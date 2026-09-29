@@ -83,8 +83,8 @@ check "  and every field the fixture has" "" "$(missing_paths "$FIXTURES_AGENTVM
 section "status --json on an empty store"
 real_lib agentvm_status > "$OMCTEST_WORK/status.json"
 check "answers" "0" "$?"
-check "  images, boxes and runningVMs"   "boxes images runningVMs " \
-    "$(/usr/bin/jq -r 'keys[]' "$OMCTEST_WORK/status.json" | /usr/bin/tr '\n' ' ')"
+check "  images, boxes and runningVMs, whatever else it adds"   "boxes images runningVMs " \
+    "$(/usr/bin/jq -r 'keys[] | select(. == "boxes" or . == "images" or . == "runningVMs")' "$OMCTEST_WORK/status.json" | /usr/bin/tr '\n' ' ')"
 check "  every field the empty-store fixture has" "" \
     "$(missing_paths "$FIXTURES_AGENTVM/status-empty.json" "$OMCTEST_WORK/status.json")"
 check "  no box rows"   "" "$(lib agentvm_status_box_rows < "$OMCTEST_WORK/status.json")"

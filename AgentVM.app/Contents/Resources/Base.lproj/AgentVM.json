@@ -2,23 +2,186 @@
   "type": "VStack",
   "properties": {
     "spacing": 10.0,
-    "alignment": "center",
+    "alignment": "leading",
     "frame": {
-      "minWidth": 600.0,
-      "minHeight": 400.0,
-      "idealWidth": 900.0,
-      "idealHeight": 600.0
+      "minWidth": 760.0,
+      "minHeight": 480.0,
+      "idealWidth": 980.0,
+      "idealHeight": 640.0
     },
     "padding": "default"
   },
   "children": [
     {
+      "type": "HStack",
+      "properties": { "spacing": 8.0 },
+      "children": [
+        {
+          "type": "Text",
+          "id": 100,
+          "properties": { "text": "", "foregroundStyle": "secondary" }
+        },
+        { "type": "Spacer" },
+        {
+          "type": "Button",
+          "id": 102,
+          "properties": { "title": "New Image...", "disabled": true }
+        },
+        {
+          "type": "Button",
+          "id": 103,
+          "properties": { "title": "New Box...", "disabled": true }
+        },
+        {
+          "type": "Button",
+          "id": 104,
+          "properties": { "title": "Setup", "disabled": true }
+        }
+      ]
+    },
+    {
       "type": "Text",
-      "id": 1,
+      "id": 101,
+      "properties": { "text": "", "foregroundStyle": "red" }
+    },
+    {
+      "type": "ZStack",
       "properties": {
-        "text": "AgentVM",
-        "font": "title"
-      }
+        "alignment": "topLeading",
+        "frame": { "maxWidth": "infinity", "maxHeight": "infinity" }
+      },
+      "children": [
+        {
+          "type": "VStack",
+          "id": 200,
+          "properties": {
+            "hidden": true,
+            "spacing": 12.0,
+            "alignment": "leading",
+            "frame": { "maxWidth": "infinity", "maxHeight": "infinity", "alignment": "topLeading" }
+          },
+          "children": [
+            {
+              "type": "Text",
+              "properties": { "text": "Get started", "font": "title2" }
+            },
+            {
+              "type": "Text",
+              "id": 201,
+              "properties": { "text": "" }
+            }
+          ]
+        },
+        {
+          "type": "VStack",
+          "id": 300,
+          "properties": {
+            "hidden": true,
+            "spacing": 8.0,
+            "alignment": "leading",
+            "frame": { "maxWidth": "infinity", "maxHeight": "infinity" }
+          },
+          "children": [
+            {
+              "type": "Text",
+              "properties": { "text": "Boxes", "font": "headline" }
+            },
+            {
+              "type": "Table",
+              "id": 310,
+              "properties": {
+                "columns": ["Name", "", "State", "Image", "Network", "Project, programs, owner", ""],
+                "columnTypes": [
+                  { "viewType": "Text" },
+                  { "viewType": "Image", "dataInterpretation": "systemName" },
+                  { "viewType": "Text" },
+                  { "viewType": "Text" },
+                  { "viewType": "Text" },
+                  { "viewType": "Text" },
+                  { "viewType": "Button", "actionContext": "rowIndex" }
+                ],
+                "widths": [150, 24, 100, 120, 110, 260, 70],
+                "minWidths": [90, 20, 70, 70, 80, 100, 60],
+                "actionID": "AgentVM.main.box.selected",
+                "frame": { "maxWidth": "infinity", "minHeight": 110.0, "maxHeight": "infinity" }
+              }
+            },
+            {
+              "type": "Text",
+              "properties": { "text": "Images", "font": "headline" }
+            },
+            {
+              "type": "Table",
+              "id": 320,
+              "properties": {
+                "columns": ["Name", "", "State", "macOS", "Built from", "Tools", "Needs", ""],
+                "columnTypes": [
+                  { "viewType": "Text" },
+                  { "viewType": "Image", "dataInterpretation": "systemName" },
+                  { "viewType": "Text" },
+                  { "viewType": "Text" },
+                  { "viewType": "Text" },
+                  { "viewType": "Text" },
+                  { "viewType": "Text" },
+                  { "viewType": "Button", "actionContext": "rowIndex" }
+                ],
+                "widths": [150, 24, 90, 60, 110, 260, 150, 50],
+                "minWidths": [90, 20, 60, 50, 70, 100, 80, 40],
+                "actionID": "AgentVM.main.image.selected",
+                "frame": { "maxWidth": "infinity", "minHeight": 130.0, "maxHeight": "infinity" }
+              }
+            },
+            {
+              "type": "HStack",
+              "properties": { "spacing": 8.0, "frame": { "minHeight": 28.0 } },
+              "children": [
+                {
+                  "type": "Text",
+                  "id": 331,
+                  "properties": { "text": "Select a box or an image.", "foregroundStyle": "secondary" }
+                },
+                { "type": "Spacer" },
+                {
+                  "type": "ZStack",
+                  "properties": { "alignment": "trailing" },
+                  "children": [
+                    {
+                      "type": "HStack",
+                      "id": 340,
+                      "properties": { "hidden": true, "spacing": 8.0 },
+                      "children": [
+                        { "type": "Button", "id": 341, "properties": { "title": "Stop", "disabled": true } },
+                        { "type": "Button", "id": 342, "properties": { "title": "View", "disabled": true } },
+                        { "type": "Button", "id": 343, "properties": { "title": "View and Control", "disabled": true } },
+                        { "type": "Button", "id": 344, "properties": { "title": "Open Shell", "disabled": true } },
+                        { "type": "Button", "id": 345, "properties": { "title": "Details...", "disabled": true } }
+                      ]
+                    },
+                    {
+                      "type": "HStack",
+                      "id": 350,
+                      "properties": { "hidden": true, "spacing": 8.0 },
+                      "children": [
+                        { "type": "Button", "id": 351, "properties": { "title": "Start", "disabled": true } },
+                        { "type": "Button", "id": 352, "properties": { "title": "Details...", "disabled": true } }
+                      ]
+                    },
+                    {
+                      "type": "HStack",
+                      "id": 360,
+                      "properties": { "hidden": true, "spacing": 8.0 },
+                      "children": [
+                        { "type": "Button", "id": 361, "properties": { "title": "New Box from It...", "disabled": true } },
+                        { "type": "Button", "id": 362, "properties": { "title": "Details...", "disabled": true } }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
     }
   ]
 }

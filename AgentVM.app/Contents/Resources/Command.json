@@ -6,7 +6,11 @@
       "EXECUTION_MODE": "exe_script_file",
       "ACTIONUI_WINDOW": {
         "JSON_NAME": "AgentVM",
-        "IS_BLOCKING": false
+        "IS_BLOCKING": false,
+        "WINDOW_TITLE": "AgentVM",
+        "INIT_SUBCOMMAND_ID": "AgentVM.main.init",
+        "WINDOW_DID_ACTIVATE_SUBCOMMAND_ID": "AgentVM.main.activated",
+        "END_CANCEL_SUBCOMMAND_ID": "AgentVM.main.close"
       },
       "REQUIRED_OMC_VERSION": "5.1",
       "REQUIRED_MAC_OS_MIN_VERSION": "27.0"

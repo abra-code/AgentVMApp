@@ -124,3 +124,13 @@ field_count() { /usr/bin/awk -F'\t' '{ print NF }' | /usr/bin/sort -u; }
 
 # row_named <name>  ->  the line of stdin whose first field is name.
 row_named() { /usr/bin/awk -F'\t' -v name="$1" '$1 == name'; }
+
+# import_view_ids <script ...>  ->  the view ids a library declares (NAME_ID=123), as variables
+# here: imported rather than restated, since a second list could disagree with the first, and
+# silently. Callers check that the names they use arrived.
+import_view_ids() {
+    local _script
+    for _script; do
+        eval "$(/usr/bin/sed -n 's/^\([A-Z][A-Z0-9_]*_ID\)=\([0-9][0-9]*\)$/\1=\2/p' "$_script")"
+    done
+}

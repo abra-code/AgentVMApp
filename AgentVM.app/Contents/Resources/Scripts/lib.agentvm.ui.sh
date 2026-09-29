@@ -1,0 +1,105 @@
+#!/bin/sh
+# lib.agentvm.ui.sh
+#
+# Window helpers shared by AgentVM.app's handlers: the OMC tools, per-window state, and the few
+# system tools a window needs besides agent-vm. Sources lib.agentvm.sh, so a handler sources
+# this one file (or a window's own library, which sources it).
+#
+# PER-WINDOW STATE. Two places, both keyed by the window's UUID: pasteboard keys for small values
+# other handlers of the same window read (the selection, the poll loop's token), and a cache
+# folder under $TMPDIR for what agent-vm last answered, so a handler that only repaints does not
+# run agent-vm again. The window's close handler removes both.
+#
+# Seams for the tests: AGENTVM_APP_PS (the process list, which a sandboxed test cannot read) and
+# AGENTVM_APP_SLEEP (the poll loop's wait).
+#
+# POSIX sh (bash 3.2 in POSIX mode) only. Validate with "sh -n".
+[ -n "${__AGENTVM_APP_UI_LIB:-}" ] && return 0
+__AGENTVM_APP_UI_LIB=1
+
+. "$OMC_APP_BUNDLE_PATH/Contents/Resources/Scripts/lib.agentvm.sh"
+
+dialog="$OMC_OMC_SUPPORT_PATH/omc_dialog_control"
+next_command="$OMC_OMC_SUPPORT_PATH/omc_next_command"
+pasteboard="$OMC_OMC_SUPPORT_PATH/pasteboard"
+ps_tool="${AGENTVM_APP_PS:-/bin/ps}"
+sleep_tool="${AGENTVM_APP_SLEEP:-/bin/sleep}"
+ui_tab="$(printf '\t')"
+
+# ui_key <name> <window uuid>  ->  the pasteboard key of one value of one window.
+ui_key() {
+    printf 'agentvm_%s_%s\n' "$1" "$2"
+}
+
+# ui_get <name> <uuid>  ->  that value, or nothing. ui_set <name> <uuid> <value>.
+ui_get() {
+    "$pasteboard" "$(ui_key "$1" "$2")" get
+}
+ui_set() {
+    "$pasteboard" "$(ui_key "$1" "$2")" set "$3"
+}
+
+# ui_cache <uuid> <name>  ->  the path of one cache file of that window (the folder exists).
+ui_cache() {
+    local _dir="${TMPDIR:-/tmp}/AgentVM/$1"
+    [ -d "$_dir" ] || /bin/mkdir -p "$_dir"
+    printf '%s/%s\n' "$_dir" "$2"
+}
+
+# ui_cache_clear <uuid>  ->  removes that window's cache folder.
+ui_cache_clear() {
+    [ -n "$1" ] || return 0
+    /bin/rm -rf "${TMPDIR:-/tmp}/AgentVM/$1"
+}
+
+# ui_store <file>  ->  stdin becomes the file, replaced in one step: other handlers read the
+# caches while the poll loop rewrites them, and a file truncated for rewriting would read as
+# "no such row". A failed write leaves the old file.
+ui_store() {
+    /bin/cat > "$1.$$"
+    local _status=$?
+    if [ "$_status" -ne 0 ]; then
+        /bin/rm -f "$1.$$"
+        return "$_status"
+    fi
+    /bin/mv -f "$1.$$" "$1"
+}
+
+# ui_enable <uuid> <view id> <1|0>  and  ui_show <uuid> <view id> <1|0>.
+ui_enable() {
+    if [ "$3" = "1" ]; then
+        "$dialog" "$1" "$2" omc_enable
+    else
+        "$dialog" "$1" "$2" omc_disable
+    fi
+}
+ui_show() {
+    if [ "$3" = "1" ]; then
+        "$dialog" "$1" "$2" omc_show
+    else
+        "$dialog" "$1" "$2" omc_hide
+    fi
+}
+
+# ui_process_name <pid>  ->  the name of the program running as that process, or nothing.
+# For display only ("Cadabra" as a box's owner): a pid can be reused, so nothing is ever decided
+# from it.
+ui_process_name() {
+    case "$1" in
+        ''|*[!0123456789]*) return 0 ;;
+    esac
+    local _command
+    _command="$("$ps_tool" -p "$1" -o comm= 2>/dev/null)"
+    local _status=$?
+    if [ "$_status" -ne 0 ] || [ -z "$_command" ]; then
+        return 0
+    fi
+    printf '%s\n' "${_command##*/}"
+}
+
+# ui_app_alive  ->  0 while the app that runs this handler is running. A loop that outlived the
+# app (a quit while it slept) must end rather than poll agent-vm for nobody.
+ui_app_alive() {
+    [ -n "${OMC_APP_PROCESS_ID:-}" ] || return 1
+    kill -0 "$OMC_APP_PROCESS_ID" 2>/dev/null
+}
