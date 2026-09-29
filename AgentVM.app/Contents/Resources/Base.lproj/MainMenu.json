@@ -1,0 +1,9 @@
+[
+  {
+    "type": "CommandMenu",
+    "properties": {
+      "name": "Tools",
+      "autoPopulate": true
+    }
+  }
+]

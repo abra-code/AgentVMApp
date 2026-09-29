@@ -1,0 +1,24 @@
+{
+  "type": "VStack",
+  "properties": {
+    "spacing": 10.0,
+    "alignment": "center",
+    "frame": {
+      "minWidth": 600.0,
+      "minHeight": 400.0,
+      "idealWidth": 900.0,
+      "idealHeight": 600.0
+    },
+    "padding": "default"
+  },
+  "children": [
+    {
+      "type": "Text",
+      "id": 1,
+      "properties": {
+        "text": "AgentVM",
+        "font": "title"
+      }
+    }
+  ]
+}

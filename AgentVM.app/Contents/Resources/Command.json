@@ -1,0 +1,16 @@
+{
+  "COMMAND_LIST": [
+    {
+      "NAME": "AgentVM",
+      "ACTIVATION_MODE": "act_always",
+      "EXECUTION_MODE": "exe_script_file",
+      "ACTIONUI_WINDOW": {
+        "JSON_NAME": "AgentVM",
+        "IS_BLOCKING": false
+      },
+      "REQUIRED_OMC_VERSION": "5.1",
+      "REQUIRED_MAC_OS_MIN_VERSION": "27.0"
+    }
+  ],
+  "VERSION": 2
+}

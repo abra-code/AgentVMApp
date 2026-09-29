@@ -1,2 +1,6 @@
 Private
 .DS_Store
+AgentVM.app/Contents/Frameworks
+AgentVM.app/Contents/MacOS
+AgentVM.app/Contents/_CodeSignature
+AgentVM.app/Contents/Library/Packages
