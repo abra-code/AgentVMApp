@@ -40,6 +40,7 @@ MAIN_SETUP_ID=104
 MAIN_GETSTARTED_ID=200
 MAIN_GETSTARTED_TEXT_ID=201
 MAIN_STATUS_ID=300
+MAIN_ATTENTION_ID=305
 MAIN_BOXES_ID=310
 MAIN_IMAGES_ID=320
 MAIN_SELECTED_ID=331
@@ -347,6 +348,105 @@ main_paint_actions() {
     done
 }
 
+# main_now  ->  the time as seconds since 1970. AGENTVM_APP_NOW, for the tests, fixes it.
+main_now() {
+    if [ -n "${AGENTVM_APP_NOW:-}" ]; then
+        printf '%s\n' "$AGENTVM_APP_NOW"
+        return 0
+    fi
+    /bin/date -u +%s
+}
+
+# main_seconds_since_epoch <ISO 8601 time, as agent-vm writes it: 2026-09-29T14:02:10Z>
+#   ->  that time as seconds since 1970, or nothing when it is not in that form.
+main_seconds_since_epoch() {
+    case "$1" in
+        [0123456789][0123456789][0123456789][0123456789]-*T*Z) ;;
+        *) return 0 ;;
+    esac
+    /bin/date -j -u -f '%Y-%m-%dT%H:%M:%SZ' "$1" +%s 2>/dev/null
+}
+
+# main_names_text <name...>  ->  "a", "a and b", "a, b and c".
+main_names_text() {
+    local _text=""
+    local _count=$#
+    local _i=0
+    local _name
+    for _name; do
+        _i=$((_i + 1))
+        if [ "$_i" -eq 1 ]; then
+            _text="$_name"
+        elif [ "$_i" -eq "$_count" ]; then
+            _text="$_text and $_name"
+        else
+            _text="$_text, $_name"
+        fi
+    done
+    printf '%s\n' "$_text"
+}
+
+# main_attention_lines <uuid>  ->  the things that need attention, most important first, one
+# line each, at most MAIN_ATTENTION_MAX:
+#   - images that need a guest update (after an agent-vm update);
+#   - images that need Full Disk Access;
+#   - failed images, with agent-vm's reason;
+#   - running boxes whose supervisor is another agent-vm version: each version is installed in a
+#     folder of its own, so a box keeps the version it started with until it is stopped;
+#   - running boxes with no owner and no program in them, started MAIN_IDLE_BOX_HOURS or more
+#     ago: each holds one of the two VM slots and its memory. agent-vm reports when a box started
+#     and how many programs run now, not how long it has been idle, and the words say only that.
+# Boxes made before their image was updated need agent-vm to record a box's guest daemon; they
+# are left out until it does.
+MAIN_ATTENTION_MAX=3
+MAIN_IDLE_BOX_HOURS=2
+main_attention_lines() {
+    local _uuid="$1"
+    local _version="$(main_agentvm_line "$_uuid" 2)"
+    local _names
+    {
+        _names="$(main_rows "$_uuid" images | /usr/bin/awk -F'\t' '(","$8",") ~ /,guest-update,/ { printf "%s ", $1 }')"
+        if [ -n "$_names" ]; then
+            set -- $_names
+            if [ "$#" -eq 1 ]; then
+                printf 'Image %s needs a guest update for agent-vm %s.\n' "$1" "$_version"
+            else
+                printf '%s images need a guest update for agent-vm %s: %s.\n' "$#" "$_version" "$(main_names_text "$@")"
+            fi
+        fi
+        _names="$(main_rows "$_uuid" images | /usr/bin/awk -F'\t' '(","$8",") ~ /,full-disk-access,/ { printf "%s ", $1 }')"
+        if [ -n "$_names" ]; then
+            set -- $_names
+            if [ "$#" -eq 1 ]; then
+                printf 'Image %s needs Full Disk Access, or programs in its boxes cannot open Desktop, Documents or Downloads.\n' "$1"
+            else
+                printf '%s images need Full Disk Access, or programs in their boxes cannot open Desktop, Documents or Downloads: %s.\n' "$#" "$(main_names_text "$@")"
+            fi
+        fi
+        main_rows "$_uuid" images | /usr/bin/awk -F'\t' '$2 == "failed" {
+            if ($3 == "-") printf "Image %s failed.\n", $1; else printf "Image %s failed: %s.\n", $1, $3 }'
+        main_rows "$_uuid" boxes | /usr/bin/awk -F'\t' -v current="$_version" '
+            ($2 == "running" || $2 == "unresponsive") && $12 != "-" && $12 != current {
+                printf "Box %s runs agent-vm %s; stop it and start it again to move it to %s.\n", $1, $12, current }'
+        local _now="$(main_now)"
+        local _name _state _started _owner _execs _since _hours
+        main_rows "$_uuid" boxes | /usr/bin/cut -f1,2,7,10,11 | while IFS="$ui_tab" read -r _name _state _owner _execs _started; do
+            [ "$_state" = "running" ] && [ "$_owner" = "-" ] || continue
+            case "$_execs" in -|0) ;; *) continue ;; esac
+            _since="$(main_seconds_since_epoch "$_started")"
+            [ -n "$_since" ] || continue
+            _hours=$(( (_now - _since) / 3600 ))
+            [ "$_hours" -ge "$MAIN_IDLE_BOX_HOURS" ] || continue
+            printf 'Box %s has run %s hours, and no program runs in it now.\n' "$_name" "$_hours"
+        done
+    } | /usr/bin/head -n "$MAIN_ATTENTION_MAX"
+}
+
+# main_paint_attention <uuid>  ->  the attention lines, each starting with "! ", or nothing.
+main_paint_attention() {
+    "$dialog" "$1" "$MAIN_ATTENTION_ID" "$(main_attention_lines "$1" | /usr/bin/sed 's/^/! /')"
+}
+
 # main_paint <uuid>  ->  the whole window from the caches: header, face, and the face's content.
 main_paint() {
     local _uuid="$1"
@@ -355,6 +455,7 @@ main_paint() {
     if [ "$_face" = "status" ]; then
         ui_show "$_uuid" "$MAIN_GETSTARTED_ID" 0
         ui_show "$_uuid" "$MAIN_STATUS_ID" 1
+        main_paint_attention "$_uuid"
         main_paint_tables "$_uuid"
         main_paint_actions "$_uuid"
     else

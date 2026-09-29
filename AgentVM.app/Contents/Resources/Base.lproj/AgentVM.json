@@ -84,6 +84,11 @@
           "children": [
             {
               "type": "Text",
+              "id": 305,
+              "properties": { "text": "", "foregroundStyle": "orange" }
+            },
+            {
+              "type": "Text",
               "properties": { "text": "Boxes", "font": "headline" }
             },
             {

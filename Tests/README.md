@@ -21,6 +21,8 @@ AB=../OMC/Distribution/AppletBuilder.app/Contents/Resources/Agents/appletbuilder
 | `10-agentvm-library.test.sh` | `lib.agentvm.sh`: which agent-vm runs, when it can be used, the store setting, error messages, and the rows read from agent-vm's JSON, against the fake and the fixtures |
 | `11-agentvm-contract.test.sh` | the library against a real agent-vm on an empty store: the JSON fields the fixtures have are still there |
 | `20-main-window.test.sh` | the main window: the face it shows, the header, both tables, the selection across them, the poll loop, activation and closing |
+| `21-attention.test.sh` | the main window's attention lines: which, in what order, at most three |
+| `98-command-wiring.test.sh` | every command has the exact script the engine looks for, every reference resolves, every script is reachable |
 | `helpers/fake_agent_vm.sh` | agent-vm, answered from `fixtures/agentvm/` |
 | `helpers/fake_ps.sh`, `helpers/fake_sleep.sh` | the process list (a box's owner) and the poll loop's wait, answered and recorded |
 | `helpers/refresh_agentvm_fixtures.sh` | captures `fixtures/agentvm/` from a real agent-vm |
