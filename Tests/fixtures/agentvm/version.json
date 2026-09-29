@@ -1,0 +1,21 @@
+{
+  "controlProtocol": 1,
+  "guestDaemon": {
+    "digest": "97b18f73c8b1166679c3c71203c3ec739d8dc261b72c3095c8f543b6b46f3150",
+    "features": [
+      "terminal",
+      "prompt-notices",
+      "wallpaper",
+      "time-sync",
+      "user-session",
+      "terminal-pixels"
+    ],
+    "path": "/Users/you/Development/agent-vm/.build/signed/work/agent-vm-guest",
+    "protocol": 1,
+    "requirement": "cdhash H\"4086fdf4576563b4d273a6426fdb1a4ede685fab\"",
+    "version": "0.3.13"
+  },
+  "guestProtocol": 1,
+  "path": "/Users/you/Development/agent-vm/.build/signed/work/agent-vm",
+  "version": "0.3.13"
+}

@@ -56,3 +56,71 @@ plist_value() {
 command_value() {
     /usr/bin/jq -r "$1" "$APP_RESOURCES/Command.json" 2>/dev/null
 }
+
+# -- agent-vm ------------------------------------------------------------------------------------
+# agent-vm never runs in these tests except in the contract test: AGENTVM_APP_AGENT_VM points
+# the library at the fake, which answers from Tests/fixtures/agentvm/.
+FAKE_AGENTVM="$TEST_HELPERS/fake_agent_vm.sh"
+FIXTURES_AGENTVM="$OMCTEST_FIXTURES/agentvm"
+# Named for the fake, which otherwise finds them beside itself: a copy installed as
+# ~/.local/bin/agent-vm would look in the wrong place.
+FAKE_AGENTVM_FIXTURES="$FIXTURES_AGENTVM"
+FAKE_AGENTVM_DIR="$OMCTEST_WORK/fakevm"
+export FAKE_AGENTVM_DIR FAKE_AGENTVM_FIXTURES
+TAB=$(printf '\t')
+
+# The developer's own environment must not decide which binary the library picks or which store
+# it reads. The scratch $HOME does not isolate a real agent-vm: it finds its home folder from the
+# account, not from $HOME, so every real run needs AGENT_VM_HOME set to a scratch store.
+unset AGENTVM_APP_AGENT_VM AGENT_VM_HOME
+
+# The app's settings file, computed as the library computes it, from $HOME.
+APP_SETTINGS="$HOME/Library/Application Support/AgentVM/settings.json"
+
+# lib_value <NAME>  ->  a variable's value as lib.agentvm.sh assigns it, read from the file.
+# For guards that compare the library with something else (the fixtures' version), never for
+# the expected value of a check about the library's own behavior.
+lib_value() {
+    /usr/bin/sed -n "s/^$1=\"\\(.*\\)\"\$/\\1/p" "$APP_SCRIPTS/lib.agentvm.sh"
+}
+
+# lib <function> [args...]  ->  the library function, run in a subshell with the library sourced,
+# so its variables and the files it names are computed from this file's $HOME and $TMPDIR.
+lib() {
+    ( . "$APP_SCRIPTS/lib.agentvm.sh" >/dev/null 2>&1
+      "$@" )
+}
+
+# with_fake <function> [args...]  ->  the same, with the test seam pointing at the fake.
+# A subshell, because in POSIX mode an assignment before a FUNCTION call outlives the call.
+with_fake() {
+    ( AGENTVM_APP_AGENT_VM="$FAKE_AGENTVM"; export AGENTVM_APP_AGENT_VM; lib "$@" )
+}
+
+# fake_reset  ->  a fake with no overrides and an empty log.
+fake_reset() {
+    /bin/rm -rf "$FAKE_AGENTVM_DIR"
+    /bin/mkdir -p "$FAKE_AGENTVM_DIR"
+}
+
+# fake_log  ->  the arguments of every call the fake answered, one call per line.
+fake_log() {
+    /bin/cat "$FAKE_AGENTVM_DIR/log" 2>/dev/null
+}
+
+# settings_write <json>  ->  the app's settings file, as the Settings window would leave it.
+# settings_clear removes it.
+settings_write() {
+    /bin/mkdir -p "$(/usr/bin/dirname "$APP_SETTINGS")"
+    printf '%s\n' "$1" > "$APP_SETTINGS"
+}
+settings_clear() {
+    /bin/rm -f "$APP_SETTINGS"
+}
+
+# col <n>  ->  one tab-separated column of stdin. field_count  ->  the fields of each line.
+col() { /usr/bin/cut -f"$1"; }
+field_count() { /usr/bin/awk -F'\t' '{ print NF }' | /usr/bin/sort -u; }
+
+# row_named <name>  ->  the line of stdin whose first field is name.
+row_named() { /usr/bin/awk -F'\t' -v name="$1" '$1 == name'; }

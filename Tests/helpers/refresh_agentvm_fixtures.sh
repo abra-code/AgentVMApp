@@ -1,0 +1,71 @@
+#!/bin/bash
+# Tests/helpers/refresh_agentvm_fixtures.sh - capture Tests/fixtures/agentvm/ from a real agent-vm.
+#
+# Usage: Tests/helpers/refresh_agentvm_fixtures.sh <path to agent-vm>
+#
+# Runs only queries that start and stop nothing: `version`, `doctor`, `status` (which, unlike
+# `box list`, deletes no stopped disposable box) against the store agent-vm finds by itself
+# (AGENT_VM_HOME, or ~/Library/Application Support/agent-vm), and `status` again against an
+# empty store in a temporary folder. Each answer is re-serialized with sorted keys, and the home
+# folder in every string is replaced with /Users/you, so a capture names no real account.
+#
+# status-variety.json is not captured: it is made by hand (see the README beside the fixtures)
+# and this script leaves it alone.
+#
+# After a refresh, run the suite: the drift checks in Tests/10-agentvm-library.test.sh fail
+# when a field the library reads is gone, and the version check fails until the library's
+# AGENTVM_MIN_VERSION and version.json agree. A coding agent must run this with its sandbox
+# off: doctor asks the virtualization framework, which a sandbox refuses.
+
+fail() {
+    printf 'refresh_agentvm_fixtures.sh: %s\n' "$*" >&2
+    exit 1
+}
+
+[ "$#" -eq 1 ] || fail "usage: $0 <path to agent-vm>"
+agentvm="$1"
+[ -f "$agentvm" ] && [ -x "$agentvm" ] || fail "$agentvm is not an executable file"
+
+script_dir="$(cd "$(/usr/bin/dirname "$0")" && pwd -P)"
+fixtures="$script_dir/../fixtures/agentvm"
+[ -d "$fixtures" ] || fail "no fixtures folder at $fixtures"
+
+work="$(/usr/bin/mktemp -d "${TMPDIR:-/tmp}/agentvm-fixtures.XXXXXX")"
+status=$?
+[ "$status" -eq 0 ] && [ -n "$work" ] || fail "cannot make a temporary folder"
+trap '/bin/rm -rf "$work"' EXIT
+
+# capture <fixture name> <agent-vm args...> - one answer, sanitized, into the fixtures folder.
+# Written to the temporary folder first and moved into place only when agent-vm and jq both
+# succeeded, so a failed capture leaves the old fixture as it was.
+capture() {
+    local name="$1"
+    shift
+    "$agentvm" "$@" > "$work/$name.raw" 2> "$work/$name.err"
+    local status=$?
+    if [ "$status" -ne 0 ]; then
+        /bin/cat "$work/$name.err" >&2
+        fail "agent-vm $* failed with status $status"
+    fi
+    /usr/bin/jq -S --arg home "$HOME" \
+        'walk(if type == "string" then split($home) | join("/Users/you") else . end)' \
+        "$work/$name.raw" > "$work/$name.json"
+    status=$?
+    [ "$status" -eq 0 ] || fail "agent-vm $* did not print JSON (see $work/$name.raw)"
+    /bin/mv -f "$work/$name.json" "$fixtures/$name.json"
+    status=$?
+    [ "$status" -eq 0 ] || fail "cannot write $fixtures/$name.json"
+    printf '  %s.json  <-  agent-vm %s\n' "$name" "$*"
+}
+
+printf 'Capturing from %s (%s)\n' "$agentvm" "$("$agentvm" --version 2>&1)"
+capture version version --json
+capture doctor doctor --json
+capture status status --json
+
+/bin/mkdir -p "$work/empty-store"
+status=$?
+[ "$status" -eq 0 ] || fail "cannot make an empty store in $work"
+AGENT_VM_HOME="$work/empty-store" capture status-empty status --json
+
+printf 'Done. Run the suite; update the README beside the fixtures with the date and version.\n'

@@ -1,0 +1,349 @@
+#!/bin/sh
+# lib.agentvm.sh
+#
+# The only file in AgentVM.app that runs agent-vm. Every window reads images, boxes and their
+# state through the functions here, so there is one place that knows which agent-vm is in use,
+# how to read its answers, and how its failures reach the user.
+#
+# WHICH agent-vm. Three candidates, the first one set wins:
+#   - AGENTVM_APP_AGENT_VM in the environment: the test seam, pointed at
+#     Tests/helpers/fake_agent_vm.sh;
+#   - "developerAgentVM" in the app's settings.json: a developer override, typically
+#     ~/Development/agent-vm/.build/signed/release/agent-vm, so the app can follow an agent-vm
+#     working tree while the two change together;
+#   - the installed ~/.local/bin/agent-vm. The app carries no agent-vm of its own. agent-vm's
+#     installer puts each version in a folder of its own (~/.local/share/agent-vm/versions/<v>/,
+#     with agent-vm-guest, the network packs and the image recipes beside it) and points the
+#     link in ~/.local/bin at the newest. Terminal (agent-vm, avm), Cadabra and this app all run
+#     that one.
+# Nothing else: not $PATH, which a Finder-launched app does not share with Terminal.
+# "agentVMHome" in settings.json, when set, becomes AGENT_VM_HOME for every run: agent-vm's
+# store root. It applies to whichever binary runs, so switching binaries never switches stores.
+#
+# READING ITS ANSWERS. Only --json output is read, with /usr/bin/jq, into tab-separated rows in
+# which no field is empty (an absent value is "-"), because `read` with a tab IFS collapses
+# empty fields and shifts every column after them. agent-vm's human text changes freely; its
+# JSON is a contract with this library. A failed call leaves agent-vm's own message (written for
+# people, naming the fix) for agentvm_last_error.
+#
+# THE VERSION RULE. AGENTVM_MIN_VERSION is the agent-vm version the app is built and tested
+# against, always the newest: there is one development stream, so an older agent-vm is refused
+# rather than guessed at. update-agentvmapp.sh rewrites the line from the agent-vm working tree
+# at every build, and the tests compare it with the fixtures' version.
+#
+# POSIX sh (bash 3.2 in POSIX mode) only. Validate with "sh -n".
+[ -n "${__AGENTVM_APP_LIB:-}" ] && return 0
+__AGENTVM_APP_LIB=1
+
+AGENTVM_MIN_VERSION="0.3.13"
+
+# The app's own state, and where agent-vm's installer puts the link to the newest agent-vm.
+agentvm_support_dir="$HOME/Library/Application Support/AgentVM"
+agentvm_settings="$agentvm_support_dir/settings.json"
+agentvm_installed="$HOME/.local/bin/agent-vm"
+
+# Where agentvm_json leaves agent-vm's stderr for agentvm_last_error. Named after the handler's
+# pid: $$ is the handler's own pid inside every subshell of it too, so a call made in $( ) - the
+# usual way to call it - still leaves the message where the caller can find it afterwards.
+agentvm_err_file="${TMPDIR:-/tmp}/AgentVM.agentvm.$$.stderr"
+
+# The codes agentvm_available returns when agent-vm cannot be used, besides 1 (installing would
+# not help: a broken developer override or test seam).
+agentvm_not_installed=2
+agentvm_too_old=3
+
+# The jq definitions every row filter uses. cell: null becomes "-", tabs and line breaks inside
+# a value become spaces, and an empty string becomes "-", so every row has all its fields.
+# false stays "false": `// "-"` would replace it too.
+agentvm_jq_defs='def cell: if . == null then "-" else tostring | gsub("[\t\n\r]"; " ") | if . == "" then "-" else . end end;
+def row: map(cell) | join("\t");'
+
+# agentvm_setting <key>  ->  that string from settings.json, or nothing.
+# Reads only: a missing or malformed file, or a value that is not a string, is nothing.
+agentvm_setting() {
+    [ -f "$agentvm_settings" ] || return 0
+    /usr/bin/jq -r --arg key "$1" '.[$key] | strings' "$agentvm_settings" 2>/dev/null
+}
+
+# agentvm_display_path <path>  ->  the path with the home folder written as "~", for the window.
+agentvm_display_path() {
+    case "$1" in
+        "$HOME"/*) printf '~/%s\n' "${1#"$HOME"/}" ;;
+        *)         printf '%s\n' "$1" ;;
+    esac
+}
+
+# agentvm_origin  ->  test, developer or installed: where agentvm_bin's answer comes from.
+# The window names it next to the version, so a forgotten override is visible.
+agentvm_origin() {
+    if [ -n "${AGENTVM_APP_AGENT_VM:-}" ]; then
+        echo "test"
+        return 0
+    fi
+    local _override="$(agentvm_setting developerAgentVM)"
+    if [ -n "$_override" ]; then
+        echo "developer"
+        return 0
+    fi
+    echo "installed"
+}
+
+# agentvm_bin  ->  the agent-vm this library runs (see the header for the order).
+agentvm_bin() {
+    if [ -n "${AGENTVM_APP_AGENT_VM:-}" ]; then
+        printf '%s\n' "$AGENTVM_APP_AGENT_VM"
+        return 0
+    fi
+    local _override="$(agentvm_setting developerAgentVM)"
+    if [ -n "$_override" ]; then
+        printf '%s\n' "$_override"
+        return 0
+    fi
+    printf '%s\n' "$agentvm_installed"
+}
+
+# agentvm_run <args...>  ->  agent-vm's output and status, run with the app's store setting.
+agentvm_run() {
+    local _bin="$(agentvm_bin)"
+    local _home="$(agentvm_setting agentVMHome)"
+    if [ -n "$_home" ]; then
+        AGENT_VM_HOME="$_home" "$_bin" "$@"
+        return $?
+    fi
+    "$_bin" "$@"
+}
+
+# agentvm_json <args...>  ->  agent-vm's JSON on stdout, and agent-vm's status.
+# --json goes last, after the caller's arguments; callers pass names that agentvm_valid_name
+# accepted, so nothing after them can be read as an option or a program's argv.
+# stderr is kept apart for agentvm_last_error and removed when the call succeeds.
+agentvm_json() {
+    /bin/rm -f "$agentvm_err_file"
+    agentvm_run "$@" --json 2>"$agentvm_err_file"
+    local _status=$?
+    if [ "$_status" -eq 0 ]; then
+        /bin/rm -f "$agentvm_err_file"
+    fi
+    return "$_status"
+}
+
+# agentvm_last_error [status]  ->  the message of the last failed call, for an alert.
+# agent-vm writes "Error: <what failed and the fix>" to stderr, sometimes followed by more lines
+# (a guest program's output, say). The message is everything from that line on, less the
+# "Error: " prefix. Without such a line - a crash, say - it is every line that is not a progress
+# event (a JSON line, from long commands). The message is forgotten once read.
+agentvm_last_error() {
+    local _message
+    _message="$(/usr/bin/awk '
+        found           { print; next }
+        /^Error: /      { found = 1; sub(/^Error: /, ""); print; next }
+        !/^\{/          { other = other $0 "\n" }
+        END             { if (!found) printf "%s", other }' "$agentvm_err_file" 2>/dev/null)"
+    /bin/rm -f "$agentvm_err_file"
+    if [ -z "$_message" ]; then
+        _message="agent-vm failed (status ${1:-unknown}) and gave no reason."
+    fi
+    printf '%s\n' "$_message"
+}
+
+# _agentvm_refuse <status> <message>  ->  leaves the message for agentvm_last_error, returns status.
+# For arguments refused before agent-vm runs, so every failure is read the same way.
+_agentvm_refuse() {
+    printf 'Error: %s\n' "$2" > "$agentvm_err_file"
+    return "$1"
+}
+
+# agentvm_valid_name <name>  ->  0 when agent-vm accepts it as an image or box name.
+# agent-vm's own rule (ImageStore.isValidName): lower-case letters, digits, ".", "_" and "-",
+# starting with a letter or digit, at most 63 characters. Checked here as well because a name
+# is an argv element: one that starts with "-" would be read as an option.
+# The letters are spelled out because a bracket RANGE follows the locale's collation order: in
+# en_US.UTF-8, [a-z] also matches "B" through "Z".
+agentvm_valid_name() {
+    case "$1" in
+        [abcdefghijklmnopqrstuvwxyz0123456789]*) ;;
+        *) return 1 ;;
+    esac
+    case "$1" in
+        *[!abcdefghijklmnopqrstuvwxyz0123456789._-]*) return 1 ;;
+    esac
+    [ "${#1}" -le 63 ]
+}
+
+# _agentvm_need_name <image|box> <name>  ->  0, or 2 with the reason left for agentvm_last_error.
+_agentvm_need_name() {
+    agentvm_valid_name "$2" && return 0
+    _agentvm_refuse 2 "\"$2\" is not a $1 name agent-vm accepts: lower-case letters, digits, \".\", \"_\" and \"-\", starting with a letter or digit, at most 63 characters."
+}
+
+# agentvm_version_at_least <have> <want>  ->  0 when have >= want, compared as dotted numbers.
+# Anything that is not digits and dots is not at least anything.
+agentvm_version_at_least() {
+    case "$1" in ''|*[!0123456789.]*|.*|*.|*..*) return 1 ;; esac
+    case "$2" in ''|*[!0123456789.]*|.*|*.|*..*) return 1 ;; esac
+    local _have="$1." _want="$2."
+    local _h _w
+    while [ -n "$_have" ] || [ -n "$_want" ]; do
+        _h="${_have%%.*}"
+        _w="${_want%%.*}"
+        _have="${_have#*.}"
+        _want="${_want#*.}"
+        [ -n "$_h" ] || _h=0
+        [ -n "$_w" ] || _w=0
+        if [ "$_h" -gt "$_w" ]; then
+            return 0
+        fi
+        if [ "$_h" -lt "$_w" ]; then
+            return 1
+        fi
+    done
+    return 0
+}
+
+# agentvm_bin_reason <path> <origin>  ->  why that agent-vm cannot be run, or nothing.
+# -f as well as -x, because -x is also true of a directory.
+agentvm_bin_reason() {
+    local _shown="$(agentvm_display_path "$1")"
+    case "$2" in
+        developer)
+            case "$1" in
+                /*) ;;
+                *)  printf 'The developer agent-vm in Settings is "%s", which is not an absolute path. Fix it, or clear it to use the installed agent-vm.\n' "$1"
+                    return 0 ;;
+            esac
+            if [ ! -f "$1" ] || [ ! -x "$1" ]; then
+                printf 'The developer agent-vm in Settings is %s, which is not an executable file. Build agent-vm there, or clear the setting to use the installed agent-vm.\n' "$_shown"
+            fi ;;
+        test)
+            if [ ! -f "$1" ] || [ ! -x "$1" ]; then
+                printf 'AGENTVM_APP_AGENT_VM is %s, which is not an executable file.\n' "$1"
+            fi ;;
+        *)
+            if [ ! -f "$1" ] || [ ! -x "$1" ]; then
+                printf 'agent-vm is not installed: there is nothing at %s.\n' "$_shown"
+            fi ;;
+    esac
+}
+
+# agentvm_version_reason <path> <origin> <output of --version> <its status>
+#   ->  why that agent-vm is unusable, or nothing.
+agentvm_version_reason() {
+    local _shown="$(agentvm_display_path "$1")"
+    # One line: the reason goes into a row of the window, and a crashing binary can print several.
+    local _output="$(printf '%s' "$3" | /usr/bin/tr '\n' ' ')"
+    local _fix=""
+    if [ "$2" = "developer" ]; then
+        _fix=" Rebuild it, or clear the developer agent-vm in Settings to use the installed one."
+    fi
+    if [ "$4" != "0" ]; then
+        printf '%s did not report its version (status %s: %s).%s\n' "$_shown" "$4" "${_output:-no output}" "$_fix"
+        return 0
+    fi
+    case "$3" in
+        ''|*[!0123456789.]*)
+            printf '%s did not report a version: "%s".%s\n' "$_shown" "$_output" "$_fix"
+            return 0 ;;
+    esac
+    agentvm_version_at_least "$3" "$AGENTVM_MIN_VERSION"
+    local _new_enough=$?
+    if [ "$_new_enough" -ne 0 ]; then
+        printf 'AgentVM needs agent-vm %s or newer; the one at %s is %s.%s\n' "$AGENTVM_MIN_VERSION" "$_shown" "$3" "$_fix"
+    fi
+}
+
+# agentvm_available  ->  0 with agent-vm's version on stdout when it can be used; otherwise one
+# line saying why, meant for the window, and a status saying what would fix it:
+#   agentvm_not_installed (2)  nothing at ~/.local/bin/agent-vm: the install flow fixes it;
+#   agentvm_too_old (3)        the installed one is older than AGENTVM_MIN_VERSION, or does not
+#                              run: installing the newest fixes it;
+#   1                          a developer override or the test seam is broken: installing
+#                              would not help, the setting has to change.
+# Called before anything else runs agent-vm.
+agentvm_available() {
+    local _bin="$(agentvm_bin)"
+    local _origin="$(agentvm_origin)"
+    local _reason="$(agentvm_bin_reason "$_bin" "$_origin")"
+    if [ -n "$_reason" ]; then
+        printf '%s\n' "$_reason"
+        [ "$_origin" = "installed" ] && return "$agentvm_not_installed"
+        return 1
+    fi
+    local _version
+    _version="$(agentvm_run --version 2>&1)"
+    local _status=$?
+    _reason="$(agentvm_version_reason "$_bin" "$_origin" "$_version" "$_status")"
+    if [ -n "$_reason" ]; then
+        printf '%s\n' "$_reason"
+        [ "$_origin" = "installed" ] && return "$agentvm_too_old"
+        return 1
+    fi
+    printf '%s\n' "$_version"
+    return 0
+}
+
+# -- Reads ---------------------------------------------------------------------------------------
+# Each runs agent-vm once and fails like agentvm_json: agent-vm's status, and its message waiting
+# for agentvm_last_error. The *_rows filters read JSON on stdin, so a handler that needs several
+# views of one answer (the boxes and the images of one `status`) runs agent-vm once, and the
+# tests run the filters on the fixtures directly.
+
+# agentvm_doctor  ->  one row per check: name, status (ok, info, warning, failure), detail.
+agentvm_doctor() {
+    local _json
+    _json="$(agentvm_json doctor)"
+    local _status=$?
+    if [ "$_status" -ne 0 ]; then
+        return "$_status"
+    fi
+    printf '%s\n' "$_json" | agentvm_doctor_rows
+}
+
+# agentvm_doctor_rows  <  doctor JSON  ->  the rows agentvm_doctor documents.
+agentvm_doctor_rows() {
+    /usr/bin/jq -r "$agentvm_jq_defs"' .checks[] | [.name, .status, .detail] | row'
+}
+
+# agentvm_status  ->  `agent-vm status --json` as it is, for the *_rows filters below.
+# It measures no disk and changes nothing (unlike `box list`, it deletes no stopped disposable
+# box), so it is safe to poll; a box whose supervisor does not answer holds it up for about 7
+# seconds (2 s for the socket, 5 s for the answer), so a button's handler never waits on it.
+agentvm_status() {
+    agentvm_json status
+}
+
+# agentvm_status_box_rows  <  status JSON  ->  one row per box:
+#    1 name        2 state (stopped, starting, running, stopping, unresponsive)   3 image
+#    4 netMode (allowlist, off, open; a box made before network rules is open)
+#    5 ruleCount   6 pid (the supervisor's)   7 ownerPid   8 project   9 projectReadOnly
+#   10 activeExecs (programs running in it now)   11 startedAt   12 supervisorVersion
+#   13 disposable (true or false)   14 statusError   15 cpus   16 memoryGB   17 path
+# The running fields (6-12) are "-" for a stopped box.
+agentvm_status_box_rows() {
+    /usr/bin/jq -r "$agentvm_jq_defs"' .boxes[] | [
+        .box.name, .state, .box.image,
+        (.box.network.mode // "open"), (.box.network.allow // [] | length),
+        .pid, .ownerPid, .project, .projectReadOnly, .activeExecs, .startedAt, .supervisorVersion,
+        (.box.disposable // false), .statusError,
+        .box.cpuCount, (if .box.memoryBytes == null then null else .box.memoryBytes / 1073741824 | floor end),
+        .path ] | row'
+}
+
+# agentvm_status_image_rows  <  status JSON  ->  one row per image:
+#    1 name   2 state (installing, installed, provisioning, ready, failed)   3 failure
+#    4 macOS (its version)   5 macOSBuild   6 basedOn (the image it was built from; "-" for one
+#    built from a restore file)   7 recipe (the recipe's description)   8 needs (kinds,
+#    comma-joined: guest-update, full-disk-access)   9 guestVersion   10 createdAt   11 path
+agentvm_status_image_rows() {
+    /usr/bin/jq -r "$agentvm_jq_defs"' .images[] | [
+        .name, .state, .failure, .macOSVersion, .macOSBuild, .derivedFrom.image,
+        .recipe.description,
+        (.needs // [] | map(.kind) | if length == 0 then null else join(",") end),
+        .guestVersion, .createdAt, .path ] | row'
+}
+
+# agentvm_status_vm_row  <  status JSON  ->  count, limit: the virtual machines running on this
+# Mac (any application's, image builds included) and how many macOS guests can run at once.
+# count is "-" when agent-vm could not list processes.
+agentvm_status_vm_row() {
+    /usr/bin/jq -r "$agentvm_jq_defs"' [.runningVMs.count, .runningVMs.limit] | row'
+}
