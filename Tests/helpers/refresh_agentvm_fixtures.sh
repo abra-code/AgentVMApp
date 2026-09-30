@@ -4,10 +4,11 @@
 # Usage: Tests/helpers/refresh_agentvm_fixtures.sh <path to agent-vm>
 #
 # Runs only queries that start and stop nothing: `version`, `doctor`, `status` (which, unlike
-# `box list`, deletes no stopped disposable box) against the store agent-vm finds by itself
-# (AGENT_VM_HOME, or ~/Library/Application Support/agent-vm), and `status` again against an
-# empty store in a temporary folder. Each answer is re-serialized with sorted keys, and the home
-# folder in every string is replaced with /Users/you, so a capture names no real account.
+# `box list`, deletes no stopped disposable box) and `image info` of one image, against the
+# store agent-vm finds by itself (AGENT_VM_HOME, or ~/Library/Application Support/agent-vm),
+# and `status` again against an empty store in a temporary folder. Each answer is re-serialized
+# with sorted keys, and the home folder in every string is replaced with /Users/you, so a capture
+# names no real account.
 #
 # status-variety.json is not captured: it is made by hand (see the README beside the fixtures)
 # and this script leaves it alone.
@@ -62,6 +63,15 @@ printf 'Capturing from %s (%s)\n' "$agentvm" "$("$agentvm" --version 2>&1)"
 capture version version --json
 capture doctor doctor --json
 capture status status --json
+
+# One image's window reads `image info`: the first ready image built from another, which has every
+# field the window shows (a recipe, the space added over its base).
+info_image="$(/usr/bin/jq -r '[.images[] | select(.state == "ready" and .derivedFrom != null)][0].name // empty' "$fixtures/status.json")"
+if [ -n "$info_image" ]; then
+    capture image-info image info "$info_image" --json
+else
+    printf '  image-info.json left as it was: no ready image built from another in this store\n'
+fi
 
 /bin/mkdir -p "$work/empty-store"
 status=$?

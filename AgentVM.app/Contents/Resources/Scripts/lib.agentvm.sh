@@ -173,7 +173,7 @@ agentvm_valid_name() {
 # _agentvm_need_name <image|box> <name>  ->  0, or 2 with the reason left for agentvm_last_error.
 _agentvm_need_name() {
     agentvm_valid_name "$2" && return 0
-    _agentvm_refuse 2 "\"$2\" is not a $1 name agent-vm accepts: lower-case letters, digits, \".\", \"_\" and \"-\", starting with a letter or digit, at most 63 characters."
+    _agentvm_refuse 2 "\"$2\" is not a valid $1 name: agent-vm accepts lower-case letters, digits, \".\", \"_\" and \"-\", starting with a letter or digit, at most 63 characters."
 }
 
 # agentvm_version_at_least <have> <want>  ->  0 when have >= want, compared as dotted numbers.
@@ -337,11 +337,52 @@ agentvm_status_box_rows() {
 #    built from a restore file)   7 recipe (the recipe's description)   8 needs (kinds,
 #    comma-joined: guest-update, full-disk-access)   9 guestVersion   10 createdAt   11 path
 agentvm_status_image_rows() {
-    /usr/bin/jq -r "$agentvm_jq_defs"' .images[] | [
-        .name, .state, .failure, .macOSVersion, .macOSBuild, .derivedFrom.image,
-        .recipe.description,
-        (.needs // [] | map(.kind) | if length == 0 then null else join(",") end),
-        .guestVersion, .createdAt, .path ] | row'
+    /usr/bin/jq -r "$agentvm_jq_defs$agentvm_jq_image_defs"' .images[] | image_cells | row'
+}
+
+# The first eleven cells of an image, as agentvm_status_image_rows documents them: `status`
+# gives each image's record, and `image info` the same record with its sizes.
+agentvm_jq_image_defs='
+def image_cells: [
+    .name, .state, .failure, .macOSVersion, .macOSBuild, .derivedFrom.image,
+    .recipe.description,
+    (.needs // [] | map(.kind) | if length == 0 then null else join(",") end),
+    .guestVersion, .createdAt, .path ];'
+
+# agentvm_image_info <name>  ->  `agent-vm image info <name> --json`: the image's record and
+# what its disk takes, which agent-vm measures (0.1-0.3 s), so it is read for one image's window
+# and never in the poll loop.
+agentvm_image_info() {
+    _agentvm_need_name image "$1" || return $?
+    agentvm_json image info "$1"
+}
+
+# agentvm_image_info_row  <  image info JSON  ->  one row: fields 1-11 as agentvm_status_image_rows,
+# then
+#   12 guestFeatures (comma-joined)   13 missing (the features a guest update would add,
+#      comma-joined)   14 provisionSeconds (how long the build took, whole seconds)
+#   15 fullDiskAccess (granted, not-granted, or "-" when it was never checked)   16 its checkedAt
+#   17 commandLineTools   18 cpus   19 memoryGB   20 bytes (the space the image takes)
+#   21 unsharedBytes (what deleting it frees)   22 addedBytes (what it added over the image it
+#      was built from)
+agentvm_image_info_row() {
+    /usr/bin/jq -r "$agentvm_jq_defs$agentvm_jq_image_defs"' image_cells + [
+        (.guestFeatures // [] | if length == 0 then null else join(",") end),
+        ([.needs // [] | .[] | select(.kind == "guest-update") | .missing // [] | .[]]
+            | if length == 0 then null else join(",") end),
+        (if .provisionSeconds == null then null else .provisionSeconds | floor end),
+        (if .fullDiskAccess == null then null elif .fullDiskAccess.granted then "granted" else "not-granted" end),
+        .fullDiskAccess.checkedAt, .commandLineTools,
+        .cpuCount, (if .memoryBytes == null then null else .memoryBytes / 1073741824 | floor end),
+        .diskUsage.bytes, .diskUsage.unsharedBytes, .addedOverBase.bytes ] | row'
+}
+
+# agentvm_image_delete <name>  ->  0 when agent-vm deleted the image and its disk. agent-vm
+# refuses while another agent-vm process uses it (a build, an update, a box being made from it).
+# Boxes and images made from it keep working: they are clones.
+agentvm_image_delete() {
+    _agentvm_need_name image "$1" || return $?
+    agentvm_json image delete "$1" >/dev/null
 }
 
 # agentvm_status_vm_row  <  status JSON  ->  count, limit: the virtual machines running on this

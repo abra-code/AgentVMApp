@@ -128,11 +128,12 @@
                   { "viewType": "Text" },
                   { "viewType": "Text" },
                   { "viewType": "Text" },
-                  { "viewType": "Button", "actionContext": "rowIndex" }
+                  { "viewType": "Button", "actionContext": "rowIndex", "actionID": "AgentVM.main.image.details" }
                 ],
                 "widths": [150, 24, 90, 60, 110, 260, 150, 50],
                 "minWidths": [90, 20, 60, 50, 70, 100, 80, 40],
                 "actionID": "AgentVM.main.image.selected",
+                "doubleClickActionID": "AgentVM.main.image.details",
                 "frame": { "maxWidth": "infinity", "minHeight": 130.0, "maxHeight": "infinity" }
               }
             },
@@ -177,7 +178,7 @@
                       "properties": { "hidden": true, "spacing": 8.0 },
                       "children": [
                         { "type": "Button", "id": 361, "properties": { "title": "New Box from It...", "disabled": true } },
-                        { "type": "Button", "id": 362, "properties": { "title": "Details...", "disabled": true } }
+                        { "type": "Button", "id": 362, "properties": { "title": "Details...", "actionID": "AgentVM.main.image.details" } }
                       ]
                     }
                   ]

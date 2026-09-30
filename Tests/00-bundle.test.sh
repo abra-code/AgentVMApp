@@ -23,12 +23,17 @@ check "no document types"                      "" \
     "$(/usr/bin/plutil -extract CFBundleDocumentTypes json -o - "$APP_INFO_PLIST" 2>/dev/null)"
 
 section "Command.json"
-check "one command so far, the main one"       "1"       "$(command_value '.COMMAND_LIST | length')"
-check "its name, which names the scripts"      "AgentVM" "$(command_value '.COMMAND_LIST[0].NAME')"
+check "the main command first"                 "-"       "$(command_value '.COMMAND_LIST[0].COMMAND_ID // "-"')"
+check "every command named AgentVM, which names the scripts" "AgentVM" "$(command_value '[.COMMAND_LIST[].NAME] | unique | join(" ")')"
 check "its window is AgentVM.json"             "AgentVM" "$(command_value '.COMMAND_LIST[0].ACTIONUI_WINDOW.JSON_NAME')"
 check_exists "and that file exists"            "$APP_RESOURCES/Base.lproj/AgentVM.json"
 check "the window does not block the app"      "false"   "$(command_value '.COMMAND_LIST[0].ACTIONUI_WINDOW.IS_BLOCKING')"
 check "the engine is told macOS 27 as well"    "27.0"    "$(command_value '.COMMAND_LIST[0].REQUIRED_MAC_OS_MIN_VERSION')"
+check "every other command opens a window that does not block the app, and it exists" "" \
+    "$(command_value '.COMMAND_LIST[1:][] | select(.ACTIONUI_WINDOW.IS_BLOCKING != false) | .COMMAND_ID')$(
+        command_value '.COMMAND_LIST[1:][].ACTIONUI_WINDOW.JSON_NAME' | while read -r doc; do
+            [ -f "$APP_RESOURCES/Base.lproj/$doc.json" ] || printf '%s ' "$doc"
+        done)"
 
 section "the main command"
 omc_run AgentVM.main

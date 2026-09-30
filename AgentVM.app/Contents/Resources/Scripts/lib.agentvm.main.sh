@@ -53,13 +53,6 @@ MAIN_POLL_BUSY_SECONDS=2
 
 # -- Reading ------------------------------------------------------------------------------------
 
-# main_one_line <text>  ->  the text on one line: tabs and line breaks inside it become spaces.
-# For agent-vm's messages, which go into a row of a cache file and into one Text.
-main_one_line() {
-    printf '%s' "$1" | /usr/bin/tr '\t\n' '  '
-    printf '\n'
-}
-
 # main_read_agentvm <uuid>  ->  agentvm_available's status, with the cache file "agentvm" holding
 # four lines: that status, its one line (the version, or why not), the origin, the binary.
 main_read_agentvm() {
@@ -89,7 +82,7 @@ main_read_doctor() {
     _rows="$(agentvm_doctor)"
     local _status=$?
     if [ "$_status" -ne 0 ]; then
-        _rows="doctor${ui_tab}failure${ui_tab}$(main_one_line "$(agentvm_last_error "$_status")")"
+        _rows="doctor${ui_tab}failure${ui_tab}$(ui_one_line "$(agentvm_last_error "$_status")")"
     fi
     printf '%s\n' "$_rows" | ui_store "$(ui_cache "$1" doctor.tsv)"
 }
@@ -103,7 +96,7 @@ main_read_status() {
     _json="$(agentvm_status)"
     local _status=$?
     if [ "$_status" -ne 0 ]; then
-        main_one_line "$(agentvm_last_error "$_status")" | ui_store "$_error"
+        ui_one_line "$(agentvm_last_error "$_status")" | ui_store "$_error"
         return "$_status"
     fi
     printf '%s\n' "$_json" | agentvm_status_box_rows | ui_store "$(ui_cache "$1" boxes.tsv)"
@@ -280,11 +273,28 @@ main_image_display_rows() {
         }'
 }
 
-# main_paint_tables <uuid>  ->  both tables from the caches, then the selection again.
+# main_paint_tables <uuid>  ->  both tables from the caches, then the selection again. The rows
+# sent are kept (boxes-shown.tsv, images-shown.tsv): a row's button and a double-click name
+# their row by its index in what the table shows, which main_shown_name turns back into a name.
 main_paint_tables() {
-    main_box_display_rows "$1" | "$dialog" "$1" "$MAIN_BOXES_ID" omc_table_set_rows_from_stdin
-    main_image_display_rows "$1" | "$dialog" "$1" "$MAIN_IMAGES_ID" omc_table_set_rows_from_stdin
+    local _boxes="$(ui_cache "$1" boxes-shown.tsv)"
+    local _images="$(ui_cache "$1" images-shown.tsv)"
+    main_box_display_rows "$1" | ui_store "$_boxes"
+    main_image_display_rows "$1" | ui_store "$_images"
+    "$dialog" "$1" "$MAIN_BOXES_ID" omc_table_set_rows_from_stdin < "$_boxes"
+    "$dialog" "$1" "$MAIN_IMAGES_ID" omc_table_set_rows_from_stdin < "$_images"
     main_reselect "$1"
+}
+
+# main_shown_name <uuid> <boxes|images> <row index, from 0>  ->  the name in that row of what the
+# table shows, or nothing.
+main_shown_name() {
+    case "$3" in
+        ''|*[!0123456789]*) return 0 ;;
+    esac
+    local _file="$(ui_cache "$1" "$2-shown.tsv")"
+    [ -f "$_file" ] || return 0
+    /usr/bin/awk -F'\t' -v n="$(( $3 + 1 ))" 'NR == n { print $1; exit }' "$_file"
 }
 
 # main_reselect <uuid>  ->  the selected row highlighted again, by name; a selection whose box or
@@ -357,35 +367,6 @@ main_now() {
     /bin/date -u +%s
 }
 
-# main_seconds_since_epoch <ISO 8601 time, as agent-vm writes it: 2026-09-29T14:02:10Z>
-#   ->  that time as seconds since 1970, or nothing when it is not in that form.
-main_seconds_since_epoch() {
-    case "$1" in
-        [0123456789][0123456789][0123456789][0123456789]-*T*Z) ;;
-        *) return 0 ;;
-    esac
-    /bin/date -j -u -f '%Y-%m-%dT%H:%M:%SZ' "$1" +%s 2>/dev/null
-}
-
-# main_names_text <name...>  ->  "a", "a and b", "a, b and c".
-main_names_text() {
-    local _text=""
-    local _count=$#
-    local _i=0
-    local _name
-    for _name; do
-        _i=$((_i + 1))
-        if [ "$_i" -eq 1 ]; then
-            _text="$_name"
-        elif [ "$_i" -eq "$_count" ]; then
-            _text="$_text and $_name"
-        else
-            _text="$_text, $_name"
-        fi
-    done
-    printf '%s\n' "$_text"
-}
-
 # main_attention_lines <uuid>  ->  the things that need attention, most important first, one
 # line each, at most MAIN_ATTENTION_MAX:
 #   - images that need a guest update (after an agent-vm update);
@@ -412,7 +393,7 @@ main_attention_lines() {
             if [ "$#" -eq 1 ]; then
                 printf 'Image %s needs a guest update for agent-vm %s.\n' "$1" "$_version"
             else
-                printf '%s images need a guest update for agent-vm %s: %s.\n' "$#" "$_version" "$(main_names_text "$@")"
+                printf '%s images need a guest update for agent-vm %s: %s.\n' "$#" "$_version" "$(ui_names_text "$@")"
             fi
         fi
         _names="$(main_rows "$_uuid" images | /usr/bin/awk -F'\t' '(","$8",") ~ /,full-disk-access,/ { printf "%s ", $1 }')"
@@ -421,7 +402,7 @@ main_attention_lines() {
             if [ "$#" -eq 1 ]; then
                 printf 'Image %s needs Full Disk Access, or programs in its boxes cannot open Desktop, Documents or Downloads.\n' "$1"
             else
-                printf '%s images need Full Disk Access, or programs in their boxes cannot open Desktop, Documents or Downloads: %s.\n' "$#" "$(main_names_text "$@")"
+                printf '%s images need Full Disk Access, or programs in their boxes cannot open Desktop, Documents or Downloads: %s.\n' "$#" "$(ui_names_text "$@")"
             fi
         fi
         _names="$(main_rows "$_uuid" boxes | /usr/bin/awk -F'\t' '$13 != "true" && (","$18",") ~ /,recreate,/ { printf "%s:%s ", $1, $3 }')"
@@ -435,7 +416,7 @@ main_attention_lines() {
                 for _box; do
                     _boxes="$_boxes ${_box%%:*}"
                 done
-                printf '%s boxes were made before a guest update of their image: %s. Recreate them to get the update (what was changed inside them is lost).\n' "$#" "$(main_names_text $_boxes)"
+                printf '%s boxes were made before a guest update of their image: %s. Recreate them to get the update (what was changed inside them is lost).\n' "$#" "$(ui_names_text $_boxes)"
             fi
         fi
         main_rows "$_uuid" images | /usr/bin/awk -F'\t' '$2 == "failed" {
@@ -448,7 +429,7 @@ main_attention_lines() {
         main_rows "$_uuid" boxes | /usr/bin/cut -f1,2,7,10,11 | while IFS="$ui_tab" read -r _name _state _owner _execs _started; do
             [ "$_state" = "running" ] && [ "$_owner" = "-" ] || continue
             case "$_execs" in -|0) ;; *) continue ;; esac
-            _since="$(main_seconds_since_epoch "$_started")"
+            _since="$(ui_seconds_since_epoch "$_started")"
             [ -n "$_since" ] || continue
             _hours=$(( (_now - _since) / 3600 ))
             [ "$_hours" -ge "$MAIN_IDLE_BOX_HOURS" ] || continue

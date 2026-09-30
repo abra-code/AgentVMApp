@@ -17,14 +17,15 @@ AB=../OMC/Distribution/AppletBuilder.app/Contents/Resources/Agents/appletbuilder
 | File | What it covers |
 |---|---|
 | `lib.test.agentvm.sh` | sourced by every file: the guards that keep a test out of the real home folder, and the app's accessors |
-| `00-bundle.test.sh` | what `Info.plist` and `Command.json` declare |
+| `00-bundle.test.sh` | what `Info.plist` and `Command.json` declare: the main command first, and the windows the others open |
 | `10-agentvm-library.test.sh` | `lib.agentvm.sh`: which agent-vm runs, when it can be used, the store setting, error messages, and the rows read from agent-vm's JSON, against the fake and the fixtures |
 | `11-agentvm-contract.test.sh` | the library against a real agent-vm on an empty store: the JSON fields the fixtures have are still there |
 | `20-main-window.test.sh` | the main window: the face it shows, the header, both tables, the selection across them, the poll loop, activation and closing |
 | `21-attention.test.sh` | the main window's attention lines: which, in what order, at most three |
+| `30-image-window.test.sh` | an image's window: opening it from the main window (Details, a row's button, a double-click), one window per image, what it shows, Show in Finder, Delete and its question |
 | `98-command-wiring.test.sh` | every command has the exact script the engine looks for, every reference resolves, every script is reachable |
 | `helpers/fake_agent_vm.sh` | agent-vm, answered from `fixtures/agentvm/` |
-| `helpers/fake_ps.sh`, `helpers/fake_sleep.sh` | the process list (a box's owner) and the poll loop's wait, answered and recorded |
+| `helpers/fake_ps.sh`, `helpers/fake_sleep.sh`, `helpers/fake_open.sh` | the process list (a box's owner), the poll loop's wait and Finder (Show in Finder), answered and recorded |
 | `helpers/refresh_agentvm_fixtures.sh` | captures `fixtures/agentvm/` from a real agent-vm |
 
 ## After an agent-vm update

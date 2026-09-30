@@ -13,8 +13,8 @@
 #     document resolves to a declared command or to a script of exactly that name, case
 #     included (the engine dispatches case-sensitively; the harness's resolver does not);
 #   - every handler script is named by something: a declared command, a subcommand, an actionID,
-#     or an omc_next_command in another script. An unreachable script is dead code, or a
-#     reference that was renamed on one side only.
+#     an omc_next_command in another script, or an alert button's action. An unreachable script
+#     is dead code, or a reference that was renamed on one side only.
 #
 # POSIX sh only. Validate with "sh -n", never "bash -n".
 . "${OMCTEST_LIB:?set OMCTEST_LIB, or run via: appletbuilder test}"
@@ -29,14 +29,16 @@ declared_ids() {
 }
 
 # referenced_ids  ->  every command id something refers to: the window subcommands in
-# Command.json, every *actionID in the window documents, and every omc_next_command target
-# written as a literal in the scripts.
+# Command.json, every *actionID in the window documents, every omc_next_command target written
+# as a literal in the scripts, and every action of an alert button the scripts present
+# ("Delete:destructive:AgentVM.image.delete.confirmed").
 referenced_ids() {
     /usr/bin/jq -r '.COMMAND_LIST[] | .ACTIONUI_WINDOW // {} | to_entries[]
         | select(.key | endswith("SUBCOMMAND_ID")) | .value' "$COMMANDS"
     /usr/bin/jq -r '.. | objects | to_entries[] | select(.key | test("[aA]ctionID$")) | .value | strings' \
         "$DOCUMENTS"/*.json
     /usr/bin/sed -n 's/.*"\$next_command" "\$OMC_CURRENT_COMMAND_GUID" "\([^"]*\)".*/\1/p' "$APP_SCRIPTS"/*.sh
+    /usr/bin/grep -h -o '"[^":]*:[a-z]*:AgentVM[.][^"]*"' "$APP_SCRIPTS"/*.sh | /usr/bin/sed -e 's/^.*://' -e 's/"$//'
 }
 
 # handler_scripts  ->  the stem of every script that is not a library.

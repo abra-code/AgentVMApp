@@ -261,6 +261,37 @@ rows="$(lib agentvm_status_image_rows < "$FIXTURES_AGENTVM/status-variety.json")
 check "two needs, comma-joined"      "full-disk-access,guest-update" "$(printf '%s\n' "$rows" | row_named dev-node | col 8)"
 check "a failed image and why"       "failed${TAB}the build was canceled" "$(printf '%s\n' "$rows" | row_named latest-test | col 2-3)"
 
+section "image info row (image-info.json)"
+row="$(lib agentvm_image_info_row < "$FIXTURES_AGENTVM/image-info.json")"
+name="$(printf '%s\n' "$row" | col 1)"
+check "twenty-two fields"            "22" "$(printf '%s\n' "$row" | field_count)"
+check "the first eleven are status's row of the same image" \
+    "$(lib agentvm_status_image_rows < "$FIXTURES_AGENTVM/status.json" | row_named "$name")" "$(printf '%s\n' "$row" | col 1-11)"
+check "its guest daemon's features" "terminal,prompt-notices,wallpaper,time-sync,user-session,terminal-pixels" "$(printf '%s\n' "$row" | col 12)"
+check "  none missing"                "-"    "$(printf '%s\n' "$row" | col 13)"
+check "the build took 116 s"         "116"  "$(printf '%s\n' "$row" | col 14)"
+check "Full Disk Access, and when"   "granted${TAB}2026-09-27T07:32:54Z" "$(printf '%s\n' "$row" | col 15-16)"
+check "4 CPUs, 8 GB"                 "4${TAB}8" "$(printf '%s\n' "$row" | col 18-19)"
+check "its space, its own, and added over its base" "39008120832${TAB}547110912${TAB}1917476864" "$(printf '%s\n' "$row" | col 20-22)"
+check "what a guest update adds"     "terminal-pixels,wallpaper" \
+    "$(/usr/bin/jq '.needs = [{kind: "full-disk-access"}, {kind: "guest-update", missing: ["terminal-pixels", "wallpaper"]}]' \
+        "$FIXTURES_AGENTVM/image-info.json" | lib agentvm_image_info_row | col 13)"
+check "no Full Disk Access"          "not-granted" \
+    "$(/usr/bin/jq '.fullDiskAccess.granted = false' "$FIXTURES_AGENTVM/image-info.json" | lib agentvm_image_info_row | col 15)"
+check "  never checked: -"           "-${TAB}-" \
+    "$(/usr/bin/jq 'del(.fullDiskAccess)' "$FIXTURES_AGENTVM/image-info.json" | lib agentvm_image_info_row | col 15-16)"
+
+section "image info and delete: names agent-vm would refuse are refused first"
+fake_reset
+with_fake agentvm_image_info "-rf" >/dev/null
+check "image info"                   "2" "$?"
+with_fake agentvm_image_delete "Dev" >/dev/null
+check "image delete"                 "2" "$?"
+check "  with the reason"             "yes" "$(lib agentvm_last_error 2 | /usr/bin/grep -q -F '"Dev" is not a valid image name: agent-vm accepts lower-case letters' && echo yes)"
+check "  and agent-vm never ran"      "" "$(fake_log)"
+with_fake agentvm_image_delete dev-acp
+check "a valid name reaches agent-vm" "0${TAB}image delete dev-acp --json" "$?${TAB}$(fake_log)"
+
 section "the virtual machine row"
 check "none running, two at most"    "0${TAB}2" "$(lib agentvm_status_vm_row < "$FIXTURES_AGENTVM/status.json")"
 check "one running"                  "1${TAB}2" "$(lib agentvm_status_vm_row < "$FIXTURES_AGENTVM/status-variety.json")"
@@ -288,6 +319,9 @@ missing="$(lib agentvm_status_image_rows < "$FIXTURES_AGENTVM/status.json" | /us
     BEGIN { n = split("1:name 2:state 4:macOS 5:macOSBuild 9:guestVersion 10:createdAt 11:path", f, " ") }
     { for (i = 1; i <= n; i++) { split(f[i], p, ":"); if ($p[1] == "-") printf "%s ", p[2] } }')"
 check "no image field is absent" "" "$missing"
+check "no image info field is absent" "" "$(lib agentvm_image_info_row < "$FIXTURES_AGENTVM/image-info.json" | /usr/bin/awk -F'\t' '
+    BEGIN { n = split("12:guestFeatures 14:provisionSeconds 15:fullDiskAccess 16:checkedAt 17:commandLineTools 18:cpus 19:memoryGB 20:bytes 21:unsharedBytes 22:addedBytes", f, " ") }
+    { for (i = 1; i <= n; i++) { split(f[i], p, ":"); if ($p[1] == "-") printf "%s ", p[2] } }')"
 check "the virtual machine count is there" "0" \
     "$(lib agentvm_status_vm_row < "$FIXTURES_AGENTVM/status.json" | col 1)"
 check "doctor has the checks the window reads" "virtualization disk space running VMs " \

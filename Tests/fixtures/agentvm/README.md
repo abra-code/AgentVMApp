@@ -5,6 +5,7 @@ Real `--json` answers of agent-vm, which `Tests/helpers/fake_agent_vm.sh` serves
 - `version.json` - `agent-vm version --json`.
 - `doctor.json` - `agent-vm doctor --json` (67 GB free). Every check `ok`, the signature included (the installed, Developer ID signed agent-vm); no virtual machine ran.
 - `status.json` - `agent-vm status --json` on a store with seven images (`dev`, `dev-acp`, `dev-agents`, `dev-node`, `dev-xcode`, `dev-xcode-ios`, `latest-test`) and three stopped boxes (`cadabra-spike`, `s3`, `try1`). Four images need Full Disk Access, and nothing needs a guest update or recreating. No job ran in the last hour (`jobs` is empty). With every box stopped, the fields a running box adds (`pid`, `ownerPid`, `project` and the rest) are absent; `status-variety.json` carries them.
+- `image-info.json` - `agent-vm image info <name> --json` of the first ready image built from another (`dev-acp`, built from `dev-node`, with Full Disk Access): the record with what its disk takes (`diskUsage`) and what it added over its base (`addedOverBase`). The fake answers it for that image only; any other name is not found, unless a test leaves `image-info-<name>.json` in the fake's state folder.
 - `status-empty.json` - `agent-vm status --json` on an empty store.
 
 Captured on 2026-09-29 from agent-vm 0.4.3 with `Tests/helpers/refresh_agentvm_fixtures.sh`, which replaces the home folder with `/Users/you` and sorts keys. When agent-vm's JSON changes, run it again with the new agent-vm and rerun the suite: the drift checks fail when a field the library reads is gone.

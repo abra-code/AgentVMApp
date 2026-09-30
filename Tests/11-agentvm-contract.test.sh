@@ -95,6 +95,15 @@ check "  a VM limit that is a number" "yes" \
 check "  a VM count that is a number, or - when processes cannot be listed" "yes" \
     "$(printf '%s\n' "$vm_row" | col 1 | /usr/bin/awk '/^([0123456789]+|-)$/ { print "yes" }')"
 
+section "image info and image delete of an image the store does not have"
+# The image window reads the refusal as agent-vm's own message, from its "Error: " line.
+real_lib agentvm_image_info nosuch > /dev/null
+check "image info fails" "1" "$?"
+check "  saying there is no such image" "no image nosuch" "$(lib agentvm_last_error | /usr/bin/cut -d';' -f1)"
+real_lib agentvm_image_delete nosuch
+check "image delete fails" "1" "$?"
+check "  saying there is no such image" "no image nosuch" "$(lib agentvm_last_error | /usr/bin/cut -d';' -f1)"
+
 section "doctor --json"
 rows="$(real_lib agentvm_doctor)"
 check "answers" "0" "$?"

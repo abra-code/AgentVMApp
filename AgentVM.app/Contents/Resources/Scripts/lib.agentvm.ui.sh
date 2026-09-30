@@ -10,8 +10,8 @@
 # folder under $TMPDIR for what agent-vm last answered, so a handler that only repaints does not
 # run agent-vm again. The window's close handler removes both.
 #
-# Seams for the tests: AGENTVM_APP_PS (the process list, which a sandboxed test cannot read) and
-# AGENTVM_APP_SLEEP (the poll loop's wait).
+# Seams for the tests: AGENTVM_APP_PS (the process list, which a sandboxed test cannot read),
+# AGENTVM_APP_SLEEP (the poll loop's wait) and AGENTVM_APP_OPEN (Finder, for Show).
 #
 # POSIX sh (bash 3.2 in POSIX mode) only. Validate with "sh -n".
 [ -n "${__AGENTVM_APP_UI_LIB:-}" ] && return 0
@@ -24,6 +24,7 @@ next_command="$OMC_OMC_SUPPORT_PATH/omc_next_command"
 pasteboard="$OMC_OMC_SUPPORT_PATH/pasteboard"
 ps_tool="${AGENTVM_APP_PS:-/bin/ps}"
 sleep_tool="${AGENTVM_APP_SLEEP:-/bin/sleep}"
+open_tool="${AGENTVM_APP_OPEN:-/usr/bin/open}"
 ui_tab="$(printf '\t')"
 
 # ui_key <name> <window uuid>  ->  the pasteboard key of one value of one window.
@@ -102,4 +103,145 @@ ui_process_name() {
 ui_app_alive() {
     [ -n "${OMC_APP_PROCESS_ID:-}" ] || return 1
     kill -0 "$OMC_APP_PROCESS_ID" 2>/dev/null
+}
+
+# ui_one_line <text>  ->  the text on one line: tabs and line breaks inside it become spaces.
+# For agent-vm's messages, which go into a row of a cache file and into one Text.
+ui_one_line() {
+    printf '%s' "$1" | /usr/bin/tr '\t\n' '  '
+    printf '\n'
+}
+
+# ui_seconds_since_epoch <ISO 8601 time, as agent-vm writes it: 2026-09-29T14:02:10Z>
+#   ->  that time as seconds since 1970, or nothing when it is not in that form.
+ui_seconds_since_epoch() {
+    case "$1" in
+        [0123456789][0123456789][0123456789][0123456789]-*T*Z) ;;
+        *) return 0 ;;
+    esac
+    /bin/date -j -u -f '%Y-%m-%dT%H:%M:%SZ' "$1" +%s 2>/dev/null
+}
+
+# ui_names_text <name...>  ->  "a", "a and b", "a, b and c".
+ui_names_text() {
+    local _text=""
+    local _count=$#
+    local _i=0
+    local _name
+    for _name; do
+        _i=$((_i + 1))
+        if [ "$_i" -eq 1 ]; then
+            _text="$_name"
+        elif [ "$_i" -eq "$_count" ]; then
+            _text="$_text and $_name"
+        else
+            _text="$_text, $_name"
+        fi
+    done
+    printf '%s\n' "$_text"
+}
+
+# ui_date_text <ISO 8601 time>  ->  its day in this Mac's time zone ("Sep 23, 2026"), or nothing.
+ui_date_text() {
+    local _seconds="$(ui_seconds_since_epoch "$1")"
+    [ -n "$_seconds" ] || return 0
+    /bin/date -r "$_seconds" '+%b %e, %Y' | /usr/bin/sed 's/  / /'
+}
+
+# ui_duration_text <seconds>  ->  "45 s", "2 min", "1 h 5 min", or nothing when it is not a number.
+ui_duration_text() {
+    case "$1" in
+        ''|*[!0123456789]*) return 0 ;;
+    esac
+    if [ "$1" -lt 60 ]; then
+        printf '%s s\n' "$1"
+        return 0
+    fi
+    # Rounded to whole minutes first, so 59 min 45 s is "1 h 0 min", never "60 min".
+    local _minutes=$(( ($1 + 30) / 60 ))
+    if [ "$_minutes" -lt 60 ]; then
+        printf '%s min\n' "$_minutes"
+    else
+        printf '%s h %s min\n' "$(( _minutes / 60 ))" "$(( _minutes % 60 ))"
+    fi
+}
+
+# ui_size_text <bytes>  ->  "37.4 GB" or "296 MB", in decimal units as agent-vm and Finder write
+# them, or nothing when it is not a number.
+ui_size_text() {
+    case "$1" in
+        ''|*[!0123456789]*) return 0 ;;
+    esac
+    /usr/bin/awk -v b="$1" 'BEGIN {
+        if (b >= 999500000) printf "%.1f GB\n", b / 1000000000
+        else printf "%d MB\n", (b + 500000) / 1000000 }'
+}
+
+# -- Item windows --------------------------------------------------------------------------------
+# One window per image and per box. A pasteboard key per item names its open window as
+# "<app pid> <window uuid>", so a second Details brings that window to the front. Named
+# pasteboards outlive the app, so an entry another run of the app left (a crash skips the close
+# handler) is recognized by its pid and ignored; without a pid of its own, a handler takes no
+# entry and no request for this run's.
+#
+# Opening one hands the item to the new window through a request key, read and cleared by the
+# window's init handler, since a chained command carries no arguments. The request carries the
+# pid too: a window opened by a URL naming the command directly finds no request of this run's
+# and closes itself.
+
+AGENTVM_OPEN_REQUEST_KEY="agentvm_open_request"
+
+# ui_item_key <image|box> <name>  ->  the pasteboard key naming that item's window.
+ui_item_key() {
+    printf 'agentvm_window_%s_%s\n' "$1" "$2"
+}
+
+# ui_item_window <image|box> <name>  ->  the uuid of this run's open window for that item, or
+# nothing.
+ui_item_window() {
+    local _entry="$("$pasteboard" "$(ui_item_key "$1" "$2")" get)"
+    [ -n "$_entry" ] && [ -n "${OMC_APP_PROCESS_ID:-}" ] || return 0
+    [ "${_entry%% *}" = "$OMC_APP_PROCESS_ID" ] || return 0
+    printf '%s\n' "${_entry#* }"
+}
+
+# ui_item_claim <image|box> <name> <uuid>  ->  that window becomes the item's window.
+ui_item_claim() {
+    "$pasteboard" "$(ui_item_key "$1" "$2")" set "${OMC_APP_PROCESS_ID:-} $3"
+}
+
+# ui_item_release <image|box> <name> <uuid>  ->  the item has no window, if that one was it.
+ui_item_release() {
+    local _window="$(ui_item_window "$1" "$2")"
+    [ "$_window" = "$3" ] || return 0
+    "$pasteboard" "$(ui_item_key "$1" "$2")" set ""
+}
+
+# ui_item_open <image|box> <name> <command guid>  ->  that item's window in front: the open one,
+# or a new one, chained from the handler whose guid is given.
+ui_item_open() {
+    agentvm_valid_name "$2" || return 1
+    local _window="$(ui_item_window "$1" "$2")"
+    if [ -n "$_window" ]; then
+        "$dialog" "$_window" omc_window omc_select
+        return 0
+    fi
+    "$pasteboard" "$AGENTVM_OPEN_REQUEST_KEY" set "${OMC_APP_PROCESS_ID:-} $1:$2"
+    "$next_command" "$3" "AgentVM.$1"
+}
+
+# ui_item_request <image|box>  ->  the name a new window of that kind was opened for, or nothing;
+# the request is cleared either way, so it is read once.
+ui_item_request() {
+    local _request="$("$pasteboard" "$AGENTVM_OPEN_REQUEST_KEY" get)"
+    "$pasteboard" "$AGENTVM_OPEN_REQUEST_KEY" set ""
+    [ -n "$_request" ] && [ -n "${OMC_APP_PROCESS_ID:-}" ] || return 0
+    [ "${_request%% *}" = "$OMC_APP_PROCESS_ID" ] || return 0
+    local _item="${_request#* }"
+    case "$_item" in
+        "$1":*) ;;
+        *) return 0 ;;
+    esac
+    agentvm_valid_name "${_item#*:}" || return 0
+    printf '%s\n' "${_item#*:}"
 }

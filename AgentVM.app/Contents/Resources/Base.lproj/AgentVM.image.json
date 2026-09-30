@@ -1,0 +1,107 @@
+{
+  "type": "VStack",
+  "properties": {
+    "spacing": 8.0,
+    "alignment": "leading",
+    "frame": {
+      "minWidth": 600.0,
+      "minHeight": 330.0,
+      "idealWidth": 720.0,
+      "idealHeight": 380.0
+    },
+    "padding": "default"
+  },
+  "children": [
+    {
+      "type": "Text",
+      "id": 401,
+      "properties": { "text": "", "font": "headline" }
+    },
+    {
+      "type": "Text",
+      "id": 402,
+      "properties": { "text": "", "foregroundStyle": "red" }
+    },
+    {
+      "type": "Text",
+      "id": 403,
+      "properties": { "text": "" }
+    },
+    {
+      "type": "Text",
+      "id": 404,
+      "properties": { "text": "" }
+    },
+    {
+      "type": "Text",
+      "id": 405,
+      "properties": { "text": "" }
+    },
+    {
+      "type": "Text",
+      "id": 406,
+      "properties": { "text": "" }
+    },
+    {
+      "type": "HStack",
+      "properties": { "spacing": 8.0 },
+      "children": [
+        {
+          "type": "Text",
+          "id": 407,
+          "properties": { "text": "", "foregroundStyle": "secondary" }
+        },
+        { "type": "Spacer" },
+        {
+          "type": "Button",
+          "id": 408,
+          "properties": { "title": "Show in Finder", "disabled": true, "actionID": "AgentVM.image.show" }
+        }
+      ]
+    },
+    { "type": "Divider" },
+    {
+      "type": "Text",
+      "id": 410,
+      "properties": { "text": "" }
+    },
+    {
+      "type": "Text",
+      "id": 411,
+      "properties": { "text": "" }
+    },
+    { "type": "Spacer" },
+    {
+      "type": "HStack",
+      "properties": { "spacing": 8.0 },
+      "children": [
+        {
+          "type": "Button",
+          "id": 420,
+          "properties": { "title": "New Box...", "disabled": true }
+        },
+        {
+          "type": "Button",
+          "id": 421,
+          "properties": { "title": "New Image from This...", "disabled": true }
+        },
+        {
+          "type": "Button",
+          "id": 422,
+          "properties": { "title": "Update Guest", "disabled": true }
+        },
+        {
+          "type": "Button",
+          "id": 423,
+          "properties": { "title": "Full Disk Access...", "disabled": true }
+        },
+        { "type": "Spacer" },
+        {
+          "type": "Button",
+          "id": 424,
+          "properties": { "title": "Delete...", "disabled": true, "actionID": "AgentVM.image.delete" }
+        }
+      ]
+    }
+  ]
+}
