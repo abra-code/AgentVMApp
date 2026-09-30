@@ -64,8 +64,8 @@ capture version version --json
 capture doctor doctor --json
 capture status status --json
 
-# One image's window reads `image info`: the first ready image built from another, which has every
-# field the window shows (a recipe, the space added over its base).
+# The image detail pane reads `image info`: the first ready image built from another, which has
+# every field the pane shows (a recipe, the space added over its base).
 info_image="$(/usr/bin/jq -r '[.images[] | select(.state == "ready" and .derivedFrom != null)][0].name // empty' "$fixtures/status.json")"
 if [ -n "$info_image" ]; then
     capture image-info image info "$info_image" --json

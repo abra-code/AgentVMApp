@@ -29,11 +29,9 @@ check "its window is AgentVM.json"             "AgentVM" "$(command_value '.COMM
 check_exists "and that file exists"            "$APP_RESOURCES/Base.lproj/AgentVM.json"
 check "the window does not block the app"      "false"   "$(command_value '.COMMAND_LIST[0].ACTIONUI_WINDOW.IS_BLOCKING')"
 check "the engine is told macOS 27 as well"    "27.0"    "$(command_value '.COMMAND_LIST[0].REQUIRED_MAC_OS_MIN_VERSION')"
-check "every other command opens a window that does not block the app, and it exists" "" \
-    "$(command_value '.COMMAND_LIST[1:][] | select(.ACTIONUI_WINDOW.IS_BLOCKING != false) | .COMMAND_ID')$(
-        command_value '.COMMAND_LIST[1:][].ACTIONUI_WINDOW.JSON_NAME' | while read -r doc; do
-            [ -f "$APP_RESOURCES/Base.lproj/$doc.json" ] || printf '%s ' "$doc"
-        done)"
+# One window: images and boxes are shown in its detail panes, not in windows of their own.
+check "the main command is the only one"     "1"       "$(command_value '.COMMAND_LIST | length')"
+check "and AgentVM.json the only window document" "AgentVM.json" "$(/bin/ls "$APP_RESOURCES/Base.lproj" | /usr/bin/grep -v '^MainMenu\.json$' | /usr/bin/grep '\.json$')"
 
 section "the main command"
 omc_run AgentVM.main

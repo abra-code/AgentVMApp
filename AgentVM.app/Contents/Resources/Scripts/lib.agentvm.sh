@@ -352,8 +352,8 @@ def image_cells: [
     .guestVersion, .createdAt, .path ];'
 
 # agentvm_image_info <name>  ->  `agent-vm image info <name> --json`: the image's record and
-# what its disk takes, which agent-vm measures (0.1-0.3 s), so it is read for one image's window
-# and never in the poll loop.
+# what its disk takes, which agent-vm measures (0.1-0.3 s), so it is read for the selected image
+# only and never in the poll loop.
 agentvm_image_info() {
     _agentvm_need_name image "$1" || return $?
     agentvm_json image info "$1"

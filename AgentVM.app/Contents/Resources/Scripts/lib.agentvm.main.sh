@@ -16,8 +16,9 @@
 #
 # READING AND PAINTING ARE SEPARATE. main_read_* run agent-vm and leave its answers in the
 # window's cache folder (lib.agentvm.ui.sh); main_paint_* only read the caches. So a handler that
-# repaints after a selection runs no agent-vm, and the poll loop reads only `status`, the one
-# cheap call (doctor asks the virtualization framework; it is read on opening and activation).
+# repaints runs no agent-vm, and the poll loop reads only `status`, the one cheap call (doctor asks
+# the virtualization framework and `image info` measures a disk: they are read on opening and
+# activation, and `image info` for the selected image also on selecting it).
 #
 # THE POLL LOOP keeps the lists current while the window is open, so boxes started from
 # Terminal or Cadabra appear without a click: every MAIN_POLL_IDLE_SECONDS, or every
@@ -53,6 +54,7 @@ MAIN_BOX_STATE_ID=322
 MAIN_BOX_MAINTENANCE_ID=323
 MAIN_RUNNING_BOX_ACTIONS_ID=330
 MAIN_STOPPED_BOX_ACTIONS_ID=340
+MAIN_BOX_SHOW_ID=342
 MAIN_BOX_IMAGE_ID=351
 MAIN_BOX_NETWORK_ID=352
 MAIN_BOX_PROJECT_ID=353
@@ -72,6 +74,8 @@ MAIN_IMAGE_DETAIL_ID=420
 MAIN_IMAGE_NAME_ID=421
 MAIN_IMAGE_STATE_ID=422
 MAIN_IMAGE_MAINTENANCE_ID=423
+MAIN_IMAGE_SHOW_ID=433
+MAIN_IMAGE_DELETE_ID=434
 MAIN_IMAGE_MACOS_ID=451
 MAIN_IMAGE_BASE_ID=452
 MAIN_IMAGE_TOOLS_ID=453
@@ -80,6 +84,9 @@ MAIN_IMAGE_CREATED_ID=455
 MAIN_IMAGE_BOXES_ID=456
 MAIN_IMAGE_DERIVED_ID=457
 MAIN_IMAGE_FOLDER_ID=458
+MAIN_IMAGE_FDA_ID=459
+MAIN_IMAGE_HARDWARE_ID=460
+MAIN_IMAGE_SPACE_ID=461
 
 MAIN_AGENTVM_VERSION_ID=501
 MAIN_AGENTVM_LOCATION_ID=502
@@ -357,28 +364,11 @@ main_image_card_rows() {
         }'
 }
 
-# main_paint_lists <uuid>  ->  both lists from the caches, then the selections again. The rows
-# sent are kept (boxes-shown.tsv, images-shown.tsv): a double-click names its card by its index
-# in what the list shows, which main_shown_name turns back into a name.
+# main_paint_lists <uuid>  ->  both lists from the caches, then the selections again.
 main_paint_lists() {
-    local _boxes="$(ui_cache "$1" boxes-shown.tsv)"
-    local _images="$(ui_cache "$1" images-shown.tsv)"
-    main_box_card_rows "$1" | ui_store "$_boxes"
-    main_image_card_rows "$1" | ui_store "$_images"
-    "$dialog" "$1" "$MAIN_BOXES_ID" omc_table_set_rows_from_stdin < "$_boxes"
-    "$dialog" "$1" "$MAIN_IMAGES_ID" omc_table_set_rows_from_stdin < "$_images"
+    main_box_card_rows "$1" | "$dialog" "$1" "$MAIN_BOXES_ID" omc_table_set_rows_from_stdin
+    main_image_card_rows "$1" | "$dialog" "$1" "$MAIN_IMAGES_ID" omc_table_set_rows_from_stdin
     main_reselect "$1"
-}
-
-# main_shown_name <uuid> <boxes|images> <row index, from 0>  ->  the name in that row of what the
-# list shows, or nothing.
-main_shown_name() {
-    case "$3" in
-        ''|*[!0123456789]*) return 0 ;;
-    esac
-    local _file="$(ui_cache "$1" "$2-shown.tsv")"
-    [ -f "$_file" ] || return 0
-    /usr/bin/awk -F'\t' -v n="$(( $3 + 1 ))" 'NR == n { print $1; exit }' "$_file"
 }
 
 # main_reselect <uuid>  ->  each list's selected card highlighted again, by name; a selection
@@ -534,7 +524,28 @@ main_paint_box_detail() {
         _text="$(ui_date_text "${_created:--}")"
         "$dialog" "$_uuid" "$MAIN_BOX_CREATED_ID" "${_text:--}"
         "$dialog" "$_uuid" "$MAIN_BOX_FOLDER_ID" "$(agentvm_display_path "$_path")"
+        if [ -d "$_path" ]; then
+            ui_enable "$_uuid" "$MAIN_BOX_SHOW_ID" 1
+        else
+            ui_enable "$_uuid" "$MAIN_BOX_SHOW_ID" 0
+        fi
     }
+}
+
+# main_show_folder <uuid> <boxes|images>  ->  the selected box's or image's folder, selected in a
+# Finder window; nothing when there is no selection or the folder is not on this Mac.
+main_show_folder() {
+    local _key=box
+    local _column=17
+    if [ "$2" = "images" ]; then
+        _key=image
+        _column=11
+    fi
+    local _name="$(ui_get "$_key" "$1")"
+    [ -n "$_name" ] || return 0
+    local _folder="$(main_row "$1" "$2" "$_name" | /usr/bin/cut -f"$_column")"
+    [ -n "$_folder" ] && [ -d "$_folder" ] || return 0
+    "$open_tool" -R "$_folder"
 }
 
 # main_image_state_text <state> <failure>  ->  the image detail's state line.
@@ -554,7 +565,55 @@ main_image_state_text() {
     esac
 }
 
+# main_read_image_info <uuid> <name>  ->  agent-vm's status, with `image info` for that image in
+# the cache file image-info.tsv (agentvm_image_info_row's row, or empty after a failure) and why
+# it failed in image-info-error ("<name><TAB><message>", empty after a success). It measures the
+# image's disk (0.1-0.3 s), so it is read for the selected image only: on selecting it, on
+# activation and before Delete asks; never in the poll loop, whose passes reuse the last answer.
+main_read_image_info() {
+    local _error="$(ui_cache "$1" image-info-error)"
+    local _json
+    _json="$(agentvm_image_info "$2")"
+    local _status=$?
+    if [ "$_status" -ne 0 ]; then
+        : | ui_store "$(ui_cache "$1" image-info.tsv)"
+        printf '%s\t%s\n' "$2" "$(ui_one_line "$(agentvm_last_error "$_status")")" | ui_store "$_error"
+        return "$_status"
+    fi
+    printf '%s\n' "$_json" | agentvm_image_info_row | ui_store "$(ui_cache "$1" image-info.tsv)"
+    : | ui_store "$_error"
+    return 0
+}
+
+# main_read_selected_image <uuid>  ->  main_read_image_info for the selected image, when it is
+# still listed; 0 when there is nothing to read.
+main_read_selected_image() {
+    local _name="$(ui_get image "$1")"
+    [ -n "$_name" ] || return 0
+    [ -n "$(main_row "$1" images "$_name")" ] || return 0
+    main_read_image_info "$1" "$_name"
+}
+
+# main_image_info <uuid> <name>  ->  the cached `image info` row, when it is that image's.
+main_image_info() {
+    local _file="$(ui_cache "$1" image-info.tsv)"
+    [ -f "$_file" ] || return 0
+    /usr/bin/awk -F'\t' -v name="$2" '$1 == name { print; exit }' "$_file"
+}
+
+# main_image_info_error <uuid> <name>  ->  why `image info` failed, when the last read was that
+# image's and failed. The name is checked as for the row: selections' handlers overlap.
+main_image_info_error() {
+    [ -z "$(main_image_info "$1" "$2")" ] || return 0
+    local _file="$(ui_cache "$1" image-info-error)"
+    [ -f "$_file" ] || return 0
+    /usr/bin/awk -F'\t' -v name="$2" '$1 == name { sub(/^[^\t]*\t/, ""); print; exit }' "$_file"
+}
+
 # main_paint_image_detail <uuid>  ->  the selected image's detail pane, or the placeholder.
+# `status` gives the image's state and record (fields 1-11), always current; the cached `image
+# info` adds what only it has (fields 12-22: the guest daemon's features, Full Disk Access, the
+# tools, processors and memory, the build's length and the space), as of when it was last read.
 main_paint_image_detail() {
     local _uuid="$1"
     local _name="$(ui_get image "$_uuid")"
@@ -568,29 +627,113 @@ main_paint_image_detail() {
     ui_show "$_uuid" "$MAIN_IMAGE_NONE_ID" 0
     ui_show "$_uuid" "$MAIN_IMAGE_DETAIL_ID" 1
     "$dialog" "$_uuid" "$MAIN_IMAGE_NAME_ID" "$_name"
-    "$dialog" "$_uuid" "$MAIN_IMAGE_MAINTENANCE_ID" "$(main_maintenance_text "$_uuid" images "$_name")"
     local _boxes="$(main_rows "$_uuid" boxes | /usr/bin/awk -F'\t' -v name="$_name" '$3 == name { printf "%s (%s)\n", $1, $2 }')"
     "$dialog" "$_uuid" "$MAIN_IMAGE_BOXES_ID" "$(ui_lines_text "$_boxes")"
     local _derived="$(main_rows "$_uuid" images | /usr/bin/awk -F'\t' -v name="$_name" '$6 == name { print $1 }')"
     "$dialog" "$_uuid" "$MAIN_IMAGE_DERIVED_ID" "$(ui_lines_text "$_derived")"
-    printf '%s\n' "$_row" | {
-        local _n _state _failure _macos _build _based _recipe _needs _guest _created _path _rest
-        IFS="$ui_tab" read -r _n _state _failure _macos _build _based _recipe _needs _guest _created _path _rest
+    local _info="$(main_image_info "$_uuid" "$_name")"
+    local _info_error="$(main_image_info_error "$_uuid" "$_name")"
+    local _maintenance="$(main_maintenance_text "$_uuid" images "$_name")"
+    # The status row's eleven fields, then image info's, or eleven "-" without it.
+    local _extra="-${ui_tab}-${ui_tab}-${ui_tab}-${ui_tab}-${ui_tab}-${ui_tab}-${ui_tab}-${ui_tab}-${ui_tab}-${ui_tab}-"
+    [ -n "$_info" ] && _extra="$(printf '%s\n' "$_info" | /usr/bin/cut -f12-22)"
+    printf '%s\t%s\n' "$_row" "$_extra" | {
+        local _n _state _failure _macos _build _based _recipe _needs _guest _created _path
+        local _features _missing _seconds _fda _checked _clt _cpus _memory _bytes _unshared _added _rest
+        IFS="$ui_tab" read -r _n _state _failure _macos _build _based _recipe _needs _guest _created _path \
+            _features _missing _seconds _fda _checked _clt _cpus _memory _bytes _unshared _added _rest
         "$dialog" "$_uuid" "$MAIN_IMAGE_STATE_ID" "$(main_image_state_text "$_state" "$_failure")"
+
+        # What a guest update adds, when image info said.
+        if [ "$_missing" != "-" ]; then
+            _maintenance="$(printf '%s\n' "$_maintenance" | /usr/bin/awk -v adds="$(printf '%s' "$_missing" | /usr/bin/sed 's/,/, /g')" '
+                /^Needs a guest update for agent-vm .*\.$/ { sub(/\.$/, ", which adds " adds ".") } { print }')"
+        fi
+        "$dialog" "$_uuid" "$MAIN_IMAGE_MAINTENANCE_ID" "$_maintenance"
+
         local _text="$_macos"
         [ "$_macos" != "-" ] && [ "$_build" != "-" ] && _text="$_macos ($_build)"
         "$dialog" "$_uuid" "$MAIN_IMAGE_MACOS_ID" "$_text"
         _text="$_based"
         [ "$_based" = "-" ] && _text="a macOS restore file"
         "$dialog" "$_uuid" "$MAIN_IMAGE_BASE_ID" "$_text"
-        _text="$_recipe"
-        [ "$_recipe" = "-" ] && _text="macOS only"
-        "$dialog" "$_uuid" "$MAIN_IMAGE_TOOLS_ID" "$_text"
-        "$dialog" "$_uuid" "$MAIN_IMAGE_GUEST_ID" "$_guest"
+
+        # An image can have the Command Line Tools without a recipe (image create
+        # --command-line-tools): "macOS only" is for neither.
+        _text=""
+        [ "$_recipe" != "-" ] && _text="$_recipe"
+        [ "$_clt" != "-" ] && _text="${_text:+$_text; }$_clt"
+        "$dialog" "$_uuid" "$MAIN_IMAGE_TOOLS_ID" "${_text:-macOS only}"
+
+        _text="$_guest"
+        [ "$_features" != "-" ] && _text="$_text: $(printf '%s' "$_features" | /usr/bin/sed 's/,/, /g')"
+        "$dialog" "$_uuid" "$MAIN_IMAGE_GUEST_ID" "$_text"
+
+        # status's need is current and wins over image info's answer, which may be older (access
+        # granted or lost since it was read). Without either, only image info can say "not checked".
+        local _date="$(ui_date_text "$_checked")"
+        case ",$_needs,:$_fda" in
+            *,full-disk-access,*:not-granted) _text="not granted${_date:+ (checked $_date)}" ;;
+            *,full-disk-access,*)             _text="not granted" ;;
+            *:granted)                        _text="granted${_date:+ (checked $_date)}" ;;
+            *:not-granted)                    _text="not granted${_date:+ (checked $_date)}" ;;
+            *)
+                if [ -n "$_info" ]; then
+                    _text="not checked yet"
+                else
+                    _text="-"
+                fi ;;
+        esac
+        "$dialog" "$_uuid" "$MAIN_IMAGE_FDA_ID" "$_text"
+
+        _text=""
+        [ "$_cpus" != "-" ] && _text="$_cpus CPUs"
+        [ "$_memory" != "-" ] && _text="${_text:+$_text, }$_memory GB"
+        "$dialog" "$_uuid" "$MAIN_IMAGE_HARDWARE_ID" "${_text:--}"
+
+        local _size="$(ui_size_text "$_bytes")"
+        if [ -n "$_size" ]; then
+            _text="$_size"
+            _size="$(ui_size_text "$_unshared")"
+            [ -n "$_size" ] && _text="$_text; $_size its own (what Delete frees)"
+            _size="$(ui_size_text "$_added")"
+            [ -n "$_size" ] && [ "$_based" != "-" ] && _text="$_text; $_size added over $_based"
+        elif [ -n "$_info_error" ]; then
+            _text="not measured: $_info_error"
+        else
+            _text="not measured"
+        fi
+        "$dialog" "$_uuid" "$MAIN_IMAGE_SPACE_ID" "$_text"
+
         _text="$(ui_date_text "$_created")"
+        local _took="$(ui_duration_text "$_seconds")"
+        [ -n "$_text" ] && [ -n "$_took" ] && _text="$_text, built in $_took"
         "$dialog" "$_uuid" "$MAIN_IMAGE_CREATED_ID" "${_text:--}"
         "$dialog" "$_uuid" "$MAIN_IMAGE_FOLDER_ID" "$(agentvm_display_path "$_path")"
+        if [ -d "$_path" ]; then
+            ui_enable "$_uuid" "$MAIN_IMAGE_SHOW_ID" 1
+        else
+            ui_enable "$_uuid" "$MAIN_IMAGE_SHOW_ID" 0
+        fi
     }
+    # agent-vm refuses to delete an image another agent-vm process uses, and says so; phase 3
+    # disables Delete while one of this app's jobs holds the image.
+    ui_enable "$_uuid" "$MAIN_IMAGE_DELETE_ID" 1
+}
+
+# main_image_delete_question <uuid> <name>  ->  the confirmation's message: what deleting frees,
+# and what it means for what was made from the image (they are clones and keep working; a box
+# can no longer be recreated, since recreating makes it again from its image).
+main_image_delete_question() {
+    local _text="The image's folder and disk are deleted"
+    local _size="$(ui_size_text "$(main_image_info "$1" "$2" | /usr/bin/cut -f21)")"
+    [ -n "$_size" ] && _text="$_text, which frees about $_size"
+    _text="$_text."
+    local _boxes="$(main_rows "$1" boxes | /usr/bin/awk -F'\t' -v name="$2" '$3 == name { print $1 }')"
+    [ -n "$_boxes" ] && _text="$_text Boxes made from it ($(ui_lines_text "$_boxes")) keep working, but cannot be recreated."
+    local _derived="$(main_rows "$1" images | /usr/bin/awk -F'\t' -v name="$2" '$6 == name { print $1 }')"
+    [ -n "$_derived" ] && _text="$_text Images built from it ($(ui_lines_text "$_derived")) keep working."
+    printf '%s This cannot be undone.\n' "$_text"
 }
 
 # main_count_text <n> <thing>  ->  "1 image", "7 images".
@@ -644,6 +787,8 @@ main_refresh() {
         [ "$_mode" = "full" ] && main_read_doctor "$_uuid"
         main_read_status "$_uuid"
         _status=$?
+        # The selected image's measurements: on opening and activation, not in the poll loop.
+        [ "$_mode" = "full" ] && [ "$_status" -eq 0 ] && main_read_selected_image "$_uuid"
         # 126 and 127 are the shell's: the binary itself cannot be run any more (removed, or no
         # longer executable), so this pass asks again what can be used rather than showing the
         # shell's message as agent-vm's.

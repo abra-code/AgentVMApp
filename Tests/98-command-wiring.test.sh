@@ -31,7 +31,7 @@ declared_ids() {
 # referenced_ids  ->  every command id something refers to: the window subcommands in
 # Command.json, every *actionID in the window documents, every omc_next_command target written
 # as a literal in the scripts, and every action of an alert button the scripts present
-# ("Delete:destructive:AgentVM.image.delete.confirmed").
+# ("Delete:destructive:AgentVM.main.image.delete.confirmed").
 referenced_ids() {
     /usr/bin/jq -r '.COMMAND_LIST[] | .ACTIONUI_WINDOW // {} | to_entries[]
         | select(.key | endswith("SUBCOMMAND_ID")) | .value' "$COMMANDS"

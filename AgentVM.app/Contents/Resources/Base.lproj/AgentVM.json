@@ -183,7 +183,8 @@
                             }
                           ]
                         },
-                        { "type": "Spacer" }
+                        { "type": "Spacer" },
+                        { "type": "Button", "id": 342, "properties": { "title": "Show in Finder", "disabled": true, "actionID": "AgentVM.main.box.show" } }
                       ]
                     },
                     {
@@ -227,7 +228,6 @@
                   "id": 411,
                   "properties": {
                     "actionID": "AgentVM.main.image.selected",
-                    "doubleClickActionID": "AgentVM.main.image.details",
                     "listStyle": "sidebar",
                     "listRowSeparator": "hidden",
                     "listRowInsets": { "top": 4, "leading": 8, "bottom": 4, "trailing": 8 }
@@ -326,8 +326,10 @@
                       "properties": { "spacing": 8.0 },
                       "children": [
                         { "type": "Button", "id": 431, "properties": { "title": "New Box from It...", "disabled": true } },
-                        { "type": "Button", "id": 432, "properties": { "title": "Open in Window", "actionID": "AgentVM.main.image.details" } },
-                        { "type": "Spacer" }
+                        { "type": "Button", "id": 432, "properties": { "title": "New Image from This...", "disabled": true } },
+                        { "type": "Spacer" },
+                        { "type": "Button", "id": 433, "properties": { "title": "Show in Finder", "disabled": true, "actionID": "AgentVM.main.image.show" } },
+                        { "type": "Button", "id": 434, "properties": { "title": "Delete...", "disabled": true, "actionID": "AgentVM.main.image.delete" } }
                       ]
                     },
                     {
@@ -337,6 +339,9 @@
                         { "type": "LabeledContent", "properties": { "title": "Built from" }, "children": [ { "type": "Text", "id": 452, "properties": { "text": "", "textSelection": "enabled" } } ] },
                         { "type": "LabeledContent", "properties": { "title": "Tools" }, "children": [ { "type": "Text", "id": 453, "properties": { "text": "", "textSelection": "enabled" } } ] },
                         { "type": "LabeledContent", "properties": { "title": "Guest daemon" }, "children": [ { "type": "Text", "id": 454, "properties": { "text": "", "textSelection": "enabled" } } ] },
+                        { "type": "LabeledContent", "properties": { "title": "Full Disk Access" }, "children": [ { "type": "Text", "id": 459, "properties": { "text": "", "textSelection": "enabled" } } ] },
+                        { "type": "LabeledContent", "properties": { "title": "Processors and memory" }, "children": [ { "type": "Text", "id": 460, "properties": { "text": "", "textSelection": "enabled" } } ] },
+                        { "type": "LabeledContent", "properties": { "title": "Space" }, "children": [ { "type": "Text", "id": 461, "properties": { "text": "", "textSelection": "enabled" } } ] },
                         { "type": "LabeledContent", "properties": { "title": "Created" }, "children": [ { "type": "Text", "id": 455, "properties": { "text": "", "textSelection": "enabled" } } ] },
                         { "type": "LabeledContent", "properties": { "title": "Boxes made from it" }, "children": [ { "type": "Text", "id": 456, "properties": { "text": "", "textSelection": "enabled" } } ] },
                         { "type": "LabeledContent", "properties": { "title": "Images built from it" }, "children": [ { "type": "Text", "id": 457, "properties": { "text": "", "textSelection": "enabled" } } ] },

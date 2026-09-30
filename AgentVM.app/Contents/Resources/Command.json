@@ -14,20 +14,6 @@
       },
       "REQUIRED_OMC_VERSION": "5.1",
       "REQUIRED_MAC_OS_MIN_VERSION": "27.0"
-    },
-    {
-      "NAME": "AgentVM",
-      "COMMAND_ID": "AgentVM.image",
-      "ACTIVATION_MODE": "act_always",
-      "EXECUTION_MODE": "exe_script_file",
-      "ACTIONUI_WINDOW": {
-        "JSON_NAME": "AgentVM.image",
-        "IS_BLOCKING": false,
-        "WINDOW_TITLE": "Image",
-        "INIT_SUBCOMMAND_ID": "AgentVM.image.init",
-        "WINDOW_DID_ACTIVATE_SUBCOMMAND_ID": "AgentVM.image.activated",
-        "END_CANCEL_SUBCOMMAND_ID": "AgentVM.image.close"
-      }
     }
   ],
   "VERSION": 2

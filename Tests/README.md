@@ -17,12 +17,12 @@ AB=../OMC/Distribution/AppletBuilder.app/Contents/Resources/Agents/appletbuilder
 | File | What it covers |
 |---|---|
 | `lib.test.agentvm.sh` | sourced by every file: the guards that keep a test out of the real home folder, and the app's accessors |
-| `00-bundle.test.sh` | what `Info.plist` and `Command.json` declare: the main command first, and the windows the others open |
+| `00-bundle.test.sh` | what `Info.plist` and `Command.json` declare: one command, the main one, and its one window |
 | `10-agentvm-library.test.sh` | `lib.agentvm.sh`: which agent-vm runs, when it can be used, the store setting, error messages, and the rows read from agent-vm's JSON, against the fake and the fixtures |
 | `11-agentvm-contract.test.sh` | the library against a real agent-vm on an empty store: the JSON fields the fixtures have are still there |
 | `20-main-window.test.sh` | the main window: the face it shows, the box and image cards, each list's selection and its detail pane, Settings, the poll loop, activation and closing |
 | `21-maintenance.test.sh` | what needs doing to a box or an image: the mark on its card, the lines in its detail pane, and the state line of a running box nobody uses |
-| `30-image-window.test.sh` | an image's window: opening it from the main window (Open in Window, a double-click on a card), one window per image, what it shows, Show in Finder, Delete and its question |
+| `30-image-detail.test.sh` | the image detail pane's measured facts (`image info`) and when they are read, Show in Finder for an image and a box, Delete and its question |
 | `98-command-wiring.test.sh` | every command has the exact script the engine looks for, every reference resolves, every script is reachable |
 | `helpers/fake_agent_vm.sh` | agent-vm, answered from `fixtures/agentvm/` |
 | `helpers/fake_ps.sh`, `helpers/fake_sleep.sh`, `helpers/fake_open.sh` | the process list (a box's owner), the poll loop's wait and Finder (Show in Finder), answered and recorded |
