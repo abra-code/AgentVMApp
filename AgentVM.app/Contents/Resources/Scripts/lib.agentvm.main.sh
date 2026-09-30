@@ -223,9 +223,9 @@ main_getstarted_text() {
 # Image, Network, project, programs and owner, and the row's button.
 main_box_display_rows() {
     local _uuid="$1"
-    local _name _state _image _mode _rules _pid _owner _project _ro _execs _started _version _disposable _error _cpus _memory _path
+    local _name _state _image _mode _rules _pid _owner _project _ro _execs _started _version _disposable _error _cpus _memory _path _needs
     local _symbol _network _details _owner_name _button
-    main_rows "$_uuid" boxes | while IFS="$ui_tab" read -r _name _state _image _mode _rules _pid _owner _project _ro _execs _started _version _disposable _error _cpus _memory _path; do
+    main_rows "$_uuid" boxes | while IFS="$ui_tab" read -r _name _state _image _mode _rules _pid _owner _project _ro _execs _started _version _disposable _error _cpus _memory _path _needs; do
         case "$_state" in
             running)           _symbol="play.circle.fill" ;;
             stopped)           _symbol="circle" ;;
@@ -390,14 +390,15 @@ main_names_text() {
 # line each, at most MAIN_ATTENTION_MAX:
 #   - images that need a guest update (after an agent-vm update);
 #   - images that need Full Disk Access;
+#   - boxes made before their image's guest update, which keep the old guest daemon until they
+#     are made again (agent-vm's recreate need); a disposable box is left out, since it is
+#     deleted when it stops;
 #   - failed images, with agent-vm's reason;
 #   - running boxes whose supervisor is another agent-vm version: each version is installed in a
 #     folder of its own, so a box keeps the version it started with until it is stopped;
 #   - running boxes with no owner and no program in them, started MAIN_IDLE_BOX_HOURS or more
 #     ago: each holds one of the two VM slots and its memory. agent-vm reports when a box started
 #     and how many programs run now, not how long it has been idle, and the words say only that.
-# Boxes made before their image was updated need agent-vm to record a box's guest daemon; they
-# are left out until it does.
 MAIN_ATTENTION_MAX=3
 MAIN_IDLE_BOX_HOURS=2
 main_attention_lines() {
@@ -421,6 +422,20 @@ main_attention_lines() {
                 printf 'Image %s needs Full Disk Access, or programs in its boxes cannot open Desktop, Documents or Downloads.\n' "$1"
             else
                 printf '%s images need Full Disk Access, or programs in their boxes cannot open Desktop, Documents or Downloads: %s.\n' "$#" "$(main_names_text "$@")"
+            fi
+        fi
+        _names="$(main_rows "$_uuid" boxes | /usr/bin/awk -F'\t' '$13 != "true" && (","$18",") ~ /,recreate,/ { printf "%s:%s ", $1, $3 }')"
+        if [ -n "$_names" ]; then
+            set -- $_names
+            if [ "$#" -eq 1 ]; then
+                printf 'Box %s was made before image %s had its guest update; recreate it to get the update (what was changed inside the box is lost).\n' "${1%%:*}" "${1#*:}"
+            else
+                local _box
+                local _boxes=""
+                for _box; do
+                    _boxes="$_boxes ${_box%%:*}"
+                done
+                printf '%s boxes were made before a guest update of their image: %s. Recreate them to get the update (what was changed inside them is lost).\n' "$#" "$(main_names_text $_boxes)"
             fi
         fi
         main_rows "$_uuid" images | /usr/bin/awk -F'\t' '$2 == "failed" {

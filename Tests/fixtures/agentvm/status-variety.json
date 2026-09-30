@@ -24,6 +24,7 @@
         },
         "userName": "agent"
       },
+      "needs": [],
       "path": "/Users/you/Library/Application Support/agent-vm/Boxes/cadabra-spike",
       "running": false,
       "state": "stopped"
@@ -62,7 +63,8 @@
         "user-session",
         "terminal-pixels"
       ],
-      "guestVersion": "0.3.13",
+      "guestVersion": "0.4.3",
+      "needs": [],
       "ownerPid": 812,
       "path": "/Users/you/Library/Application Support/agent-vm/Boxes/s3",
       "pid": 44847,
@@ -71,8 +73,8 @@
       "running": true,
       "startedAt": "2026-09-29T14:02:10Z",
       "state": "running",
-      "supervisorPath": "/Users/you/.local/share/agent-vm/versions/0.3.13/agent-vm",
-      "supervisorVersion": "0.3.13"
+      "supervisorPath": "/Users/you/.local/share/agent-vm/versions/0.4.3/agent-vm",
+      "supervisorVersion": "0.4.3"
     },
     {
       "box": {
@@ -88,6 +90,7 @@
         "name": "try1",
         "userName": "agent"
       },
+      "needs": [],
       "path": "/Users/you/Library/Application Support/agent-vm/Boxes/try1",
       "running": true,
       "state": "unresponsive",
@@ -435,6 +438,7 @@
       "userName": "agent"
     }
   ],
+  "jobs": [],
   "runningVMs": {
     "count": 1,
     "limit": 2

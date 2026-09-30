@@ -35,7 +35,7 @@
 [ -n "${__AGENTVM_APP_LIB:-}" ] && return 0
 __AGENTVM_APP_LIB=1
 
-AGENTVM_MIN_VERSION="0.3.13"
+AGENTVM_MIN_VERSION="0.4.3"
 
 # The app's own state, and where agent-vm's installer puts the link to the newest agent-vm.
 agentvm_support_dir="$HOME/Library/Application Support/AgentVM"
@@ -317,6 +317,8 @@ agentvm_status() {
 #    5 ruleCount   6 pid (the supervisor's)   7 ownerPid   8 project   9 projectReadOnly
 #   10 activeExecs (programs running in it now)   11 startedAt   12 supervisorVersion
 #   13 disposable (true or false)   14 statusError   15 cpus   16 memoryGB   17 path
+#   18 needs (kinds, comma-joined: recreate, when its image's guest daemon is no longer the one
+#      the box was made with; agent-vm says nothing for a box made before it recorded that)
 # The running fields (6-12) are "-" for a stopped box.
 agentvm_status_box_rows() {
     /usr/bin/jq -r "$agentvm_jq_defs"' .boxes[] | [
@@ -325,7 +327,8 @@ agentvm_status_box_rows() {
         .pid, .ownerPid, .project, .projectReadOnly, .activeExecs, .startedAt, .supervisorVersion,
         (.box.disposable // false), .statusError,
         .box.cpuCount, (if .box.memoryBytes == null then null else .box.memoryBytes / 1073741824 | floor end),
-        .path ] | row'
+        .path,
+        (.needs // [] | map(.kind) | if length == 0 then null else join(",") end) ] | row'
 }
 
 # agentvm_status_image_rows  <  status JSON  ->  one row per image:

@@ -3,11 +3,11 @@
 Real `--json` answers of agent-vm, which `Tests/helpers/fake_agent_vm.sh` serves to the tests, and which `Tests/10-agentvm-library.test.sh` feeds to the library's row filters directly.
 
 - `version.json` - `agent-vm version --json`.
-- `doctor.json` - `agent-vm doctor --json` (66 GB free). Every check `ok` except the signature (`info`: an ad hoc build); no virtual machine ran.
-- `status.json` - `agent-vm status --json` on a store with seven images (`dev`, `dev-acp`, `dev-agents`, `dev-node`, `dev-xcode`, `dev-xcode-ios`, `latest-test`) and three stopped boxes (`cadabra-spike`, `s3`, `try1`). Four images need Full Disk Access. With every box stopped, the fields a running box adds (`pid`, `ownerPid`, `project` and the rest) are absent; `status-variety.json` carries them.
+- `doctor.json` - `agent-vm doctor --json` (67 GB free). Every check `ok`, the signature included (the installed, Developer ID signed agent-vm); no virtual machine ran.
+- `status.json` - `agent-vm status --json` on a store with seven images (`dev`, `dev-acp`, `dev-agents`, `dev-node`, `dev-xcode`, `dev-xcode-ios`, `latest-test`) and three stopped boxes (`cadabra-spike`, `s3`, `try1`). Four images need Full Disk Access, and nothing needs a guest update or recreating. No job ran in the last hour (`jobs` is empty). With every box stopped, the fields a running box adds (`pid`, `ownerPid`, `project` and the rest) are absent; `status-variety.json` carries them.
 - `status-empty.json` - `agent-vm status --json` on an empty store.
 
-Captured on 2026-09-29 from agent-vm 0.3.13 with `Tests/helpers/refresh_agentvm_fixtures.sh`, which replaces the home folder with `/Users/you` and sorts keys. One image in the store that day, `jobtest-a`, was left by another agent-vm test run and was removed from `status.json` by hand. When agent-vm's JSON changes, run it again with the new agent-vm and rerun the suite: the drift checks fail when a field the library reads is gone.
+Captured on 2026-09-29 from agent-vm 0.4.3 with `Tests/helpers/refresh_agentvm_fixtures.sh`, which replaces the home folder with `/Users/you` and sorts keys. When agent-vm's JSON changes, run it again with the new agent-vm and rerun the suite: the drift checks fail when a field the library reads is gone.
 
 ## Made by hand
 
@@ -18,9 +18,9 @@ Captured on 2026-09-29 from agent-vm 0.3.13 with `Tests/helpers/refresh_agentvm_
   .boxes |= map(
     if .box.name == "s3" then . + {state: "running", running: true, pid: 44847, ownerPid: 812,
         project: "/Users/you/src/app", projectReadOnly: false, activeExecs: 2,
-        startedAt: "2026-09-29T14:02:10Z", supervisorVersion: "0.3.13",
-        supervisorPath: "/Users/you/.local/share/agent-vm/versions/0.3.13/agent-vm",
-        guestVersion: "0.3.13", guestFeatures: ["terminal", "prompt-notices", "wallpaper", "time-sync", "user-session", "terminal-pixels"]}
+        startedAt: "2026-09-29T14:02:10Z", supervisorVersion: "0.4.3",
+        supervisorPath: "/Users/you/.local/share/agent-vm/versions/0.4.3/agent-vm",
+        guestVersion: "0.4.3", guestFeatures: ["terminal", "prompt-notices", "wallpaper", "time-sync", "user-session", "terminal-pixels"]}
     elif .box.name == "try1" then (. + {state: "unresponsive", running: true,
         statusError: "no answer from the supervisor within 5 s"}) | del(.box.network)
     elif .box.name == "cadabra-spike" then .box.disposable = true

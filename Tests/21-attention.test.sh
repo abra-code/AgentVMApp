@@ -37,6 +37,7 @@ attention_for() {
 
 # Nothing needs attention: no needs, no failed image, every supervisor current, s3 owned.
 QUIET='.images |= map(.needs = [] | if .state == "failed" then .state = "ready" | del(.failure) else . end)'
+QUIET="$QUIET"' | .boxes |= map(.needs = [])'
 QUIET="$QUIET"' | (.boxes[] | select(.running)).supervisorVersion = "'"$VERSION"'"'
 
 fake_reset
@@ -72,6 +73,21 @@ check "Full Disk Access" "! Image dev needs Full Disk Access, or programs in its
     "$(attention_for "$QUIET"' | (.images[] | select(.name == "dev")).needs = [{kind: "full-disk-access", reason: "not-granted"}]')"
 check "a failed image agent-vm gave no reason for" "! Image dev failed." \
     "$(attention_for "$QUIET"' | (.images[] | select(.name == "dev")).state = "failed"')"
+
+section "boxes made before their image's guest update"
+RECREATE='[{kind: "recreate", guestVersion: "0.4.3"}]'
+check "one: which image, and what recreating costs" \
+    "! Box s3 was made before image dev-acp had its guest update; recreate it to get the update (what was changed inside the box is lost)." \
+    "$(attention_for "$QUIET"' | (.boxes[] | select(.box.name == "s3")).needs = '"$RECREATE")"
+check "two: named together" \
+    "! 2 boxes were made before a guest update of their image: s3 and try1. Recreate them to get the update (what was changed inside them is lost)." \
+    "$(attention_for "$QUIET"' | (.boxes[] | select(.box.name == "s3" or .box.name == "try1")).needs = '"$RECREATE")"
+check "a disposable box is not named: it is deleted when it stops" "" \
+    "$(attention_for "$QUIET"' | (.boxes[] | select(.box.name == "cadabra-spike")).needs = '"$RECREATE")"
+lines="$(attention_for '(.boxes[] | select(.box.name == "s3")).needs = '"$RECREATE")"
+check "after Full Disk Access and before a failed image" \
+    "! Box s3 was made before image dev-acp had its guest update; recreate it to get the update (what was changed inside the box is lost)." \
+    "$(printf '%s\n' "$lines" | /usr/bin/sed -n 3p)"
 
 section "a box whose supervisor is another agent-vm version"
 check "says which, and how to move it" \

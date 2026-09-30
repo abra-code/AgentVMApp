@@ -93,7 +93,7 @@ check "Get started is not"       "0" "$(visible "$MAIN_GETSTARTED_ID")"
 check "agent-vm was asked: version, doctor, status" \
     "--version doctor --json status --json " "$(fake_log | /usr/bin/tr '\n' ' ')"
 check "the header: version and origin, the VMs, the disk" \
-    "agent-vm $(lib_value AGENTVM_MIN_VERSION) (test agent-vm at $FAKE_AGENTVM)  -  1 of 2 virtual machines running  -  66 GB free" \
+    "agent-vm $(lib_value AGENTVM_MIN_VERSION) (test agent-vm at $FAKE_AGENTVM)  -  1 of 2 virtual machines running  -  67 GB free" \
     "$(ui_value "$MAIN_HEADER_ID")"
 check "no error note"            "" "$(ui_value "$MAIN_NOTE_ID")"
 check "the poll loop is chained" "1" "$(chain_asked AgentVM.main.poll)"
@@ -130,7 +130,7 @@ fake_reset
 store status-variety.json
 open_window
 check "in ~/.local/bin" \
-    "agent-vm $(lib_value AGENTVM_MIN_VERSION) (in ~/.local/bin)  -  1 of 2 virtual machines running  -  66 GB free" \
+    "agent-vm $(lib_value AGENTVM_MIN_VERSION) (in ~/.local/bin)  -  1 of 2 virtual machines running  -  67 GB free" \
     "$(ui_value "$MAIN_HEADER_ID")"
 
 section "a developer override is named in the header"

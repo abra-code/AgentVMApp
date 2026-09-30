@@ -1,6 +1,7 @@
 {
   "boxes": [],
   "images": [],
+  "jobs": [],
   "runningVMs": {
     "count": 0,
     "limit": 2

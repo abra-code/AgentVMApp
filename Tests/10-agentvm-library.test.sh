@@ -190,7 +190,7 @@ fake_reset
 rows="$(with_fake agentvm_doctor)"
 check "agentvm_doctor: one row per check" "6" "$(printf '%s\n' "$rows" | /usr/bin/awk 'END { print NR }')"
 check "  name, status and detail"    "macOS${TAB}ok${TAB}macOS 27.0.0" "$(printf '%s\n' "$rows" | /usr/bin/head -1)"
-check "  the disk space detail"      "66 GB free on the volume of /Users/you/Library/Application Support/agent-vm" \
+check "  the disk space detail"      "67 GB free on the volume of /Users/you/Library/Application Support/agent-vm" \
     "$(printf '%s\n' "$rows" | row_named "disk space" | col 3)"
 check "  one call"                   "doctor --json" "$(fake_log)"
 printf 'no store\n' > "$FAKE_AGENTVM_DIR/fail-doctor"
@@ -202,7 +202,7 @@ check "  with its message"           "no store" "$(lib agentvm_last_error 1)"
 section "box rows: every box stopped (status.json)"
 rows="$(lib agentvm_status_box_rows < "$FIXTURES_AGENTVM/status.json")"
 check "one row per box"              "3"  "$(printf '%s\n' "$rows" | /usr/bin/awk 'END { print NR }')"
-check "seventeen fields in every row" "17" "$(printf '%s\n' "$rows" | field_count)"
+check "eighteen fields in every row" "18" "$(printf '%s\n' "$rows" | field_count)"
 row="$(printf '%s\n' "$rows" | row_named s3)"
 check "name, state, image"           "s3${TAB}stopped${TAB}dev-acp" "$(printf '%s\n' "$row" | col 1-3)"
 check "network: allowlist, 6 rules"  "allowlist${TAB}6"             "$(printf '%s\n' "$row" | col 4-5)"
@@ -210,16 +210,17 @@ check "no running fields: all -"     "-${TAB}-${TAB}-${TAB}-${TAB}-${TAB}-${TAB}
 check "not disposable"               "false"                         "$(printf '%s\n' "$row" | col 13)"
 check "4 CPUs, 8 GB"                 "4${TAB}8"                     "$(printf '%s\n' "$row" | col 15-16)"
 check "its folder"                   "/Users/you/Library/Application Support/agent-vm/Boxes/s3" "$(printf '%s\n' "$row" | col 17)"
+check "needs nothing"                "-"                             "$(printf '%s\n' "$row" | col 18)"
 
 section "box rows: running, unresponsive, disposable (status-variety.json)"
 rows="$(lib agentvm_status_box_rows < "$FIXTURES_AGENTVM/status-variety.json")"
-check "seventeen fields in every row" "17" "$(printf '%s\n' "$rows" | field_count)"
+check "eighteen fields in every row" "18" "$(printf '%s\n' "$rows" | field_count)"
 row="$(printf '%s\n' "$rows" | row_named s3)"
 check "running"                      "running"            "$(printf '%s\n' "$row" | col 2)"
 check "the supervisor and the owner" "44847${TAB}812"     "$(printf '%s\n' "$row" | col 6-7)"
 check "the project, read-write"      "/Users/you/src/app${TAB}false" "$(printf '%s\n' "$row" | col 8-9)"
 check "two programs, since"          "2${TAB}2026-09-29T14:02:10Z" "$(printf '%s\n' "$row" | col 10-11)"
-check "the supervisor's version"     "0.3.13"             "$(printf '%s\n' "$row" | col 12)"
+check "the supervisor's version"     "0.4.3"              "$(printf '%s\n' "$row" | col 12)"
 check "no status error"              "-"                  "$(printf '%s\n' "$row" | col 14)"
 row="$(printf '%s\n' "$rows" | row_named try1)"
 check "unresponsive"                 "unresponsive"       "$(printf '%s\n' "$row" | col 2)"
@@ -227,12 +228,15 @@ check "  and says why"               "no answer from the supervisor within 5 s" 
 check "  no network record: open, no rules" "open${TAB}0" "$(printf '%s\n' "$row" | col 4-5)"
 check "  no pid to signal"           "-"                  "$(printf '%s\n' "$row" | col 6)"
 check "disposable"                   "true"               "$(printf '%s\n' "$rows" | row_named cadabra-spike | col 13)"
+check "a box to recreate"            "recreate" \
+    "$(/usr/bin/jq '(.boxes[] | select(.box.name == "s3")).needs = [{kind: "recreate", guestVersion: "0.4.3"}]' \
+        "$FIXTURES_AGENTVM/status-variety.json" | lib agentvm_status_box_rows | row_named s3 | col 18)"
 
 section "box rows: values that would break a row"
 json='{"boxes": [{"box": {"name": "odd", "image": "dev", "network": {"mode": "off"}}, "state": "running",
     "project": "/Users/you/my\tproject\nfolder", "statusError": "", "path": "/p"}], "images": [], "runningVMs": {"limit": 2}}'
 row="$(printf '%s\n' "$json" | lib agentvm_status_box_rows)"
-check "still seventeen fields"       "17"   "$(printf '%s\n' "$row" | field_count)"
+check "still eighteen fields"        "18"   "$(printf '%s\n' "$row" | field_count)"
 check "still one line"               "1"    "$(printf '%s\n' "$row" | /usr/bin/awk 'END { print NR }')"
 check "a tab and a line break become spaces" "/Users/you/my project folder" "$(printf '%s\n' "$row" | col 8)"
 check "an empty string is -"         "-"    "$(printf '%s\n' "$row" | col 14)"
@@ -278,6 +282,8 @@ missing="$(lib agentvm_status_box_rows < "$FIXTURES_AGENTVM/status.json" | /usr/
     BEGIN { n = split("1:name 2:state 3:image 4:netMode 15:cpus 16:memoryGB 17:path", f, " ") }
     { for (i = 1; i <= n; i++) { split(f[i], p, ":"); if ($p[1] == "-") printf "%s ", p[2] } }')"
 check "no box field is absent" "" "$missing"
+check "every box says what it needs, if only nothing" "true" \
+    "$(/usr/bin/jq '[.boxes[] | has("needs")] | all' "$FIXTURES_AGENTVM/status.json")"
 missing="$(lib agentvm_status_image_rows < "$FIXTURES_AGENTVM/status.json" | /usr/bin/awk -F'\t' '
     BEGIN { n = split("1:name 2:state 4:macOS 5:macOSBuild 9:guestVersion 10:createdAt 11:path", f, " ") }
     { for (i = 1; i <= n; i++) { split(f[i], p, ":"); if ($p[1] == "-") printf "%s ", p[2] } }')"

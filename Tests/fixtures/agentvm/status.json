@@ -23,6 +23,7 @@
         },
         "userName": "agent"
       },
+      "needs": [],
       "path": "/Users/you/Library/Application Support/agent-vm/Boxes/cadabra-spike",
       "running": false,
       "state": "stopped"
@@ -52,6 +53,7 @@
         },
         "userName": "agent"
       },
+      "needs": [],
       "path": "/Users/you/Library/Application Support/agent-vm/Boxes/s3",
       "running": false,
       "state": "stopped"
@@ -76,6 +78,7 @@
         },
         "userName": "agent"
       },
+      "needs": [],
       "path": "/Users/you/Library/Application Support/agent-vm/Boxes/try1",
       "running": false,
       "state": "stopped"
@@ -413,6 +416,7 @@
       "userName": "agent"
     }
   ],
+  "jobs": [],
   "runningVMs": {
     "count": 0,
     "limit": 2
