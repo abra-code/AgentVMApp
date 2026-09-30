@@ -8,6 +8,12 @@
 # picks again, so the window moves between them by itself as the store fills or agent-vm goes
 # missing. No face is ever remembered: it is computed from what agent-vm answers.
 #
+# THE STATUS FACE is a TabView: Boxes, Images and Settings. Boxes and Images are each a split
+# view with a list of cards in the sidebar and the selected card's details beside it. A card
+# carries what is checked at a glance (name, state, image or macOS, and a "Needs maintenance"
+# mark); the detail pane has the rest, including what the maintenance is. Settings shows which
+# agent-vm runs and what this Mac has room for.
+#
 # READING AND PAINTING ARE SEPARATE. main_read_* run agent-vm and leave its answers in the
 # window's cache folder (lib.agentvm.ui.sh); main_paint_* only read the caches. So a handler that
 # repaints after a selection runs no agent-vm, and the poll loop reads only `status`, the one
@@ -20,11 +26,10 @@
 # close handler's "closed" ends it. It also ends when the app is gone. AGENTVM_APP_POLL_PASSES,
 # for the tests, ends it after that many passes.
 #
-# THE SELECTION is one across both tables, kept as "box:<name>" or "image:<name>". Name is the
-# FIRST column of both tables on purpose: a Table keeps its selection across new rows only by
-# the first column, and a column of state symbols would carry it to whichever row shares the
-# symbol. It is highlighted again by name after every repaint, since a row whose text changed
-# loses its highlight.
+# THE SELECTIONS, one per list, are kept by name in the window's pasteboard values "box" and
+# "image". Name is the FIRST column of both lists' rows on purpose: a list keeps its selection
+# across new rows only by the first column. Every repaint selects the row again by name, since a
+# card whose text changed loses its highlight, and paints the detail pane from the new rows.
 #
 # POSIX sh (bash 3.2 in POSIX mode) only. Validate with "sh -n".
 [ -n "${__AGENTVM_APP_MAIN_LIB:-}" ] && return 0
@@ -32,21 +37,54 @@ __AGENTVM_APP_MAIN_LIB=1
 
 . "$OMC_APP_BUNDLE_PATH/Contents/Resources/Scripts/lib.agentvm.ui.sh"
 
-MAIN_HEADER_ID=100
-MAIN_NOTE_ID=101
-MAIN_NEW_IMAGE_ID=102
-MAIN_NEW_BOX_ID=103
-MAIN_SETUP_ID=104
 MAIN_GETSTARTED_ID=200
 MAIN_GETSTARTED_TEXT_ID=201
+MAIN_GETSTARTED_NOTE_ID=202
 MAIN_STATUS_ID=300
-MAIN_ATTENTION_ID=305
-MAIN_BOXES_ID=310
-MAIN_IMAGES_ID=320
-MAIN_SELECTED_ID=331
-MAIN_RUNNING_BOX_ACTIONS_ID=340
-MAIN_STOPPED_BOX_ACTIONS_ID=350
-MAIN_IMAGE_ACTIONS_ID=360
+
+MAIN_BOXES_ID=311
+MAIN_BOXES_FOOTER_ID=312
+MAIN_BOXES_NOTE_ID=313
+MAIN_NEW_BOX_ID=314
+MAIN_BOX_NONE_ID=319
+MAIN_BOX_DETAIL_ID=320
+MAIN_BOX_NAME_ID=321
+MAIN_BOX_STATE_ID=322
+MAIN_BOX_MAINTENANCE_ID=323
+MAIN_RUNNING_BOX_ACTIONS_ID=330
+MAIN_STOPPED_BOX_ACTIONS_ID=340
+MAIN_BOX_IMAGE_ID=351
+MAIN_BOX_NETWORK_ID=352
+MAIN_BOX_PROJECT_ID=353
+MAIN_BOX_PROGRAMS_ID=354
+MAIN_BOX_OWNER_ID=355
+MAIN_BOX_HARDWARE_ID=356
+MAIN_BOX_KEPT_ID=357
+MAIN_BOX_CREATED_ID=358
+MAIN_BOX_FOLDER_ID=359
+
+MAIN_IMAGES_ID=411
+MAIN_IMAGES_FOOTER_ID=412
+MAIN_IMAGES_NOTE_ID=413
+MAIN_NEW_IMAGE_ID=414
+MAIN_IMAGE_NONE_ID=419
+MAIN_IMAGE_DETAIL_ID=420
+MAIN_IMAGE_NAME_ID=421
+MAIN_IMAGE_STATE_ID=422
+MAIN_IMAGE_MAINTENANCE_ID=423
+MAIN_IMAGE_MACOS_ID=451
+MAIN_IMAGE_BASE_ID=452
+MAIN_IMAGE_TOOLS_ID=453
+MAIN_IMAGE_GUEST_ID=454
+MAIN_IMAGE_CREATED_ID=455
+MAIN_IMAGE_BOXES_ID=456
+MAIN_IMAGE_DERIVED_ID=457
+MAIN_IMAGE_FOLDER_ID=458
+
+MAIN_AGENTVM_VERSION_ID=501
+MAIN_AGENTVM_LOCATION_ID=502
+MAIN_VMS_ID=511
+MAIN_DISK_ID=512
 
 MAIN_POLL_IDLE_SECONDS=15
 MAIN_POLL_BUSY_SECONDS=2
@@ -145,7 +183,7 @@ main_moving() {
 
 # -- Painting -----------------------------------------------------------------------------------
 
-# main_agentvm_origin_text <uuid>  ->  where the agent-vm in use comes from, for the header.
+# main_agentvm_origin_text <uuid>  ->  where the agent-vm in use comes from, for Get started.
 main_agentvm_origin_text() {
     local _bin="$(agentvm_display_path "$(main_agentvm_line "$1" 4)")"
     case "$(main_agentvm_line "$1" 3)" in
@@ -155,36 +193,51 @@ main_agentvm_origin_text() {
     esac
 }
 
-# main_header_text <uuid>  ->  the header line: which agent-vm, the virtual machines, the disk.
-main_header_text() {
-    local _uuid="$1"
-    local _available="$(main_agentvm_line "$_uuid" 1)"
-    local _text
-    case "$_available" in
-        0) _text="agent-vm $(main_agentvm_line "$_uuid" 2) ($(main_agentvm_origin_text "$_uuid"))" ;;
-        "$agentvm_not_installed") _text="agent-vm is not installed" ;;
-        "$agentvm_too_old")       _text="agent-vm is too old" ;;
-        *)                        _text="agent-vm cannot be used" ;;
+# main_agentvm_location_text <uuid>  ->  the agent-vm in use, for Settings: its path, and what
+# kind it is when it is not the installed one, so a forgotten override is visible.
+main_agentvm_location_text() {
+    local _bin="$(agentvm_display_path "$(main_agentvm_line "$1" 4)")"
+    case "$(main_agentvm_line "$1" 3)" in
+        installed) printf '%s\n' "$_bin" ;;
+        developer) printf '%s (developer build)\n' "$_bin" ;;
+        *)         printf '%s (test agent-vm)\n' "$_bin" ;;
     esac
-    if [ "$_available" = "0" ]; then
-        local _vms="$(main_rows "$_uuid" vm | /usr/bin/awk -F'\t' '
-            NR == 1 && $1 == "-" { printf "at most %s virtual machines at once", $2 }
-            NR == 1 && $1 != "-" { printf "%s of %s virtual machines running", $1, $2 }')"
-        [ -n "$_vms" ] && _text="$_text  -  $_vms"
-        local _disk="$(main_rows "$_uuid" doctor | /usr/bin/awk -F'\t' '
-            $1 == "disk space" && $3 != "-" { sub(/ on the volume.*/, "", $3); print $3; exit }')"
-        [ -n "$_disk" ] && _text="$_text  -  $_disk"
-    fi
-    printf '%s\n' "$_text"
 }
 
-# main_paint_header <uuid>  ->  the header, and agent-vm's message when `status` failed.
-main_paint_header() {
-    "$dialog" "$1" "$MAIN_HEADER_ID" "$(main_header_text "$1")"
-    local _error=""
+# main_vms_text <uuid> [short]  ->  "1 of 2 virtual machines running", or "1 of 2 running" when
+# short (beside a "Virtual machines" label); nothing before status answered.
+main_vms_text() {
+    local _what="virtual machines "
+    [ "${2:-}" = "short" ] && _what=""
+    main_rows "$1" vm | /usr/bin/awk -F'\t' -v what="$_what" '
+        NR == 1 && $1 == "-" { printf "at most %s %sat once\n", $2, what }
+        NR == 1 && $1 != "-" { printf "%s of %s %srunning\n", $1, $2, what }'
+}
+
+# main_disk_text <uuid>  ->  doctor's free space ("67 GB free"), or nothing.
+main_disk_text() {
+    main_rows "$1" doctor | /usr/bin/awk -F'\t' '
+        $1 == "disk space" && $3 != "-" { sub(/ on the volume.*/, "", $3); print $3; exit }'
+}
+
+# main_status_error <uuid>  ->  agent-vm's message when the last `status` failed, or nothing.
+main_status_error() {
     local _file="$(ui_cache "$1" status-error)"
-    [ -f "$_file" ] && _error="$(/bin/cat "$_file")"
-    "$dialog" "$1" "$MAIN_NOTE_ID" "$_error"
+    [ -f "$_file" ] || return 0
+    /bin/cat "$_file"
+}
+
+# main_paint_settings <uuid>  ->  the Settings tab: which agent-vm, the virtual machines, the disk.
+main_paint_settings() {
+    local _uuid="$1"
+    local _version="-"
+    [ "$(main_agentvm_line "$_uuid" 1)" = "0" ] && _version="$(main_agentvm_line "$_uuid" 2)"
+    "$dialog" "$_uuid" "$MAIN_AGENTVM_VERSION_ID" "$_version"
+    "$dialog" "$_uuid" "$MAIN_AGENTVM_LOCATION_ID" "$(main_agentvm_location_text "$_uuid")"
+    local _vms="$(main_vms_text "$_uuid" short)"
+    "$dialog" "$_uuid" "$MAIN_VMS_ID" "${_vms:--}"
+    local _disk="$(main_disk_text "$_uuid")"
+    "$dialog" "$_uuid" "$MAIN_DISK_ID" "${_disk:--}"
 }
 
 # main_getstarted_text <uuid>  ->  what exists and what does not, one line each.
@@ -212,82 +265,113 @@ main_getstarted_text() {
     printf '\nIn Terminal, agent-vm image create makes an image and agent-vm box create makes a box from it; this window shows them within seconds.\n'
 }
 
-# main_box_display_rows <uuid>  ->  the boxes table's rows: Name, the state's symbol, State,
-# Image, Network, project, programs and owner, and the row's button.
-main_box_display_rows() {
-    local _uuid="$1"
-    local _name _state _image _mode _rules _pid _owner _project _ro _execs _started _version _disposable _error _cpus _memory _path _needs
-    local _symbol _network _details _owner_name _button
-    main_rows "$_uuid" boxes | while IFS="$ui_tab" read -r _name _state _image _mode _rules _pid _owner _project _ro _execs _started _version _disposable _error _cpus _memory _path _needs; do
-        case "$_state" in
-            running)           _symbol="play.circle.fill" ;;
-            stopped)           _symbol="circle" ;;
-            starting|stopping) _symbol="hourglass" ;;
-            *)                 _symbol="exclamationmark.triangle" ;;
-        esac
-        case "$_state" in
-            running|starting|unresponsive) _button="Stop" ;;
-            *)                             _button="Start" ;;
-        esac
-        _network="$_mode"
-        [ "$_mode" = "allowlist" ] && _network="allowlist ($_rules)"
-        _details=""
-        if [ "$_project" != "-" ]; then
-            _details="$(agentvm_display_path "$_project")"
-            [ "$_ro" = "true" ] && _details="$_details (read-only)"
-        fi
-        case "$_execs" in
-            ''|-|0) ;;
-            1) _details="${_details:+$_details, }1 program" ;;
-            *) _details="${_details:+$_details, }$_execs programs" ;;
-        esac
-        if [ "$_owner" != "-" ]; then
-            _owner_name="$(ui_process_name "$_owner")"
-            _details="${_details:+$_details, }${_owner_name:-process $_owner}"
-        fi
-        [ "$_disposable" = "true" ] && _details="${_details:+$_details, }disposable"
-        [ "$_error" != "-" ] && _details="${_details:+$_details, }$_error"
-        printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\n' "$_name" "$_symbol" "$_state" "$_image" "$_network" "${_details:--}" "$_button"
-    done
+# main_maintenance <uuid> <boxes|images>  ->  "name<TAB>what to do" for each thing that needs
+# doing to a box or an image. A card with any of them is marked "Needs maintenance", and its
+# detail pane lists them:
+#   - a box made before its image's guest update keeps the old guest daemon until it is made
+#     again (agent-vm's recreate need); a disposable box is left out, since it is deleted when it
+#     stops;
+#   - a running box whose supervisor is another agent-vm version: each version is installed in
+#     a folder of its own, so a box keeps the version it started with until it is stopped;
+#   - an image that needs a guest update (after an agent-vm update), or Full Disk Access.
+# A failed image is not maintenance: its card is red and says Failed.
+main_maintenance() {
+    local _version="$(main_agentvm_line "$1" 2)"
+    case "$2" in
+        boxes)
+            main_rows "$1" boxes | /usr/bin/awk -F'\t' -v current="$_version" '
+                $13 != "true" && (","$18",") ~ /,recreate,/ {
+                    printf "%s\tMade before image %s had its guest update. Recreate it to get the update; what was changed inside it is lost.\n", $1, $3 }
+                ($2 == "running" || $2 == "unresponsive") && $12 != "-" && $12 != current {
+                    printf "%s\tRuns agent-vm %s. Stop it and start it again to move it to %s.\n", $1, $12, current }' ;;
+        images)
+            main_rows "$1" images | /usr/bin/awk -F'\t' -v current="$_version" '
+                $2 == "failed" { next }
+                (","$8",") ~ /,guest-update,/ {
+                    printf "%s\tNeeds a guest update for agent-vm %s.\n", $1, current }
+                (","$8",") ~ /,full-disk-access,/ {
+                    printf "%s\tNeeds Full Disk Access, or programs in its boxes cannot open Desktop, Documents or Downloads.\n", $1 }' ;;
+    esac
 }
 
-# main_image_display_rows <uuid>  ->  the images table's rows: Name, the state's symbol, State,
-# macOS, Built from, Tools (the recipe's description up to its first parenthesis), Needs, and the
-# row's button.
-main_image_display_rows() {
-    main_rows "$1" images | /usr/bin/awk -F'\t' '
+# main_maintenance_text <uuid> <boxes|images> <name>  ->  "Needs maintenance" and one line per
+# thing to do, for the detail pane; nothing when there is none.
+main_maintenance_text() {
+    local _lines="$(main_maintenance "$1" "$2" | /usr/bin/awk -F'\t' -v name="$3" '$1 == name { print $2 }')"
+    [ -n "$_lines" ] || return 0
+    printf 'Needs maintenance\n%s\n' "$_lines"
+}
+
+# main_flagged <uuid> <boxes|images>  ->  " a b " : the names with maintenance, between spaces,
+# for awk's index() (names never hold a space).
+main_flagged() {
+    printf ' %s\n' "$(main_maintenance "$1" "$2" | /usr/bin/cut -f1 | /usr/bin/sort -u | /usr/bin/tr '\n' ' ')"
+}
+
+# main_box_card_rows <uuid>  ->  the box list's rows, one card each:
+#   1 name   2 the state's symbol   3 image and macOS version   4 "Needs maintenance" or empty
+#   5 its symbol or empty   6 the card's color, from the state
+main_box_card_rows() {
+    main_rows "$1" boxes | /usr/bin/awk -F'\t' -v flagged="$(main_flagged "$1" boxes)" '
         {
-            symbol = "hammer.circle"
-            if ($2 == "ready") symbol = "checkmark.circle"
-            if ($2 == "failed") symbol = "exclamationmark.triangle"
-            state = $2
-            if ($3 != "-") state = state ": " $3
-            from = ($6 == "-") ? "restore file" : $6
-            tools = $7
-            sub(/ \(.*/, "", tools)
-            needs = $8
-            gsub(/guest-update/, "guest update", needs)
-            gsub(/full-disk-access/, "Full Disk Access", needs)
-            gsub(/,/, ", ", needs)
-            printf "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n", $1, symbol, state, $4, from, tools, needs, "..."
+            symbol = "questionmark.circle"; color = "#8E8E93"
+            if ($2 == "running")                           { symbol = "play.circle.fill"; color = "#2E9E4F" }
+            else if ($2 == "stopped")                      { symbol = "stop.circle" }
+            else if ($2 == "starting" || $2 == "stopping") { symbol = "circle.dotted"; color = "#0A84FF" }
+            else if ($2 == "unresponsive")                 { symbol = "exclamationmark.circle.fill"; color = "#E8861A" }
+            caption = $3
+            if ($19 != "-") caption = caption " - macOS " $19
+            mark = ""; mark_symbol = ""
+            if (index(flagged, " " $1 " ")) { mark = "Needs maintenance"; mark_symbol = "exclamationmark.triangle.fill" }
+            printf "%s\t%s\t%s\t%s\t%s\t%s\n", $1, symbol, caption, mark, mark_symbol, color
         }'
 }
 
-# main_paint_tables <uuid>  ->  both tables from the caches, then the selection again. The rows
-# sent are kept (boxes-shown.tsv, images-shown.tsv): a row's button and a double-click name
-# their row by its index in what the table shows, which main_shown_name turns back into a name.
-main_paint_tables() {
+# main_image_card_rows <uuid>  ->  the image list's rows, one card each:
+#   1 name   2 the state's symbol   3 macOS version and what it was built from, or Building or
+#   Failed   4 "Needs maintenance" or empty   5 its symbol or empty   6 the card's color
+#   7 how many boxes were made from it
+main_image_card_rows() {
+    local _counts="$(main_rows "$1" boxes | /usr/bin/cut -f3 | /usr/bin/sort | /usr/bin/uniq -c | /usr/bin/awk '{ printf "%s=%s ", $2, $1 }')"
+    main_rows "$1" images | /usr/bin/awk -F'\t' -v flagged="$(main_flagged "$1" images)" -v counts="$_counts" '
+        BEGIN {
+            n = split(counts, pairs, " ")
+            for (i = 1; i <= n; i++) {
+                eq = index(pairs[i], "=")
+                boxes[substr(pairs[i], 1, eq - 1)] = substr(pairs[i], eq + 1)
+            }
+        }
+        {
+            symbol = "hammer.fill"; color = "#0A84FF"; caption = "Building"
+            macos = ($4 == "-") ? "" : "macOS " $4
+            if ($2 == "ready") {
+                symbol = "square.stack.3d.up.fill"; color = "#5E5CE6"
+                caption = ($6 == "-") ? "from a restore file" : "from " $6
+            } else if ($2 == "failed") {
+                symbol = "xmark.octagon.fill"; color = "#D93025"; caption = "Failed"
+            }
+            if (macos != "") caption = ($2 == "ready") ? macos " - " caption : caption " - " macos
+            mark = ""; mark_symbol = ""
+            if (index(flagged, " " $1 " ")) { mark = "Needs maintenance"; mark_symbol = "exclamationmark.triangle.fill" }
+            printf "%s\t%s\t%s\t%s\t%s\t%s\t%s\n", $1, symbol, caption, mark, mark_symbol, color, (($1 in boxes) ? boxes[$1] : 0)
+        }'
+}
+
+# main_paint_lists <uuid>  ->  both lists from the caches, then the selections again. The rows
+# sent are kept (boxes-shown.tsv, images-shown.tsv): a double-click names its card by its index
+# in what the list shows, which main_shown_name turns back into a name.
+main_paint_lists() {
     local _boxes="$(ui_cache "$1" boxes-shown.tsv)"
     local _images="$(ui_cache "$1" images-shown.tsv)"
-    main_box_display_rows "$1" | ui_store "$_boxes"
-    main_image_display_rows "$1" | ui_store "$_images"
+    main_box_card_rows "$1" | ui_store "$_boxes"
+    main_image_card_rows "$1" | ui_store "$_images"
     "$dialog" "$1" "$MAIN_BOXES_ID" omc_table_set_rows_from_stdin < "$_boxes"
     "$dialog" "$1" "$MAIN_IMAGES_ID" omc_table_set_rows_from_stdin < "$_images"
     main_reselect "$1"
 }
 
 # main_shown_name <uuid> <boxes|images> <row index, from 0>  ->  the name in that row of what the
-# table shows, or nothing.
+# list shows, or nothing.
 main_shown_name() {
     case "$3" in
         ''|*[!0123456789]*) return 0 ;;
@@ -297,65 +381,26 @@ main_shown_name() {
     /usr/bin/awk -F'\t' -v n="$(( $3 + 1 ))" 'NR == n { print $1; exit }' "$_file"
 }
 
-# main_reselect <uuid>  ->  the selected row highlighted again, by name; a selection whose box or
-# image is gone is dropped. The verb fires no action.
+# main_reselect <uuid>  ->  each list's selected card highlighted again, by name; a selection
+# whose box or image is gone is dropped. The verb fires no action.
 main_reselect() {
-    local _selected="$(ui_get selected "$1")"
-    local _row
-    case "$_selected" in
-        box:*)
-            _row="$(main_row "$1" boxes "${_selected#box:}")"
-            if [ -n "$_row" ]; then
-                "$dialog" "$1" "$MAIN_BOXES_ID" omc_select_row_with_content "${_selected#box:}" 1
-            else
-                ui_set selected "$1" ""
-            fi ;;
-        image:*)
-            _row="$(main_row "$1" images "${_selected#image:}")"
-            if [ -n "$_row" ]; then
-                "$dialog" "$1" "$MAIN_IMAGES_ID" omc_select_row_with_content "${_selected#image:}" 1
-            else
-                ui_set selected "$1" ""
-            fi ;;
-    esac
-}
-
-# main_paint_actions <uuid>  ->  the action row for the selection: a running box's, a stopped
-# box's, an image's, or none.
-main_paint_actions() {
     local _uuid="$1"
-    local _selected="$(ui_get selected "$_uuid")"
-    local _panel=""
-    local _text="Select a box or an image."
-    local _row _state
-    case "$_selected" in
-        box:*)
-            _row="$(main_row "$_uuid" boxes "${_selected#box:}")"
-            if [ -n "$_row" ]; then
-                _state="$(printf '%s\n' "$_row" | /usr/bin/cut -f2)"
-                _text="Selected: box ${_selected#box:} ($_state)"
-                case "$_state" in
-                    running|starting|unresponsive) _panel="$MAIN_RUNNING_BOX_ACTIONS_ID" ;;
-                    *)                             _panel="$MAIN_STOPPED_BOX_ACTIONS_ID" ;;
-                esac
-            fi ;;
-        image:*)
-            _row="$(main_row "$_uuid" images "${_selected#image:}")"
-            if [ -n "$_row" ]; then
-                _state="$(printf '%s\n' "$_row" | /usr/bin/cut -f2)"
-                _text="Selected: image ${_selected#image:} ($_state)"
-                _panel="$MAIN_IMAGE_ACTIONS_ID"
-            fi ;;
-    esac
-    "$dialog" "$_uuid" "$MAIN_SELECTED_ID" "$_text"
-    local _id
-    for _id in $MAIN_RUNNING_BOX_ACTIONS_ID $MAIN_STOPPED_BOX_ACTIONS_ID $MAIN_IMAGE_ACTIONS_ID; do
-        if [ "$_id" = "$_panel" ]; then
-            ui_show "$_uuid" "$_id" 1
+    local _name="$(ui_get box "$_uuid")"
+    if [ -n "$_name" ]; then
+        if [ -n "$(main_row "$_uuid" boxes "$_name")" ]; then
+            "$dialog" "$_uuid" "$MAIN_BOXES_ID" omc_select_row_with_content "$_name" 1
         else
-            ui_show "$_uuid" "$_id" 0
+            ui_set box "$_uuid" ""
         fi
-    done
+    fi
+    _name="$(ui_get image "$_uuid")"
+    if [ -n "$_name" ]; then
+        if [ -n "$(main_row "$_uuid" images "$_name")" ]; then
+            "$dialog" "$_uuid" "$MAIN_IMAGES_ID" omc_select_row_with_content "$_name" 1
+        else
+            ui_set image "$_uuid" ""
+        fi
+    fi
 }
 
 # main_now  ->  the time as seconds since 1970. AGENTVM_APP_NOW, for the tests, fixes it.
@@ -367,97 +412,217 @@ main_now() {
     /bin/date -u +%s
 }
 
-# main_attention_lines <uuid>  ->  the things that need attention, most important first, one
-# line each, at most MAIN_ATTENTION_MAX:
-#   - images that need a guest update (after an agent-vm update);
-#   - images that need Full Disk Access;
-#   - boxes made before their image's guest update, which keep the old guest daemon until they
-#     are made again (agent-vm's recreate need); a disposable box is left out, since it is
-#     deleted when it stops;
-#   - failed images, with agent-vm's reason;
-#   - running boxes whose supervisor is another agent-vm version: each version is installed in a
-#     folder of its own, so a box keeps the version it started with until it is stopped;
-#   - running boxes with no owner and no program in them, started MAIN_IDLE_BOX_HOURS or more
-#     ago: each holds one of the two VM slots and its memory. agent-vm reports when a box started
-#     and how many programs run now, not how long it has been idle, and the words say only that.
-MAIN_ATTENTION_MAX=3
+# main_box_state_text <state> <startedAt> <ownerPid> <activeExecs> <statusError>  ->  the box
+# detail's state line. A running box nobody owns, with no program in it, started
+# MAIN_IDLE_BOX_HOURS or more ago, says so: it holds one of the VM slots and its memory until it
+# is stopped. agent-vm reports when a box started and how many programs run now, not how long it
+# has been idle, and the words say only that.
 MAIN_IDLE_BOX_HOURS=2
-main_attention_lines() {
+main_box_state_text() {
+    case "$1" in
+        running)
+            local _text="Running"
+            local _since="$(ui_seconds_since_epoch "$2")"
+            local _seconds=""
+            if [ -n "$_since" ]; then
+                _seconds=$(( $(main_now) - _since ))
+                [ "$_seconds" -ge 0 ] && _text="Running for $(ui_duration_text "$_seconds")"
+            fi
+            if [ -n "$_seconds" ] && [ "$3" = "-" ] && [ "$_seconds" -ge $((MAIN_IDLE_BOX_HOURS * 3600)) ]; then
+                case "$4" in
+                    -|0) _text="$_text. No program runs in it now." ;;
+                esac
+            fi
+            printf '%s\n' "$_text" ;;
+        starting)     echo "Starting" ;;
+        stopping)     echo "Stopping" ;;
+        stopped)      echo "Stopped" ;;
+        unresponsive)
+            if [ "$5" = "-" ]; then
+                echo "Not responding"
+            else
+                printf 'Not responding: %s\n' "$5"
+            fi ;;
+        *)            printf '%s\n' "$1" ;;
+    esac
+}
+
+# main_paint_box_detail <uuid>  ->  the selected box's detail pane, or the placeholder.
+main_paint_box_detail() {
     local _uuid="$1"
-    local _version="$(main_agentvm_line "$_uuid" 2)"
-    local _names
-    {
-        _names="$(main_rows "$_uuid" images | /usr/bin/awk -F'\t' '(","$8",") ~ /,guest-update,/ { printf "%s ", $1 }')"
-        if [ -n "$_names" ]; then
-            set -- $_names
-            if [ "$#" -eq 1 ]; then
-                printf 'Image %s needs a guest update for agent-vm %s.\n' "$1" "$_version"
-            else
-                printf '%s images need a guest update for agent-vm %s: %s.\n' "$#" "$_version" "$(ui_names_text "$@")"
-            fi
+    local _name="$(ui_get box "$_uuid")"
+    local _row=""
+    [ -n "$_name" ] && _row="$(main_row "$_uuid" boxes "$_name")"
+    if [ -z "$_row" ]; then
+        ui_show "$_uuid" "$MAIN_BOX_DETAIL_ID" 0
+        ui_show "$_uuid" "$MAIN_BOX_NONE_ID" 1
+        return 0
+    fi
+    ui_show "$_uuid" "$MAIN_BOX_NONE_ID" 0
+    ui_show "$_uuid" "$MAIN_BOX_DETAIL_ID" 1
+    "$dialog" "$_uuid" "$MAIN_BOX_NAME_ID" "$_name"
+    "$dialog" "$_uuid" "$MAIN_BOX_MAINTENANCE_ID" "$(main_maintenance_text "$_uuid" boxes "$_name")"
+    printf '%s\n' "$_row" | {
+        local _n _state _image _mode _rules _pid _owner _project _ro _execs _started _version _disposable _error
+        local _cpus _memory _path _needs _macos _build _created _rest
+        IFS="$ui_tab" read -r _n _state _image _mode _rules _pid _owner _project _ro _execs _started _version _disposable _error \
+            _cpus _memory _path _needs _macos _build _created _rest
+        "$dialog" "$_uuid" "$MAIN_BOX_STATE_ID" "$(main_box_state_text "$_state" "$_started" "$_owner" "$_execs" "$_error")"
+        case "$_state" in
+            running|starting|unresponsive)
+                ui_show "$_uuid" "$MAIN_STOPPED_BOX_ACTIONS_ID" 0
+                ui_show "$_uuid" "$MAIN_RUNNING_BOX_ACTIONS_ID" 1 ;;
+            *)
+                ui_show "$_uuid" "$MAIN_RUNNING_BOX_ACTIONS_ID" 0
+                ui_show "$_uuid" "$MAIN_STOPPED_BOX_ACTIONS_ID" 1 ;;
+        esac
+
+        local _text="$_image"
+        if [ "${_macos:--}" != "-" ]; then
+            _text="$_text (macOS $_macos"
+            [ "${_build:--}" != "-" ] && _text="$_text, $_build"
+            _text="$_text)"
         fi
-        _names="$(main_rows "$_uuid" images | /usr/bin/awk -F'\t' '(","$8",") ~ /,full-disk-access,/ { printf "%s ", $1 }')"
-        if [ -n "$_names" ]; then
-            set -- $_names
-            if [ "$#" -eq 1 ]; then
-                printf 'Image %s needs Full Disk Access, or programs in its boxes cannot open Desktop, Documents or Downloads.\n' "$1"
-            else
-                printf '%s images need Full Disk Access, or programs in their boxes cannot open Desktop, Documents or Downloads: %s.\n' "$#" "$(ui_names_text "$@")"
-            fi
+        "$dialog" "$_uuid" "$MAIN_BOX_IMAGE_ID" "$_text"
+
+        case "$_mode" in
+            allowlist)
+                if [ "$_rules" = "1" ]; then
+                    _text="allowlist, 1 rule"
+                else
+                    _text="allowlist, $_rules rules"
+                fi ;;
+            *)  _text="$_mode" ;;
+        esac
+        "$dialog" "$_uuid" "$MAIN_BOX_NETWORK_ID" "$_text"
+
+        _text="none"
+        if [ "$_project" != "-" ]; then
+            _text="$(agentvm_display_path "$_project")"
+            [ "$_ro" = "true" ] && _text="$_text (read-only)"
         fi
-        _names="$(main_rows "$_uuid" boxes | /usr/bin/awk -F'\t' '$13 != "true" && (","$18",") ~ /,recreate,/ { printf "%s:%s ", $1, $3 }')"
-        if [ -n "$_names" ]; then
-            set -- $_names
-            if [ "$#" -eq 1 ]; then
-                printf 'Box %s was made before image %s had its guest update; recreate it to get the update (what was changed inside the box is lost).\n' "${1%%:*}" "${1#*:}"
-            else
-                local _box
-                local _boxes=""
-                for _box; do
-                    _boxes="$_boxes ${_box%%:*}"
-                done
-                printf '%s boxes were made before a guest update of their image: %s. Recreate them to get the update (what was changed inside them is lost).\n' "$#" "$(ui_names_text $_boxes)"
-            fi
+        "$dialog" "$_uuid" "$MAIN_BOX_PROJECT_ID" "$_text"
+
+        case "$_execs" in
+            -|0) _text="none" ;;
+            *)   _text="$_execs" ;;
+        esac
+        "$dialog" "$_uuid" "$MAIN_BOX_PROGRAMS_ID" "$_text"
+
+        if [ "$_owner" != "-" ]; then
+            local _owner_name="$(ui_process_name "$_owner")"
+            _text="${_owner_name:-process} ($_owner)"
+        elif [ "$_state" = "stopped" ]; then
+            _text="-"
+        else
+            _text="nobody: it runs until it is stopped"
         fi
-        main_rows "$_uuid" images | /usr/bin/awk -F'\t' '$2 == "failed" {
-            if ($3 == "-") printf "Image %s failed.\n", $1; else printf "Image %s failed: %s.\n", $1, $3 }'
-        main_rows "$_uuid" boxes | /usr/bin/awk -F'\t' -v current="$_version" '
-            ($2 == "running" || $2 == "unresponsive") && $12 != "-" && $12 != current {
-                printf "Box %s runs agent-vm %s; stop it and start it again to move it to %s.\n", $1, $12, current }'
-        local _now="$(main_now)"
-        local _name _state _started _owner _execs _since _hours
-        main_rows "$_uuid" boxes | /usr/bin/cut -f1,2,7,10,11 | while IFS="$ui_tab" read -r _name _state _owner _execs _started; do
-            [ "$_state" = "running" ] && [ "$_owner" = "-" ] || continue
-            case "$_execs" in -|0) ;; *) continue ;; esac
-            _since="$(ui_seconds_since_epoch "$_started")"
-            [ -n "$_since" ] || continue
-            _hours=$(( (_now - _since) / 3600 ))
-            [ "$_hours" -ge "$MAIN_IDLE_BOX_HOURS" ] || continue
-            printf 'Box %s has run %s hours, and no program runs in it now.\n' "$_name" "$_hours"
-        done
-    } | /usr/bin/head -n "$MAIN_ATTENTION_MAX"
+        "$dialog" "$_uuid" "$MAIN_BOX_OWNER_ID" "$_text"
+
+        _text=""
+        [ "$_cpus" != "-" ] && _text="$_cpus CPUs"
+        [ "$_memory" != "-" ] && _text="${_text:+$_text, }$_memory GB"
+        "$dialog" "$_uuid" "$MAIN_BOX_HARDWARE_ID" "${_text:--}"
+
+        if [ "$_disposable" = "true" ]; then
+            _text="no: it is deleted when it stops"
+        else
+            _text="yes, until it is deleted"
+        fi
+        "$dialog" "$_uuid" "$MAIN_BOX_KEPT_ID" "$_text"
+
+        _text="$(ui_date_text "${_created:--}")"
+        "$dialog" "$_uuid" "$MAIN_BOX_CREATED_ID" "${_text:--}"
+        "$dialog" "$_uuid" "$MAIN_BOX_FOLDER_ID" "$(agentvm_display_path "$_path")"
+    }
 }
 
-# main_paint_attention <uuid>  ->  the attention lines, each starting with "! ", or nothing.
-main_paint_attention() {
-    "$dialog" "$1" "$MAIN_ATTENTION_ID" "$(main_attention_lines "$1" | /usr/bin/sed 's/^/! /')"
+# main_image_state_text <state> <failure>  ->  the image detail's state line.
+main_image_state_text() {
+    case "$1" in
+        ready)        echo "Ready" ;;
+        installing)   echo "Building: installing macOS" ;;
+        installed)    echo "Building: macOS is installed" ;;
+        provisioning) echo "Building: setting up its tools" ;;
+        failed)
+            if [ "$2" = "-" ]; then
+                echo "Failed, and agent-vm gave no reason."
+            else
+                printf 'Failed: %s.\n' "${2%.}"
+            fi ;;
+        *)            printf '%s\n' "$1" ;;
+    esac
 }
 
-# main_paint <uuid>  ->  the whole window from the caches: header, face, and the face's content.
+# main_paint_image_detail <uuid>  ->  the selected image's detail pane, or the placeholder.
+main_paint_image_detail() {
+    local _uuid="$1"
+    local _name="$(ui_get image "$_uuid")"
+    local _row=""
+    [ -n "$_name" ] && _row="$(main_row "$_uuid" images "$_name")"
+    if [ -z "$_row" ]; then
+        ui_show "$_uuid" "$MAIN_IMAGE_DETAIL_ID" 0
+        ui_show "$_uuid" "$MAIN_IMAGE_NONE_ID" 1
+        return 0
+    fi
+    ui_show "$_uuid" "$MAIN_IMAGE_NONE_ID" 0
+    ui_show "$_uuid" "$MAIN_IMAGE_DETAIL_ID" 1
+    "$dialog" "$_uuid" "$MAIN_IMAGE_NAME_ID" "$_name"
+    "$dialog" "$_uuid" "$MAIN_IMAGE_MAINTENANCE_ID" "$(main_maintenance_text "$_uuid" images "$_name")"
+    local _boxes="$(main_rows "$_uuid" boxes | /usr/bin/awk -F'\t' -v name="$_name" '$3 == name { printf "%s (%s)\n", $1, $2 }')"
+    "$dialog" "$_uuid" "$MAIN_IMAGE_BOXES_ID" "$(ui_lines_text "$_boxes")"
+    local _derived="$(main_rows "$_uuid" images | /usr/bin/awk -F'\t' -v name="$_name" '$6 == name { print $1 }')"
+    "$dialog" "$_uuid" "$MAIN_IMAGE_DERIVED_ID" "$(ui_lines_text "$_derived")"
+    printf '%s\n' "$_row" | {
+        local _n _state _failure _macos _build _based _recipe _needs _guest _created _path _rest
+        IFS="$ui_tab" read -r _n _state _failure _macos _build _based _recipe _needs _guest _created _path _rest
+        "$dialog" "$_uuid" "$MAIN_IMAGE_STATE_ID" "$(main_image_state_text "$_state" "$_failure")"
+        local _text="$_macos"
+        [ "$_macos" != "-" ] && [ "$_build" != "-" ] && _text="$_macos ($_build)"
+        "$dialog" "$_uuid" "$MAIN_IMAGE_MACOS_ID" "$_text"
+        _text="$_based"
+        [ "$_based" = "-" ] && _text="a macOS restore file"
+        "$dialog" "$_uuid" "$MAIN_IMAGE_BASE_ID" "$_text"
+        _text="$_recipe"
+        [ "$_recipe" = "-" ] && _text="macOS only"
+        "$dialog" "$_uuid" "$MAIN_IMAGE_TOOLS_ID" "$_text"
+        "$dialog" "$_uuid" "$MAIN_IMAGE_GUEST_ID" "$_guest"
+        _text="$(ui_date_text "$_created")"
+        "$dialog" "$_uuid" "$MAIN_IMAGE_CREATED_ID" "${_text:--}"
+        "$dialog" "$_uuid" "$MAIN_IMAGE_FOLDER_ID" "$(agentvm_display_path "$_path")"
+    }
+}
+
+# main_count_text <n> <thing>  ->  "1 image", "7 images".
+main_count_text() {
+    if [ "$1" = "1" ]; then
+        printf '1 %s\n' "$2"
+    else
+        printf '%s %ss\n' "$1" "$2"
+    fi
+}
+
+# main_paint <uuid>  ->  the whole window from the caches: the face, and the face's content.
 main_paint() {
     local _uuid="$1"
-    main_paint_header "$_uuid"
+    local _error="$(main_status_error "$_uuid")"
     local _face="$(main_face "$_uuid")"
     if [ "$_face" = "status" ]; then
         ui_show "$_uuid" "$MAIN_GETSTARTED_ID" 0
         ui_show "$_uuid" "$MAIN_STATUS_ID" 1
-        main_paint_attention "$_uuid"
-        main_paint_tables "$_uuid"
-        main_paint_actions "$_uuid"
+        "$dialog" "$_uuid" "$MAIN_BOXES_FOOTER_ID" "$(main_vms_text "$_uuid")"
+        "$dialog" "$_uuid" "$MAIN_IMAGES_FOOTER_ID" "$(main_count_text "$(main_rows "$_uuid" images | /usr/bin/awk 'END { print NR }')" image)"
+        "$dialog" "$_uuid" "$MAIN_BOXES_NOTE_ID" "$_error"
+        "$dialog" "$_uuid" "$MAIN_IMAGES_NOTE_ID" "$_error"
+        main_paint_settings "$_uuid"
+        main_paint_lists "$_uuid"
+        main_paint_box_detail "$_uuid"
+        main_paint_image_detail "$_uuid"
     else
         ui_show "$_uuid" "$MAIN_STATUS_ID" 0
         ui_show "$_uuid" "$MAIN_GETSTARTED_ID" 1
         "$dialog" "$_uuid" "$MAIN_GETSTARTED_TEXT_ID" "$(main_getstarted_text "$_uuid")"
+        "$dialog" "$_uuid" "$MAIN_GETSTARTED_NOTE_ID" "$_error"
     fi
 }
 

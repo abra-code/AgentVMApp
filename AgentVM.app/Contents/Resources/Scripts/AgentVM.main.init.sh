@@ -7,8 +7,9 @@
 
 window_uuid="$OMC_ACTIONUI_WINDOW_UUID"
 [ -n "$window_uuid" ] || exit 0
-# A new window has no loop and no selection yet.
+# A new window has no loop and no selections yet.
 ui_set poll "$window_uuid" ""
-ui_set selected "$window_uuid" ""
+ui_set box "$window_uuid" ""
+ui_set image "$window_uuid" ""
 main_refresh "$window_uuid" full
 "$next_command" "$OMC_CURRENT_COMMAND_GUID" "AgentVM.main.poll"

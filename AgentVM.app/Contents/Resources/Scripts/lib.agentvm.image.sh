@@ -104,20 +104,6 @@ image_derived() {
     image_cached "$1" images.tsv | /usr/bin/awk -F'\t' -v name="$2" '$6 == name { print $1 }'
 }
 
-# image_list_text <lines>  ->  the lines as "a", "a and b", "a, b and c", or "none".
-image_list_text() {
-    [ -n "$1" ] || {
-        echo "none"
-        return 0
-    }
-    local _saved="$IFS"
-    IFS='
-'
-    set -- $1
-    IFS="$_saved"
-    ui_names_text "$@"
-}
-
 # -- Painting -----------------------------------------------------------------------------------
 
 # image_facts_text <row>  ->  the first line: state, macOS, where it came from and when, and its
@@ -238,8 +224,8 @@ image_paint() {
 
         "$dialog" "$_uuid" "$IMAGE_FOLDER_ID" "Folder: $(agentvm_display_path "$_path")"
     }
-    "$dialog" "$_uuid" "$IMAGE_BOXES_ID" "Boxes made from it: $(image_list_text "$(image_boxes "$_uuid" "$_name")")."
-    "$dialog" "$_uuid" "$IMAGE_DERIVED_ID" "Images built from it: $(image_list_text "$(image_derived "$_uuid" "$_name")")."
+    "$dialog" "$_uuid" "$IMAGE_BOXES_ID" "Boxes made from it: $(ui_lines_text "$(image_boxes "$_uuid" "$_name")")."
+    "$dialog" "$_uuid" "$IMAGE_DERIVED_ID" "Images built from it: $(ui_lines_text "$(image_derived "$_uuid" "$_name")")."
     ui_enable "$_uuid" "$IMAGE_SHOW_ID" 1
     ui_enable "$_uuid" "$IMAGE_DELETE_ID" 1
 }
@@ -268,11 +254,11 @@ image_delete_question() {
     _text="$_text."
     local _boxes="$(image_cached "$_uuid" boxes.tsv | /usr/bin/awk -F'\t' -v name="$_name" '$3 == name { print $1 }')"
     if [ -n "$_boxes" ]; then
-        _text="$_text Boxes made from it ($(image_list_text "$_boxes")) keep working, but cannot be recreated."
+        _text="$_text Boxes made from it ($(ui_lines_text "$_boxes")) keep working, but cannot be recreated."
     fi
     local _derived="$(image_derived "$_uuid" "$_name")"
     if [ -n "$_derived" ]; then
-        _text="$_text Images built from it ($(image_list_text "$_derived")) keep working."
+        _text="$_text Images built from it ($(ui_lines_text "$_derived")) keep working."
     fi
     printf '%s This cannot be undone.\n' "$_text"
 }

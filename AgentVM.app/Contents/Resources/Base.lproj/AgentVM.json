@@ -1,191 +1,389 @@
 {
-  "type": "VStack",
+  "type": "ZStack",
   "properties": {
-    "spacing": 10.0,
-    "alignment": "leading",
+    "alignment": "topLeading",
     "frame": {
       "minWidth": 760.0,
       "minHeight": 480.0,
       "idealWidth": 980.0,
       "idealHeight": 640.0
-    },
-    "padding": "default"
+    }
   },
   "children": [
     {
-      "type": "HStack",
-      "properties": { "spacing": 8.0 },
+      "type": "VStack",
+      "id": 200,
+      "properties": {
+        "hidden": true,
+        "spacing": 12.0,
+        "alignment": "leading",
+        "padding": 20.0,
+        "frame": { "maxWidth": "infinity", "maxHeight": "infinity", "alignment": "topLeading" }
+      },
       "children": [
         {
           "type": "Text",
-          "id": 100,
-          "properties": { "text": "", "foregroundStyle": "secondary" }
-        },
-        { "type": "Spacer" },
-        {
-          "type": "Button",
-          "id": 102,
-          "properties": { "title": "New Image...", "disabled": true }
+          "properties": { "text": "Get started", "font": "title2" }
         },
         {
-          "type": "Button",
-          "id": 103,
-          "properties": { "title": "New Box...", "disabled": true }
+          "type": "Text",
+          "id": 201,
+          "properties": { "text": "", "textSelection": "enabled" }
         },
         {
-          "type": "Button",
-          "id": 104,
-          "properties": { "title": "Setup", "disabled": true }
+          "type": "Text",
+          "id": 202,
+          "properties": { "text": "", "foregroundStyle": "red", "textSelection": "enabled" }
         }
       ]
     },
     {
-      "type": "Text",
-      "id": 101,
-      "properties": { "text": "", "foregroundStyle": "red" }
-    },
-    {
-      "type": "ZStack",
-      "properties": {
-        "alignment": "topLeading",
-        "frame": { "maxWidth": "infinity", "maxHeight": "infinity" }
-      },
+      "type": "TabView",
+      "id": 300,
+      "properties": { "hidden": true },
       "children": [
         {
-          "type": "VStack",
-          "id": 200,
-          "properties": {
-            "hidden": true,
-            "spacing": 12.0,
-            "alignment": "leading",
-            "frame": { "maxWidth": "infinity", "maxHeight": "infinity", "alignment": "topLeading" }
-          },
-          "children": [
-            {
-              "type": "Text",
-              "properties": { "text": "Get started", "font": "title2" }
-            },
-            {
-              "type": "Text",
-              "id": 201,
-              "properties": { "text": "" }
-            }
-          ]
-        },
-        {
-          "type": "VStack",
-          "id": 300,
-          "properties": {
-            "hidden": true,
-            "spacing": 8.0,
-            "alignment": "leading",
-            "frame": { "maxWidth": "infinity", "maxHeight": "infinity" }
-          },
-          "children": [
-            {
-              "type": "Text",
-              "id": 305,
-              "properties": { "text": "", "foregroundStyle": "orange" }
-            },
-            {
-              "type": "Text",
-              "properties": { "text": "Boxes", "font": "headline" }
-            },
-            {
-              "type": "Table",
-              "id": 310,
+          "type": "Tab",
+          "properties": { "title": "Boxes", "systemImage": "shippingbox" },
+          "content": {
+            "type": "NavigationSplitView",
+            "id": 310,
+            "properties": { "columnVisibility": "all", "style": "balanced" },
+            "sidebar": {
+              "type": "VStack",
               "properties": {
-                "columns": ["Name", "", "State", "Image", "Network", "Project, programs, owner", ""],
-                "columnTypes": [
-                  { "viewType": "Text" },
-                  { "viewType": "Image", "dataInterpretation": "systemName" },
-                  { "viewType": "Text" },
-                  { "viewType": "Text" },
-                  { "viewType": "Text" },
-                  { "viewType": "Text" },
-                  { "viewType": "Button", "actionContext": "rowIndex" }
-                ],
-                "widths": [150, 24, 100, 120, 110, 260, 70],
-                "minWidths": [90, 20, 70, 70, 80, 100, 60],
-                "actionID": "AgentVM.main.box.selected",
-                "frame": { "maxWidth": "infinity", "minHeight": 110.0, "maxHeight": "infinity" }
-              }
-            },
-            {
-              "type": "Text",
-              "properties": { "text": "Images", "font": "headline" }
-            },
-            {
-              "type": "Table",
-              "id": 320,
-              "properties": {
-                "columns": ["Name", "", "State", "macOS", "Built from", "Tools", "Needs", ""],
-                "columnTypes": [
-                  { "viewType": "Text" },
-                  { "viewType": "Image", "dataInterpretation": "systemName" },
-                  { "viewType": "Text" },
-                  { "viewType": "Text" },
-                  { "viewType": "Text" },
-                  { "viewType": "Text" },
-                  { "viewType": "Text" },
-                  { "viewType": "Button", "actionContext": "rowIndex", "actionID": "AgentVM.main.image.details" }
-                ],
-                "widths": [150, 24, 90, 60, 110, 260, 150, 50],
-                "minWidths": [90, 20, 60, 50, 70, 100, 80, 40],
-                "actionID": "AgentVM.main.image.selected",
-                "doubleClickActionID": "AgentVM.main.image.details",
-                "frame": { "maxWidth": "infinity", "minHeight": 130.0, "maxHeight": "infinity" }
-              }
-            },
-            {
-              "type": "HStack",
-              "properties": { "spacing": 8.0, "frame": { "minHeight": 28.0 } },
+                "spacing": 0.0,
+                "navigationSplitViewColumnWidth": { "min": 220, "ideal": 260, "max": 340 }
+              },
               "children": [
                 {
-                  "type": "Text",
-                  "id": 331,
-                  "properties": { "text": "Select a box or an image.", "foregroundStyle": "secondary" }
+                  "type": "List",
+                  "id": 311,
+                  "properties": {
+                    "actionID": "AgentVM.main.box.selected",
+                    "listStyle": "sidebar",
+                    "listRowSeparator": "hidden",
+                    "listRowInsets": { "top": 4, "leading": 8, "bottom": 4, "trailing": 8 }
+                  },
+                  "template": {
+                    "type": "VStack",
+                    "properties": {
+                      "alignment": "leading",
+                      "spacing": 6,
+                      "padding": 12,
+                      "frame": { "maxWidth": "infinity", "alignment": "leading" },
+                      "foregroundStyle": "white",
+                      "background": "$6",
+                      "cornerRadius": 12
+                    },
+                    "children": [
+                      {
+                        "type": "HStack",
+                        "children": [
+                          { "type": "Image", "properties": { "systemName": "shippingbox.fill", "font": "title2" } },
+                          { "type": "Spacer" },
+                          {
+                            "type": "HStack",
+                            "properties": { "spacing": 4 },
+                            "children": [
+                              { "type": "Image", "properties": { "systemName": "$5", "font": "caption" } },
+                              { "type": "Text", "properties": { "text": "$4", "font": { "size": 11, "weight": "semibold" } } }
+                            ]
+                          },
+                          { "type": "Image", "properties": { "systemName": "$2", "font": "title2" } }
+                        ]
+                      },
+                      { "type": "Text", "properties": { "text": "$1", "font": { "size": 17, "weight": "bold" } } },
+                      { "type": "Text", "properties": { "text": "$3", "font": "caption", "opacity": 0.85 } }
+                    ]
+                  },
+                  "toolbar": [
+                    {
+                      "type": "ToolbarItem",
+                      "properties": { "placement": "primaryAction" },
+                      "content": {
+                        "type": "Button",
+                        "id": 314,
+                        "properties": { "systemImage": "plus", "help": "New Box...", "disabled": true }
+                      }
+                    }
+                  ]
                 },
-                { "type": "Spacer" },
                 {
-                  "type": "ZStack",
-                  "properties": { "alignment": "trailing" },
+                  "type": "VStack",
+                  "properties": {
+                    "spacing": 4.0,
+                    "alignment": "leading",
+                    "padding": { "top": 6, "leading": 16, "bottom": 10, "trailing": 12 },
+                    "frame": { "maxWidth": "infinity", "alignment": "leading" }
+                  },
                   "children": [
                     {
-                      "type": "HStack",
-                      "id": 340,
-                      "properties": { "hidden": true, "spacing": 8.0 },
-                      "children": [
-                        { "type": "Button", "id": 341, "properties": { "title": "Stop", "disabled": true } },
-                        { "type": "Button", "id": 342, "properties": { "title": "View", "disabled": true } },
-                        { "type": "Button", "id": 343, "properties": { "title": "View and Control", "disabled": true } },
-                        { "type": "Button", "id": 344, "properties": { "title": "Open Shell", "disabled": true } },
-                        { "type": "Button", "id": 345, "properties": { "title": "Details...", "disabled": true } }
-                      ]
+                      "type": "Text",
+                      "id": 312,
+                      "properties": { "text": "", "font": "caption", "foregroundStyle": "secondary" }
                     },
                     {
-                      "type": "HStack",
-                      "id": 350,
-                      "properties": { "hidden": true, "spacing": 8.0 },
-                      "children": [
-                        { "type": "Button", "id": 351, "properties": { "title": "Start", "disabled": true } },
-                        { "type": "Button", "id": 352, "properties": { "title": "Details...", "disabled": true } }
-                      ]
-                    },
-                    {
-                      "type": "HStack",
-                      "id": 360,
-                      "properties": { "hidden": true, "spacing": 8.0 },
-                      "children": [
-                        { "type": "Button", "id": 361, "properties": { "title": "New Box from It...", "disabled": true } },
-                        { "type": "Button", "id": 362, "properties": { "title": "Details...", "actionID": "AgentVM.main.image.details" } }
-                      ]
+                      "type": "Text",
+                      "id": 313,
+                      "properties": { "text": "", "font": "caption", "foregroundStyle": "red" }
                     }
                   ]
                 }
               ]
+            },
+            "detail": {
+              "type": "ZStack",
+              "properties": { "frame": { "maxWidth": "infinity", "minHeight": 0, "maxHeight": "infinity" } },
+              "children": [
+                {
+                  "type": "ContentUnavailableView",
+                  "id": 319,
+                  "properties": { "title": "No Box Selected", "systemImage": "shippingbox", "description": "Select a box to see its details." }
+                },
+                {
+                  "type": "VStack",
+                  "id": 320,
+                  "properties": {
+                    "hidden": true,
+                    "alignment": "leading",
+                    "spacing": 12,
+                    "padding": 20,
+                    "frame": { "maxWidth": "infinity", "minHeight": 0, "maxHeight": "infinity", "alignment": "topLeading" }
+                  },
+                  "children": [
+                    { "type": "Text", "id": 321, "properties": { "text": "", "font": "largeTitle", "textSelection": "enabled" } },
+                    { "type": "Text", "id": 322, "properties": { "text": "", "foregroundStyle": "secondary", "textSelection": "enabled" } },
+                    {
+                      "type": "HStack",
+                      "properties": { "spacing": 8.0 },
+                      "children": [
+                        {
+                          "type": "ZStack",
+                          "properties": { "alignment": "leading" },
+                          "children": [
+                            {
+                              "type": "HStack",
+                              "id": 330,
+                              "properties": { "hidden": true, "spacing": 8.0 },
+                              "children": [
+                                { "type": "Button", "id": 331, "properties": { "title": "Stop", "disabled": true } },
+                                { "type": "Button", "id": 332, "properties": { "title": "View", "disabled": true } },
+                                { "type": "Button", "id": 333, "properties": { "title": "View and Control", "disabled": true } },
+                                { "type": "Button", "id": 334, "properties": { "title": "Open Shell", "disabled": true } }
+                              ]
+                            },
+                            {
+                              "type": "HStack",
+                              "id": 340,
+                              "properties": { "hidden": true, "spacing": 8.0 },
+                              "children": [
+                                { "type": "Button", "id": 341, "properties": { "title": "Start", "disabled": true } }
+                              ]
+                            }
+                          ]
+                        },
+                        { "type": "Spacer" }
+                      ]
+                    },
+                    {
+                      "type": "Form",
+                      "children": [
+                        { "type": "LabeledContent", "properties": { "title": "Image" }, "children": [ { "type": "Text", "id": 351, "properties": { "text": "", "textSelection": "enabled" } } ] },
+                        { "type": "LabeledContent", "properties": { "title": "Network" }, "children": [ { "type": "Text", "id": 352, "properties": { "text": "", "textSelection": "enabled" } } ] },
+                        { "type": "LabeledContent", "properties": { "title": "Project folder" }, "children": [ { "type": "Text", "id": 353, "properties": { "text": "", "textSelection": "enabled" } } ] },
+                        { "type": "LabeledContent", "properties": { "title": "Programs running" }, "children": [ { "type": "Text", "id": 354, "properties": { "text": "", "textSelection": "enabled" } } ] },
+                        { "type": "LabeledContent", "properties": { "title": "Started by" }, "children": [ { "type": "Text", "id": 355, "properties": { "text": "", "textSelection": "enabled" } } ] },
+                        { "type": "LabeledContent", "properties": { "title": "Processors and memory" }, "children": [ { "type": "Text", "id": 356, "properties": { "text": "", "textSelection": "enabled" } } ] },
+                        { "type": "LabeledContent", "properties": { "title": "Kept" }, "children": [ { "type": "Text", "id": 357, "properties": { "text": "", "textSelection": "enabled" } } ] },
+                        { "type": "LabeledContent", "properties": { "title": "Created" }, "children": [ { "type": "Text", "id": 358, "properties": { "text": "", "textSelection": "enabled" } } ] },
+                        { "type": "LabeledContent", "properties": { "title": "Folder" }, "children": [ { "type": "Text", "id": 359, "properties": { "text": "", "textSelection": "enabled" } } ] }
+                      ]
+                    },
+                    { "type": "Text", "id": 323, "properties": { "text": "", "foregroundStyle": "orange", "textSelection": "enabled" } },
+                    { "type": "Spacer" }
+                  ]
+                }
+              ]
             }
-          ]
+          }
+        },
+        {
+          "type": "Tab",
+          "properties": { "title": "Images", "systemImage": "square.stack.3d.up" },
+          "content": {
+            "type": "NavigationSplitView",
+            "id": 410,
+            "properties": { "columnVisibility": "all", "style": "balanced" },
+            "sidebar": {
+              "type": "VStack",
+              "properties": {
+                "spacing": 0.0,
+                "navigationSplitViewColumnWidth": { "min": 220, "ideal": 260, "max": 340 }
+              },
+              "children": [
+                {
+                  "type": "List",
+                  "id": 411,
+                  "properties": {
+                    "actionID": "AgentVM.main.image.selected",
+                    "doubleClickActionID": "AgentVM.main.image.details",
+                    "listStyle": "sidebar",
+                    "listRowSeparator": "hidden",
+                    "listRowInsets": { "top": 4, "leading": 8, "bottom": 4, "trailing": 8 }
+                  },
+                  "template": {
+                    "type": "VStack",
+                    "properties": {
+                      "alignment": "leading",
+                      "spacing": 6,
+                      "padding": 12,
+                      "frame": { "maxWidth": "infinity", "alignment": "leading" },
+                      "foregroundStyle": "white",
+                      "background": "$6",
+                      "cornerRadius": 12
+                    },
+                    "children": [
+                      {
+                        "type": "HStack",
+                        "children": [
+                          { "type": "Image", "properties": { "systemName": "$2", "font": "title2" } },
+                          { "type": "Spacer" },
+                          {
+                            "type": "HStack",
+                            "properties": { "spacing": 4 },
+                            "children": [
+                              { "type": "Image", "properties": { "systemName": "$5", "font": "caption" } },
+                              { "type": "Text", "properties": { "text": "$4", "font": { "size": 11, "weight": "semibold" } } }
+                            ]
+                          },
+                          { "type": "Text", "properties": { "text": "$7", "font": { "size": 22, "weight": "bold" } } }
+                        ]
+                      },
+                      { "type": "Text", "properties": { "text": "$1", "font": { "size": 17, "weight": "bold" } } },
+                      { "type": "Text", "properties": { "text": "$3", "font": "caption", "opacity": 0.85 } }
+                    ]
+                  },
+                  "toolbar": [
+                    {
+                      "type": "ToolbarItem",
+                      "properties": { "placement": "primaryAction" },
+                      "content": {
+                        "type": "Button",
+                        "id": 414,
+                        "properties": { "systemImage": "plus", "help": "New Image...", "disabled": true }
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "VStack",
+                  "properties": {
+                    "spacing": 4.0,
+                    "alignment": "leading",
+                    "padding": { "top": 6, "leading": 16, "bottom": 10, "trailing": 12 },
+                    "frame": { "maxWidth": "infinity", "alignment": "leading" }
+                  },
+                  "children": [
+                    {
+                      "type": "Text",
+                      "id": 412,
+                      "properties": { "text": "", "font": "caption", "foregroundStyle": "secondary" }
+                    },
+                    {
+                      "type": "Text",
+                      "id": 413,
+                      "properties": { "text": "", "font": "caption", "foregroundStyle": "red" }
+                    }
+                  ]
+                }
+              ]
+            },
+            "detail": {
+              "type": "ZStack",
+              "properties": { "frame": { "maxWidth": "infinity", "minHeight": 0, "maxHeight": "infinity" } },
+              "children": [
+                {
+                  "type": "ContentUnavailableView",
+                  "id": 419,
+                  "properties": { "title": "No Image Selected", "systemImage": "square.stack.3d.up", "description": "Select an image to see its details." }
+                },
+                {
+                  "type": "VStack",
+                  "id": 420,
+                  "properties": {
+                    "hidden": true,
+                    "alignment": "leading",
+                    "spacing": 12,
+                    "padding": 20,
+                    "frame": { "maxWidth": "infinity", "minHeight": 0, "maxHeight": "infinity", "alignment": "topLeading" }
+                  },
+                  "children": [
+                    { "type": "Text", "id": 421, "properties": { "text": "", "font": "largeTitle", "textSelection": "enabled" } },
+                    { "type": "Text", "id": 422, "properties": { "text": "", "foregroundStyle": "secondary", "textSelection": "enabled" } },
+                    {
+                      "type": "HStack",
+                      "properties": { "spacing": 8.0 },
+                      "children": [
+                        { "type": "Button", "id": 431, "properties": { "title": "New Box from It...", "disabled": true } },
+                        { "type": "Button", "id": 432, "properties": { "title": "Open in Window", "actionID": "AgentVM.main.image.details" } },
+                        { "type": "Spacer" }
+                      ]
+                    },
+                    {
+                      "type": "Form",
+                      "children": [
+                        { "type": "LabeledContent", "properties": { "title": "macOS" }, "children": [ { "type": "Text", "id": 451, "properties": { "text": "", "textSelection": "enabled" } } ] },
+                        { "type": "LabeledContent", "properties": { "title": "Built from" }, "children": [ { "type": "Text", "id": 452, "properties": { "text": "", "textSelection": "enabled" } } ] },
+                        { "type": "LabeledContent", "properties": { "title": "Tools" }, "children": [ { "type": "Text", "id": 453, "properties": { "text": "", "textSelection": "enabled" } } ] },
+                        { "type": "LabeledContent", "properties": { "title": "Guest daemon" }, "children": [ { "type": "Text", "id": 454, "properties": { "text": "", "textSelection": "enabled" } } ] },
+                        { "type": "LabeledContent", "properties": { "title": "Created" }, "children": [ { "type": "Text", "id": 455, "properties": { "text": "", "textSelection": "enabled" } } ] },
+                        { "type": "LabeledContent", "properties": { "title": "Boxes made from it" }, "children": [ { "type": "Text", "id": 456, "properties": { "text": "", "textSelection": "enabled" } } ] },
+                        { "type": "LabeledContent", "properties": { "title": "Images built from it" }, "children": [ { "type": "Text", "id": 457, "properties": { "text": "", "textSelection": "enabled" } } ] },
+                        { "type": "LabeledContent", "properties": { "title": "Folder" }, "children": [ { "type": "Text", "id": 458, "properties": { "text": "", "textSelection": "enabled" } } ] }
+                      ]
+                    },
+                    { "type": "Text", "id": 423, "properties": { "text": "", "foregroundStyle": "orange", "textSelection": "enabled" } },
+                    { "type": "Spacer" }
+                  ]
+                }
+              ]
+            }
+          }
+        },
+        {
+          "type": "Tab",
+          "properties": { "title": "Settings", "systemImage": "gearshape" },
+          "content": {
+            "type": "Form",
+            "properties": {
+              "padding": { "top": 32, "leading": 20, "bottom": 20, "trailing": 20 },
+              "frame": { "maxWidth": "infinity", "maxHeight": "infinity", "alignment": "top" }
+            },
+            "children": [
+              {
+                "type": "Section",
+                "properties": { "header": "agent-vm" },
+                "children": [
+                  { "type": "LabeledContent", "properties": { "title": "Version" }, "children": [ { "type": "Text", "id": 501, "properties": { "text": "", "textSelection": "enabled" } } ] },
+                  { "type": "LabeledContent", "properties": { "title": "Location" }, "children": [ { "type": "Text", "id": 502, "properties": { "text": "", "textSelection": "enabled" } } ] },
+                  {
+                    "type": "LabeledContent",
+                    "properties": { "title": "Updates" },
+                    "children": [ { "type": "Button", "id": 503, "properties": { "title": "Check for Updates...", "disabled": true } } ]
+                  }
+                ]
+              },
+              {
+                "type": "Section",
+                "properties": { "header": "This Mac" },
+                "children": [
+                  { "type": "LabeledContent", "properties": { "title": "Virtual machines" }, "children": [ { "type": "Text", "id": 511, "properties": { "text": "", "textSelection": "enabled" } } ] },
+                  { "type": "LabeledContent", "properties": { "title": "Free disk space" }, "children": [ { "type": "Text", "id": 512, "properties": { "text": "", "textSelection": "enabled" } } ] }
+                ]
+              }
+            ]
+          }
         }
       ]
     }

@@ -1,21 +1,16 @@
 #!/bin/sh
 # AgentVM.main.box.selected.sh
-# A row of the boxes table was selected or deselected: the one selection across both tables
-# becomes that box (the images table loses its highlight), and the action row follows.
+# A card of the box list was selected or deselected: the box list's selection becomes that box,
+# or nothing, and the detail pane follows.
 
 . "$OMC_APP_BUNDLE_PATH/Contents/Resources/Scripts/lib.agentvm.main.sh"
 
 window_uuid="$OMC_ACTIONUI_WINDOW_UUID"
 [ -n "$window_uuid" ] || exit 0
-name="$OMC_ACTIONUI_TABLE_310_COLUMN_1_VALUE"
+name="$OMC_ACTIONUI_TABLE_311_COLUMN_1_VALUE"
 if [ -n "$name" ] && agentvm_valid_name "$name"; then
-    ui_set selected "$window_uuid" "box:$name"
-    # Fires no action, so the images table's handler does not clear what was just set.
-    "$dialog" "$window_uuid" "$MAIN_IMAGES_ID" omc_deselect
+    ui_set box "$window_uuid" "$name"
 else
-    selected="$(ui_get selected "$window_uuid")"
-    case "$selected" in
-        box:*) ui_set selected "$window_uuid" "" ;;
-    esac
+    ui_set box "$window_uuid" ""
 fi
-main_paint_actions "$window_uuid"
+main_paint_box_detail "$window_uuid"

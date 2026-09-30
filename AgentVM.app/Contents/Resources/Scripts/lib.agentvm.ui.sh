@@ -141,6 +141,20 @@ ui_names_text() {
     printf '%s\n' "$_text"
 }
 
+# ui_lines_text <lines>  ->  the lines as "a", "a and b", "a, b and c", or "none".
+ui_lines_text() {
+    [ -n "$1" ] || {
+        echo "none"
+        return 0
+    }
+    local _saved="$IFS"
+    IFS='
+'
+    set -- $1
+    IFS="$_saved"
+    ui_names_text "$@"
+}
+
 # ui_date_text <ISO 8601 time>  ->  its day in this Mac's time zone ("Sep 23, 2026"), or nothing.
 ui_date_text() {
     local _seconds="$(ui_seconds_since_epoch "$1")"

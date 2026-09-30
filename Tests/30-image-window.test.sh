@@ -1,6 +1,6 @@
 #!/bin/sh
 # Tests/30-image-window.test.sh - an image's window: how it opens (from the main window's
-# Details, a row's "..." button or a double-click), one window per image, what it shows, Show in
+# Open in Window, or a double-click on a card), one window per image, what it shows, Show in
 # Finder, and Delete with its question.
 #
 # agent-vm is the fake: status from fixtures/agentvm/status-variety.json, and `image info` from
@@ -84,36 +84,31 @@ store '.'
 "$PB" "agentvm_window_image_dev-acp" set ""
 
 # -----------------------------------------------------------------------------------------------
-section "Details from the main window"
+section "Open in Window from the main window"
 open_main
 ui_rows "$MAIN_IMAGES_ID" > "$SHOWN_ROWS"
 chains_reset
 omc_table_cell "$MAIN_IMAGES_ID" 1 dev-acp
 omc_trigger "$MAIN_IMAGES_ID"
 omc_run AgentVM.main.image.selected
-omc_trigger 362
+omc_trigger 432
 omc_run AgentVM.main.image.details
-check "Details... asks for an image window" "1" "$(chain_asked AgentVM.image)"
+check "Open in Window asks for an image window" "1" "$(chain_asked AgentVM.image)"
 check "  for the selected image, from this run of the app" "$APP_PID image:dev-acp" "$(request)"
 
 "$PB" agentvm_open_request set ""
 index="$(shown_index dev-node)"
 check "the fixture shows dev-node" "yes" "$([ -n "$index" ] && echo yes)"
-omc_trigger "$MAIN_IMAGES_ID" 7 "$index"
+omc_trigger "$MAIN_IMAGES_ID" 0 "$index"
 omc_run AgentVM.main.image.details
-check "a row's ... button names the image in that row" "$APP_PID image:dev-node" "$(request)"
-
-"$PB" agentvm_open_request set ""
-omc_trigger "$MAIN_IMAGES_ID" 0 "$(shown_index latest-test)"
-omc_run AgentVM.main.image.details
-check "a double-click the same" "$APP_PID image:latest-test" "$(request)"
+check "a double-click on a card names the image on that card" "$APP_PID image:dev-node" "$(request)"
 
 "$PB" agentvm_open_request set ""
 chains_reset
-omc_trigger "$MAIN_IMAGES_ID" 7 "99"
+omc_trigger "$MAIN_IMAGES_ID" 0 "99"
 omc_run AgentVM.main.image.details
 check "a row index past the rows opens nothing" "0" "$(chain_asked AgentVM.image)"
-omc_trigger "$MAIN_IMAGES_ID" 7 "-1"
+omc_trigger "$MAIN_IMAGES_ID" 0 "-1"
 omc_run AgentVM.main.image.details
 check "  nor one that is not an index" "0" "$(chain_asked AgentVM.image)"
 check "  and leaves no request" "" "$(request)"
@@ -152,7 +147,7 @@ section "a second Details on the same image"
 in_window "$MAIN_UUID"
 chains_reset
 "$PB" agentvm_open_request set ""
-omc_trigger "$MAIN_IMAGES_ID" 7 "$(shown_index dev-acp)"
+omc_trigger "$MAIN_IMAGES_ID" 0 "$(shown_index dev-acp)"
 omc_run AgentVM.main.image.details
 check "opens no second window" "0" "$(chain_asked AgentVM.image)"
 check "  and brings the open one to the front" "1" "$(ui_calls "${IMAGE_UUID}${TAB}omc_window${TAB}omc_select")"
@@ -161,7 +156,7 @@ check "  leaving no request" "" "$(request)"
 section "an entry an earlier run of the app left (it quit without closing the window)"
 "$PB" "agentvm_window_image_dev-acp" set "1 $IMAGE_UUID"
 chains_reset
-omc_trigger "$MAIN_IMAGES_ID" 7 "$(shown_index dev-acp)"
+omc_trigger "$MAIN_IMAGES_ID" 0 "$(shown_index dev-acp)"
 omc_run AgentVM.main.image.details
 check "is not a window: a new one is asked for" "1" "$(chain_asked AgentVM.image)"
 "$PB" "agentvm_window_image_dev-acp" set "$APP_PID $IMAGE_UUID"

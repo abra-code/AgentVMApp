@@ -319,6 +319,7 @@ agentvm_status() {
 #   13 disposable (true or false)   14 statusError   15 cpus   16 memoryGB   17 path
 #   18 needs (kinds, comma-joined: recreate, when its image's guest daemon is no longer the one
 #      the box was made with; agent-vm says nothing for a box made before it recorded that)
+#   19 macOSVersion   20 macOSBuild (what the box was made with)   21 createdAt
 # The running fields (6-12) are "-" for a stopped box.
 agentvm_status_box_rows() {
     /usr/bin/jq -r "$agentvm_jq_defs"' .boxes[] | [
@@ -328,7 +329,8 @@ agentvm_status_box_rows() {
         (.box.disposable // false), .statusError,
         .box.cpuCount, (if .box.memoryBytes == null then null else .box.memoryBytes / 1073741824 | floor end),
         .path,
-        (.needs // [] | map(.kind) | if length == 0 then null else join(",") end) ] | row'
+        (.needs // [] | map(.kind) | if length == 0 then null else join(",") end),
+        .box.macOSVersion, .box.macOSBuild, .box.createdAt ] | row'
 }
 
 # agentvm_status_image_rows  <  status JSON  ->  one row per image:
