@@ -14,6 +14,10 @@
 # mark); the detail pane has the rest, including what the maintenance is. Settings shows which
 # agent-vm runs and what this Mac has room for.
 #
+# A DETAIL PANE IS AN OVERVIEW. What has work of its own opens in a window of its own, one per
+# box, from a Details... button on the pane's row (lib.agentvm.ui.sh, "Box windows"): a box's
+# network is lib.agentvm.network.sh.
+#
 # READING AND PAINTING ARE SEPARATE. main_read_* run agent-vm and leave its answers in the
 # window's cache folder (lib.agentvm.ui.sh); main_paint_* only read the caches. So a handler that
 # repaints runs no agent-vm, and the poll loop reads only `status`, the one cheap call (doctor asks
@@ -64,6 +68,7 @@ MAIN_BOX_RECREATE_ID=344
 MAIN_BOX_DELETE_ID=345
 MAIN_BOX_IMAGE_ID=351
 MAIN_BOX_NETWORK_ID=352
+MAIN_BOX_NETWORK_DETAILS_ID=361
 MAIN_BOX_PROJECT_ID=353
 MAIN_BOX_PROGRAMS_ID=354
 MAIN_BOX_OWNER_ID=355

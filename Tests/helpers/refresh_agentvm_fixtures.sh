@@ -4,8 +4,8 @@
 # Usage: Tests/helpers/refresh_agentvm_fixtures.sh <path to agent-vm>
 #
 # Runs only queries that start and stop nothing: `version`, `doctor`, `status` (which, unlike
-# `box list`, deletes no stopped disposable box), `image info` of one image and `box info` of one
-# box, against the
+# `box list`, deletes no stopped disposable box), `image info` of one image, `box info` and the
+# rules (`box network` with no change) of one box, and `box packs`, against the
 # store agent-vm finds by itself (AGENT_VM_HOME, or ~/Library/Application Support/agent-vm),
 # and `status` again against an empty store in a temporary folder. Each answer is re-serialized
 # with sorted keys, and the home folder in every string is replaced with /Users/you, so a capture
@@ -78,9 +78,14 @@ fi
 info_box="$(/usr/bin/jq -r '.boxes[0].box.name // empty' "$fixtures/status.json")"
 if [ -n "$info_box" ]; then
     capture box-info box info "$info_box" --json
+    # The network window: the same box's rules (`box network` with no change only reads them).
+    # Its connection log is not captured: it lists what programs in the box reached, which does
+    # not belong in a public repository; box-netlog.json is made by hand (see the README).
+    capture box-network box network "$info_box" --json
 else
-    printf '  box-info.json left as it was: no box in this store\n'
+    printf '  box-info.json and box-network.json left as they were: no box in this store\n'
 fi
+capture packs box packs --json
 
 /bin/mkdir -p "$work/empty-store"
 status=$?

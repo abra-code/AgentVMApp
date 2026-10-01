@@ -1,8 +1,8 @@
 #!/bin/sh
 # AgentVM.main.box.delete.confirmed.sh
 # Delete, in the question AgentVM.main.box.delete asked: agent-vm deletes the box asked about,
-# and the lists are read again. When agent-vm refuses (the box was started meanwhile), its reason
-# is shown and the box stays selected.
+# its network window closes, and the lists are read again. When agent-vm refuses (the box was
+# started meanwhile), its reason is shown and the box stays selected.
 
 . "$OMC_APP_BUNDLE_PATH/Contents/Resources/Scripts/lib.agentvm.main.sh"
 
@@ -19,6 +19,8 @@ if [ "$status" -ne 0 ]; then
     main_refresh "$window_uuid" status
     exit 0
 fi
+# A deleted box has nothing to show in a window of its own.
+ui_item_close network "$name"
 selected="$(ui_get box "$window_uuid")"
 [ "$selected" = "$name" ] && ui_set box "$window_uuid" ""
 main_refresh "$window_uuid" status

@@ -31,7 +31,12 @@
 #   --version, version --json, doctor --json, status --json, image info <name> --json,
 #   image delete <name> --json, box delete <name> --json and box recreate <name> --json (which
 #   change nothing: the test changes status.json to match), box info <name> --json, and
-#   box view <name> [--interactive] --json (which shows nothing).
+#   box view <name> [--interactive] --json (which shows nothing), box packs --json,
+#   box network <name> [--net <mode>] [--allow <rule> ...] [--disallow <rule> ...] --json (the
+#   rules from box-network-<name>.json in the state directory, else the fixture box-network.json;
+#   a change is applied to them and written to box-network-<name>.json, as agent-vm would keep
+#   it), and box netlog <name> --last <n> --json (box-netlog-<name>.json in the state directory,
+#   else the fixture box-netlog.json).
 # Anything else fails with status 64, so a test that reaches an unimplemented command finds out.
 
 state="${FAKE_AGENTVM_DIR:?fake_agent_vm: FAKE_AGENTVM_DIR is not set}"
@@ -110,6 +115,32 @@ case "$*" in
                 exit 1
             fi
             /bin/cat "$fixtures/box-info.json"
+        fi ;;
+    "box packs --json")
+        answer packs ;;
+    "box network "*)
+        box="$3"
+        shift 3
+        rules="$state/box-network-$box.json"
+        [ -f "$rules" ] || /bin/cat "$fixtures/box-network.json" > "$rules"
+        while [ "$#" -gt 1 ]; do
+            case "$1" in
+                --net)      edit='.mode = $v' ;;
+                --allow)    edit='(.allow // []) as $a | .allow = (if ($a | any(. == $v)) then $a else $a + [$v] end)' ;;
+                --disallow) edit='.allow = ((.allow // []) - [$v])' ;;
+                *)          printf 'Error: fake_agent_vm does not implement box network %s\n' "$1" >&2
+                            exit 64 ;;
+            esac
+            /usr/bin/jq --arg v "$2" "$edit" "$rules" > "$rules.new" && /bin/mv "$rules.new" "$rules"
+            shift 2
+        done
+        [ "$1" = "--json" ] || exit 64
+        /bin/cat "$rules" ;;
+    "box netlog "*" --last "*" --json")
+        if [ -f "$state/box-netlog-$3.json" ]; then
+            /bin/cat "$state/box-netlog-$3.json"
+        else
+            /bin/cat "$fixtures/box-netlog.json"
         fi ;;
     "box delete "*" --json"|"box recreate "*" --json"|"box view "*" --json"|"box view "*" --interactive --json")
         ;;

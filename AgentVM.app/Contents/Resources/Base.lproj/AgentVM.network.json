@@ -1,0 +1,183 @@
+{
+  "type": "TabView",
+  "properties": {
+    "frame": { "minWidth": 560.0, "minHeight": 460.0, "idealWidth": 640.0, "idealHeight": 560.0 }
+  },
+  "children": [
+    {
+      "type": "Tab",
+      "properties": { "title": "Settings", "systemImage": "slider.horizontal.3" },
+      "content": {
+        "type": "VStack",
+        "properties": {
+          "alignment": "leading",
+          "spacing": 10.0,
+          "padding": 20.0,
+          "frame": { "maxWidth": "infinity", "maxHeight": "infinity", "alignment": "topLeading" }
+        },
+        "children": [
+          {
+            "type": "HStack",
+            "properties": { "spacing": 8.0 },
+            "children": [
+              { "type": "Text", "properties": { "text": "Mode", "font": "headline" } },
+              {
+                "type": "Picker",
+                "id": 601,
+                "properties": {
+                  "title": "Mode",
+                  "labelsHidden": true,
+                  "pickerStyle": "segmented",
+                  "options": [ "Allowlist", "Off", "Open" ],
+                  "actionID": "AgentVM.network.mode",
+                  "disabled": true,
+                  "frame": { "maxWidth": 260 }
+                }
+              }
+            ]
+          },
+          {
+            "type": "Text",
+            "id": 602,
+            "properties": { "text": "", "font": "caption", "foregroundStyle": "secondary", "textSelection": "enabled" }
+          },
+          { "type": "Text", "properties": { "text": "Packs", "font": "headline", "padding": { "top": 6 } } },
+          {
+            "type": "LazyVGrid",
+            "id": 603,
+            "properties": {
+              "columns": [ { "flexible": true }, { "flexible": true }, { "flexible": true } ],
+              "spacing": 6,
+              "alignment": "leading"
+            },
+            "template": {
+              "type": "HStack",
+              "properties": {
+                "spacing": 6,
+                "padding": 2,
+                "actionID": "AgentVM.network.pack",
+                "help": "$3",
+                "frame": { "maxWidth": "infinity", "alignment": "leading" }
+              },
+              "children": [
+                { "type": "Image", "properties": { "systemName": "$1", "foregroundStyle": "$4" } },
+                { "type": "Text", "properties": { "text": "$2" } }
+              ]
+            }
+          },
+          {
+            "type": "HStack",
+            "id": 608,
+            "properties": {
+              "spacing": 6,
+              "padding": 2,
+              "actionID": "AgentVM.network.public",
+              "help": "Any host name that resolves to a public address, logged like every connection. Never an IP address, a local name, this Mac or your local network."
+            },
+            "children": [
+              { "type": "Image", "id": 609, "properties": { "systemName": "square" } },
+              { "type": "Text", "properties": { "text": "Any public host name (logged; never this Mac or your local network)" } }
+            ]
+          },
+          { "type": "Text", "properties": { "text": "Other hosts", "font": "headline", "padding": { "top": 6 } } },
+          {
+            "type": "Table",
+            "id": 604,
+            "properties": {
+              "columns": [ "Rule", "Note" ],
+              "widths": [ 320, 160 ],
+              "minWidths": [ 120, 80 ],
+              "actionID": "AgentVM.network.host.selected",
+              "frame": { "maxWidth": "infinity", "minHeight": 80, "maxHeight": "infinity" }
+            }
+          },
+          {
+            "type": "HStack",
+            "properties": { "spacing": 8.0 },
+            "children": [
+              {
+                "type": "TextField",
+                "id": 605,
+                "properties": {
+                  "title": "Host",
+                  "prompt": "host, *.domain or host:port",
+                  "labelsHidden": true,
+                  "frame": { "maxWidth": 300 }
+                }
+              },
+              { "type": "Button", "id": 606, "properties": { "title": "Add", "disabled": true, "actionID": "AgentVM.network.add" } },
+              { "type": "Button", "id": 607, "properties": { "title": "Remove", "disabled": true, "actionID": "AgentVM.network.remove" } }
+            ]
+          },
+          { "type": "Divider" },
+          {
+            "type": "HStack",
+            "properties": { "spacing": 8.0 },
+            "children": [
+              {
+                "type": "Text",
+                "id": 610,
+                "properties": { "text": "", "font": "caption", "foregroundStyle": "orange", "textSelection": "enabled" }
+              },
+              { "type": "Spacer" },
+              { "type": "Button", "id": 611, "properties": { "title": "Discard Changes", "disabled": true, "actionID": "AgentVM.network.discard" } },
+              {
+                "type": "Button",
+                "id": 612,
+                "properties": { "title": "Apply Rules", "disabled": true, "buttonStyle": "borderedProminent", "actionID": "AgentVM.network.apply" }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "type": "Tab",
+      "properties": { "title": "Activity", "systemImage": "list.bullet.rectangle" },
+      "content": {
+        "type": "VStack",
+        "properties": {
+          "alignment": "leading",
+          "spacing": 10.0,
+          "padding": 20.0,
+          "frame": { "maxWidth": "infinity", "maxHeight": "infinity", "alignment": "topLeading" }
+        },
+        "children": [
+          {
+            "type": "HStack",
+            "properties": { "spacing": 8.0 },
+            "children": [
+              { "type": "Text", "properties": { "text": "Recent connections, refused first", "font": "headline" } },
+              { "type": "Spacer" },
+              { "type": "Button", "id": 615, "properties": { "title": "Refresh", "actionID": "AgentVM.network.refresh" } }
+            ]
+          },
+          {
+            "type": "Table",
+            "id": 613,
+            "properties": {
+              "columns": [ "Host", "Port", "Result", "Count", "Why" ],
+              "widths": [ 220, 50, 70, 50, 180 ],
+              "minWidths": [ 120, 40, 60, 40, 80 ],
+              "actionID": "AgentVM.network.connection.selected",
+              "frame": { "maxWidth": "infinity", "minHeight": 120, "maxHeight": "infinity" }
+            }
+          },
+          {
+            "type": "HStack",
+            "properties": { "spacing": 8.0 },
+            "children": [
+              {
+                "type": "Text",
+                "id": 616,
+                "properties": { "text": "", "font": "caption", "foregroundStyle": "secondary", "textSelection": "enabled" }
+              },
+              { "type": "Spacer" },
+              { "type": "Button", "id": 614, "properties": { "title": "Allow Selected Host...", "disabled": true, "actionID": "AgentVM.network.allow" } }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

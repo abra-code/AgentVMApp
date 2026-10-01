@@ -1,0 +1,10 @@
+{
+  "allow": [
+    "pack:npm",
+    "opencode.ai",
+    "models.opencode.ai",
+    "pack:anthropic",
+    "html.duckduckgo.com"
+  ],
+  "mode": "allowlist"
+}

@@ -95,4 +95,10 @@ for stem in $(handler_scripts); do
 done
 check "no script nothing names" "" "$orphans"
 
+section "every action is under a key its view dispatches"
+# ActionUI's Picker fires only actionID, on a change the user makes; it never reads
+# valueChangeActionID, so a picker wired that way passes every check above and does nothing.
+check "no Picker with a valueChangeActionID" "" \
+    "$(/usr/bin/jq -r '.. | objects | select(.type? == "Picker" and .properties.valueChangeActionID? != null) | .id' "$DOCUMENTS"/*.json)"
+
 omctest_end

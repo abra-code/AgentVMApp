@@ -382,6 +382,104 @@ agentvm_box_delete() {
     agentvm_json box delete "$1" >/dev/null
 }
 
+# -- A box's network -----------------------------------------------------------------------------
+
+# agentvm_box_packs  ->  `agent-vm box packs --json`: the host packs this agent-vm knows (its own,
+# and any in the store's Packs/), for agentvm_packs_rows.
+agentvm_box_packs() {
+    agentvm_json box packs
+}
+
+# agentvm_packs_rows  <  box packs JSON  ->  one row per pack: name, description.
+agentvm_packs_rows() {
+    /usr/bin/jq -r "$agentvm_jq_defs"' .[] | [.name, .description] | row'
+}
+
+# agentvm_box_rules <name>  ->  `agent-vm box network <name> --json` with no change asked for:
+# the box's mode and rules as they are now, for agentvm_rules_lines.
+agentvm_box_rules() {
+    _agentvm_need_name box "$1" || return $?
+    agentvm_json box network "$1"
+}
+
+# agentvm_rules_lines  <  box network JSON  ->  the mode (allowlist, off or open; a box made before
+# network rules is open) on the first line, then one rule per line, as agent-vm lists them.
+agentvm_rules_lines() {
+    /usr/bin/jq -r "$agentvm_jq_defs"' (.mode // "open"), (.allow // [] | .[] | cell)'
+}
+
+# _agentvm_need_rule <rule>  ->  0, or 2 with the reason left for agentvm_last_error. A rule is an
+# argv element after --allow or --disallow, so one that is empty, starts with "-" or holds
+# whitespace is refused here; agent-vm checks the rest.
+_agentvm_need_rule() {
+    case "$1" in
+        ''|-*|*' '*|*"$(printf '\t')"*|*'
+'*)
+            _agentvm_refuse 2 "\"$1\" is not a network rule: a host, \"*.domain\", \"host:port\", \"pack:<name>\" or \"public\"."
+            return 2 ;;
+    esac
+    return 0
+}
+
+# agentvm_box_network_change <name> <mode, or - to keep it> [+rule|-rule ...]  ->  0 once agent-vm
+# changed the box's network in one call: --net for a new mode (agent-vm refuses it while the box
+# runs: the mode decides the box's network card), --allow for each +rule, --disallow for each
+# -rule. Rules apply at once, even while the box runs: its proxy rereads them.
+agentvm_box_network_change() {
+    _agentvm_need_name box "$1" || return $?
+    local _box="$1"
+    local _mode="$2"
+    shift 2
+    local _change
+    case "$_mode" in
+        -|allowlist|off|open) ;;
+        *)  _agentvm_refuse 2 "\"$_mode\" is not a network mode: allowlist, off or open."
+            return 2 ;;
+    esac
+    # Checked first, so nothing is changed when one of them is refused.
+    for _change; do
+        _agentvm_need_rule "${_change#?}" || return $?
+        case "$_change" in
+            +*|-*) ;;
+            *) _agentvm_refuse 2 "\"$_change\" is not a change: +rule or -rule."
+               return 2 ;;
+        esac
+    done
+    # Each change is taken off the front and its options put on the back, once round.
+    local _left=$#
+    while [ "$_left" -gt 0 ]; do
+        _change="$1"
+        shift
+        case "$_change" in
+            +*) set -- "$@" --allow "${_change#+}" ;;
+            -*) set -- "$@" --disallow "${_change#-}" ;;
+        esac
+        _left=$((_left - 1))
+    done
+    if [ "$_mode" != "-" ]; then
+        set -- --net "$_mode" "$@"
+    fi
+    agentvm_json box network "$_box" "$@" >/dev/null
+}
+
+# agentvm_box_netlog <name> <last>  ->  `agent-vm box netlog <name> --last <last> --json`: the
+# box's last connections, oldest first, for agentvm_netlog_rows. The whole log can hold a hundred
+# thousand connections, so the window always asks for the last few hundred.
+agentvm_box_netlog() {
+    _agentvm_need_name box "$1" || return $?
+    case "$2" in
+        ''|*[!0123456789]*) _agentvm_refuse 2 "\"$2\" is not a count."
+                            return 2 ;;
+    esac
+    agentvm_json box netlog "$1" --last "$2"
+}
+
+# agentvm_netlog_rows  <  box netlog JSON  ->  one row per connection: time, decision (allowed,
+# denied or failed), host, port, method, why (the rule that allowed it, else agent-vm's reason).
+agentvm_netlog_rows() {
+    /usr/bin/jq -r "$agentvm_jq_defs"' .[] | [.time, .decision, .host, .port, .method, (.rule // .reason)] | row'
+}
+
 # -- Terminal ------------------------------------------------------------------------------------
 # A handler has no terminal to hand the user, so what runs in Terminal is written to a .command
 # file, which Terminal runs when it opens one. Each file has a name of its own (the handler's

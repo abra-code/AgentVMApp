@@ -201,7 +201,10 @@
                       "type": "Form",
                       "children": [
                         { "type": "LabeledContent", "properties": { "title": "Image" }, "children": [ { "type": "Text", "id": 351, "properties": { "text": "", "textSelection": "enabled" } } ] },
-                        { "type": "LabeledContent", "properties": { "title": "Network" }, "children": [ { "type": "Text", "id": 352, "properties": { "text": "", "textSelection": "enabled" } } ] },
+                        { "type": "LabeledContent", "properties": { "title": "Network" }, "children": [ { "type": "HStack", "properties": { "spacing": 8.0 }, "children": [
+                          { "type": "Text", "id": 352, "properties": { "text": "", "textSelection": "enabled" } },
+                          { "type": "Button", "id": 361, "properties": { "title": "Details...", "controlSize": "small", "actionID": "AgentVM.main.box.network", "help": "Open the box's network window: what it may reach, and the connections it made lately." } }
+                        ] } ] },
                         { "type": "LabeledContent", "properties": { "title": "Project folder" }, "children": [ { "type": "Text", "id": 353, "properties": { "text": "", "textSelection": "enabled" } } ] },
                         { "type": "LabeledContent", "properties": { "title": "Programs running" }, "children": [ { "type": "Text", "id": 354, "properties": { "text": "", "textSelection": "enabled" } } ] },
                         { "type": "LabeledContent", "properties": { "title": "Started by" }, "children": [ { "type": "Text", "id": 355, "properties": { "text": "", "textSelection": "enabled" } } ] },

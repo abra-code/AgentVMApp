@@ -1,0 +1,111 @@
+[
+  {
+    "address": "203.0.113.7",
+    "bytesDown": 2048,
+    "bytesUp": 512,
+    "decision": "allowed",
+    "host": "registry.npmjs.org",
+    "id": "2026-09-30T10:00:01Zregistry.npmjs.org",
+    "method": "CONNECT",
+    "milliseconds": 12,
+    "port": 443,
+    "rule": "pack:npm",
+    "time": "2026-09-30T10:00:01Z"
+  },
+  {
+    "decision": "denied",
+    "host": "registry.yarnpkg.com",
+    "id": "2026-09-30T10:00:02Zregistry.yarnpkg.com",
+    "method": "CONNECT",
+    "milliseconds": 12,
+    "port": 443,
+    "reason": "not in the allowlist",
+    "time": "2026-09-30T10:00:02Z"
+  },
+  {
+    "address": "203.0.113.7",
+    "bytesDown": 2048,
+    "bytesUp": 512,
+    "decision": "allowed",
+    "host": "api.anthropic.com",
+    "id": "2026-09-30T10:00:03Zapi.anthropic.com",
+    "method": "CONNECT",
+    "milliseconds": 12,
+    "port": 443,
+    "rule": "pack:anthropic",
+    "time": "2026-09-30T10:00:03Z"
+  },
+  {
+    "decision": "denied",
+    "host": "registry.yarnpkg.com",
+    "id": "2026-09-30T10:00:04Zregistry.yarnpkg.com",
+    "method": "CONNECT",
+    "milliseconds": 12,
+    "port": 443,
+    "reason": "not in the allowlist",
+    "time": "2026-09-30T10:00:04Z"
+  },
+  {
+    "decision": "failed",
+    "host": "models.example.dev",
+    "id": "2026-09-30T10:00:05Zmodels.example.dev",
+    "method": "CONNECT",
+    "milliseconds": 12,
+    "port": 443,
+    "reason": "could not resolve the host",
+    "time": "2026-09-30T10:00:05Z"
+  },
+  {
+    "decision": "denied",
+    "host": "203.0.113.9",
+    "id": "2026-09-30T10:00:06Z203.0.113.9",
+    "method": "CONNECT",
+    "milliseconds": 12,
+    "port": 443,
+    "reason": "an IP address, not a host name",
+    "time": "2026-09-30T10:00:06Z"
+  },
+  {
+    "decision": "denied",
+    "host": "plain.example.org",
+    "id": "2026-09-30T10:00:07Zplain.example.org",
+    "method": "GET",
+    "milliseconds": 12,
+    "port": 80,
+    "reason": "not in the allowlist",
+    "time": "2026-09-30T10:00:07Z"
+  },
+  {
+    "decision": "denied",
+    "host": "raw.example.org",
+    "id": "2026-09-30T10:00:08Zraw.example.org",
+    "method": "CONNECT",
+    "milliseconds": 12,
+    "port": 80,
+    "reason": "not in the allowlist",
+    "time": "2026-09-30T10:00:08Z"
+  },
+  {
+    "address": "203.0.113.7",
+    "bytesDown": 2048,
+    "bytesUp": 512,
+    "decision": "allowed",
+    "host": "api.anthropic.com",
+    "id": "2026-09-30T10:00:09Zapi.anthropic.com",
+    "method": "CONNECT",
+    "milliseconds": 12,
+    "port": 443,
+    "rule": "pack:anthropic",
+    "time": "2026-09-30T10:00:09Z"
+  },
+  {
+    "decision": "denied",
+    "host": "registry.yarnpkg.com",
+    "id": "2026-09-30T10:00:10Zregistry.yarnpkg.com",
+    "method": "CONNECT",
+    "milliseconds": 12,
+    "port": 443,
+    "reason": "not in the allowlist",
+    "time": "2026-09-30T10:00:10Z"
+  }
+]

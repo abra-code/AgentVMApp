@@ -7,11 +7,15 @@ Real `--json` answers of agent-vm, which `Tests/helpers/fake_agent_vm.sh` serves
 - `status.json` - `agent-vm status --json` on a store with seven images (`dev`, `dev-acp`, `dev-agents`, `dev-node`, `dev-xcode`, `dev-xcode-ios`, `latest-test`) and three stopped boxes (`cadabra-spike`, `s3`, `try1`). Four images need Full Disk Access, and nothing needs a guest update or recreating. No job ran in the last hour (`jobs` is empty). With every box stopped, the fields a running box adds (`pid`, `ownerPid`, `project` and the rest) are absent; `status-variety.json` carries them.
 - `image-info.json` - `agent-vm image info <name> --json` of the first ready image built from another (`dev-acp`, built from `dev-node`, with Full Disk Access): the record with what its disk takes (`diskUsage`) and what it added over its base (`addedOverBase`). The fake answers it for that image only; any other name is not found, unless a test leaves `image-info-<name>.json` in the fake's state folder.
 - `box-info.json` - `agent-vm box info <name> --json` of the first box (`cadabra-spike`, stopped, made from `dev-agents`): its status entry with what its disk takes (`diskUsage`). The fake answers it for that box only; any other name is not found, unless a test leaves `box-info-<name>.json` in the fake's state folder.
+- `box-network.json` - `agent-vm box network <name> --json` with no change, which only reads: the same box's mode and rules. The fake answers it for any box, and keeps a change per box in its state folder.
+- `packs.json` - `agent-vm box packs --json`: the host packs of the installed agent-vm.
 - `status-empty.json` - `agent-vm status --json` on an empty store.
 
 Captured on 2026-09-30 from agent-vm 0.4.4 with `Tests/helpers/refresh_agentvm_fixtures.sh`, which replaces the home folder with `/Users/you` and sorts keys. When agent-vm's JSON changes, run it again with the new agent-vm and rerun the suite: the drift checks fail when a field the library reads is gone.
 
 ## Made by hand
+
+`box-netlog.json` is made by hand, not captured: a real connection log lists what programs in a box reached, which does not belong in a public repository. Its ten connections hold one of each kind the network window treats differently: hosts reached through a pack, a host refused three times over a tunnel to port 443, one refused over plain HTTP to port 80 (allowed by its host name), one refused over a raw tunnel to port 80 and one refused by IP address (neither gets a rule), and a failure to resolve. Its fields are those of a real `box netlog --json` entry on agent-vm 0.4.4.
 
 `status-variety.json` is `status.json` edited to hold every state the window shows, since a capture holds only what the store held that day, and a wedged supervisor cannot be produced on request. The edit, which the refresher does not repeat (rerun it by hand after a refresh, and fix the tests that name what changed):
 

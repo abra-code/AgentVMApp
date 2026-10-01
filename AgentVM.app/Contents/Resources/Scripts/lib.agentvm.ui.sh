@@ -190,3 +190,85 @@ ui_size_text() {
         if (b >= 999500000) printf "%.1f GB\n", b / 1000000000
         else printf "%d MB\n", (b + 500000) / 1000000 }'
 }
+
+# -- Box windows ---------------------------------------------------------------------------------
+# A box's network and its program log each open in a window of their own, one per box: the main
+# window's box pane shows the overview only. A pasteboard key per box and kind names the open
+# window as "<app pid> <window uuid>", so a second Details... brings that window to the front.
+# Named pasteboards outlive the app, so an entry another run of the app left (a crash skips the
+# close handler) is recognized by its pid and ignored; without a pid of its own, a handler takes
+# no entry and no request for this run's.
+#
+# Opening one hands the box to the new window through a request key of its kind, read and cleared
+# by the window's init handler, since a chained command carries no arguments. A key per kind, so
+# that opening both of a box's windows in quick succession loses neither. The request carries the
+# pid too: a window opened by a URL naming the command directly finds no request of this run's
+# and closes itself.
+
+# The request key of a kind is this, an underscore and the kind.
+AGENTVM_OPEN_REQUEST_KEY="agentvm_open_request"
+
+# ui_item_key <network|programs> <box>  ->  the pasteboard key naming that box's window of that kind.
+ui_item_key() {
+    printf 'agentvm_window_%s_%s\n' "$1" "$2"
+}
+
+# ui_item_window <network|programs> <box>  ->  the uuid of this run's open window of that kind for
+# the box, or nothing.
+ui_item_window() {
+    local _entry="$("$pasteboard" "$(ui_item_key "$1" "$2")" get)"
+    [ -n "$_entry" ] && [ -n "${OMC_APP_PROCESS_ID:-}" ] || return 0
+    [ "${_entry%% *}" = "$OMC_APP_PROCESS_ID" ] || return 0
+    printf '%s\n' "${_entry#* }"
+}
+
+# ui_item_claim <network|programs> <box> <uuid>  ->  that window becomes the box's window of that kind.
+ui_item_claim() {
+    "$pasteboard" "$(ui_item_key "$1" "$2")" set "${OMC_APP_PROCESS_ID:-} $3"
+}
+
+# ui_item_release <network|programs> <box> <uuid>  ->  the box has no window of that kind, if that
+# one was it.
+ui_item_release() {
+    local _window="$(ui_item_window "$1" "$2")"
+    [ "$_window" = "$3" ] || return 0
+    "$pasteboard" "$(ui_item_key "$1" "$2")" set ""
+}
+
+# ui_item_open <network|programs> <box> <command guid>  ->  that window of the box in front: the
+# open one, or a new one, chained from the handler whose guid is given (AgentVM.network or
+# AgentVM.programs).
+ui_item_open() {
+    agentvm_valid_name "$2" || return 1
+    local _window="$(ui_item_window "$1" "$2")"
+    if [ -n "$_window" ]; then
+        "$dialog" "$_window" omc_window omc_select
+        return 0
+    fi
+    "$pasteboard" "${AGENTVM_OPEN_REQUEST_KEY}_$1" set "${OMC_APP_PROCESS_ID:-} $1:$2"
+    "$next_command" "$3" "AgentVM.$1"
+}
+
+# ui_item_close <network|programs> <box>  ->  that window of the box closed, if one is open: for a
+# box that was deleted. Its close handler releases it.
+ui_item_close() {
+    local _window="$(ui_item_window "$1" "$2")"
+    [ -n "$_window" ] || return 0
+    "$dialog" "$_window" omc_window omc_terminate_cancel
+}
+
+# ui_item_request <network|programs>  ->  the box a new window of that kind was opened for, or
+# nothing; the request is cleared either way, so it is read once.
+ui_item_request() {
+    local _request="$("$pasteboard" "${AGENTVM_OPEN_REQUEST_KEY}_$1" get)"
+    "$pasteboard" "${AGENTVM_OPEN_REQUEST_KEY}_$1" set ""
+    [ -n "$_request" ] && [ -n "${OMC_APP_PROCESS_ID:-}" ] || return 0
+    [ "${_request%% *}" = "$OMC_APP_PROCESS_ID" ] || return 0
+    local _item="${_request#* }"
+    case "$_item" in
+        "$1":*) ;;
+        *) return 0 ;;
+    esac
+    agentvm_valid_name "${_item#*:}" || return 0
+    printf '%s\n' "${_item#*:}"
+}

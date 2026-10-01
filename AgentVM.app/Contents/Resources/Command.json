@@ -25,6 +25,20 @@
         "BUTTON_PROMPT": "Run avm Here",
         "DIALOG_IDENTIFIER": "com.abracode.AgentVM.projectFolder"
       }
+    },
+    {
+      "NAME": "AgentVM",
+      "COMMAND_ID": "AgentVM.network",
+      "ACTIVATION_MODE": "act_always",
+      "EXECUTION_MODE": "exe_script_file",
+      "ACTIONUI_WINDOW": {
+        "JSON_NAME": "AgentVM.network",
+        "IS_BLOCKING": false,
+        "WINDOW_TITLE": "Network",
+        "INIT_SUBCOMMAND_ID": "AgentVM.network.init",
+        "WINDOW_DID_ACTIVATE_SUBCOMMAND_ID": "AgentVM.network.activated",
+        "END_CANCEL_SUBCOMMAND_ID": "AgentVM.network.close"
+      }
     }
   ],
   "VERSION": 2

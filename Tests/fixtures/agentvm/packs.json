@@ -1,0 +1,112 @@
+[
+  {
+    "description": "Claude Code and the Anthropic API: sign-in and its token exchange (platform.claude.com), the API, the console.",
+    "hosts": [
+      "api.anthropic.com",
+      "claude.ai",
+      "platform.claude.com",
+      "console.anthropic.com",
+      "statsig.anthropic.com"
+    ],
+    "name": "anthropic",
+    "path": "/Users/you/.local/share/agent-vm/versions/0.4.4/packs.json",
+    "source": "built-in"
+  },
+  {
+    "description": "The claude.ai connectors (Gmail, Drive and others) for Claude Code in the box. It gives the agent the data you connected, so it is a pack of its own, never part of pack:anthropic.",
+    "hosts": [
+      "mcp-proxy.anthropic.com"
+    ],
+    "name": "anthropic-connectors",
+    "path": "/Users/you/.local/share/agent-vm/versions/0.4.4/packs.json",
+    "source": "built-in"
+  },
+  {
+    "description": "Apple software update and the Command Line Tools download.",
+    "hosts": [
+      "swscan.apple.com",
+      "swcdn.apple.com",
+      "swdist.apple.com",
+      "mesu.apple.com",
+      "gdmf.apple.com",
+      "updates.cdn-apple.com"
+    ],
+    "name": "apple-updates",
+    "path": "/Users/you/.local/share/agent-vm/versions/0.4.4/packs.json",
+    "source": "built-in"
+  },
+  {
+    "description": "Reading from and pushing to GitHub, over HTTPS or SSH (git@github.com: port 22 goes through the box proxy).",
+    "hosts": [
+      "github.com",
+      "github.com:22",
+      "api.github.com",
+      "codeload.github.com",
+      "objects.githubusercontent.com",
+      "raw.githubusercontent.com",
+      "*.githubusercontent.com",
+      "ghcr.io",
+      "pkg-containers.githubusercontent.com"
+    ],
+    "name": "github",
+    "path": "/Users/you/.local/share/agent-vm/versions/0.4.4/packs.json",
+    "source": "built-in"
+  },
+  {
+    "description": "Homebrew formulae and bottles.",
+    "hosts": [
+      "formulae.brew.sh",
+      "ghcr.io",
+      "pkg-containers.githubusercontent.com",
+      "github.com",
+      "objects.githubusercontent.com"
+    ],
+    "name": "homebrew",
+    "path": "/Users/you/.local/share/agent-vm/versions/0.4.4/packs.json",
+    "source": "built-in"
+  },
+  {
+    "description": "The npm and Yarn registries.",
+    "hosts": [
+      "registry.npmjs.org",
+      "registry.yarnpkg.com"
+    ],
+    "name": "npm",
+    "path": "/Users/you/.local/share/agent-vm/versions/0.4.4/packs.json",
+    "source": "built-in"
+  },
+  {
+    "description": "The OpenAI API and ChatGPT sign-in (Codex).",
+    "hosts": [
+      "api.openai.com",
+      "chatgpt.com",
+      "auth.openai.com"
+    ],
+    "name": "openai",
+    "path": "/Users/you/.local/share/agent-vm/versions/0.4.4/packs.json",
+    "source": "built-in"
+  },
+  {
+    "description": "The Python Package Index.",
+    "hosts": [
+      "pypi.org",
+      "files.pythonhosted.org"
+    ],
+    "name": "pypi",
+    "path": "/Users/you/.local/share/agent-vm/versions/0.4.4/packs.json",
+    "source": "built-in"
+  },
+  {
+    "description": "Swift packages from GitHub, the Swift Package Index and swift.org downloads.",
+    "hosts": [
+      "github.com",
+      "codeload.github.com",
+      "objects.githubusercontent.com",
+      "swiftpackageindex.com",
+      "download.swift.org"
+    ],
+    "name": "swiftpm",
+    "path": "/Users/you/.local/share/agent-vm/versions/0.4.4/packs.json",
+    "source": "built-in"
+  }
+]

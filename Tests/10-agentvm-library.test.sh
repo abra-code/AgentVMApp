@@ -405,6 +405,62 @@ file="$(with_fake agentvm_shell_file s3)"
 check "it ran agent-vm's shell"      "box shell s3" "$(fake_log)"
 check "  and deleted itself"         "no" "$([ -e "$file" ] && echo yes || echo no)"
 
+section "a box's network: what is read"
+rows="$(lib agentvm_packs_rows < "$FIXTURES_AGENTVM/packs.json")"
+check "one row per pack, two fields"  "$(/usr/bin/jq length "$FIXTURES_AGENTVM/packs.json") 2" \
+    "$(printf '%s\n' "$rows" | /usr/bin/awk 'END { print NR }') $(printf '%s\n' "$rows" | field_count)"
+check "  a name and its description" "github" "$(printf '%s\n' "$rows" | row_named github | col 1)"
+check "the rules: the mode first, then each rule in agent-vm's order" \
+    "allowlist|pack:npm|opencode.ai|models.opencode.ai|pack:anthropic|html.duckduckgo.com" \
+    "$(lib agentvm_rules_lines < "$FIXTURES_AGENTVM/box-network.json" | /usr/bin/paste -sd '|' -)"
+check "  a box made before network rules: open, no rules" "open" "$(printf '{}\n' | lib agentvm_rules_lines)"
+row="$(lib agentvm_netlog_rows < "$FIXTURES_AGENTVM/box-netlog.json" | /usr/bin/sed -n '1p')"
+check "a connection: time, decision, host, port, method, and the rule that allowed it" \
+    "2026-09-30T10:00:01Z${TAB}allowed${TAB}registry.npmjs.org${TAB}443${TAB}CONNECT${TAB}pack:npm" "$row"
+check "  a refused one: agent-vm's reason" "not in the allowlist" \
+    "$(lib agentvm_netlog_rows < "$FIXTURES_AGENTVM/box-netlog.json" | /usr/bin/sed -n '2p' | col 6)"
+
+section "a box's network: what reaches agent-vm"
+fake_reset
+with_fake agentvm_box_rules s3 >/dev/null
+with_fake agentvm_box_netlog s3 200 >/dev/null
+with_fake agentvm_box_packs >/dev/null
+with_fake agentvm_box_network_change s3 off "+*.example.com" "-pack:npm" "+public"
+check "reads, then one change with the mode, the additions and removals in order" \
+    "box network s3 --json|box netlog s3 --last 200 --json|box packs --json|box network s3 --net off --allow *.example.com --disallow pack:npm --allow public --json" \
+    "$(fake_log | /usr/bin/paste -sd '|' -)"
+fake_reset
+with_fake agentvm_box_network_change s3 - "+github.com"
+check "no mode: no --net" "box network s3 --allow github.com --json" "$(fake_log)"
+fake_reset
+for bad in "+-rf" "+a b" "+" "github.com" "-"; do
+    with_fake agentvm_box_network_change s3 - "+ok.example.com" "$bad" >/dev/null
+    check "refused before agent-vm runs: \"$bad\"" "2" "$?"
+done
+with_fake agentvm_box_network_change s3 sideways >/dev/null
+check "  and a mode agent-vm does not have" "2" "$?"
+with_fake agentvm_box_netlog s3 "-1" >/dev/null
+check "  and a count that is not one" "2" "$?"
+check "  agent-vm never ran" "" "$(fake_log)"
+
+section "a box's network: rules typed by hand, and rules built from the log"
+AWK="$APP_SCRIPTS/lib.agentvm.network.awk"
+typed() { printf '%s\n' "$1" | /usr/bin/awk -v mode=check -f "$AWK"; }
+check "a host, as agent-vm reads it" "github.com" "$(typed GitHub.com.)"
+check "subdomains"                   "*.example.com" "$(typed '*.example.com')"
+check "a host and port"              "example.com:8443" "$(typed example.com:08443)"
+check "a pack"                       "pack:npm" "$(typed pack:npm)"
+check "public, and public with a port" "public public:22" "$(typed public) $(typed public:022)"
+for bad in "-rf" "a b" "203.0.113.9" "example.com:70000" "*." "pack:" "a..b" "exam_ple.com"; do
+    check "not a rule: \"$bad\"" "-" "$(typed "$bad")"
+done
+built() { printf '%s\t%s\t%s\n' "$1" "$2" "$3" | /usr/bin/awk -F'\t' -v mode=rule -f "$AWK"; }
+check "a tunnel to 443: the host"    "registry.yarnpkg.com" "$(built registry.yarnpkg.com 443 CONNECT)"
+check "plain HTTP to 80: the host"   "plain.example.org" "$(built plain.example.org 80 GET)"
+check "another port: named"          "example.org:8443" "$(built example.org 8443 CONNECT)"
+check "a raw tunnel to 80, an address, public: none" "- - -" \
+    "$(built raw.example.org 80 CONNECT) $(built 203.0.113.9 443 CONNECT) $(built public 443 CONNECT)"
+
 section "the virtual machine row"
 check "none running, two at most"    "0${TAB}2" "$(lib agentvm_status_vm_row < "$FIXTURES_AGENTVM/status.json")"
 check "one running"                  "1${TAB}2" "$(lib agentvm_status_vm_row < "$FIXTURES_AGENTVM/status-variety.json")"
