@@ -167,7 +167,7 @@
                               "id": 330,
                               "properties": { "hidden": true, "spacing": 8.0 },
                               "children": [
-                                { "type": "Button", "id": 331, "properties": { "title": "Stop", "disabled": true } },
+                                { "type": "Button", "id": 331, "properties": { "title": "Stop", "disabled": true, "actionID": "AgentVM.main.box.stop", "help": "Shut the box down. Asks first when another program started it or programs run in it." } },
                                 { "type": "Button", "id": 332, "properties": { "title": "View", "disabled": true, "actionID": "AgentVM.main.box.view", "help": "Show the box's screen. Keys and clicks do not reach it." } },
                                 { "type": "Button", "id": 333, "properties": { "title": "View and Control", "disabled": true, "actionID": "AgentVM.main.box.control", "help": "Show the box's screen, and let keys and clicks reach it." } },
                                 { "type": "Button", "id": 334, "properties": { "title": "Open Shell", "disabled": true, "actionID": "AgentVM.main.box.shell", "help": "Open a shell in the box in Terminal." } }
@@ -178,7 +178,7 @@
                               "id": 340,
                               "properties": { "hidden": true, "spacing": 8.0 },
                               "children": [
-                                { "type": "Button", "id": 341, "properties": { "title": "Start", "disabled": true } }
+                                { "type": "Button", "id": 341, "properties": { "title": "Start", "disabled": true, "actionID": "AgentVM.main.box.start", "help": "Start the box. It runs until it is stopped, whether or not this app is open." } }
                               ]
                             }
                           ]

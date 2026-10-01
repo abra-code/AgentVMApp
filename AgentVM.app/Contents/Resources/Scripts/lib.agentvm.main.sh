@@ -59,9 +59,11 @@ MAIN_BOX_STATE_ID=322
 MAIN_BOX_MAINTENANCE_ID=323
 MAIN_RUNNING_BOX_ACTIONS_ID=330
 MAIN_STOPPED_BOX_ACTIONS_ID=340
+MAIN_BOX_STOP_ID=331
 MAIN_BOX_VIEW_ID=332
 MAIN_BOX_CONTROL_ID=333
 MAIN_BOX_SHELL_ID=334
+MAIN_BOX_START_ID=341
 MAIN_BOX_SHOW_ID=342
 MAIN_BOX_AGENT_ID=343
 MAIN_BOX_RECREATE_ID=344
@@ -146,8 +148,8 @@ main_read_doctor() {
     printf '%s\n' "$_rows" | ui_store "$(ui_cache "$1" doctor.tsv)"
 }
 
-# main_read_status <uuid>  ->  0, with the cache files boxes.tsv, images.tsv and vm.tsv holding
-# the rows lib.agentvm.sh documents; or agent-vm's status, with the previous rows kept and its
+# main_read_status <uuid>  ->  0, with the cache files boxes.tsv, images.tsv, vm.tsv and jobs.tsv
+# holding the rows lib.agentvm.sh documents; or agent-vm's status, with the previous rows kept and its
 # message in the cache file "status-error" (empty after a success).
 main_read_status() {
     local _error="$(ui_cache "$1" status-error)"
@@ -161,11 +163,12 @@ main_read_status() {
     printf '%s\n' "$_json" | agentvm_status_box_rows | ui_store "$(ui_cache "$1" boxes.tsv)"
     printf '%s\n' "$_json" | agentvm_status_image_rows | ui_store "$(ui_cache "$1" images.tsv)"
     printf '%s\n' "$_json" | agentvm_status_vm_row | ui_store "$(ui_cache "$1" vm.tsv)"
+    printf '%s\n' "$_json" | agentvm_job_rows | ui_store "$(ui_cache "$1" jobs.tsv)"
     : | ui_store "$_error"
     return 0
 }
 
-# main_rows <uuid> <boxes|images|doctor|vm>  ->  that cache file's rows, nothing when it is missing.
+# main_rows <uuid> <boxes|images|doctor|vm|jobs>  ->  that cache file's rows, nothing when it is missing.
 main_rows() {
     local _file="$(ui_cache "$1" "$2.tsv")"
     [ -f "$_file" ] || return 0
@@ -194,12 +197,108 @@ main_face() {
     echo "status"
 }
 
-# main_moving <uuid>  ->  0 while a box starts or stops or an image is being built, when the poll
-# loop looks more often.
+# main_moving <uuid>  ->  0 while a box starts or stops, an image is being built, or a job runs or
+# waits, when the poll loop looks more often.
 main_moving() {
-    local _moving="$( { main_rows "$1" boxes | /usr/bin/awk -F'\t' '$2 == "starting" || $2 == "stopping"'
+    local _moving="$( { main_rows "$1" jobs | /usr/bin/awk -F'\t' '$2 == "running" || $2 == "queued"'
+        main_rows "$1" boxes | /usr/bin/awk -F'\t' '$2 == "starting" || $2 == "stopping"'
         main_rows "$1" images | /usr/bin/awk -F'\t' '$2 == "installing" || $2 == "installed" || $2 == "provisioning"'; } )"
     [ -n "$_moving" ]
+}
+
+# -- Jobs ----------------------------------------------------------------------------------------
+# What takes long (starting or stopping a box) is an agent-vm job (lib.agentvm.sh, "Jobs"), and
+# `status` carries the jobs, so the window learns of them wherever they were started: here, in
+# Cadabra or in Terminal. A job that runs or waits holds its box: the card and the pane say what it
+# does, the pane's buttons are off, and the poll loop looks every MAIN_POLL_BUSY_SECONDS. When a
+# job the window saw running has failed, the window says so, once, in agent-vm's words.
+
+# main_job <uuid> <box|image> <name>  ->  the row of the job that holds that box or image now (it
+# runs or waits; the newest, when there are several), or nothing.
+main_job() {
+    main_rows "$1" jobs | /usr/bin/awk -F'\t' -v target="$2:$3" '
+        ($2 == "running" || $2 == "queued") && $3 == target { row = $0 }
+        END { if (row != "") print row }'
+}
+
+# main_job_text <job row>  ->  what the job does, for a card and a pane: "Starting", "Stopping", and
+# for a job that waits for another, "Waiting to start". With how long it has run so far, when
+# agent-vm says when it started. Other jobs are named by their command ("image create").
+main_job_text() {
+    local _state="$(printf '%s\n' "$1" | /usr/bin/cut -f2)"
+    local _what="$(printf '%s\n' "$1" | /usr/bin/cut -f4)"
+    local _text
+    case "$_what" in
+        "box start") _text="Starting" ;;
+        "box stop")  _text="Stopping" ;;
+        *)           _text="Busy: $_what" ;;
+    esac
+    if [ "$_state" = "queued" ]; then
+        case "$_what" in
+            "box start") _text="Waiting to start" ;;
+            "box stop")  _text="Waiting to stop" ;;
+            *)           _text="Waiting: $_what" ;;
+        esac
+        printf '%s\n' "$_text"
+        return 0
+    fi
+    local _since="$(ui_seconds_since_epoch "$(printf '%s\n' "$1" | /usr/bin/cut -f7)")"
+    if [ -n "$_since" ]; then
+        local _seconds=$(( $(main_now) - _since ))
+        [ "$_seconds" -ge 0 ] && _text="$_text, $(ui_duration_text "$_seconds") so far"
+    fi
+    printf '%s\n' "$_text"
+}
+
+# main_note_jobs <uuid>  ->  the rows of the jobs this window saw running or waiting that have
+# ended since, each printed once; and the jobs that run or wait now are remembered for next time.
+# A job that had already ended when the window first read it is never printed.
+main_note_jobs() {
+    local _jobs="$(ui_cache "$1" jobs.tsv)"
+    local _watched="$(ui_cache "$1" jobs-watched)"
+    [ -f "$_jobs" ] || return 0
+    if [ -s "$_watched" ]; then
+        /usr/bin/awk -F'\t' 'FILENAME == ARGV[1] { watched[$1] = 1; next }
+            ($1 in watched) && $2 != "running" && $2 != "queued"' "$_watched" "$_jobs"
+    fi
+    /usr/bin/awk -F'\t' '$2 == "running" || $2 == "queued" { print $1 }' "$_jobs" | ui_store "$_watched"
+}
+
+# main_job_failure_title <job row>  ->  what did not happen: "Box s3 did not start".
+main_job_failure_title() {
+    local _target="$(printf '%s\n' "$1" | /usr/bin/cut -f3)"
+    local _what="$(printf '%s\n' "$1" | /usr/bin/cut -f4)"
+    case "$_what" in
+        "box start") printf 'Box %s did not start\n' "${_target#box:}" ;;
+        "box stop")  printf 'Box %s did not stop\n' "${_target#box:}" ;;
+        *)           printf '%s failed (%s)\n' "$_what" "$_target" ;;
+    esac
+}
+
+# main_report_jobs <uuid>  ->  an alert for the jobs main_note_jobs says have ended in failure
+# (failed, or lost: the runner was stopped), with agent-vm's reason. One alert, whatever their
+# number. A job that was canceled, or that did what it was asked, says nothing: the lists show it.
+main_report_jobs() {
+    local _failed="$(main_note_jobs "$1" | /usr/bin/awk -F'\t' '$2 == "failed" || $2 == "lost"')"
+    [ -n "$_failed" ] || return 0
+    local _count="$(printf '%s\n' "$_failed" | /usr/bin/awk 'END { print NR }')"
+    if [ "$_count" -eq 1 ]; then
+        local _error="$(printf '%s\n' "$_failed" | /usr/bin/cut -f15)"
+        [ "$_error" = "-" ] && _error="agent-vm gave no reason."
+        main_alert "$1" "$(main_job_failure_title "$_failed")" "$_error"
+        return 0
+    fi
+    local _message=""
+    local _row _error
+    while IFS= read -r _row; do
+        _error="$(printf '%s\n' "$_row" | /usr/bin/cut -f15)"
+        [ "$_error" = "-" ] && _error="agent-vm gave no reason."
+        _message="$_message$(main_job_failure_title "$_row"): $_error
+"
+    done <<ROWS
+$_failed
+ROWS
+    main_alert "$1" "$_count jobs failed" "$_message"
 }
 
 # -- Painting -----------------------------------------------------------------------------------
@@ -332,8 +431,18 @@ main_flagged() {
 # main_box_card_rows <uuid>  ->  the box list's rows, one card each:
 #   1 name   2 the state's symbol   3 image and macOS version   4 "Needs maintenance" or empty
 #   5 its symbol or empty   6 the card's color, from the state
+# A box a job holds (it is being started or stopped, or waits to be) looks as a box in between
+# does, and its caption begins with what the job does, or with "Waiting" for a job queued after
+# another.
 main_box_card_rows() {
-    main_rows "$1" boxes | /usr/bin/awk -F'\t' -v flagged="$(main_flagged "$1" boxes)" '
+    main_rows "$1" boxes | /usr/bin/awk -F'\t' -v flagged="$(main_flagged "$1" boxes)" -v jobs="$(ui_cache "$1" jobs.tsv)" '
+        BEGIN {
+            while ((getline line < jobs) > 0) {
+                split(line, job, "\t")
+                if ((job[2] == "running" || job[2] == "queued") && job[3] ~ /^box:/)
+                    held[substr(job[3], 5)] = (job[2] == "queued") ? "Waiting" : (job[4] == "box start") ? "Starting" : (job[4] == "box stop") ? "Stopping" : "Busy"
+            }
+        }
         {
             symbol = "questionmark.circle"; color = "#8E8E93"
             if ($2 == "running")                           { symbol = "play.circle.fill"; color = "#2E9E4F" }
@@ -342,6 +451,7 @@ main_box_card_rows() {
             else if ($2 == "unresponsive")                 { symbol = "exclamationmark.circle.fill"; color = "#E8861A" }
             caption = $3
             if ($19 != "-") caption = caption " - macOS " $19
+            if ($1 in held) { symbol = "circle.dotted"; color = "#0A84FF"; caption = held[$1] " - " caption }
             mark = ""; mark_symbol = ""
             if (index(flagged, " " $1 " ")) { mark = "Needs maintenance"; mark_symbol = "exclamationmark.triangle.fill" }
             printf "%s\t%s\t%s\t%s\t%s\t%s\n", $1, symbol, caption, mark, mark_symbol, color
@@ -471,7 +581,13 @@ main_paint_box_detail() {
         local _cpus _memory _path _needs _macos _build _created _rest
         IFS="$ui_tab" read -r _n _state _image _mode _rules _pid _owner _project _ro _execs _started _version _disposable _error \
             _cpus _memory _path _needs _macos _build _created _rest
-        "$dialog" "$_uuid" "$MAIN_BOX_STATE_ID" "$(main_box_state_text "$_state" "$_started" "$_owner" "$_execs" "$_error")"
+        # A job that holds the box says what it does, in place of the state it has not left yet.
+        local _job="$(main_job "$_uuid" box "$_name")"
+        if [ -n "$_job" ]; then
+            "$dialog" "$_uuid" "$MAIN_BOX_STATE_ID" "$(main_job_text "$_job")"
+        else
+            "$dialog" "$_uuid" "$MAIN_BOX_STATE_ID" "$(main_box_state_text "$_state" "$_started" "$_owner" "$_execs" "$_error")"
+        fi
         case "$_state" in
             running|starting|unresponsive)
                 ui_show "$_uuid" "$MAIN_STOPPED_BOX_ACTIONS_ID" 0
@@ -554,19 +670,27 @@ main_paint_box_detail() {
         # (not a starting one, nor one whose supervisor does not answer); recreating and deleting
         # need a stopped one, and agent-vm refuses the others anyway. A disposable box belongs to
         # the chat window that made it and is deleted when it stops: it is neither recreated nor
-        # given to avm. Recreating needs the image the box was made from, ready.
-        local _running=0 _stopped=0 _kept=1 _image_ready=0
+        # given to avm. Recreating needs the image the box was made from, ready. Stop is for a box
+        # that runs, answering or not; Start for a stopped one. A box a job holds gets none of
+        # them until the job ends.
+        local _running=0 _stopped=0 _kept=1 _image_ready=0 _free=1 _stoppable=0
+        [ -n "$_job" ] && _free=0
+        case "$_state" in
+            running|unresponsive) _stoppable=1 ;;
+        esac
         [ "$_state" = "running" ] && _running=1
         [ "$_state" = "stopped" ] && _stopped=1
         [ "$_disposable" = "true" ] && _kept=0
         [ "$(main_row "$_uuid" images "$_image" | /usr/bin/cut -f2)" = "ready" ] && _image_ready=1
-        ui_enable "$_uuid" "$MAIN_BOX_VIEW_ID" "$_running"
-        ui_enable "$_uuid" "$MAIN_BOX_CONTROL_ID" "$_running"
-        ui_enable "$_uuid" "$MAIN_BOX_SHELL_ID" "$_running"
+        ui_enable "$_uuid" "$MAIN_BOX_STOP_ID" "$(( _stoppable * _free ))"
+        ui_enable "$_uuid" "$MAIN_BOX_START_ID" "$(( _stopped * _free ))"
+        ui_enable "$_uuid" "$MAIN_BOX_VIEW_ID" "$(( _running * _free ))"
+        ui_enable "$_uuid" "$MAIN_BOX_CONTROL_ID" "$(( _running * _free ))"
+        ui_enable "$_uuid" "$MAIN_BOX_SHELL_ID" "$(( _running * _free ))"
         # avm starts a stopped box itself.
-        ui_enable "$_uuid" "$MAIN_BOX_AGENT_ID" "$(( (_running + _stopped) * _kept ))"
-        ui_enable "$_uuid" "$MAIN_BOX_RECREATE_ID" "$(( _stopped * _kept * _image_ready ))"
-        ui_enable "$_uuid" "$MAIN_BOX_DELETE_ID" "$_stopped"
+        ui_enable "$_uuid" "$MAIN_BOX_AGENT_ID" "$(( (_running + _stopped) * _kept * _free ))"
+        ui_enable "$_uuid" "$MAIN_BOX_RECREATE_ID" "$(( _stopped * _kept * _image_ready * _free ))"
+        ui_enable "$_uuid" "$MAIN_BOX_DELETE_ID" "$(( _stopped * _free ))"
     }
 }
 
@@ -588,13 +712,20 @@ main_box_recreate_question() {
     printf 'It is made again from image %s as the image is now, with the same name, processors, memory and network rules. Everything installed or saved in the box, logins included, is deleted. This cannot be undone.\n' "$_image"
 }
 
-# main_box_askable <uuid> <name> <recreate|delete>  ->  0 when the box can be asked about now, from
-# the rows just read: it exists, it is stopped, and for recreate it is kept and its image ready
-# (the rules main_paint_box_detail enables the buttons by).
+# main_box_askable <uuid> <name> <recreate|delete|start|stop>  ->  0 when that can be done to the
+# box now, from the rows just read: it exists and no job holds it; for stop it runs, answering or
+# not; for the others it is stopped, and for recreate it is kept and its image ready (the rules
+# main_paint_box_detail enables the buttons by).
 main_box_askable() {
     local _row="$(main_row "$1" boxes "$2")"
     [ -n "$_row" ] || return 1
-    [ "$(printf '%s\n' "$_row" | /usr/bin/cut -f2)" = "stopped" ] || return 1
+    [ -z "$(main_job "$1" box "$2")" ] || return 1
+    local _state="$(printf '%s\n' "$_row" | /usr/bin/cut -f2)"
+    if [ "$3" = "stop" ]; then
+        [ "$_state" = "running" ] || [ "$_state" = "unresponsive" ]
+        return
+    fi
+    [ "$_state" = "stopped" ] || return 1
     [ "$3" = "recreate" ] || return 0
     [ "$(printf '%s\n' "$_row" | /usr/bin/cut -f13)" != "true" ] || return 1
     [ "$(main_row "$1" images "$(printf '%s\n' "$_row" | /usr/bin/cut -f3)" | /usr/bin/cut -f2)" = "ready" ]
@@ -938,6 +1069,8 @@ main_refresh() {
         [ "$_mode" = "full" ] && main_read_doctor "$_uuid"
         main_read_status "$_uuid"
         _status=$?
+        # A job this window saw running that has failed is said once, whoever reads first.
+        [ "$_status" -eq 0 ] && main_report_jobs "$_uuid"
         # The selected box's and image's measurements: on opening and activation, not in the poll
         # loop.
         if [ "$_mode" = "full" ] && [ "$_status" -eq 0 ]; then
@@ -1002,5 +1135,51 @@ main_poll() {
     done
     _holder="$(ui_get poll "$_uuid")"
     [ "$_holder" = "$_token" ] && ui_set poll "$_uuid" ""
+    return 0
+}
+
+# main_box_stop_question <uuid> <name>  ->  why stopping the box should be asked about first: another
+# program started it and may be using it, or programs run in it. Nothing when neither holds.
+main_box_stop_question() {
+    local _row="$(main_row "$1" boxes "$2")"
+    local _owner="$(printf '%s\n' "$_row" | /usr/bin/cut -f7)"
+    local _execs="$(printf '%s\n' "$_row" | /usr/bin/cut -f10)"
+    local _text=""
+    if [ "$_owner" != "-" ] && [ -n "$_owner" ]; then
+        local _owner_name="$(ui_process_name "$_owner")"
+        _text="${_owner_name:-Another program} (process $_owner) started this box and may be using it."
+    fi
+    case "$_execs" in
+        ''|-|0) ;;
+        1) _text="${_text:+$_text }One program is running in it and will be ended." ;;
+        *) _text="${_text:+$_text }$_execs programs are running in it and will be ended." ;;
+    esac
+    printf '%s' "$_text"
+}
+
+# main_box_job <uuid> <name> <start|stop> <command guid>  ->  the job started, the lists read again,
+# and the poll loop begun anew, so that it looks every MAIN_POLL_BUSY_SECONDS from now rather than
+# when the old loop next wakes. agent-vm's refusal is shown in its words.
+main_box_job() {
+    local _id _status
+    if [ "$3" = "start" ]; then
+        _id="$(agentvm_job_box_start "$2")"
+        _status=$?
+    else
+        _id="$(agentvm_job_box_stop "$2")"
+        _status=$?
+    fi
+    if [ "$_status" -ne 0 ]; then
+        local _verb="started"
+        [ "$3" = "stop" ] && _verb="stopped"
+        main_alert "$1" "Box $2 was not $_verb" "$(agentvm_last_error "$_status")"
+        main_refresh "$1" status
+        return "$_status"
+    fi
+    # The job is watched from now, not from the next reading: one that fails within the moment
+    # before it (an unknown box, no free slot) would otherwise never have been seen running.
+    printf '%s\n' "$_id" >> "$(ui_cache "$1" jobs-watched)"
+    main_refresh "$1" status
+    "$next_command" "$4" "AgentVM.main.poll"
     return 0
 }
