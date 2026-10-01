@@ -1,6 +1,7 @@
 #!/bin/sh
 # Tests/50-jobs.test.sh - the library's job functions: starting and stopping a box as a job, the
-# rows read from `status` and `job list`, cancel and forget, and what never reaches agent-vm.
+# rows read from `status`, `job list` and `job log`, a job's events, cancel and forget, and what
+# never reaches agent-vm.
 #
 # The row filter is run on the fixtures directly: job-list.json, a real record (one job that
 # failed, captured against an empty store), and jobs-variety.json, made by hand with a job in each
@@ -166,6 +167,57 @@ for function in agentvm_job_cancel agentvm_job_forget; do
         with_fake "$function" "$id"
         check "$function [$id]: refused first" "2" "$?"
     done
+done
+check "  and agent-vm never ran"     "" "$(fake_log)"
+
+section "a job's log: a real answer (job-log.json)"
+LOG="$FIXTURES_AGENTVM/job-log.json"
+LOG_VARIETY="$FIXTURES_AGENTVM/job-log-variety.json"
+check "the keys the library reads"   "events,job,lines" "$(/usr/bin/jq -r 'keys | join(",")' "$LOG")"
+rows="$(lib agentvm_job_rows < "$LOG")"
+check "its record is one job row"    "1|16" "$(printf '%s\n' "$rows" | /usr/bin/awk 'END { print NR }')|$(printf '%s\n' "$rows" | field_count)"
+check "  the same row job list gives" "$(lib agentvm_job_rows < "$REAL")" "$rows"
+check "it failed before any step: no events, no lines" "|" "$(lib agentvm_job_event_rows < "$LOG")|$(lib agentvm_job_lines < "$LOG")"
+
+section "a job's log: a build (job-log-variety.json)"
+check "the same keys as the real answer" "$(/usr/bin/jq -r 'keys | join(",")' "$LOG")" "$(/usr/bin/jq -r 'keys | join(",")' "$LOG_VARIETY")"
+check "its job row: a build that runs, at its last step" "running${TAB}image:dev-new${TAB}image create${TAB}recipe-step${TAB}3${TAB}3" \
+    "$(lib agentvm_job_rows < "$LOG_VARIETY" | /usr/bin/cut -f2-4,9,11,12)"
+events="$(lib agentvm_job_event_rows < "$LOG_VARIETY")"
+check "thirteen events, eight fields each" "13|8" "$(printf '%s\n' "$events" | /usr/bin/awk 'END { print NR }')|$(printf '%s\n' "$events" | field_count)"
+check "the steps, oldest first"      "clone boot recipe recipe-step recipe-step recipe-step" \
+    "$(printf '%s\n' "$events" | /usr/bin/awk -F'\t' '$1 == "progress" { print $2 }' | /usr/bin/paste -sd ' ' -)"
+check "a step with its fraction, index, count and message" "progress${TAB}recipe-step${TAB}0.3333333333333333${TAB}2${TAB}3${TAB}[2/3] Node${TAB}-${TAB}-" \
+    "$(printf '%s\n' "$events" | /usr/bin/sed -n '9p')"
+check "a log line of agent-vm's own" "log${TAB}-${TAB}-${TAB}-${TAB}-${TAB}agent-vm-guest 0.5.2 answers over vsock${TAB}-${TAB}-" \
+    "$(printf '%s\n' "$events" | /usr/bin/sed -n '3p')"
+check "a guest program's line is marked" "==> Installation successful!${TAB}true" "$(printf '%s\n' "$events" | /usr/bin/sed -n '7p' | col 6-7)"
+check "a tab inside a line is a space" "a line with a tab in it" "$(printf '%s\n' "$events" | /usr/bin/sed -n '11p' | col 6)"
+check "the notice"                   "notice${TAB}Homebrew is already installed in the base image" "$(printf '%s\n' "$events" | /usr/bin/sed -n '8p' | /usr/bin/cut -f1,6)"
+check "the other lines"              "warning: a line that is neither an event nor the error" "$(lib agentvm_job_lines < "$LOG_VARIETY")"
+check "an answer without events or lines: nothing" "|" "$(printf '{"job": {}}\n' | lib agentvm_job_event_rows)|$(printf '{"job": {}}\n' | lib agentvm_job_lines)"
+
+section "reading a job's log"
+fake_reset
+id="$(with_fake agentvm_job_box_start s3)"
+: > "$FAKE_AGENTVM_DIR/log"
+json="$(with_fake agentvm_job_log "$id")"
+check "it succeeds"                  "0" "$?"
+check "the call"                     "job log $id --json" "$(fake_log)"
+check "the job, with no events yet"  "$id${TAB}running|" "$(printf '%s\n' "$json" | lib agentvm_job_rows | col 1-2)|$(printf '%s\n' "$json" | lib agentvm_job_event_rows)"
+/usr/bin/jq '{events, lines}' "$LOG_VARIETY" > "$FAKE_AGENTVM_DIR/job-log-$id.json"
+json="$(with_fake agentvm_job_log "$id")"
+check "a job with a log: its events" "13" "$(printf '%s\n' "$json" | lib agentvm_job_event_rows | /usr/bin/awk 'END { print NR }')"
+check "  its record carries the last step and notice, here and in status" \
+    "recipe-step${TAB}Homebrew is already installed in the base image|recipe-step${TAB}Homebrew is already installed in the base image" \
+    "$(printf '%s\n' "$json" | lib agentvm_job_rows | /usr/bin/cut -f9,14)|$(with_fake agentvm_status | lib agentvm_job_rows | /usr/bin/cut -f9,14)"
+with_fake agentvm_job_log 20261001-000000-aaaaaa >/dev/null
+check "a job agent-vm no longer keeps: its status" "1" "$?"
+check "  and its words"              "yes" "$(lib agentvm_last_error 1 | /usr/bin/grep -q -F 'no job 20261001-000000-aaaaaa' && echo yes)"
+: > "$FAKE_AGENTVM_DIR/log"
+for bad in "-rf" "--follow" "" "s3" "20261001-000000-aaaaaa/.."; do
+    with_fake agentvm_job_log "$bad" >/dev/null
+    check "agentvm_job_log [$bad]: refused first" "2" "$?"
 done
 check "  and agent-vm never ran"     "" "$(fake_log)"
 

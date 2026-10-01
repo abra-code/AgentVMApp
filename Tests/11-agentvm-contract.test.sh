@@ -3,7 +3,8 @@
 #
 # The fake answers from fixtures, so it keeps answering the way agent-vm did when they were
 # captured. This file runs the real agent-vm through the library, on an empty store in the
-# scratch folder, with the commands that start no virtual machine and need no image: a JSON
+# scratch folder, with the commands that start no virtual machine and need no image (one job is started, of a
+# box the store does not have, which can only fail): a JSON
 # change shows up here before the fake hides it.
 #
 # Which agent-vm: AGENTVM_APP_CONTRACT_AGENT_VM when set, else the first build in the agent-vm
@@ -103,6 +104,37 @@ check "  saying there is no such image" "no image nosuch" "$(lib agentvm_last_er
 real_lib agentvm_image_delete nosuch
 check "image delete fails" "1" "$?"
 check "  saying there is no such image" "no image nosuch" "$(lib agentvm_last_error | /usr/bin/cut -d';' -f1)"
+
+section "a job, its record and its log"
+# One job that can only fail: the empty store has no such box, so nothing starts.
+id="$(real_lib agentvm_job_box_start nosuch)"
+check "job start answers with a job id" "0|0" "$?|$(lib agentvm_valid_job_id "$id"; echo $?)"
+# It ends within a second; its runner records the end a moment later.
+state=""
+tries=0
+while [ "$tries" -lt 20 ]; do
+    real_lib agentvm_job_list > "$OMCTEST_WORK/job-list.json"
+    state="$(lib agentvm_job_rows < "$OMCTEST_WORK/job-list.json" | row_named "$id" | col 2)"
+    [ "$state" = "failed" ] && break
+    /bin/sleep 0.5
+    tries=$((tries + 1))
+done
+check "job list shows it failed"  "failed" "$state"
+check "  with every field the fixture has" "" "$(missing_paths "$FIXTURES_AGENTVM/job-list.json" "$OMCTEST_WORK/job-list.json")"
+real_lib agentvm_status | lib agentvm_job_rows | row_named "$id" | col 2 > "$OMCTEST_WORK/status-job"
+check "status carries it too"     "failed" "$(/bin/cat "$OMCTEST_WORK/status-job")"
+real_lib agentvm_job_log "$id" > "$OMCTEST_WORK/job-log.json"
+check "job log answers"           "0" "$?"
+check "  with every field the fixture has" "" "$(missing_paths "$FIXTURES_AGENTVM/job-log.json" "$OMCTEST_WORK/job-log.json")"
+check "  events and lines are lists" "array array" "$(/usr/bin/jq -r '[(.events | type), (.lines | type)] | join(" ")' "$OMCTEST_WORK/job-log.json")"
+check "  its record is the job list's row" "$(lib agentvm_job_rows < "$OMCTEST_WORK/job-list.json" | row_named "$id")" \
+    "$(lib agentvm_job_rows < "$OMCTEST_WORK/job-log.json")"
+real_lib agentvm_job_cancel "$id"
+check "cancel of a job that ended fails" "1" "$?"
+real_lib agentvm_job_forget "$id"
+check "forget succeeds"           "0" "$?"
+real_lib agentvm_job_log "$id" > /dev/null
+check "  and its log is gone"     "1|no job $id" "$?|$(lib agentvm_last_error 1 | /usr/bin/cut -d';' -f1)"
 
 section "doctor --json"
 rows="$(real_lib agentvm_doctor)"

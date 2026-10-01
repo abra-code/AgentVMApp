@@ -1,5 +1,6 @@
-[
-  {
+{
+  "events": [],
+  "job": {
     "command": [
       "box",
       "start",
@@ -17,5 +18,6 @@
     "targets": [
       "box:nosuch"
     ]
-  }
-]
+  },
+  "lines": []
+}

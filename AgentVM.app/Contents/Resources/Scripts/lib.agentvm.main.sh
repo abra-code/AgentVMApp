@@ -207,10 +207,11 @@ main_moving() {
 }
 
 # -- Jobs ----------------------------------------------------------------------------------------
-# What takes long (starting or stopping a box) is an agent-vm job (lib.agentvm.sh, "Jobs"), and
-# `status` carries the jobs, so the window learns of them wherever they were started: here, in
-# Cadabra or in Terminal. A job that runs or waits holds its box: the card and the pane say what it
-# does, the pane's buttons are off, and the poll loop looks every MAIN_POLL_BUSY_SECONDS. When a
+# What takes long (starting or stopping a box, building or updating an image) is an agent-vm job
+# (lib.agentvm.sh, "Jobs"), and `status` carries the jobs, so the window learns of them wherever
+# they were started: here, in Cadabra or in Terminal. A job that runs or waits holds its box or
+# image: the card and the pane say what it does, the pane's buttons that would change it are off,
+# and the poll loop looks every MAIN_POLL_BUSY_SECONDS. When a
 # job the window saw running ends, the window says so, once: a toast when it did what it was asked,
 # an alert in agent-vm's words when it failed.
 
@@ -222,24 +223,42 @@ main_job() {
         END { if (row != "") print row }'
 }
 
-# main_job_text <job row>  ->  what the job does, for a card and a pane: "Starting", "Stopping", and
-# for a job that waits for another, "Waiting to start". With how long it has run so far, when
-# agent-vm says when it started. Other jobs are named by their command ("image create").
+# main_job_verb <what it does> <state>  ->  the job in a word or two, for a card and a pane:
+# "Starting", "Stopping", "Building", "Updating", "Setting up", and for a job that waits for
+# another, "Waiting to start" and the like. Other jobs are named by their command.
+main_job_verb() {
+    if [ "$2" = "queued" ]; then
+        case "$1" in
+            "box start")          echo "Waiting to start" ;;
+            "box stop")           echo "Waiting to stop" ;;
+            "image create")       echo "Waiting to be built" ;;
+            "image update"|"image update-guest")
+                                  echo "Waiting to be updated" ;;
+            "image setup")        echo "Waiting to be set up" ;;
+            *)                    printf 'Waiting: %s\n' "$1" ;;
+        esac
+        return 0
+    fi
+    case "$1" in
+        "box start")          echo "Starting" ;;
+        "box stop")           echo "Stopping" ;;
+        "image create")       echo "Building" ;;
+        "image update"|"image update-guest")
+                              echo "Updating" ;;
+        "image setup")        echo "Setting up" ;;
+        *)                    printf 'Busy: %s\n' "$1" ;;
+    esac
+}
+
+# main_job_text <job row>  ->  what the job does, for a pane's state line: main_job_verb's words,
+# with how long it has run so far, when agent-vm says when it started, and for an image's job the
+# step it is at, in agent-vm's words ("Building, 4 min so far: [2/3] Node"). A box's steps are
+# what the verb already says.
 main_job_text() {
     local _state="$(printf '%s\n' "$1" | /usr/bin/cut -f2)"
     local _what="$(printf '%s\n' "$1" | /usr/bin/cut -f4)"
-    local _text
-    case "$_what" in
-        "box start") _text="Starting" ;;
-        "box stop")  _text="Stopping" ;;
-        *)           _text="Busy: $_what" ;;
-    esac
+    local _text="$(main_job_verb "$_what" "$_state")"
     if [ "$_state" = "queued" ]; then
-        case "$_what" in
-            "box start") _text="Waiting to start" ;;
-            "box stop")  _text="Waiting to stop" ;;
-            *)           _text="Waiting: $_what" ;;
-        esac
         printf '%s\n' "$_text"
         return 0
     fi
@@ -248,6 +267,11 @@ main_job_text() {
         local _seconds=$(( $(main_now) - _since ))
         [ "$_seconds" -ge 0 ] && _text="$_text, $(ui_duration_text "$_seconds") so far"
     fi
+    local _message="$(printf '%s\n' "$1" | /usr/bin/cut -f13)"
+    case "$_what" in
+        box\ *) ;;
+        *) [ "$_message" != "-" ] && [ -n "$_message" ] && _text="$_text: $_message" ;;
+    esac
     printf '%s\n' "$_text"
 }
 
@@ -560,10 +584,17 @@ main_box_card_rows() {
 #   1 name   2 the state's symbol   3 macOS version and what it was built from, or Building or
 #   Failed   4 "Needs maintenance" or empty   5 its symbol or empty   6 the card's color
 #   7 how many boxes were made from it
+# A ready image a job holds (it is being updated or set up, or waits to be) looks as an image
+# being built does, and its caption begins with what the job does, or with "Waiting".
 main_image_card_rows() {
     local _counts="$(main_rows "$1" boxes | /usr/bin/cut -f3 | /usr/bin/sort | /usr/bin/uniq -c | /usr/bin/awk '{ printf "%s=%s ", $2, $1 }')"
-    main_rows "$1" images | /usr/bin/awk -F'\t' -v flagged="$(main_flagged "$1" images)" -v counts="$_counts" '
+    main_rows "$1" images | /usr/bin/awk -F'\t' -v flagged="$(main_flagged "$1" images)" -v counts="$_counts" -v jobs="$(ui_cache "$1" jobs.tsv)" '
         BEGIN {
+            while ((getline line < jobs) > 0) {
+                split(line, job, "\t")
+                if ((job[2] == "running" || job[2] == "queued") && job[3] ~ /^image:/)
+                    held[substr(job[3], 7)] = (job[2] == "queued") ? "Waiting" : (job[4] == "image create") ? "Building" : (job[4] ~ /^image update/) ? "Updating" : (job[4] == "image setup") ? "Setting up" : "Busy"
+            }
             n = split(counts, pairs, " ")
             for (i = 1; i <= n; i++) {
                 eq = index(pairs[i], "=")
@@ -580,6 +611,7 @@ main_image_card_rows() {
                 symbol = "xmark.octagon.fill"; color = "#D93025"; caption = "Failed"
             }
             if (macos != "") caption = ($2 == "ready") ? macos " - " caption : caption " - " macos
+            if ($2 == "ready" && ($1 in held)) { symbol = "hammer.fill"; color = "#0A84FF"; caption = held[$1] " - " caption }
             mark = ""; mark_symbol = ""
             if (index(flagged, " " $1 " ")) { mark = "Needs maintenance"; mark_symbol = "exclamationmark.triangle.fill" }
             printf "%s\t%s\t%s\t%s\t%s\t%s\t%s\n", $1, symbol, caption, mark, mark_symbol, color, (($1 in boxes) ? boxes[$1] : 0)
@@ -992,7 +1024,13 @@ main_paint_image_detail() {
         local _features _missing _seconds _fda _checked _clt _cpus _memory _bytes _unshared _added _rest
         IFS="$ui_tab" read -r _n _state _failure _macos _build _based _recipe _needs _guest _created _path \
             _features _missing _seconds _fda _checked _clt _cpus _memory _bytes _unshared _added _rest
-        "$dialog" "$_uuid" "$MAIN_IMAGE_STATE_ID" "$(main_image_state_text "$_state" "$_failure")"
+        # A job that holds the image says what it does and where it is, in place of the state.
+        local _job="$(main_job "$_uuid" image "$_name")"
+        if [ -n "$_job" ]; then
+            "$dialog" "$_uuid" "$MAIN_IMAGE_STATE_ID" "$(main_job_text "$_job")"
+        else
+            "$dialog" "$_uuid" "$MAIN_IMAGE_STATE_ID" "$(main_image_state_text "$_state" "$_failure")"
+        fi
 
         # What a guest update adds, when image info said.
         if [ "$_missing" != "-" ]; then
@@ -1057,9 +1095,13 @@ main_paint_image_detail() {
             ui_enable "$_uuid" "$MAIN_IMAGE_SHOW_ID" 0
         fi
     }
-    # agent-vm refuses to delete an image another agent-vm process uses, and says so; phase 3
-    # disables Delete while one of this app's jobs holds the image.
-    ui_enable "$_uuid" "$MAIN_IMAGE_DELETE_ID" 1
+    # Not while a job holds the image. agent-vm also refuses to delete an image another agent-vm
+    # process uses (a build started without a job, a box being made from it), and says so.
+    if [ -n "$(main_job "$_uuid" image "$_name")" ]; then
+        ui_enable "$_uuid" "$MAIN_IMAGE_DELETE_ID" 0
+    else
+        ui_enable "$_uuid" "$MAIN_IMAGE_DELETE_ID" 1
+    fi
 }
 
 # main_image_delete_question <uuid> <name>  ->  the confirmation's message: what deleting frees,

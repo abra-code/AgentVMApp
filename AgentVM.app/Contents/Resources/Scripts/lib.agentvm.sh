@@ -751,7 +751,8 @@ agentvm_job_list() {
     agentvm_json job list
 }
 
-# agentvm_job_rows  <  status JSON, or `job list` JSON  ->  one row per job, oldest first:
+# agentvm_job_rows  <  status JSON, `job list` JSON or `job log` JSON  ->  one row per job, oldest
+# first (the one job, for `job log`):
 #    1 id   2 state (queued, running, done, failed, canceled, lost)
 #    3 target, the first one ("box:<name>", "image:<name>" or "ipsw")
 #    4 what it does, the command's first two words ("box start", "image create")
@@ -760,10 +761,35 @@ agentvm_job_list() {
 #   13 its message   14 the last notice   15 error (after it failed or was canceled)
 #   16 after (the job it waits for)
 agentvm_job_rows() {
-    /usr/bin/jq -r "$agentvm_jq_defs"' (if type == "array" then . else (.jobs // []) end)[]
+    /usr/bin/jq -r "$agentvm_jq_defs"' (if type == "array" then . elif has("job") then [.job] else (.jobs // []) end)[]
         | [.id, .state, (.targets // [])[0], ((.command // [])[0:2] | join(" ")), .status, .createdAt, .startedAt, .endedAt,
            .progress.step, .progress.fraction, .progress.index, .progress.count, .progress.message, .notice, .error, .after]
         | row'
+}
+
+# agentvm_job_log <id>  ->  everything agent-vm keeps of one job, as JSON: `job` (its record, as
+# `job list` gives it), `events` (every progress event its command wrote, oldest first) and
+# `lines` (what the command wrote that is neither an event nor its error). agent-vm fails for a
+# job it no longer keeps.
+agentvm_job_log() {
+    _agentvm_need_job "$1" || return $?
+    agentvm_json job log "$1"
+}
+
+# agentvm_job_event_rows  <  `job log` JSON  ->  one row per event, oldest first:
+#   1 event (progress: a step began or moved on; log: a line of the log; notice: something the
+#     user may need to act on)
+#   2 step (a progress event's; names are stable, messages are not)   3 fraction (0-1)
+#   4 index   5 count   6 message   7 output ("true" for a line a program in the guest printed)
+#   8 expectedSeconds (how long the step took last time, when agent-vm knows)
+agentvm_job_event_rows() {
+    /usr/bin/jq -r "$agentvm_jq_defs"' (.events // [])[]
+        | [.event, .step, .fraction, .index, .count, .message, .output, .expectedSeconds] | row'
+}
+
+# agentvm_job_lines  <  `job log` JSON  ->  the other lines the command wrote, one per line.
+agentvm_job_lines() {
+    /usr/bin/jq -r '(.lines // [])[] | strings | gsub("[\t\n\r]"; " ")'
 }
 
 # agentvm_job_cancel <id>  ->  0 once the job was asked to stop; it stops at its next safe point and

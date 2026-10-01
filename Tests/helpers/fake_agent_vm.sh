@@ -31,6 +31,9 @@
 #              20260930-120001-000001, -120002-000002 and so on; `job cancel` and `job forget`
 #              change it as agent-vm would. A job never ends by itself: the test edits jobs.json
 #              (and status.json, for what the job did) to move it on.
+#   job-log-<id>.json  a job's log: {"events": [...], "lines": [...]}, what `job log <id>` answers
+#              with the job's record; a job without one has no events. The job's `progress` and
+#              `notice`, in `status`, `job list` and `job log`, are then the log's last ones.
 #   job-start-state  when present, the state a job is in as `job start` returns ("failed"), with
 #              the text of job-start-error as its error: a job that fails within the moment.
 #
@@ -46,7 +49,7 @@
 #   else the fixture box-netlog.json), and box execlog <name> --last <n> --json
 #   (box-execlog-<name>.json in the state directory, else the fixture box-execlog.json), and
 #   job start [--after <id>] --json -- <command...>, job list --json, job cancel <id> --json and
-#   job forget <id> --json (see jobs.json above).
+#   job forget <id> --json (see jobs.json above), and job log <id> --json.
 # Anything else fails with status 64, so a test that reaches an unimplemented command finds out.
 
 state="${FAKE_AGENTVM_DIR:?fake_agent_vm: FAKE_AGENTVM_DIR is not set}"
@@ -89,13 +92,28 @@ answer() {
     fi
 }
 
-# jobs  ->  the fake's jobs: jobs.json in the state directory, else none.
+# jobs  ->  the fake's jobs: jobs.json in the state directory, else none. A job with a log
+# (job-log-<id>.json) gets its last progress event and its last notice from it, as agent-vm's do.
 jobs() {
-    if [ -f "$state/jobs.json" ]; then
-        /bin/cat "$state/jobs.json"
-    else
+    if [ ! -f "$state/jobs.json" ]; then
         printf '[]\n'
+        return 0
     fi
+    logs="$(/bin/ls "$state" | /usr/bin/grep -c '^job-log-.*\.json$')"
+    if [ "$logs" -eq 0 ]; then
+        /bin/cat "$state/jobs.json"
+        return 0
+    fi
+    /usr/bin/jq -n '[inputs | {key: (input_filename | sub("^.*/job-log-"; "") | sub("\\.json$"; "")), value: (.events // [])}] | from_entries' \
+        "$state"/job-log-*.json > "$state/job-logs.json"
+    /usr/bin/jq --slurpfile logs "$state/job-logs.json" 'map(. as $job | ($logs[0][$job.id] // null) as $events
+        | if $events == null then . else
+            ([$events[] | select(.event == "progress")] | last) as $progress
+            | ([$events[] | select(.event == "notice")] | last) as $notice
+            | (if $progress != null then .progress = $progress else . end)
+            | (if $notice != null then .notice = $notice.message else . end)
+          end)' "$state/jobs.json"
+    /bin/rm -f "$state/job-logs.json"
 }
 
 case "$*" in
@@ -112,7 +130,9 @@ case "$*" in
     "status --json")
         # The jobs the fake holds, when it holds any, are the store's jobs.
         if [ -f "$state/jobs.json" ]; then
-            answer status | /usr/bin/jq --slurpfile jobs "$state/jobs.json" '.jobs = $jobs[0]'
+            jobs > "$state/jobs-now.json"
+            answer status | /usr/bin/jq --slurpfile jobs "$state/jobs-now.json" '.jobs = $jobs[0]'
+            /bin/rm -f "$state/jobs-now.json"
         else
             answer status
         fi ;;
@@ -228,6 +248,19 @@ case "$*" in
         /bin/rm -f "$state/job-new.json" ;;
     "job list --json")
         jobs ;;
+    "job log "*" --json")
+        jobs | /usr/bin/jq --arg id "$3" '.[] | select(.id == $id)' > "$state/job-was.json"
+        if [ ! -s "$state/job-was.json" ]; then
+            /bin/rm -f "$state/job-was.json"
+            printf 'Error: no job %s; `agent-vm job list` shows the jobs kept (finished ones for a week)\n' "$3" >&2
+            exit 1
+        fi
+        log="$state/job-log-$3.json"
+        [ -f "$log" ] || log="$state/job-log-none.tmp"
+        [ -f "$log" ] || printf '{}\n' > "$log"
+        /usr/bin/jq -n --slurpfile job "$state/job-was.json" --slurpfile log "$log" \
+            '{events: ($log[0].events // []), job: $job[0], lines: ($log[0].lines // [])}'
+        /bin/rm -f "$state/job-was.json" "$state/job-log-none.tmp" ;;
     "job cancel "*" --json"|"job forget "*" --json")
         job_state="$(jobs | /usr/bin/jq -r --arg id "$3" '.[] | select(.id == $id) | .state')"
         if [ -z "$job_state" ]; then

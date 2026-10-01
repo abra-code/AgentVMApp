@@ -8,7 +8,7 @@
 # rules (`box network` with no change) of one box, and `box packs`, against the
 # store agent-vm finds by itself (AGENT_VM_HOME, or ~/Library/Application Support/agent-vm),
 # and, against an empty store in a temporary folder, `status` again and one job that can only
-# fail, for the shape of a job's record. Each answer is re-serialized
+# fail, for the shape of a job's record and of its log. Each answer is re-serialized
 # with sorted keys, and the home folder in every string is replaced with /Users/you, so a capture
 # names no real account.
 #
@@ -110,5 +110,15 @@ AGENT_VM_HOME="$work/empty-store" capture job-list job list --json
 status=$?
 [ "$status" -eq 0 ] || fail "cannot rewrite the store path in job-list.json"
 /bin/mv -f "$work/job-list.clean.json" "$fixtures/job-list.json"
+
+# The same job's log: its record again, with its events and lines (none: it failed before any).
+job_id="$(/usr/bin/jq -r '.[0].id // empty' "$fixtures/job-list.json")"
+[ -n "$job_id" ] || fail "job-list.json names no job"
+AGENT_VM_HOME="$work/empty-store" capture job-log job log "$job_id" --json
+/usr/bin/jq -S 'walk(if type == "string" then sub("^.*/empty-store"; "/Users/you/Library/Application Support/agent-vm") else . end)' \
+    "$fixtures/job-log.json" > "$work/job-log.clean.json"
+status=$?
+[ "$status" -eq 0 ] || fail "cannot rewrite the store path in job-log.json"
+/bin/mv -f "$work/job-log.clean.json" "$fixtures/job-log.json"
 
 printf 'Done. Run the suite; update the README beside the fixtures with the date and version.\n'
