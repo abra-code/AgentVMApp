@@ -64,7 +64,7 @@
         "user-session",
         "terminal-pixels"
       ],
-      "guestVersion": "0.5.2",
+      "guestVersion": "0.5.7",
       "needs": [],
       "ownerPid": 812,
       "path": "/Users/you/Library/Application Support/agent-vm/Boxes/s3",
@@ -74,8 +74,8 @@
       "running": true,
       "startedAt": "2026-09-29T14:02:10Z",
       "state": "running",
-      "supervisorPath": "/Users/you/.local/share/agent-vm/versions/0.5.2/agent-vm",
-      "supervisorVersion": "0.5.2"
+      "supervisorPath": "/Users/you/.local/share/agent-vm/versions/0.5.7/agent-vm",
+      "supervisorVersion": "0.5.7"
     },
     {
       "box": {
@@ -127,6 +127,7 @@
       "installSeconds": 172.70192475,
       "macAddress": "96:10:12:fa:06:ed",
       "macOSBuild": "26A428",
+      "macOSCheckedAt": "2026-09-30T08:15:00Z",
       "macOSVersion": "27.0",
       "memoryBytes": 8589934592,
       "name": "dev",
@@ -140,7 +141,10 @@
       ],
       "path": "/Users/you/Library/Application Support/agent-vm/Images/dev",
       "provisionSeconds": 186.049275625,
+      "revision": 2,
       "state": "ready",
+      "toolsCheckedAt": "2026-09-30T08:15:00Z",
+      "updatedAt": "2026-09-30T08:15:00Z",
       "userName": "agent"
     },
     {
@@ -190,6 +194,20 @@
           "opencode": "1.18.32"
         }
       },
+      "recipes": [
+        {
+          "description": "ACP agents: Claude Agent ACP, Codex ACP and opencode (needs Node: build from an image with Recipes/homebrew-node)",
+          "digest": "b9bf629549f20304c81fbcf720f0bbc798def996926550a68a58a8defbec6374",
+          "folder": "1-dev-acp",
+          "name": "dev-acp",
+          "parameters": {
+            "claude_acp": "0.81.2",
+            "codex_acp": "1.13.1",
+            "extras": "",
+            "opencode": "1.18.32"
+          }
+        }
+      ],
       "state": "ready",
       "userName": "agent"
     },

@@ -35,7 +35,7 @@
 [ -n "${__AGENTVM_APP_LIB:-}" ] && return 0
 __AGENTVM_APP_LIB=1
 
-AGENTVM_MIN_VERSION="0.5.2"
+AGENTVM_MIN_VERSION="0.5.7"
 
 # The app's own state, and where agent-vm's installer puts the link to the newest agent-vm.
 agentvm_support_dir="$HOME/Library/Application Support/AgentVM"
@@ -317,15 +317,18 @@ agentvm_status() {
 #    5 ruleCount   6 pid (the supervisor's)   7 ownerPid   8 project   9 projectReadOnly
 #   10 activeExecs (programs running in it now)   11 startedAt   12 supervisorVersion
 #   13 disposable (true or false)   14 statusError   15 cpus   16 memoryGB   17 path
-#   18 needs (kinds, comma-joined: recreate, when its image's guest daemon is no longer the one
-#      the box was made with; agent-vm says nothing for a box made before it recorded that)
+#   18 needs (kinds, comma-joined: recreate, when its image is no longer what the box was made
+#      from; agent-vm says nothing for a box made before it recorded what it compares)
 #   19 macOSVersion   20 macOSBuild (what the box was made with)   21 createdAt
+#   22 why it needs recreating: guest-update (the image's guest daemon was replaced),
+#      image-updated (macOS or the tools in it were updated) or image-rebuilt (another image was
+#      built under the name)
 # The running fields (6-12) are "-" for a stopped box.
 agentvm_status_box_rows() {
     /usr/bin/jq -r "$agentvm_jq_defs$agentvm_jq_box_defs"' .boxes[] | box_cells | row'
 }
 
-# The 21 cells of a box, as agentvm_status_box_rows documents them: `status` gives each box's
+# The 22 cells of a box, as agentvm_status_box_rows documents them: `status` gives each box's
 # entry, and `box info` the same entry with its sizes.
 agentvm_jq_box_defs='
 def box_cells: [
@@ -336,7 +339,8 @@ def box_cells: [
     .box.cpuCount, (if .box.memoryBytes == null then null else .box.memoryBytes / 1073741824 | floor end),
     .path,
     (.needs // [] | map(.kind) | if length == 0 then null else join(",") end),
-    .box.macOSVersion, .box.macOSBuild, .box.createdAt ];'
+    .box.macOSVersion, .box.macOSBuild, .box.createdAt,
+    ([.needs // [] | .[] | select(.kind == "recreate") | .reason][0]) ];'
 
 # agentvm_box_info <name>  ->  `agent-vm box info <name> --json`: the box's status entry and what
 # its disk takes, which agent-vm measures (about 0.1 s), so it is read for the selected box only
@@ -347,8 +351,8 @@ agentvm_box_info() {
     agentvm_json box info "$1"
 }
 
-# agentvm_box_info_row  <  box info JSON  ->  one row: fields 1-21 as agentvm_status_box_rows,
-# then 22 bytes (the space the box takes)   23 unsharedBytes (what deleting it frees).
+# agentvm_box_info_row  <  box info JSON  ->  one row: fields 1-22 as agentvm_status_box_rows,
+# then 23 bytes (the space the box takes)   24 unsharedBytes (what deleting it frees).
 agentvm_box_info_row() {
     /usr/bin/jq -r "$agentvm_jq_defs$agentvm_jq_box_defs"' box_cells + [.diskUsage.bytes, .diskUsage.unsharedBytes] | row'
 }
@@ -632,6 +636,35 @@ def image_cells: [
     .recipe.description,
     (.needs // [] | map(.kind) | if length == 0 then null else join(",") end),
     .guestVersion, .createdAt, .path ];'
+
+# agentvm_status_update_rows  <  status JSON  ->  one row per image, with what an update of it
+# would find and what the last one did:
+#    1 name   2 revision (how often an update changed its disk; "-" for never)   3 updatedAt
+#    4 macOSCheckedAt (when an update of the image last asked Apple)   5 toolsCheckedAt (when
+#    one last ran its recipes' update steps)
+#    6 the newer macOS it can take, by what `status --check-updates` last learned ("-" when it
+#      is not behind, or nothing was learned)   7 that macOS's build   8 when that was learned
+#    9 the recipes it keeps (names, comma-joined, in the order they ran; "-" for an image built
+#      before agent-vm listed them, whose tools an update cannot refresh)
+#   10 updating (true while an agent-vm command changes the image: an update or a setup, started
+#      as a job or not)
+#   11 what its guest daemon lacks (features, comma-joined; "-" when nothing)
+agentvm_status_update_rows() {
+    /usr/bin/jq -r "$agentvm_jq_defs"' .images[] | [
+        .name, .revision, .updatedAt, .macOSCheckedAt, .toolsCheckedAt,
+        .macOSUpdate.version, .macOSUpdate.build, .macOSUpdate.checkedAt,
+        ([.recipes // [] | .[] | select(.folder != null) | .name // .folder] | if length == 0 then null else join(",") end),
+        (.updating // false),
+        ([.needs // [] | .[] | select(.kind == "guest-update") | .missing // [] | .[]]
+            | if length == 0 then null else join(",") end) ] | row'
+}
+
+# agentvm_status_newest_row  <  status JSON  ->  version, build, checkedAt, error: the newest macOS
+# this Mac's virtual machines can run, as `status --check-updates` last learned it and agent-vm
+# kept it; all "-" when it was never asked. The error is why the lookup of this very call failed.
+agentvm_status_newest_row() {
+    /usr/bin/jq -r "$agentvm_jq_defs"' [.newestMacOS.version, .newestMacOS.build, .newestMacOS.checkedAt, .newestMacOSError] | row'
+}
 
 # agentvm_image_info <name>  ->  `agent-vm image info <name> --json`: the image's record and
 # what its disk takes, which agent-vm measures (0.1-0.3 s), so it is read for the selected image

@@ -27,8 +27,10 @@ if [ -n "$(main_row "$window_uuid" images "$name")" ]; then
 fi
 main_paint "$window_uuid"
 [ -n "$(main_row "$window_uuid" images "$name")" ] || exit 0
-# Nor about an image a job holds: it is being built, updated or set up, and the pane now says so.
+# Nor about an image a job holds, or another agent-vm command is changing: it is being built,
+# updated or set up, and the pane now says so.
 [ -z "$(main_job "$window_uuid" image "$name")" ] || exit 0
+main_image_busy "$window_uuid" "$name" && exit 0
 ui_set image_delete "$window_uuid" "$name"
 "$dialog" "$window_uuid" omc_window omc_present_alert "Delete image $name?" \
     "$(main_image_delete_question "$window_uuid" "$name")" \

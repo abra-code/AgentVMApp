@@ -69,12 +69,12 @@
       "diskBytes": 68719476736,
       "formatVersion": 1,
       "fullDiskAccess": {
-        "checkedAt": "2026-09-27T07:28:15Z",
+        "checkedAt": "2026-10-01T18:52:05Z",
         "granted": true,
-        "guestDigest": "8aecca450c3571b01b7ffbd7d69461394061f029d92d0eee07d678ceb909ccd6",
-        "guestRequirement": "cdhash H\"8a009b1b825f636202afe7c9f4a85db617d1c908\""
+        "guestDigest": "85bd24505bf01029b79aefda228e3050db914086af4e90526107cb4b87a7775a",
+        "guestRequirement": "identifier \"com.abracode.agent-vm-guest\" and anchor apple generic and certificate 1[field.1.2.840.113635.100.6.2.6] /* exists */ and certificate leaf[field.1.2.840.113635.100.6.1.13] /* exists */ and certificate leaf[subject.OU] = T9NM2ZLDTY"
       },
-      "guestDigest": "8aecca450c3571b01b7ffbd7d69461394061f029d92d0eee07d678ceb909ccd6",
+      "guestDigest": "85bd24505bf01029b79aefda228e3050db914086af4e90526107cb4b87a7775a",
       "guestFeatures": [
         "terminal",
         "prompt-notices",
@@ -84,25 +84,29 @@
         "terminal-pixels"
       ],
       "guestProtocol": 1,
-      "guestRequirement": "cdhash H\"8a009b1b825f636202afe7c9f4a85db617d1c908\"",
-      "guestVersion": "0.2.18",
+      "guestRequirement": "identifier \"com.abracode.agent-vm-guest\" and anchor apple generic and certificate 1[field.1.2.840.113635.100.6.2.6] /* exists */ and certificate leaf[field.1.2.840.113635.100.6.1.13] /* exists */ and certificate leaf[subject.OU] = T9NM2ZLDTY",
+      "guestVersion": "0.5.6",
       "installSeconds": 172.70192475,
       "macAddress": "96:10:12:fa:06:ed",
-      "macOSBuild": "26A428",
-      "macOSVersion": "27.0",
+      "macOSBuild": "26A434",
+      "macOSCheckedAt": "2026-10-01T18:42:49Z",
+      "macOSVersion": "27.0.1",
       "memoryBytes": 8589934592,
       "name": "dev",
       "needs": [],
       "path": "/Users/you/Library/Application Support/agent-vm/Images/dev",
       "provisionSeconds": 186.049275625,
+      "revision": 1,
       "state": "ready",
+      "toolsCheckedAt": "2026-10-01T18:42:49Z",
+      "updatedAt": "2026-10-01T18:42:49Z",
       "userName": "agent"
     },
     {
       "commandLineTools": "Command Line Tools for Xcode 27.0-27.0",
       "cpuCount": 4,
-      "createdAt": "2026-09-26T01:41:00Z",
-      "createdBy": "0.2.6",
+      "createdAt": "2026-10-01T18:55:13Z",
+      "createdBy": "0.5.6",
       "derivedFrom": {
         "image": "dev-node",
         "recipeDigest": "edef427c53ca1f576a458db6504b52a1be6a3adbe179450fdef78870f95d5290"
@@ -110,12 +114,12 @@
       "diskBytes": 68719476736,
       "formatVersion": 1,
       "fullDiskAccess": {
-        "checkedAt": "2026-09-27T07:32:54Z",
-        "granted": true,
-        "guestDigest": "8aecca450c3571b01b7ffbd7d69461394061f029d92d0eee07d678ceb909ccd6",
-        "guestRequirement": "cdhash H\"8a009b1b825f636202afe7c9f4a85db617d1c908\""
+        "checkedAt": "2026-10-01T18:56:39Z",
+        "granted": false,
+        "guestDigest": "85bd24505bf01029b79aefda228e3050db914086af4e90526107cb4b87a7775a",
+        "guestRequirement": "identifier \"com.abracode.agent-vm-guest\" and anchor apple generic and certificate 1[field.1.2.840.113635.100.6.2.6] /* exists */ and certificate leaf[field.1.2.840.113635.100.6.1.13] /* exists */ and certificate leaf[subject.OU] = T9NM2ZLDTY"
       },
-      "guestDigest": "8aecca450c3571b01b7ffbd7d69461394061f029d92d0eee07d678ceb909ccd6",
+      "guestDigest": "85bd24505bf01029b79aefda228e3050db914086af4e90526107cb4b87a7775a",
       "guestFeatures": [
         "terminal",
         "prompt-notices",
@@ -125,16 +129,26 @@
         "terminal-pixels"
       ],
       "guestProtocol": 1,
-      "guestRequirement": "cdhash H\"8a009b1b825f636202afe7c9f4a85db617d1c908\"",
-      "guestVersion": "0.2.18",
-      "macAddress": "86:52:f3:e6:ee:27",
+      "guestRequirement": "identifier \"com.abracode.agent-vm-guest\" and anchor apple generic and certificate 1[field.1.2.840.113635.100.6.2.6] /* exists */ and certificate leaf[field.1.2.840.113635.100.6.1.13] /* exists */ and certificate leaf[subject.OU] = T9NM2ZLDTY",
+      "guestVersion": "0.5.6",
+      "macAddress": "16:25:14:1d:61:8c",
       "macOSBuild": "26A428",
+      "macOSUpdate": {
+        "build": "26A434",
+        "checkedAt": "2026-10-01T17:30:02Z",
+        "version": "27.0.1"
+      },
       "macOSVersion": "27.0",
       "memoryBytes": 8589934592,
       "name": "dev-acp",
-      "needs": [],
+      "needs": [
+        {
+          "kind": "full-disk-access",
+          "reason": "not-granted"
+        }
+      ],
       "path": "/Users/you/Library/Application Support/agent-vm/Images/dev-acp",
-      "provisionSeconds": 116.608079167,
+      "provisionSeconds": 92.596060833,
       "recipe": {
         "description": "ACP agents: Claude Agent ACP, Codex ACP and opencode (needs Node: build from an image with Recipes/homebrew-node)",
         "digest": "b9bf629549f20304c81fbcf720f0bbc798def996926550a68a58a8defbec6374",
@@ -145,6 +159,20 @@
           "opencode": "1.18.32"
         }
       },
+      "recipes": [
+        {
+          "description": "ACP agents: Claude Agent ACP, Codex ACP and opencode (needs Node: build from an image with Recipes/homebrew-node)",
+          "digest": "b9bf629549f20304c81fbcf720f0bbc798def996926550a68a58a8defbec6374",
+          "folder": "1-dev-acp",
+          "name": "dev-acp",
+          "parameters": {
+            "claude_acp": "0.81.2",
+            "codex_acp": "1.13.1",
+            "extras": "",
+            "opencode": "1.18.32"
+          }
+        }
+      ],
       "state": "ready",
       "userName": "agent"
     },
@@ -179,6 +207,11 @@
       "guestVersion": "0.2.18",
       "macAddress": "32:13:b8:d7:ab:81",
       "macOSBuild": "26A428",
+      "macOSUpdate": {
+        "build": "26A434",
+        "checkedAt": "2026-10-01T17:30:02Z",
+        "version": "27.0.1"
+      },
       "macOSVersion": "27.0",
       "memoryBytes": 8589934592,
       "name": "dev-agents",
@@ -222,6 +255,11 @@
       "guestVersion": "0.2.18",
       "macAddress": "f6:17:26:ed:42:14",
       "macOSBuild": "26A428",
+      "macOSUpdate": {
+        "build": "26A434",
+        "checkedAt": "2026-10-01T17:30:02Z",
+        "version": "27.0.1"
+      },
       "macOSVersion": "27.0",
       "memoryBytes": 8589934592,
       "name": "dev-node",
@@ -270,6 +308,11 @@
       "guestVersion": "0.2.18",
       "macAddress": "1a:8d:b1:d5:f6:a4",
       "macOSBuild": "26A428",
+      "macOSUpdate": {
+        "build": "26A434",
+        "checkedAt": "2026-10-01T17:30:02Z",
+        "version": "27.0.1"
+      },
       "macOSVersion": "27.0",
       "memoryBytes": 8589934592,
       "name": "dev-xcode",
@@ -327,6 +370,11 @@
       "guestVersion": "0.2.18",
       "macAddress": "b6:8c:fc:5e:41:aa",
       "macOSBuild": "26A428",
+      "macOSUpdate": {
+        "build": "26A434",
+        "checkedAt": "2026-10-01T17:30:02Z",
+        "version": "27.0.1"
+      },
       "macOSVersion": "27.0",
       "memoryBytes": 8589934592,
       "name": "dev-xcode-ios",
@@ -350,56 +398,12 @@
       "userName": "agent"
     }
   ],
-  "jobs": [
-    {
-      "command": [
-        "box",
-        "start",
-        "try1",
-        "--json"
-      ],
-      "createdAt": "2026-10-01T10:51:42Z",
-      "endedAt": "2026-10-01T10:52:08Z",
-      "id": "20261001-105142-d6ec6e",
-      "path": "/Users/you/Library/Application Support/agent-vm/Jobs/20261001-105142-d6ec6e",
-      "progress": {
-        "box": "try1",
-        "event": "progress",
-        "message": "running",
-        "step": "running"
-      },
-      "startedAt": "2026-10-01T10:51:42Z",
-      "state": "done",
-      "status": 0,
-      "targets": [
-        "box:try1"
-      ]
-    },
-    {
-      "command": [
-        "box",
-        "stop",
-        "try1",
-        "--json"
-      ],
-      "createdAt": "2026-10-01T10:53:56Z",
-      "endedAt": "2026-10-01T10:54:03Z",
-      "id": "20261001-105356-627ff7",
-      "path": "/Users/you/Library/Application Support/agent-vm/Jobs/20261001-105356-627ff7",
-      "progress": {
-        "box": "try1",
-        "event": "progress",
-        "message": "Stopping box try1",
-        "step": "shutdown"
-      },
-      "startedAt": "2026-10-01T10:53:56Z",
-      "state": "done",
-      "status": 0,
-      "targets": [
-        "box:try1"
-      ]
-    }
-  ],
+  "jobs": [],
+  "newestMacOS": {
+    "build": "26A434",
+    "checkedAt": "2026-10-01T17:30:02Z",
+    "version": "27.0.1"
+  },
   "runningVMs": {
     "count": 0,
     "limit": 2

@@ -190,7 +190,7 @@ fake_reset
 rows="$(with_fake agentvm_doctor)"
 check "agentvm_doctor: one row per check" "6" "$(printf '%s\n' "$rows" | /usr/bin/awk 'END { print NR }')"
 check "  name, status and detail"    "macOS${TAB}ok${TAB}macOS 27.0.0" "$(printf '%s\n' "$rows" | /usr/bin/head -1)"
-check "  the disk space detail"      "82 GB free on the volume of /Users/you/Library/Application Support/agent-vm" \
+check "  the disk space detail"      "64 GB free on the volume of /Users/you/Library/Application Support/agent-vm" \
     "$(printf '%s\n' "$rows" | row_named "disk space" | col 3)"
 check "  one call"                   "doctor --json" "$(fake_log)"
 printf 'no store\n' > "$FAKE_AGENTVM_DIR/fail-doctor"
@@ -202,7 +202,7 @@ check "  with its message"           "no store" "$(lib agentvm_last_error 1)"
 section "box rows: every box stopped (status.json)"
 rows="$(lib agentvm_status_box_rows < "$FIXTURES_AGENTVM/status.json")"
 check "one row per box"              "2"  "$(printf '%s\n' "$rows" | /usr/bin/awk 'END { print NR }')"
-check "twenty-one fields in every row" "21" "$(printf '%s\n' "$rows" | field_count)"
+check "twenty-two fields in every row" "22" "$(printf '%s\n' "$rows" | field_count)"
 row="$(printf '%s\n' "$rows" | row_named s3)"
 check "name, state, image"           "s3${TAB}stopped${TAB}dev-acp" "$(printf '%s\n' "$row" | col 1-3)"
 check "network: allowlist, 6 rules"  "allowlist${TAB}6"             "$(printf '%s\n' "$row" | col 4-5)"
@@ -210,12 +210,12 @@ check "no running fields: all -"     "-${TAB}-${TAB}-${TAB}-${TAB}-${TAB}-${TAB}
 check "not disposable"               "false"                         "$(printf '%s\n' "$row" | col 13)"
 check "4 CPUs, 8 GB"                 "4${TAB}8"                     "$(printf '%s\n' "$row" | col 15-16)"
 check "its folder"                   "/Users/you/Library/Application Support/agent-vm/Boxes/s3" "$(printf '%s\n' "$row" | col 17)"
-check "needs nothing"                "-"                             "$(printf '%s\n' "$row" | col 18)"
+check "needs nothing, so no reason"  "-${TAB}-"                      "$(printf '%s\n' "$row" | col 18,22)"
 check "the macOS it was made with, and when" "27.0${TAB}26A428${TAB}2026-09-25T06:53:07Z" "$(printf '%s\n' "$rows" | row_named cadabra-spike | col 19-21)"
 
 section "box rows: running, unresponsive, disposable (status-variety.json)"
 rows="$(lib agentvm_status_box_rows < "$FIXTURES_AGENTVM/status-variety.json")"
-check "twenty-one fields in every row" "21" "$(printf '%s\n' "$rows" | field_count)"
+check "twenty-two fields in every row" "22" "$(printf '%s\n' "$rows" | field_count)"
 row="$(printf '%s\n' "$rows" | row_named s3)"
 check "running"                      "running"            "$(printf '%s\n' "$row" | col 2)"
 check "the supervisor and the owner" "44847${TAB}812"     "$(printf '%s\n' "$row" | col 6-7)"
@@ -229,15 +229,18 @@ check "  and says why"               "no answer from the supervisor within 5 s" 
 check "  no network record: open, no rules" "open${TAB}0" "$(printf '%s\n' "$row" | col 4-5)"
 check "  no pid to signal"           "-"                  "$(printf '%s\n' "$row" | col 6)"
 check "disposable"                   "true"               "$(printf '%s\n' "$rows" | row_named cadabra-spike | col 13)"
-check "a box to recreate"            "recreate" \
+check "a box to recreate, and why"   "recreate${TAB}image-updated" \
+    "$(/usr/bin/jq '(.boxes[] | select(.box.name == "s3")).needs = [{kind: "recreate", reason: "image-updated", macOSBuild: "26A434"}]' \
+        "$FIXTURES_AGENTVM/status-variety.json" | lib agentvm_status_box_rows | row_named s3 | col 18,22)"
+check "  a need without a reason: -"  "recreate${TAB}-" \
     "$(/usr/bin/jq '(.boxes[] | select(.box.name == "s3")).needs = [{kind: "recreate", guestVersion: "0.4.3"}]' \
-        "$FIXTURES_AGENTVM/status-variety.json" | lib agentvm_status_box_rows | row_named s3 | col 18)"
+        "$FIXTURES_AGENTVM/status-variety.json" | lib agentvm_status_box_rows | row_named s3 | col 18,22)"
 
 section "box rows: values that would break a row"
 json='{"boxes": [{"box": {"name": "odd", "image": "dev", "network": {"mode": "off"}}, "state": "running",
     "project": "/Users/you/my\tproject\nfolder", "statusError": "", "path": "/p"}], "images": [], "runningVMs": {"limit": 2}}'
 row="$(printf '%s\n' "$json" | lib agentvm_status_box_rows)"
-check "still twenty-one fields"      "21"   "$(printf '%s\n' "$row" | field_count)"
+check "still twenty-two fields"      "22"   "$(printf '%s\n' "$row" | field_count)"
 check "still one line"               "1"    "$(printf '%s\n' "$row" | /usr/bin/awk 'END { print NR }')"
 check "a tab and a line break become spaces" "/Users/you/my project folder" "$(printf '%s\n' "$row" | col 8)"
 check "an empty string is -"         "-"    "$(printf '%s\n' "$row" | col 14)"
@@ -250,9 +253,9 @@ rows="$(lib agentvm_status_image_rows < "$FIXTURES_AGENTVM/status.json")"
 check "one row per image"            "6"  "$(printf '%s\n' "$rows" | /usr/bin/awk 'END { print NR }')"
 check "eleven fields in every row"   "11" "$(printf '%s\n' "$rows" | field_count)"
 row="$(printf '%s\n' "$rows" | row_named dev)"
-check "dev: ready, no failure, macOS 27.0 (26A428)" "dev${TAB}ready${TAB}-${TAB}27.0${TAB}26A428" "$(printf '%s\n' "$row" | col 1-5)"
+check "dev: ready, no failure, macOS 27.0.1 (26A434)" "dev${TAB}ready${TAB}-${TAB}27.0.1${TAB}26A434" "$(printf '%s\n' "$row" | col 1-5)"
 check "  built from a restore file, no recipe, needs nothing" "-${TAB}-${TAB}-" "$(printf '%s\n' "$row" | col 6-8)"
-check "  its guest daemon"           "0.2.18" "$(printf '%s\n' "$row" | col 9)"
+check "  its guest daemon"           "0.5.6" "$(printf '%s\n' "$row" | col 9)"
 row="$(printf '%s\n' "$rows" | row_named dev-node)"
 check "dev-node: built from dev"     "dev"               "$(printf '%s\n' "$row" | col 6)"
 check "  with its recipe"            "Homebrew and Node" "$(printf '%s\n' "$row" | col 7)"
@@ -263,6 +266,38 @@ rows="$(lib agentvm_status_image_rows < "$FIXTURES_AGENTVM/status-variety.json")
 check "two needs, comma-joined"      "full-disk-access,guest-update" "$(printf '%s\n' "$rows" | row_named dev-node | col 8)"
 check "a failed image and why"       "failed${TAB}the build was canceled" "$(printf '%s\n' "$rows" | row_named latest-test | col 2-3)"
 
+section "update rows: what an update of each image would find (status.json)"
+rows="$(lib agentvm_status_update_rows < "$FIXTURES_AGENTVM/status.json")"
+check "one row per image"            "6"  "$(printf '%s\n' "$rows" | /usr/bin/awk 'END { print NR }')"
+check "eleven fields in every row"   "11" "$(printf '%s\n' "$rows" | field_count)"
+check "dev was updated once, and when; macOS and its tools were looked at then" \
+    "dev${TAB}1${TAB}2026-10-01T18:42:49Z${TAB}2026-10-01T18:42:49Z${TAB}2026-10-01T18:42:49Z" "$(printf '%s\n' "$rows" | row_named dev | col 1-5)"
+check "  it is not behind, keeps no recipes, is not being changed, and its daemon lacks nothing" \
+    "-${TAB}-${TAB}-${TAB}-${TAB}false${TAB}-" "$(printf '%s\n' "$rows" | row_named dev | col 6-11)"
+check "dev-acp was never updated"    "-${TAB}-${TAB}-${TAB}-" "$(printf '%s\n' "$rows" | row_named dev-acp | col 2-5)"
+check "  it is behind: the newer macOS, its build, and when that was learned" \
+    "27.0.1${TAB}26A434${TAB}2026-10-01T17:30:02Z" "$(printf '%s\n' "$rows" | row_named dev-acp | col 6-8)"
+check "  the recipe it keeps"        "dev-acp" "$(printf '%s\n' "$rows" | row_named dev-acp | col 9)"
+check "an image built before recipes were listed keeps none" "-" "$(printf '%s\n' "$rows" | row_named dev-node | col 9)"
+
+section "update rows: values a capture does not hold"
+json='{"images": [{"name": "one", "state": "ready", "updating": true,
+    "recipes": [{"name": "homebrew", "folder": "1-homebrew"}, {"name": "inherited"}, {"folder": "3-node"}, {"name": "agent\tclis", "folder": "4"}],
+    "needs": [{"kind": "full-disk-access"}, {"kind": "guest-update", "missing": ["wallpaper", "terminal-pixels"]}]}]}'
+row="$(printf '%s\n' "$json" | lib agentvm_status_update_rows)"
+check "still eleven fields, on one line" "11 1" "$(printf '%s\n' "$row" | field_count) $(printf '%s\n' "$row" | /usr/bin/awk 'END { print NR }')"
+check "the recipes whose files it keeps, in order; one without a name by its folder" \
+    "homebrew,3-node,agent clis" "$(printf '%s\n' "$row" | col 9)"
+check "being changed"                "true" "$(printf '%s\n' "$row" | col 10)"
+check "what its guest daemon lacks"  "wallpaper,terminal-pixels" "$(printf '%s\n' "$row" | col 11)"
+
+section "the newest macOS row"
+check "what status --check-updates last learned" "27.0.1${TAB}26A434${TAB}2026-10-01T17:30:02Z${TAB}-" \
+    "$(lib agentvm_status_newest_row < "$FIXTURES_AGENTVM/status.json")"
+check "never asked: all -"           "-${TAB}-${TAB}-${TAB}-" "$(lib agentvm_status_newest_row < "$FIXTURES_AGENTVM/status-empty.json")"
+check "a lookup that failed says why" "27.0${TAB}26A428${TAB}2026-09-30T10:00:00Z${TAB}the lookup timed out" \
+    "$(printf '{"newestMacOS": {"version": "27.0", "build": "26A428", "checkedAt": "2026-09-30T10:00:00Z"}, "newestMacOSError": "the lookup\\ttimed out"}\n' | lib agentvm_status_newest_row)"
+
 section "image info row (image-info.json)"
 row="$(lib agentvm_image_info_row < "$FIXTURES_AGENTVM/image-info.json")"
 name="$(printf '%s\n' "$row" | col 1)"
@@ -271,15 +306,15 @@ check "the first eleven are status's row of the same image" \
     "$(lib agentvm_status_image_rows < "$FIXTURES_AGENTVM/status.json" | row_named "$name")" "$(printf '%s\n' "$row" | col 1-11)"
 check "its guest daemon's features" "terminal,prompt-notices,wallpaper,time-sync,user-session,terminal-pixels" "$(printf '%s\n' "$row" | col 12)"
 check "  none missing"                "-"    "$(printf '%s\n' "$row" | col 13)"
-check "the build took 116 s"         "116"  "$(printf '%s\n' "$row" | col 14)"
-check "Full Disk Access, and when"   "granted${TAB}2026-09-27T07:32:54Z" "$(printf '%s\n' "$row" | col 15-16)"
+check "the build took 92 s"          "92"  "$(printf '%s\n' "$row" | col 14)"
+check "Full Disk Access, and when"   "not-granted${TAB}2026-10-01T18:56:39Z" "$(printf '%s\n' "$row" | col 15-16)"
 check "4 CPUs, 8 GB"                 "4${TAB}8" "$(printf '%s\n' "$row" | col 18-19)"
-check "its space, its own, and added over its base" "39008120832${TAB}547110912${TAB}1917476864" "$(printf '%s\n' "$row" | col 20-22)"
+check "its space, its own, and added over its base" "38752391168${TAB}1549213696${TAB}1548103680" "$(printf '%s\n' "$row" | col 20-22)"
 check "what a guest update adds"     "terminal-pixels,wallpaper" \
     "$(/usr/bin/jq '.needs = [{kind: "full-disk-access"}, {kind: "guest-update", missing: ["terminal-pixels", "wallpaper"]}]' \
         "$FIXTURES_AGENTVM/image-info.json" | lib agentvm_image_info_row | col 13)"
-check "no Full Disk Access"          "not-granted" \
-    "$(/usr/bin/jq '.fullDiskAccess.granted = false' "$FIXTURES_AGENTVM/image-info.json" | lib agentvm_image_info_row | col 15)"
+check "Full Disk Access granted"     "granted" \
+    "$(/usr/bin/jq '.fullDiskAccess.granted = true' "$FIXTURES_AGENTVM/image-info.json" | lib agentvm_image_info_row | col 15)"
 check "  never checked: -"           "-${TAB}-" \
     "$(/usr/bin/jq 'del(.fullDiskAccess)' "$FIXTURES_AGENTVM/image-info.json" | lib agentvm_image_info_row | col 15-16)"
 
@@ -297,12 +332,12 @@ check "a valid name reaches agent-vm" "0${TAB}image delete dev-acp --json" "$?${
 section "box info row (box-info.json)"
 row="$(lib agentvm_box_info_row < "$FIXTURES_AGENTVM/box-info.json")"
 name="$(printf '%s\n' "$row" | col 1)"
-check "twenty-three fields"          "23" "$(printf '%s\n' "$row" | field_count)"
-check "the first twenty-one are status's row of the same box" \
-    "$(lib agentvm_status_box_rows < "$FIXTURES_AGENTVM/status.json" | row_named "$name")" "$(printf '%s\n' "$row" | col 1-21)"
-check "its space, and its own"       "40175632384${TAB}2061914112" "$(printf '%s\n' "$row" | col 22-23)"
+check "twenty-four fields"           "24" "$(printf '%s\n' "$row" | field_count)"
+check "the first twenty-two are status's row of the same box" \
+    "$(lib agentvm_status_box_rows < "$FIXTURES_AGENTVM/status.json" | row_named "$name")" "$(printf '%s\n' "$row" | col 1-22)"
+check "its space, and its own"       "40161345536${TAB}2048749568" "$(printf '%s\n' "$row" | col 23-24)"
 check "a volume that does not report its own part: -" "-" \
-    "$(/usr/bin/jq 'del(.diskUsage.unsharedBytes)' "$FIXTURES_AGENTVM/box-info.json" | lib agentvm_box_info_row | col 23)"
+    "$(/usr/bin/jq 'del(.diskUsage.unsharedBytes)' "$FIXTURES_AGENTVM/box-info.json" | lib agentvm_box_info_row | col 24)"
 
 section "box commands: names agent-vm would refuse are refused first"
 fake_reset
@@ -492,6 +527,7 @@ check "a count agent-vm could not take is -" "-${TAB}2" \
 section "an empty store (status-empty.json)"
 check "no box rows"                  "" "$(lib agentvm_status_box_rows < "$FIXTURES_AGENTVM/status-empty.json")"
 check "no image rows"                "" "$(lib agentvm_status_image_rows < "$FIXTURES_AGENTVM/status-empty.json")"
+check "no update rows"               "" "$(lib agentvm_status_update_rows < "$FIXTURES_AGENTVM/status-empty.json")"
 check "and the virtual machines"     "0${TAB}2" "$(lib agentvm_status_vm_row < "$FIXTURES_AGENTVM/status-empty.json")"
 
 # -----------------------------------------------------------------------------------------------
@@ -514,8 +550,16 @@ check "no image info field is absent" "" "$(lib agentvm_image_info_row < "$FIXTU
     BEGIN { n = split("12:guestFeatures 14:provisionSeconds 15:fullDiskAccess 16:checkedAt 17:commandLineTools 18:cpus 19:memoryGB 20:bytes 21:unsharedBytes 22:addedBytes", f, " ") }
     { for (i = 1; i <= n; i++) { split(f[i], p, ":"); if ($p[1] == "-") printf "%s ", p[2] } }')"
 check "no box info field is absent" "" "$(lib agentvm_box_info_row < "$FIXTURES_AGENTVM/box-info.json" | /usr/bin/awk -F'\t' '
-    BEGIN { n = split("1:name 2:state 3:image 15:cpus 16:memoryGB 17:path 22:bytes 23:unsharedBytes", f, " ") }
+    BEGIN { n = split("1:name 2:state 3:image 15:cpus 16:memoryGB 17:path 23:bytes 24:unsharedBytes", f, " ") }
     { for (i = 1; i <= n; i++) { split(f[i], p, ":"); if ($p[1] == "-") printf "%s ", p[2] } }')"
+# The update fields are each absent from an image they do not apply to, so the capture is asked
+# whether any image has them: it was taken after `status --check-updates` and one `image update`.
+check "the update fields are there" "revision updatedAt macOSCheckedAt toolsCheckedAt macOSUpdate recipes " \
+    "$(/usr/bin/jq -r '[.images[] | keys[]] | unique as $have
+        | ["revision", "updatedAt", "macOSCheckedAt", "toolsCheckedAt", "macOSUpdate", "recipes"][] | select(. as $key | $have | index($key))' \
+        "$FIXTURES_AGENTVM/status.json" | /usr/bin/tr '\n' ' ')"
+check "the newest macOS is there"    "version build checkedAt " \
+    "$(/usr/bin/jq -r '.newestMacOS | keys_unsorted | sort_by(if . == "version" then 0 elif . == "build" then 1 else 2 end)[]' "$FIXTURES_AGENTVM/status.json" | /usr/bin/tr '\n' ' ')"
 check "the virtual machine count is there" "0" \
     "$(lib agentvm_status_vm_row < "$FIXTURES_AGENTVM/status.json" | col 1)"
 check "doctor has the checks the window reads" "virtualization disk space running VMs " \

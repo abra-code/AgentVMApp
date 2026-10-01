@@ -99,13 +99,26 @@ section "nothing needs doing"
 open_with "$QUIET"
 check "no card is marked" "" "$( { ui_rows "$MAIN_IMAGES_ID"; ui_rows "$MAIN_BOXES_ID"; } | col 4-5 | /usr/bin/tr -d "$TAB\n")"
 
-section "a box made before its image's guest update"
-RECREATE='[{kind: "recreate", guestVersion: "0.4.3"}]'
+section "a box made before its image changed"
+RECREATE='[{kind: "recreate", reason: "image-updated", macOSBuild: "26A434"}]'
 open_with "$QUIET"' | (.boxes[] | select(.box.name == "s3" or .box.name == "cadabra-spike")).needs = '"$RECREATE"
 check "marked" "$MARK" "$(box_mark s3)"
 check "which image, and what recreating costs" \
-    "Needs maintenance|Made before image dev-acp had its guest update. Recreate it to get the update; what was changed inside it is lost." \
+    "Needs maintenance|Made before image dev-acp was updated. Recreate it to get the update; what was changed inside it is lost." \
     "$(box_lines s3)"
+open_with "$QUIET"' | (.boxes[] | select(.box.name == "s3")).needs = [{kind: "recreate", reason: "guest-update", guestVersion: "0.5.7"}]'
+check "the image's guest daemon was replaced" \
+    "Needs maintenance|Made before image dev-acp had its guest daemon replaced. Recreate it to get the new one; what was changed inside it is lost." \
+    "$(box_lines s3)"
+open_with "$QUIET"' | (.boxes[] | select(.box.name == "s3")).needs = [{kind: "recreate", reason: "image-rebuilt", macOSBuild: "26A434"}]'
+check "the image was built again" \
+    "Needs maintenance|Made before image dev-acp was built again. Recreate it to get the new image; what was changed inside it is lost." \
+    "$(box_lines s3)"
+open_with "$QUIET"' | (.boxes[] | select(.box.name == "s3")).needs = [{kind: "recreate"}]'
+check "a reason this app does not know is not guessed at" \
+    "Needs maintenance|Made before image dev-acp changed. Recreate it to get the image as it is now; what was changed inside it is lost." \
+    "$(box_lines s3)"
+open_with "$QUIET"' | (.boxes[] | select(.box.name == "s3" or .box.name == "cadabra-spike")).needs = '"$RECREATE"
 check "a disposable box is not marked: it is deleted when it stops" "$TAB" "$(box_mark cadabra-spike)"
 check "  and lists nothing" "" "$(box_lines cadabra-spike)"
 

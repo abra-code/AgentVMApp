@@ -148,12 +148,44 @@ check "the card says Failed"         "xmark.octagon.fill${TAB}Failed - macOS 27.
 select_image dev-new
 check "the failed image can be deleted" "1" "$(enabled "$MAIN_IMAGE_DELETE_ID")"
 
+section "an image a command without a job is changing"
+# An update or a setup run in Terminal: no job names the image, and agent-vm says `updating`.
+/usr/bin/jq '(.images[] | select(.name == "dev-acp")).updating = true' \
+    "$FAKE_AGENTVM_DIR/status.json" > "$FAKE_AGENTVM_DIR/status.json.new" && /bin/mv "$FAKE_AGENTVM_DIR/status.json.new" "$FAKE_AGENTVM_DIR/status.json"
+job_edit 'map(select(.state != "running" and .state != "queued"))'
+select_image dev-acp
+poll 1
+check "its card is drawn as one being built, and says Busy" "hammer.fill${TAB}Busy - macOS 27.0 - from dev-node" "$(card dev-acp)"
+check "the pane says who holds it" "Ready, and being updated or set up by another agent-vm command" "$(ui_value "$MAIN_IMAGE_STATE_ID")"
+check "  no job, so no Progress..., and Delete is off" "0|0" "$(ui_visible "$MAIN_IMAGE_PROGRESS_ID")|$(enabled "$MAIN_IMAGE_DELETE_ID")"
+: > "$FAKE_SLEEP_LOG"
+poll 1
+check "the poll loop looks often meanwhile" "2" "$(/bin/cat "$FAKE_SLEEP_LOG")"
+# The pane is stale by the click: the store says the image is free, then that it is taken.
+asked="$(ui_calls omc_present_alert)"
+omc_run AgentVM.main.image.delete
+check "Delete... asks nothing"       "$asked|" "$(ui_calls omc_present_alert)|$("$PB" "agentvm_image_delete_$UUID" get)"
+/usr/bin/jq '(.images[] | select(.name == "dev-acp")) |= del(.updating)' \
+    "$FAKE_AGENTVM_DIR/status.json" > "$FAKE_AGENTVM_DIR/status.json.new" && /bin/mv "$FAKE_AGENTVM_DIR/status.json.new" "$FAKE_AGENTVM_DIR/status.json"
+poll 1
+check "when the command ends, the image is its own again" "square.stack.3d.up.fill${TAB}macOS 27.0 - from dev-node|Ready|1" \
+    "$(card dev-acp)|$(ui_value "$MAIN_IMAGE_STATE_ID")|$(enabled "$MAIN_IMAGE_DELETE_ID")"
+: > "$FAKE_SLEEP_LOG"
+poll 1
+check "  and the loop is idle again" "15" "$(/bin/cat "$FAKE_SLEEP_LOG")"
+
 section "the words for a job"
 words() { ( . "$APP_SCRIPTS/lib.agentvm.main.sh" >/dev/null 2>&1; main_job_verb "$@" ); }
-check "running" "Starting|Stopping|Building|Updating|Updating|Setting up|Busy: image fetch-ipsw" \
-    "$(words "box start" running)|$(words "box stop" running)|$(words "image create" running)|$(words "image update" running)|$(words "image update-guest" running)|$(words "image setup" running)|$(words "image fetch-ipsw" running)"
-check "waiting" "Waiting to start|Waiting to stop|Waiting to be built|Waiting to be updated|Waiting to be set up|Waiting: image fetch-ipsw" \
-    "$(words "box start" queued)|$(words "box stop" queued)|$(words "image create" queued)|$(words "image update" queued)|$(words "image setup" queued)|$(words "image fetch-ipsw" queued)"
+check "running" "Starting|Stopping|Building|Updating|Updating|Building again|Setting up|Busy: image fetch-ipsw" \
+    "$(words "box start" running)|$(words "box stop" running)|$(words "image create" running)|$(words "image update" running)|$(words "image update-guest" running)|$(words "image rebuild" running)|$(words "image setup" running)|$(words "image fetch-ipsw" running)"
+check "waiting" "Waiting to start|Waiting to stop|Waiting to be built|Waiting to be updated|Waiting to be built again|Waiting to be set up|Waiting: image fetch-ipsw" \
+    "$(words "box start" queued)|$(words "box stop" queued)|$(words "image create" queued)|$(words "image update" queued)|$(words "image rebuild" queued)|$(words "image setup" queued)|$(words "image fetch-ipsw" queued)"
+outcome() { ( . "$APP_SCRIPTS/lib.agentvm.main.sh" >/dev/null 2>&1; main_job_outcome "x${TAB}$1${TAB}image:dev${TAB}image rebuild" ); }
+check "an image built again, and one that was not" "Image dev was built again|Image dev was not built again, and is as it was" "$(outcome done)|$(outcome failed)"
+# A rebuild on the card of the image it replaces.
+job_edit ". + [{id: \"20260930-120030-0000b5\", command: [\"image\", \"rebuild\", \"dev-acp\", \"--json\"], targets: [\"image:dev-acp\"], state: \"running\", createdAt: \"2026-09-30T12:00:00Z\", startedAt: \"2026-09-30T12:00:00Z\"}]"
+poll 1
+check "a rebuild on its image's card" "hammer.fill${TAB}Building again - macOS 27.0 - from dev-node" "$(card dev-acp)"
 
 section "no writes to views the window does not have"
 check "no undeclared ids" "" "$(ui_unknown_writes)"

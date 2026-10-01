@@ -7,12 +7,12 @@
       "nosuch",
       "--json"
     ],
-    "createdAt": "2026-10-01T17:24:23Z",
-    "endedAt": "2026-10-01T17:24:23Z",
+    "createdAt": "2026-10-01T20:25:10Z",
+    "endedAt": "2026-10-01T20:25:10Z",
     "error": "no box nosuch; `agent-vm box list` shows the existing ones",
-    "id": "20261001-172423-b90f11",
-    "path": "/Users/you/Library/Application Support/agent-vm/Jobs/20261001-172423-b90f11",
-    "startedAt": "2026-10-01T17:24:23Z",
+    "id": "20261001-202510-94e186",
+    "path": "/Users/you/Library/Application Support/agent-vm/Jobs/20261001-202510-94e186",
+    "startedAt": "2026-10-01T20:25:10Z",
     "state": "failed",
     "status": 1,
     "targets": [

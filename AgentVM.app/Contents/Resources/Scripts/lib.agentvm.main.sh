@@ -152,7 +152,7 @@ main_read_doctor() {
     printf '%s\n' "$_rows" | ui_store "$(ui_cache "$1" doctor.tsv)"
 }
 
-# main_read_status <uuid>  ->  0, with the cache files boxes.tsv, images.tsv, vm.tsv and jobs.tsv
+# main_read_status <uuid>  ->  0, with the cache files boxes.tsv, images.tsv, updates.tsv, vm.tsv and jobs.tsv
 # holding the rows lib.agentvm.sh documents; or agent-vm's status, with the previous rows kept and its
 # message in the cache file "status-error" (empty after a success).
 main_read_status() {
@@ -166,20 +166,21 @@ main_read_status() {
     fi
     printf '%s\n' "$_json" | agentvm_status_box_rows | ui_store "$(ui_cache "$1" boxes.tsv)"
     printf '%s\n' "$_json" | agentvm_status_image_rows | ui_store "$(ui_cache "$1" images.tsv)"
+    printf '%s\n' "$_json" | agentvm_status_update_rows | ui_store "$(ui_cache "$1" updates.tsv)"
     printf '%s\n' "$_json" | agentvm_status_vm_row | ui_store "$(ui_cache "$1" vm.tsv)"
     printf '%s\n' "$_json" | agentvm_job_rows | ui_store "$(ui_cache "$1" jobs.tsv)"
     : | ui_store "$_error"
     return 0
 }
 
-# main_rows <uuid> <boxes|images|doctor|vm|jobs>  ->  that cache file's rows, nothing when it is missing.
+# main_rows <uuid> <boxes|images|updates|doctor|vm|jobs>  ->  that cache file's rows, nothing when it is missing.
 main_rows() {
     local _file="$(ui_cache "$1" "$2.tsv")"
     [ -f "$_file" ] || return 0
     /usr/bin/awk 'NF' "$_file"
 }
 
-# main_row <uuid> <boxes|images> <name>  ->  the cached row of that box or image, or nothing.
+# main_row <uuid> <boxes|images|updates> <name>  ->  the cached row of that box or image, or nothing.
 main_row() {
     main_rows "$1" "$2" | /usr/bin/awk -F'\t' -v name="$3" '$1 == name { print; exit }'
 }
@@ -201,11 +202,12 @@ main_face() {
     echo "status"
 }
 
-# main_moving <uuid>  ->  0 while a box starts or stops, an image is being built, or a job runs or
-# waits, when the poll loop looks more often.
+# main_moving <uuid>  ->  0 while a box starts or stops, an image is being built or changed, or a
+# job runs or waits, when the poll loop looks more often.
 main_moving() {
     local _moving="$( { main_rows "$1" jobs | /usr/bin/awk -F'\t' '$2 == "running" || $2 == "queued"'
         main_rows "$1" boxes | /usr/bin/awk -F'\t' '$2 == "starting" || $2 == "stopping"'
+        main_rows "$1" updates | /usr/bin/awk -F'\t' '$10 == "true"'
         main_rows "$1" images | /usr/bin/awk -F'\t' '$2 == "installing" || $2 == "installed" || $2 == "provisioning"'; } )"
     [ -n "$_moving" ]
 }
@@ -230,7 +232,7 @@ main_job() {
 }
 
 # main_job_verb <what it does> <state>  ->  the job in a word or two, for a card and a pane:
-# "Starting", "Stopping", "Building", "Updating", "Setting up", and for a job that waits for
+# "Starting", "Stopping", "Building", "Updating", "Building again", "Setting up", and for a job that waits for
 # another, "Waiting to start" and the like. Other jobs are named by their command.
 main_job_verb() {
     if [ "$2" = "queued" ]; then
@@ -240,6 +242,7 @@ main_job_verb() {
             "image create")       echo "Waiting to be built" ;;
             "image update"|"image update-guest")
                                   echo "Waiting to be updated" ;;
+            "image rebuild")      echo "Waiting to be built again" ;;
             "image setup")        echo "Waiting to be set up" ;;
             *)                    printf 'Waiting: %s\n' "$1" ;;
         esac
@@ -251,6 +254,7 @@ main_job_verb() {
         "image create")       echo "Building" ;;
         "image update"|"image update-guest")
                               echo "Updating" ;;
+        "image rebuild")      echo "Building again" ;;
         "image setup")        echo "Setting up" ;;
         *)                    printf 'Busy: %s\n' "$1" ;;
     esac
@@ -310,6 +314,7 @@ main_job_outcome() {
             "image create")       printf 'Image %s is ready\n' "$_name" ;;
             "image update"|"image update-guest")
                                   printf 'Image %s is up to date\n' "$_name" ;;
+            "image rebuild")      printf 'Image %s was built again\n' "$_name" ;;
             "image setup")        printf 'The setup of image %s is done\n' "$_name" ;;
             "image fetch-ipsw")   printf 'The macOS restore file is downloaded\n' ;;
             *)                    printf '%s is done (%s)\n' "$_what" "$_target" ;;
@@ -322,6 +327,7 @@ main_job_outcome() {
         "image create")       printf 'Image %s was not built\n' "$_name" ;;
         "image update"|"image update-guest")
                               printf 'Image %s was not updated\n' "$_name" ;;
+        "image rebuild")      printf 'Image %s was not built again, and is as it was\n' "$_name" ;;
         "image setup")        printf 'The setup of image %s did not finish\n' "$_name" ;;
         "image fetch-ipsw")   printf 'The macOS restore file was not downloaded\n' ;;
         *)                    printf '%s failed (%s)\n' "$_what" "$_target" ;;
@@ -516,9 +522,10 @@ main_getstarted_text() {
 # main_maintenance <uuid> <boxes|images>  ->  "name<TAB>what to do" for each thing that needs
 # doing to a box or an image. A card with any of them is marked "Needs maintenance", and its
 # detail pane lists them:
-#   - a box made before its image's guest update keeps the old guest daemon until it is made
-#     again (agent-vm's recreate need); a disposable box is left out, since it is deleted when it
-#     stops;
+#   - a box whose image changed since the box was made keeps what it was made with until it is
+#     made again (agent-vm's recreate need, with its reason: the image was updated, built again,
+#     or had its guest daemon replaced); a disposable box is left out, since it is deleted when
+#     it stops;
 #   - a running box whose supervisor is another agent-vm version: each version is installed in
 #     a folder of its own, so a box keeps the version it started with until it is stopped;
 #   - an image that needs a guest update (after an agent-vm update), or Full Disk Access.
@@ -529,7 +536,11 @@ main_maintenance() {
         boxes)
             main_rows "$1" boxes | /usr/bin/awk -F'\t' -v current="$_version" '
                 $13 != "true" && (","$18",") ~ /,recreate,/ {
-                    printf "%s\tMade before image %s had its guest update. Recreate it to get the update; what was changed inside it is lost.\n", $1, $3 }
+                    what = "changed"; gets = "the image as it is now"
+                    if ($22 == "guest-update")  { what = "had its guest daemon replaced"; gets = "the new one" }
+                    if ($22 == "image-updated") { what = "was updated"; gets = "the update" }
+                    if ($22 == "image-rebuilt") { what = "was built again"; gets = "the new image" }
+                    printf "%s\tMade before image %s %s. Recreate it to get %s; what was changed inside it is lost.\n", $1, $3, what, gets }
                 ($2 == "running" || $2 == "unresponsive") && $12 != "-" && $12 != current {
                     printf "%s\tRuns agent-vm %s. Stop it and start it again to move it to %s.\n", $1, $12, current }' ;;
         images)
@@ -594,18 +605,24 @@ main_box_card_rows() {
 #   Failed   4 "Needs maintenance" or empty   5 its symbol or empty   6 the card's color
 #   7 how many boxes were made from it
 # A ready image a job holds (it is being updated or set up, or waits to be) looks as an image
-# being built does, and its caption begins with what the job does, or with "Waiting".
+# being built does, and its caption begins with what the job does, or with "Waiting". One that an
+# agent-vm command started elsewhere without a job is changing (agent-vm's `updating`) says "Busy".
 main_image_card_rows() {
     local _counts="$(main_rows "$1" boxes | /usr/bin/cut -f3 | /usr/bin/sort | /usr/bin/uniq -c | /usr/bin/awk '{ printf "%s=%s ", $2, $1 }')"
-    main_rows "$1" images | /usr/bin/awk -F'\t' -v flagged="$(main_flagged "$1" images)" -v counts="$_counts" -v jobs="$(ui_cache "$1" jobs.tsv)" '
+    main_rows "$1" images | /usr/bin/awk -F'\t' -v flagged="$(main_flagged "$1" images)" -v counts="$_counts" -v jobs="$(ui_cache "$1" jobs.tsv)" \
+        -v updates="$(ui_cache "$1" updates.tsv)" '
         BEGIN {
+            while ((getline line < updates) > 0) {
+                split(line, update, "\t")
+                if (update[10] == "true") busy[update[1]] = 1
+            }
             while ((getline line < jobs) > 0) {
                 split(line, job, "\t")
                 # A job that runs wins over one that waits, as in main_job.
                 if (job[2] == "queued" && job[3] ~ /^image:/ && !(substr(job[3], 7) in held))
                     held[substr(job[3], 7)] = "Waiting"
                 if (job[2] == "running" && job[3] ~ /^image:/)
-                    held[substr(job[3], 7)] = (job[4] == "image create") ? "Building" : (job[4] ~ /^image update/) ? "Updating" : (job[4] == "image setup") ? "Setting up" : "Busy"
+                    held[substr(job[3], 7)] = (job[4] == "image create") ? "Building" : (job[4] ~ /^image update/) ? "Updating" : (job[4] == "image rebuild") ? "Building again" : (job[4] == "image setup") ? "Setting up" : "Busy"
             }
             n = split(counts, pairs, " ")
             for (i = 1; i <= n; i++) {
@@ -623,6 +640,7 @@ main_image_card_rows() {
                 symbol = "xmark.octagon.fill"; color = "#D93025"; caption = "Failed"
             }
             if (macos != "") caption = ($2 == "ready") ? macos " - " caption : caption " - " macos
+            if ($2 == "ready" && !($1 in held) && ($1 in busy)) held[$1] = "Busy"
             if ($2 == "ready" && ($1 in held)) { symbol = "hammer.fill"; color = "#0A84FF"; caption = held[$1] " - " caption }
             mark = ""; mark_symbol = ""
             if (index(flagged, " " $1 " ")) { mark = "Needs maintenance"; mark_symbol = "exclamationmark.triangle.fill" }
@@ -720,9 +738,9 @@ main_paint_box_detail() {
     "$dialog" "$_uuid" "$MAIN_BOX_MAINTENANCE_ID" "$(main_maintenance_text "$_uuid" boxes "$_name")"
     printf '%s\n' "$_row" | {
         local _n _state _image _mode _rules _pid _owner _project _ro _execs _started _version _disposable _error
-        local _cpus _memory _path _needs _macos _build _created _rest
+        local _cpus _memory _path _needs _macos _build _created _reason _rest
         IFS="$ui_tab" read -r _n _state _image _mode _rules _pid _owner _project _ro _execs _started _version _disposable _error \
-            _cpus _memory _path _needs _macos _build _created _rest
+            _cpus _memory _path _needs _macos _build _created _reason _rest
         # A job that holds the box says what it does, in place of the state it has not left yet.
         local _job="$(main_job "$_uuid" box "$_name")"
         # Progress... opens the job's window (lib.agentvm.progress.sh).
@@ -808,7 +826,7 @@ main_paint_box_detail() {
         # The cached `box info` adds the space, as of when it was last read, and only for this box.
         local _info="$(main_info "$_uuid" box "$_name")"
         "$dialog" "$_uuid" "$MAIN_BOX_SPACE_ID" \
-            "$(main_space_text "$(printf '%s\n' "$_info" | /usr/bin/cut -f22)" "$(printf '%s\n' "$_info" | /usr/bin/cut -f23)" \
+            "$(main_space_text "$(printf '%s\n' "$_info" | /usr/bin/cut -f23)" "$(printf '%s\n' "$_info" | /usr/bin/cut -f24)" \
                 "$(main_info_error "$_uuid" box "$_name")")"
 
         # The enable rules Cadabra's box window tested. The screen and a shell need a running box
@@ -843,7 +861,7 @@ main_paint_box_detail() {
 # that the image it was made from stays.
 main_box_delete_question() {
     local _text="The box's folder and disk are deleted, with everything installed or saved in it"
-    local _size="$(ui_size_text "$(main_info "$1" box "$2" | /usr/bin/cut -f23)")"
+    local _size="$(ui_size_text "$(main_info "$1" box "$2" | /usr/bin/cut -f24)")"
     [ -n "$_size" ] && _text="$_text, which frees about $_size"
     _text="$_text."
     local _image="$(main_row "$1" boxes "$2" | /usr/bin/cut -f3)"
@@ -913,10 +931,22 @@ main_show_folder() {
     "$open_tool" -R "$_folder"
 }
 
-# main_image_state_text <state> <failure>  ->  the image detail's state line.
+# main_image_busy <uuid> <name>  ->  0 while an agent-vm command changes the image (agent-vm's
+# `updating`): an update or a setup, whether a job runs it or a command in Terminal does.
+main_image_busy() {
+    [ "$(main_row "$1" updates "$2" | /usr/bin/cut -f10)" = "true" ]
+}
+
+# main_image_state_text <state> <failure> [busy]  ->  the image detail's state line. "busy" is for
+# a ready image that a command no job runs is changing.
 main_image_state_text() {
     case "$1" in
-        ready)        echo "Ready" ;;
+        ready)
+            if [ "${3:-}" = "busy" ]; then
+                echo "Ready, and being updated or set up by another agent-vm command"
+            else
+                echo "Ready"
+            fi ;;
         installing)   echo "Building: installing macOS" ;;
         installed)    echo "Building: macOS is installed" ;;
         provisioning) echo "Building: setting up its tools" ;;
@@ -1046,7 +1076,9 @@ main_paint_image_detail() {
             "$dialog" "$_uuid" "$MAIN_IMAGE_STATE_ID" "$(main_job_text "$_job")"
             ui_show "$_uuid" "$MAIN_IMAGE_PROGRESS_ID" 1
         else
-            "$dialog" "$_uuid" "$MAIN_IMAGE_STATE_ID" "$(main_image_state_text "$_state" "$_failure")"
+            local _busy=""
+            main_image_busy "$_uuid" "$_name" && _busy="busy"
+            "$dialog" "$_uuid" "$MAIN_IMAGE_STATE_ID" "$(main_image_state_text "$_state" "$_failure" "$_busy")"
             ui_show "$_uuid" "$MAIN_IMAGE_PROGRESS_ID" 0
         fi
 
@@ -1113,9 +1145,10 @@ main_paint_image_detail() {
             ui_enable "$_uuid" "$MAIN_IMAGE_SHOW_ID" 0
         fi
     }
-    # Not while a job holds the image. agent-vm also refuses to delete an image another agent-vm
-    # process uses (a build started without a job, a box being made from it), and says so.
-    if [ -n "$(main_job "$_uuid" image "$_name")" ]; then
+    # Not while a job holds the image, or another command changes it. agent-vm also refuses to
+    # delete an image another agent-vm process uses (a build started without a job, a box being
+    # made from it), and says so.
+    if [ -n "$(main_job "$_uuid" image "$_name")" ] || main_image_busy "$_uuid" "$_name"; then
         ui_enable "$_uuid" "$MAIN_IMAGE_DELETE_ID" 0
     else
         ui_enable "$_uuid" "$MAIN_IMAGE_DELETE_ID" 1
