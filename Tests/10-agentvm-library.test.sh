@@ -190,7 +190,7 @@ fake_reset
 rows="$(with_fake agentvm_doctor)"
 check "agentvm_doctor: one row per check" "6" "$(printf '%s\n' "$rows" | /usr/bin/awk 'END { print NR }')"
 check "  name, status and detail"    "macOS${TAB}ok${TAB}macOS 27.0.0" "$(printf '%s\n' "$rows" | /usr/bin/head -1)"
-check "  the disk space detail"      "67 GB free on the volume of /Users/you/Library/Application Support/agent-vm" \
+check "  the disk space detail"      "55 GB free on the volume of /Users/you/Library/Application Support/agent-vm" \
     "$(printf '%s\n' "$rows" | row_named "disk space" | col 3)"
 check "  one call"                   "doctor --json" "$(fake_log)"
 printf 'no store\n' > "$FAKE_AGENTVM_DIR/fail-doctor"
@@ -221,7 +221,7 @@ check "running"                      "running"            "$(printf '%s\n' "$row
 check "the supervisor and the owner" "44847${TAB}812"     "$(printf '%s\n' "$row" | col 6-7)"
 check "the project, read-write"      "/Users/you/src/app${TAB}false" "$(printf '%s\n' "$row" | col 8-9)"
 check "two programs, since"          "2${TAB}2026-09-29T14:02:10Z" "$(printf '%s\n' "$row" | col 10-11)"
-check "the supervisor's version"     "0.4.3"              "$(printf '%s\n' "$row" | col 12)"
+check "the supervisor's version"     "$(/usr/bin/jq -r .version "$FIXTURES_AGENTVM/version.json")" "$(printf '%s\n' "$row" | col 12)"
 check "no status error"              "-"                  "$(printf '%s\n' "$row" | col 14)"
 row="$(printf '%s\n' "$rows" | row_named try1)"
 check "unresponsive"                 "unresponsive"       "$(printf '%s\n' "$row" | col 2)"

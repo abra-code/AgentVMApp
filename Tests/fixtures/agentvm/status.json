@@ -17,7 +17,8 @@
             "pack:npm",
             "opencode.ai",
             "models.opencode.ai",
-            "pack:anthropic"
+            "pack:anthropic",
+            "html.duckduckgo.com"
           ],
           "mode": "allowlist"
         },
