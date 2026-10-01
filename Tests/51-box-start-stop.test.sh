@@ -156,7 +156,12 @@ check "the pane shows the box running" "yes" "$(ui_value "$MAIN_BOX_STATE_ID" | 
 check "  with Stop"              "0 1" "$(enabled "$MAIN_BOX_START_ID") $(enabled "$MAIN_BOX_STOP_ID")"
 check "  the card no longer says Starting" "play.circle.fill|no" \
     "$(card cadabra-spike | /usr/bin/cut -d'|' -f1)|$(card cadabra-spike | /usr/bin/grep -q 'Starting' && echo yes || echo no)"
-check "nothing is said"          "" "$(ui_alert_title)"
+check "a toast says the box is running, and goes by itself" "1|1" \
+    "$(ui_calls 'omc_present_toast.*Box cadabra-spike is running\.')|$(ui_calls 'omc_present_toast.Box cadabra-spike is running\..5')"
+check "  no alert"               "" "$(ui_alert_title)"
+clear_alerts
+poll 1
+check "  said once"              "0" "$(ui_calls omc_present_toast)"
 : > "$FAKE_SLEEP_LOG"
 poll 1
 check "the poll loop is back to its idle pace" "15" "$(/bin/cat "$FAKE_SLEEP_LOG")"
@@ -172,6 +177,7 @@ poll 1
 check "is said when the job ends, in agent-vm's words" \
     "Box cadabra-spike did not start|box cadabra-spike cannot start: two virtual machines are running already (s3, try1); stop one first" \
     "$(ui_alert_title)|$(ui_alert_message)"
+check "  in an alert, not a toast" "0" "$(ui_calls omc_present_toast)"
 check "  the box is stopped, with Start again" "Stopped|1 0" "$(ui_value "$MAIN_BOX_STATE_ID")|$(enabled "$MAIN_BOX_START_ID") $(enabled "$MAIN_BOX_STOP_ID")"
 clear_alerts
 poll 1
@@ -190,6 +196,7 @@ job_end canceled canceled
 clear_alerts
 poll 1
 check "canceled: nothing is said" "" "$(ui_alert_title)"
+check "  not in a toast either"  "0" "$(ui_calls omc_present_toast)"
 omc_run AgentVM.main.box.start
 job_end failed ""
 clear_alerts
@@ -263,7 +270,9 @@ omc_run AgentVM.main.box.stop.confirmed
 check "a second confirmation stops nothing" "" "$(started)"
 job_end done
 store "$KEPT | $(box_state s3 stopped)"
+clear_alerts
 poll 1
+check "the stop done: a toast says the box is stopped" "1" "$(ui_calls 'omc_present_toast.*Box s3 is stopped\.')"
 
 section "Stop: the question's other shapes"
 store "$KEPT | (.boxes[] | select(.box.name == \"s3\")).activeExecs = 1 | (.boxes[] | select(.box.name == \"s3\")).ownerPid = null"

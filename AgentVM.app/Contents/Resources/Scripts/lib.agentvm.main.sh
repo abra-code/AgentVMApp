@@ -211,7 +211,8 @@ main_moving() {
 # `status` carries the jobs, so the window learns of them wherever they were started: here, in
 # Cadabra or in Terminal. A job that runs or waits holds its box: the card and the pane say what it
 # does, the pane's buttons are off, and the poll loop looks every MAIN_POLL_BUSY_SECONDS. When a
-# job the window saw running has failed, the window says so, once, in agent-vm's words.
+# job the window saw running ends, the window says so, once: a toast when it did what it was asked,
+# an alert in agent-vm's words when it failed.
 
 # main_job <uuid> <box|image> <name>  ->  the row of the job that holds that box or image now (it
 # runs or waits; the newest, when there are several), or nothing.
@@ -264,41 +265,138 @@ main_note_jobs() {
     /usr/bin/awk -F'\t' '$2 == "running" || $2 == "queued" { print $1 }' "$_jobs" | ui_store "$_watched"
 }
 
-# main_job_failure_title <job row>  ->  what did not happen: "Box s3 did not start".
-main_job_failure_title() {
+# main_job_outcome <job row>  ->  how the job ended, as a sentence without its period: for one that
+# did what it was asked, what is so now ("Box s3 is running"); for one that failed or was lost,
+# what did not happen ("Box s3 did not start"). A job names its first target only.
+main_job_outcome() {
+    local _state="$(printf '%s\n' "$1" | /usr/bin/cut -f2)"
     local _target="$(printf '%s\n' "$1" | /usr/bin/cut -f3)"
     local _what="$(printf '%s\n' "$1" | /usr/bin/cut -f4)"
+    local _name="${_target#*:}"
+    if [ "$_state" = "done" ]; then
+        case "$_what" in
+            "box start")          printf 'Box %s is running\n' "$_name" ;;
+            "box stop")           printf 'Box %s is stopped\n' "$_name" ;;
+            "image create")       printf 'Image %s is ready\n' "$_name" ;;
+            "image update"|"image update-guest")
+                                  printf 'Image %s is up to date\n' "$_name" ;;
+            "image setup")        printf 'The setup of image %s is done\n' "$_name" ;;
+            "image fetch-ipsw")   printf 'The macOS restore file is downloaded\n' ;;
+            *)                    printf '%s is done (%s)\n' "$_what" "$_target" ;;
+        esac
+        return 0
+    fi
     case "$_what" in
-        "box start") printf 'Box %s did not start\n' "${_target#box:}" ;;
-        "box stop")  printf 'Box %s did not stop\n' "${_target#box:}" ;;
-        *)           printf '%s failed (%s)\n' "$_what" "$_target" ;;
+        "box start")          printf 'Box %s did not start\n' "$_name" ;;
+        "box stop")           printf 'Box %s did not stop\n' "$_name" ;;
+        "image create")       printf 'Image %s was not built\n' "$_name" ;;
+        "image update"|"image update-guest")
+                              printf 'Image %s was not updated\n' "$_name" ;;
+        "image setup")        printf 'The setup of image %s did not finish\n' "$_name" ;;
+        "image fetch-ipsw")   printf 'The macOS restore file was not downloaded\n' ;;
+        *)                    printf '%s failed (%s)\n' "$_what" "$_target" ;;
     esac
 }
 
-# main_report_jobs <uuid>  ->  an alert for the jobs main_note_jobs says have ended in failure
-# (failed, or lost: the runner was stopped), with agent-vm's reason. One alert, whatever their
-# number. A job that was canceled, or that did what it was asked, says nothing: the lists show it.
+# main_job_lines <job rows>  ->  one line per job: its outcome, and for one that failed, why.
+main_job_lines() {
+    local _row _error
+    while IFS= read -r _row; do
+        [ -n "$_row" ] || continue
+        case "$(printf '%s\n' "$_row" | /usr/bin/cut -f2)" in
+            done) printf '%s.\n' "$(main_job_outcome "$_row")" ;;
+            *)
+                _error="$(printf '%s\n' "$_row" | /usr/bin/cut -f15)"
+                [ "$_error" = "-" ] && _error="agent-vm gave no reason."
+                printf '%s: %s\n' "$(main_job_outcome "$_row")" "$_error" ;;
+        esac
+    done <<ROWS
+$1
+ROWS
+}
+
+# How long a toast about a job that ended well stays.
+MAIN_TOAST_SECONDS=5
+
+# main_report_jobs <uuid>  ->  what main_note_jobs says has ended is said: a job that failed, or
+# was lost (its runner was stopped), in an alert with agent-vm's reason, one alert whatever their
+# number; a job that did what it was asked, in a toast that goes by itself. A job that was
+# canceled says nothing: someone asked for that.
 main_report_jobs() {
-    local _failed="$(main_note_jobs "$1" | /usr/bin/awk -F'\t' '$2 == "failed" || $2 == "lost"')"
+    local _ended="$(main_note_jobs "$1")"
+    [ -n "$_ended" ] || return 0
+    local _done="$(printf '%s\n' "$_ended" | /usr/bin/awk -F'\t' '$2 == "done"')"
+    if [ -n "$_done" ]; then
+        "$dialog" "$1" omc_window omc_present_toast "$(main_job_lines "$_done" | /usr/bin/paste -sd ' ' -)" "$MAIN_TOAST_SECONDS"
+    fi
+    local _failed="$(printf '%s\n' "$_ended" | /usr/bin/awk -F'\t' '$2 == "failed" || $2 == "lost"')"
     [ -n "$_failed" ] || return 0
     local _count="$(printf '%s\n' "$_failed" | /usr/bin/awk 'END { print NR }')"
     if [ "$_count" -eq 1 ]; then
         local _error="$(printf '%s\n' "$_failed" | /usr/bin/cut -f15)"
         [ "$_error" = "-" ] && _error="agent-vm gave no reason."
-        main_alert "$1" "$(main_job_failure_title "$_failed")" "$_error"
+        main_alert "$1" "$(main_job_outcome "$_failed")" "$_error"
         return 0
     fi
-    local _message=""
-    local _row _error
-    while IFS= read -r _row; do
-        _error="$(printf '%s\n' "$_row" | /usr/bin/cut -f15)"
-        [ "$_error" = "-" ] && _error="agent-vm gave no reason."
-        _message="$_message$(main_job_failure_title "$_row"): $_error
-"
-    done <<ROWS
-$_failed
-ROWS
-    main_alert "$1" "$_count jobs failed" "$_message"
+    main_alert "$1" "$_count jobs failed" "$(main_job_lines "$_failed")"
+}
+
+# -- What ended while the app was closed -----------------------------------------------------------
+# A build or an update takes minutes to hours, and the app may be quit meanwhile: the job goes on.
+# The app keeps the time it last read `status` (the file jobs-seen in its support folder, written
+# at every reading), and a main window that opens reports, once, the image jobs and downloads that
+# ended after that time: what was built, what failed and why. `job list` is read for it, since
+# `status` carries finished jobs for an hour only. Boxes started and stopped meanwhile are not
+# reported: the lists show how they are now, and Cadabra starts and stops boxes all day.
+
+main_jobs_seen_file="$agentvm_support_dir/jobs-seen"
+
+# main_time_text  ->  the time now as agent-vm writes times (2026-10-01T10:52:08Z), which sort as text.
+main_time_text() {
+    /bin/date -u -r "$(main_now)" '+%Y-%m-%dT%H:%M:%SZ'
+}
+
+# main_jobs_seen  ->  when the app last read `status`, or nothing when it never did.
+main_jobs_seen() {
+    [ -f "$main_jobs_seen_file" ] || return 0
+    /usr/bin/sed -n '1p' "$main_jobs_seen_file"
+}
+
+# main_mark_jobs_seen [time]  ->  the app has looked until that time (now, when none is given). A
+# time that is not one is not kept: an empty file would make the next launch a first launch.
+main_mark_jobs_seen() {
+    local _time="${1:-$(main_time_text)}"
+    case "$_time" in
+        [0123456789][0123456789][0123456789][0123456789]-*T*Z) ;;
+        *) return 0 ;;
+    esac
+    [ -d "$agentvm_support_dir" ] || /bin/mkdir -p "$agentvm_support_dir"
+    printf '%s\n' "$_time" | ui_store "$main_jobs_seen_file"
+}
+
+# main_launch_report <uuid> <when the app last read status>  ->  an alert naming the image jobs and
+# downloads that ended after that time, well or not; nothing when there are none, when the app
+# never read `status` before (a first launch reports no history), when agent-vm cannot be used
+# (main_refresh found it missing or too old: nothing runs it then, and the time has not moved, so
+# the report would come back at every launch), or when agent-vm cannot list the jobs. Canceled
+# jobs are left out. Called after main_refresh.
+main_launch_report() {
+    [ "$(main_agentvm_line "$1" 1)" = "0" ] || return 0
+    case "$2" in
+        [0123456789][0123456789][0123456789][0123456789]-*T*Z) ;;
+        *) return 0 ;;
+    esac
+    local _json
+    _json="$(agentvm_job_list)"
+    local _status=$?
+    [ "$_status" -eq 0 ] || return 0
+    local _rows="$(printf '%s\n' "$_json" | agentvm_job_rows | /usr/bin/awk -F'\t' -v seen="$2" '
+        ($3 ~ /^image:/ || $3 == "ipsw") && ($2 == "done" || $2 == "failed" || $2 == "lost") && $8 != "-" && $8 > seen')"
+    [ -n "$_rows" ] || return 0
+    main_alert "$1" "While AgentVM was closed" "$(main_job_lines "$_rows")"
+    # Said, so it is not said again: `status` may be failing while `job list` answers, and then no
+    # reading would move the time.
+    main_mark_jobs_seen
 }
 
 # -- Painting -----------------------------------------------------------------------------------
@@ -1067,10 +1165,17 @@ main_refresh() {
     local _status
     if [ "$_available" -eq 0 ]; then
         [ "$_mode" = "full" ] && main_read_doctor "$_uuid"
+        # The time is taken before the reading: a job that ends while agent-vm answers is then
+        # reported at the next launch, perhaps a second time, rather than never.
+        local _looked="$(main_time_text)"
         main_read_status "$_uuid"
         _status=$?
-        # A job this window saw running that has failed is said once, whoever reads first.
-        [ "$_status" -eq 0 ] && main_report_jobs "$_uuid"
+        # What ended among the jobs this window saw running is said once, whoever reads first; and
+        # the app has looked until that time, for the report at the next launch.
+        if [ "$_status" -eq 0 ]; then
+            main_report_jobs "$_uuid"
+            main_mark_jobs_seen "$_looked"
+        fi
         # The selected box's and image's measurements: on opening and activation, not in the poll
         # loop.
         if [ "$_mode" = "full" ] && [ "$_status" -eq 0 ]; then
