@@ -881,6 +881,45 @@ main_paint() {
     fi
 }
 
+# main_goto <uuid> <target>  ->  the window showing what a URL named (lib.agentvm.ui.sh, "The
+# agentvm URL scheme"): "box <name>" or "image <name>" shows that tab with the card selected and
+# its details read, as selecting it by hand does; "status" changes nothing. From the caches, so
+# the caller reads `status` first. A name the lists do not hold is said in an alert, since the
+# link came from somewhere that believed it existed. Nothing happens on the Get started face,
+# which has no lists.
+main_goto() {
+    local _uuid="$1"
+    local _kind="${2%% *}"
+    local _name="${2#* }"
+    local _tab _list
+    case "$_kind" in
+        box)   _tab=0; _list=boxes ;;
+        image) _tab=1; _list=images ;;
+        *)     return 0 ;;
+    esac
+    agentvm_valid_name "$_name" || return 0
+    [ "$(main_face "$_uuid")" = "status" ] || return 0
+    # A TabView's value is the 0-based index of its tab. Setting it fires nothing.
+    "$dialog" "$_uuid" "$MAIN_STATUS_ID" "$_tab"
+    if [ -z "$(main_row "$_uuid" "$_list" "$_name")" ]; then
+        # When `status` failed the lists are old or empty, and the window's note says why: the
+        # name may well exist.
+        [ -z "$(main_status_error "$_uuid")" ] || return 0
+        main_alert "$_uuid" "There is no $_kind named $_name" "It may have been deleted, or the link that named it is out of date."
+        return 0
+    fi
+    ui_set "$_kind" "$_uuid" "$_name"
+    main_reselect "$_uuid"
+    if [ "$_kind" = "box" ]; then
+        main_paint_box_detail "$_uuid"
+        main_read_info "$_uuid" box "$_name"
+        main_paint_box_detail "$_uuid"
+    else
+        main_read_info "$_uuid" image "$_name"
+        main_paint_image_detail "$_uuid"
+    fi
+}
+
 # main_refresh <uuid> <full|status>  ->  reads agent-vm, then paints. "full" checks agent-vm
 # itself and runs doctor too (opening, activation); "status" reads only the lists (the poll loop),
 # unless agent-vm could not be used last time, when it checks again whether it can now.

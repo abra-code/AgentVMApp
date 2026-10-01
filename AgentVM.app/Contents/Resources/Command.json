@@ -28,6 +28,12 @@
     },
     {
       "NAME": "AgentVM",
+      "COMMAND_ID": "omc.app.handle-url",
+      "ACTIVATION_MODE": "act_always",
+      "EXECUTION_MODE": "exe_script_file"
+    },
+    {
+      "NAME": "AgentVM",
       "COMMAND_ID": "AgentVM.network",
       "ACTIVATION_MODE": "act_always",
       "EXECUTION_MODE": "exe_script_file",

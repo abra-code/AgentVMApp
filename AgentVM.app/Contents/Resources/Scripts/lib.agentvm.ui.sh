@@ -272,3 +272,66 @@ ui_item_request() {
     agentvm_valid_name "${_item#*:}" || return 0
     printf '%s\n' "${_item#*:}"
 }
+
+# -- The agentvm URL scheme ----------------------------------------------------------------------
+# agentvm://status, agentvm://box/<name> and agentvm://image/<name> bring the main window to the
+# front, with that box or image selected (omc.app.handle-url.sh). The handler runs with no window
+# of its own, so the main window names itself in a pasteboard entry, as the box windows do
+# (ui_item_* with the kind "main" and the name "window"); and when no main window is open, what to
+# show waits in a request the next main window's init handler takes, once. Both carry the app's
+# pid, so what another run of the app left is ignored.
+#
+# A URL is text from outside the app: only these three forms are routed, a name must be one
+# agent-vm accepts, and nothing a URL names is ever changed, only shown.
+
+AGENTVM_GOTO_KEY="agentvm_goto"
+
+# ui_url_target <url>  ->  "status", "box <name>" or "image <name>" for a URL the app routes, or
+# nothing. The scheme and the first part are matched in any case, as URLs are; a query or a
+# fragment is dropped; a name is taken as written, with no percent-decoding (a valid name needs
+# none).
+ui_url_target() {
+    local _rest
+    case "$1" in
+        *://*) _rest="${1#*://}" ;;
+        *) return 0 ;;
+    esac
+    local _scheme="$(printf '%s\n' "${1%%://*}" | /usr/bin/tr 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' 'abcdefghijklmnopqrstuvwxyz')"
+    [ "$_scheme" = "agentvm" ] || return 0
+    _rest="${_rest%%\?*}"
+    _rest="${_rest%%#*}"
+    _rest="${_rest%/}"
+    local _kind="$(printf '%s\n' "${_rest%%/*}" | /usr/bin/tr 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' 'abcdefghijklmnopqrstuvwxyz')"
+    local _name=""
+    case "$_rest" in
+        */*) _name="${_rest#*/}" ;;
+    esac
+    case "$_kind" in
+        status)
+            [ -z "$_name" ] && printf 'status\n' ;;
+        box|image)
+            agentvm_valid_name "$_name" && printf '%s %s\n' "$_kind" "$_name" ;;
+    esac
+    return 0
+}
+
+# ui_goto_set <target, as ui_url_target prints it>  ->  what the next main window shows on opening.
+ui_goto_set() {
+    "$pasteboard" "$AGENTVM_GOTO_KEY" set "${OMC_APP_PROCESS_ID:-} $1"
+}
+
+# ui_goto_take  ->  that target, if this run of the app left one, or nothing; cleared either way,
+# so it is read once. Checked again as it is read: a pasteboard is not a trusted place.
+ui_goto_take() {
+    local _request="$("$pasteboard" "$AGENTVM_GOTO_KEY" get)"
+    "$pasteboard" "$AGENTVM_GOTO_KEY" set ""
+    [ -n "$_request" ] && [ -n "${OMC_APP_PROCESS_ID:-}" ] || return 0
+    [ "${_request%% *}" = "$OMC_APP_PROCESS_ID" ] || return 0
+    local _target="${_request#* }"
+    case "$_target" in
+        status) printf 'status\n' ;;
+        "box "*|"image "*)
+            agentvm_valid_name "${_target#* }" && printf '%s\n' "$_target" ;;
+    esac
+    return 0
+}

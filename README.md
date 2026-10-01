@@ -13,6 +13,18 @@ AgentVM.app is a Mac app for making and looking after [AgentVM](https://github.c
 
 AgentVM.app is an [OMC](https://github.com/abra-code/OMC) applet: its windows are [ActionUI](https://github.com/abra-code/ActionUI) JSON, and its actions are shell scripts that run `agent-vm` and read its `--json` output. It keeps no copy of what agent-vm knows, so whatever you do in Terminal or in Cadabra shows up here.
 
+## Links
+
+Other apps and scripts can open AgentVM.app at a place:
+
+```sh
+open agentvm://status          # the main window
+open agentvm://box/<name>      # with that box selected
+open agentvm://image/<name>    # with that image selected
+```
+
+A link only shows; it never changes a box or an image.
+
 ## Building
 
 The repository holds the applet's own files; the OMC engine inside the bundle is installed by AppletBuilder. With AppletBuilder in `/Applications` or in `../OMC/Distribution`:
