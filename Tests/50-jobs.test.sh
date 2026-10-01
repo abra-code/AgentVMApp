@@ -67,8 +67,12 @@ check "running, a box starting"      "running${TAB}box:cadabra-spike${TAB}box st
 section "job rows: from status"
 check "status carries the same jobs: the same rows" "$rows" \
     "$(/usr/bin/jq --slurpfile jobs "$VARIETY" '.jobs = $jobs[0]' "$FIXTURES_AGENTVM/status.json" | lib agentvm_job_rows)"
-check "a status with no jobs: no rows" "" "$(lib agentvm_job_rows < "$FIXTURES_AGENTVM/status.json")"
-check "  nor from an empty store"    "" "$(lib agentvm_job_rows < "$FIXTURES_AGENTVM/status-empty.json")"
+# status.json is a real capture, taken within the hour of two real jobs: a box started and stopped.
+check "the jobs a real status carried: both done, with the last progress of each" \
+    "done${TAB}box start${TAB}0${TAB}running|done${TAB}box stop${TAB}0${TAB}shutdown" \
+    "$(lib agentvm_job_rows < "$FIXTURES_AGENTVM/status.json" | /usr/bin/cut -f2,4,5,9 | /usr/bin/paste -sd '|' -)"
+check "  sixteen fields in each" "16" "$(lib agentvm_job_rows < "$FIXTURES_AGENTVM/status.json" | field_count)"
+check "an empty store: no rows"      "" "$(lib agentvm_job_rows < "$FIXTURES_AGENTVM/status-empty.json")"
 check "  nor from a status without the field" "" "$(printf '{"boxes": []}\n' | lib agentvm_job_rows)"
 check "no jobs: no rows"             "" "$(printf '[]\n' | lib agentvm_job_rows)"
 

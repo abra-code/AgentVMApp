@@ -58,31 +58,6 @@
       "path": "/Users/you/Library/Application Support/agent-vm/Boxes/s3",
       "running": false,
       "state": "stopped"
-    },
-    {
-      "box": {
-        "cpuCount": 4,
-        "createdAt": "2026-09-24T09:06:22Z",
-        "formatVersion": 1,
-        "guestProtocol": 1,
-        "image": "dev",
-        "macAddress": "d2:5e:f2:43:b0:0d",
-        "macOSBuild": "26A428",
-        "macOSVersion": "27.0",
-        "memoryBytes": 8589934592,
-        "name": "try1",
-        "network": {
-          "allow": [
-            "pack:github"
-          ],
-          "mode": "allowlist"
-        },
-        "userName": "agent"
-      },
-      "needs": [],
-      "path": "/Users/you/Library/Application Support/agent-vm/Boxes/try1",
-      "running": false,
-      "state": "stopped"
     }
   ],
   "images": [
@@ -373,51 +348,58 @@
       },
       "state": "ready",
       "userName": "agent"
-    },
-    {
-      "commandLineTools": "Command Line Tools for Xcode 27.0-27.0",
-      "cpuCount": 4,
-      "createdAt": "2026-09-26T01:42:58Z",
-      "createdBy": "0.2.7",
-      "diskBytes": 68719476736,
-      "formatVersion": 1,
-      "fullDiskAccess": {
-        "checkedAt": "2026-09-26T13:26:46Z",
-        "granted": false,
-        "guestDigest": "1a7fdef2c823b0fa5bf6cde1b7534ff6025ae9b9c1fd19dd6e63e248750320e3",
-        "guestRequirement": "cdhash H\"45f7069ccf9ff1c9de66dc4fc103d05a261a1443\""
-      },
-      "guestDigest": "1a7fdef2c823b0fa5bf6cde1b7534ff6025ae9b9c1fd19dd6e63e248750320e3",
-      "guestFeatures": [
-        "terminal",
-        "prompt-notices",
-        "wallpaper",
-        "time-sync",
-        "user-session",
-        "terminal-pixels"
-      ],
-      "guestProtocol": 1,
-      "guestRequirement": "cdhash H\"45f7069ccf9ff1c9de66dc4fc103d05a261a1443\"",
-      "guestVersion": "0.2.12",
-      "installSeconds": 235.794456042,
-      "macAddress": "32:80:42:7a:cc:93",
-      "macOSBuild": "26A428",
-      "macOSVersion": "27.0",
-      "memoryBytes": 8589934592,
-      "name": "latest-test",
-      "needs": [
-        {
-          "kind": "full-disk-access",
-          "reason": "not-granted"
-        }
-      ],
-      "path": "/Users/you/Library/Application Support/agent-vm/Images/latest-test",
-      "provisionSeconds": 212.205459959,
-      "state": "ready",
-      "userName": "agent"
     }
   ],
-  "jobs": [],
+  "jobs": [
+    {
+      "command": [
+        "box",
+        "start",
+        "try1",
+        "--json"
+      ],
+      "createdAt": "2026-10-01T10:51:42Z",
+      "endedAt": "2026-10-01T10:52:08Z",
+      "id": "20261001-105142-d6ec6e",
+      "path": "/Users/you/Library/Application Support/agent-vm/Jobs/20261001-105142-d6ec6e",
+      "progress": {
+        "box": "try1",
+        "event": "progress",
+        "message": "running",
+        "step": "running"
+      },
+      "startedAt": "2026-10-01T10:51:42Z",
+      "state": "done",
+      "status": 0,
+      "targets": [
+        "box:try1"
+      ]
+    },
+    {
+      "command": [
+        "box",
+        "stop",
+        "try1",
+        "--json"
+      ],
+      "createdAt": "2026-10-01T10:53:56Z",
+      "endedAt": "2026-10-01T10:54:03Z",
+      "id": "20261001-105356-627ff7",
+      "path": "/Users/you/Library/Application Support/agent-vm/Jobs/20261001-105356-627ff7",
+      "progress": {
+        "box": "try1",
+        "event": "progress",
+        "message": "Stopping box try1",
+        "step": "shutdown"
+      },
+      "startedAt": "2026-10-01T10:53:56Z",
+      "state": "done",
+      "status": 0,
+      "targets": [
+        "box:try1"
+      ]
+    }
+  ],
   "runningVMs": {
     "count": 0,
     "limit": 2

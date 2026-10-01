@@ -110,7 +110,7 @@ section "Settings"
 check "agent-vm's version"       "$VERSION" "$(ui_value "$MAIN_AGENTVM_VERSION_ID")"
 check "the test agent-vm is named as such" "$FAKE_AGENTVM (test agent-vm)" "$(ui_value "$MAIN_AGENTVM_LOCATION_ID")"
 check "the virtual machines, without repeating the label" "1 of 2 running" "$(ui_value "$MAIN_VMS_ID")"
-check "the free disk space"      "55 GB free" "$(ui_value "$MAIN_DISK_ID")"
+check "the free disk space"      "82 GB free" "$(ui_value "$MAIN_DISK_ID")"
 
 section "the box cards"
 check "one card per box" "3" "$(ui_row_count "$MAIN_BOXES_ID")"
@@ -203,7 +203,7 @@ section "images but no box: still Get started"
 /usr/bin/jq '.boxes = []' "$FIXTURES_AGENTVM/status.json" > "$FAKE_AGENTVM_DIR/status.json"
 open_window
 check "Get started is shown" "1" "$(visible "$MAIN_GETSTARTED_ID")"
-check "the ready images are counted" "Images: 7 ready." \
+check "the ready images are counted" "Images: 6 ready." \
     "$(ui_value "$MAIN_GETSTARTED_TEXT_ID" | /usr/bin/sed -n 3p)"
 
 section "a doctor failure: Get started, with doctor's detail"

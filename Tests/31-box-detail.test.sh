@@ -96,7 +96,7 @@ check "nothing selected at opening: nothing measured" "0" "$(asks)"
 select_box cadabra-spike
 check_status "the handler exits cleanly" 0
 check "agent-vm measures the selected box once" "box info cadabra-spike --json" "$(fake_log | /usr/bin/grep '^box info')"
-check "its space, and its own"  "40.2 GB; 2.0 GB its own (what Delete frees)" "$(ui_value "$MAIN_BOX_SPACE_ID")"
+check "its space, and its own"  "40.2 GB; 2.1 GB its own (what Delete frees)" "$(ui_value "$MAIN_BOX_SPACE_ID")"
 
 section "the poll loop does not measure again; activation does"
 : > "$FAKE_AGENTVM_DIR/log"
@@ -296,7 +296,7 @@ check "reads status and measures the box again first" "status --json|box info ca
     "$(fake_log | /usr/bin/paste -sd '|' -)"
 check "asks"                    "Delete box cadabra-spike?" "$(ui_alert_title)"
 check "  what it frees, and that its image stays" \
-    "The box's folder and disk are deleted, with everything installed or saved in it, which frees about 2.0 GB. The image it was made from, dev-agents, is kept. This cannot be undone." \
+    "The box's folder and disk are deleted, with everything installed or saved in it, which frees about 2.1 GB. The image it was made from, dev-agents, is kept. This cannot be undone." \
     "$(ui_alert_message)"
 check "  Delete confirms"       "AgentVM.main.box.delete.confirmed" "$(ui_alert_action Delete)"
 check "  the box asked about is kept" "cadabra-spike" "$(pending delete)"

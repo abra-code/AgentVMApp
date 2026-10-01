@@ -190,7 +190,7 @@ fake_reset
 rows="$(with_fake agentvm_doctor)"
 check "agentvm_doctor: one row per check" "6" "$(printf '%s\n' "$rows" | /usr/bin/awk 'END { print NR }')"
 check "  name, status and detail"    "macOS${TAB}ok${TAB}macOS 27.0.0" "$(printf '%s\n' "$rows" | /usr/bin/head -1)"
-check "  the disk space detail"      "55 GB free on the volume of /Users/you/Library/Application Support/agent-vm" \
+check "  the disk space detail"      "82 GB free on the volume of /Users/you/Library/Application Support/agent-vm" \
     "$(printf '%s\n' "$rows" | row_named "disk space" | col 3)"
 check "  one call"                   "doctor --json" "$(fake_log)"
 printf 'no store\n' > "$FAKE_AGENTVM_DIR/fail-doctor"
@@ -201,7 +201,7 @@ check "  with its message"           "no store" "$(lib agentvm_last_error 1)"
 # -----------------------------------------------------------------------------------------------
 section "box rows: every box stopped (status.json)"
 rows="$(lib agentvm_status_box_rows < "$FIXTURES_AGENTVM/status.json")"
-check "one row per box"              "3"  "$(printf '%s\n' "$rows" | /usr/bin/awk 'END { print NR }')"
+check "one row per box"              "2"  "$(printf '%s\n' "$rows" | /usr/bin/awk 'END { print NR }')"
 check "twenty-one fields in every row" "21" "$(printf '%s\n' "$rows" | field_count)"
 row="$(printf '%s\n' "$rows" | row_named s3)"
 check "name, state, image"           "s3${TAB}stopped${TAB}dev-acp" "$(printf '%s\n' "$row" | col 1-3)"
@@ -247,7 +247,7 @@ check "no macOS or creation date: -" "-${TAB}-${TAB}-" "$(printf '%s\n' "$row" |
 
 section "image rows (status.json)"
 rows="$(lib agentvm_status_image_rows < "$FIXTURES_AGENTVM/status.json")"
-check "one row per image"            "7"  "$(printf '%s\n' "$rows" | /usr/bin/awk 'END { print NR }')"
+check "one row per image"            "6"  "$(printf '%s\n' "$rows" | /usr/bin/awk 'END { print NR }')"
 check "eleven fields in every row"   "11" "$(printf '%s\n' "$rows" | field_count)"
 row="$(printf '%s\n' "$rows" | row_named dev)"
 check "dev: ready, no failure, macOS 27.0 (26A428)" "dev${TAB}ready${TAB}-${TAB}27.0${TAB}26A428" "$(printf '%s\n' "$row" | col 1-5)"
@@ -300,7 +300,7 @@ name="$(printf '%s\n' "$row" | col 1)"
 check "twenty-three fields"          "23" "$(printf '%s\n' "$row" | field_count)"
 check "the first twenty-one are status's row of the same box" \
     "$(lib agentvm_status_box_rows < "$FIXTURES_AGENTVM/status.json" | row_named "$name")" "$(printf '%s\n' "$row" | col 1-21)"
-check "its space, and its own"       "40161382400${TAB}2042597376" "$(printf '%s\n' "$row" | col 22-23)"
+check "its space, and its own"       "40175632384${TAB}2061914112" "$(printf '%s\n' "$row" | col 22-23)"
 check "a volume that does not report its own part: -" "-" \
     "$(/usr/bin/jq 'del(.diskUsage.unsharedBytes)' "$FIXTURES_AGENTVM/box-info.json" | lib agentvm_box_info_row | col 23)"
 

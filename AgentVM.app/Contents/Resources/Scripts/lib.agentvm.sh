@@ -35,7 +35,7 @@
 [ -n "${__AGENTVM_APP_LIB:-}" ] && return 0
 __AGENTVM_APP_LIB=1
 
-AGENTVM_MIN_VERSION="0.4.4"
+AGENTVM_MIN_VERSION="0.5.2"
 
 # The app's own state, and where agent-vm's installer puts the link to the newest agent-vm.
 agentvm_support_dir="$HOME/Library/Application Support/AgentVM"
