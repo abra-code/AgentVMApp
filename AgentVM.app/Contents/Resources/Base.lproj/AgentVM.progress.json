@@ -1,0 +1,62 @@
+{
+  "type": "VStack",
+  "properties": {
+    "alignment": "leading",
+    "spacing": 10.0,
+    "padding": 20.0,
+    "frame": { "minWidth": 560.0, "minHeight": 470.0, "idealWidth": 700.0, "idealHeight": 520.0 }
+  },
+  "children": [
+    {
+      "type": "HStack",
+      "properties": { "spacing": 8.0, "alignment": "firstTextBaseline" },
+      "children": [
+        {
+          "type": "Text",
+          "id": 701,
+          "properties": { "text": "", "font": "headline", "textSelection": "enabled", "frame": { "maxWidth": "infinity", "alignment": "leading" } }
+        },
+        { "type": "Text", "id": 702, "properties": { "text": "", "foregroundStyle": "secondary" } }
+      ]
+    },
+    {
+      "type": "ProgressView",
+      "id": 703,
+      "properties": { "value": 0, "total": 100, "progressViewStyle": "linear", "hidden": true, "frame": { "maxWidth": "infinity" } }
+    },
+    {
+      "type": "Table",
+      "id": 704,
+      "properties": {
+        "columns": [ "Step", "Progress" ],
+        "widths": [ 520, 90 ],
+        "minWidths": [ 200, 60 ],
+        "frame": { "maxWidth": "infinity", "minHeight": 110, "maxHeight": "infinity" }
+      }
+    },
+    {
+      "type": "TextEditor",
+      "id": 705,
+      "properties": {
+        "text": "",
+        "readOnly": true,
+        "font": { "size": 11, "design": "monospaced" },
+        "frame": { "maxWidth": "infinity", "minHeight": 190, "maxHeight": 190 }
+      }
+    },
+    {
+      "type": "Text",
+      "id": 706,
+      "properties": { "text": "", "foregroundStyle": "orange", "textSelection": "enabled", "frame": { "maxWidth": "infinity", "alignment": "leading" } }
+    },
+    {
+      "type": "HStack",
+      "properties": { "spacing": 8.0 },
+      "children": [
+        { "type": "Text", "id": 707, "properties": { "text": "", "font": "caption", "foregroundStyle": "secondary", "textSelection": "enabled" } },
+        { "type": "Spacer" },
+        { "type": "Button", "id": 708, "properties": { "title": "Stop...", "disabled": true, "actionID": "AgentVM.progress.stop" } }
+      ]
+    }
+  ]
+}

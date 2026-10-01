@@ -204,6 +204,9 @@ ui_size_text() {
 # that opening both of a box's windows in quick succession loses neither. The request carries the
 # pid too: a window opened by a URL naming the command directly finds no request of this run's
 # and closes itself.
+#
+# A job's progress window (lib.agentvm.progress.sh) is kept the same way, one per job: its kind is
+# "progress", and the name is the job's id, which has the form of a name.
 
 # The request key of a kind is this, an underscore and the kind.
 AGENTVM_OPEN_REQUEST_KEY="agentvm_open_request"

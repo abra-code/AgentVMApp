@@ -16,7 +16,9 @@
 #
 # A DETAIL PANE IS AN OVERVIEW. What has work of its own opens in a window of its own, one per
 # box, from a Details... button on the pane's row (lib.agentvm.ui.sh, "Box windows"): a box's
-# network is lib.agentvm.network.sh, and what ran in it lib.agentvm.programs.sh.
+# network is lib.agentvm.network.sh, and what ran in it lib.agentvm.programs.sh. A job that holds
+# a box or an image has a window too, one per job, from the Progress... button beside the pane's
+# state line (lib.agentvm.progress.sh).
 #
 # READING AND PAINTING ARE SEPARATE. main_read_* run agent-vm and leave its answers in the
 # window's cache folder (lib.agentvm.ui.sh); main_paint_* only read the caches. So a handler that
@@ -57,6 +59,7 @@ MAIN_BOX_DETAIL_ID=320
 MAIN_BOX_NAME_ID=321
 MAIN_BOX_STATE_ID=322
 MAIN_BOX_MAINTENANCE_ID=323
+MAIN_BOX_PROGRESS_ID=324
 MAIN_RUNNING_BOX_ACTIONS_ID=330
 MAIN_STOPPED_BOX_ACTIONS_ID=340
 MAIN_BOX_STOP_ID=331
@@ -90,6 +93,7 @@ MAIN_IMAGE_DETAIL_ID=420
 MAIN_IMAGE_NAME_ID=421
 MAIN_IMAGE_STATE_ID=422
 MAIN_IMAGE_MAINTENANCE_ID=423
+MAIN_IMAGE_PROGRESS_ID=424
 MAIN_IMAGE_SHOW_ID=433
 MAIN_IMAGE_DELETE_ID=434
 MAIN_IMAGE_MACOS_ID=451
@@ -215,12 +219,14 @@ main_moving() {
 # job the window saw running ends, the window says so, once: a toast when it did what it was asked,
 # an alert in agent-vm's words when it failed.
 
-# main_job <uuid> <box|image> <name>  ->  the row of the job that holds that box or image now (it
-# runs or waits; the newest, when there are several), or nothing.
+# main_job <uuid> <box|image> <name>  ->  the row of the job that holds that box or image now, or
+# nothing: the one that runs (the newest, should there be several), and only when none runs, the
+# newest that waits. A build with a setup queued after it is shown as the build.
 main_job() {
     main_rows "$1" jobs | /usr/bin/awk -F'\t' -v target="$2:$3" '
-        ($2 == "running" || $2 == "queued") && $3 == target { row = $0 }
-        END { if (row != "") print row }'
+        $2 == "running" && $3 == target { running = $0 }
+        $2 == "queued" && $3 == target { queued = $0 }
+        END { if (running != "") print running; else if (queued != "") print queued }'
 }
 
 # main_job_verb <what it does> <state>  ->  the job in a word or two, for a card and a pane:
@@ -561,8 +567,11 @@ main_box_card_rows() {
         BEGIN {
             while ((getline line < jobs) > 0) {
                 split(line, job, "\t")
-                if ((job[2] == "running" || job[2] == "queued") && job[3] ~ /^box:/)
-                    held[substr(job[3], 5)] = (job[2] == "queued") ? "Waiting" : (job[4] == "box start") ? "Starting" : (job[4] == "box stop") ? "Stopping" : "Busy"
+                # A job that runs wins over one that waits, as in main_job.
+                if (job[2] == "queued" && job[3] ~ /^box:/ && !(substr(job[3], 5) in held))
+                    held[substr(job[3], 5)] = "Waiting"
+                if (job[2] == "running" && job[3] ~ /^box:/)
+                    held[substr(job[3], 5)] = (job[4] == "box start") ? "Starting" : (job[4] == "box stop") ? "Stopping" : "Busy"
             }
         }
         {
@@ -592,8 +601,11 @@ main_image_card_rows() {
         BEGIN {
             while ((getline line < jobs) > 0) {
                 split(line, job, "\t")
-                if ((job[2] == "running" || job[2] == "queued") && job[3] ~ /^image:/)
-                    held[substr(job[3], 7)] = (job[2] == "queued") ? "Waiting" : (job[4] == "image create") ? "Building" : (job[4] ~ /^image update/) ? "Updating" : (job[4] == "image setup") ? "Setting up" : "Busy"
+                # A job that runs wins over one that waits, as in main_job.
+                if (job[2] == "queued" && job[3] ~ /^image:/ && !(substr(job[3], 7) in held))
+                    held[substr(job[3], 7)] = "Waiting"
+                if (job[2] == "running" && job[3] ~ /^image:/)
+                    held[substr(job[3], 7)] = (job[4] == "image create") ? "Building" : (job[4] ~ /^image update/) ? "Updating" : (job[4] == "image setup") ? "Setting up" : "Busy"
             }
             n = split(counts, pairs, " ")
             for (i = 1; i <= n; i++) {
@@ -713,10 +725,13 @@ main_paint_box_detail() {
             _cpus _memory _path _needs _macos _build _created _rest
         # A job that holds the box says what it does, in place of the state it has not left yet.
         local _job="$(main_job "$_uuid" box "$_name")"
+        # Progress... opens the job's window (lib.agentvm.progress.sh).
         if [ -n "$_job" ]; then
             "$dialog" "$_uuid" "$MAIN_BOX_STATE_ID" "$(main_job_text "$_job")"
+            ui_show "$_uuid" "$MAIN_BOX_PROGRESS_ID" 1
         else
             "$dialog" "$_uuid" "$MAIN_BOX_STATE_ID" "$(main_box_state_text "$_state" "$_started" "$_owner" "$_execs" "$_error")"
+            ui_show "$_uuid" "$MAIN_BOX_PROGRESS_ID" 0
         fi
         case "$_state" in
             running|starting|unresponsive)
@@ -1026,10 +1041,13 @@ main_paint_image_detail() {
             _features _missing _seconds _fda _checked _clt _cpus _memory _bytes _unshared _added _rest
         # A job that holds the image says what it does and where it is, in place of the state.
         local _job="$(main_job "$_uuid" image "$_name")"
+        # Progress... opens the job's window (lib.agentvm.progress.sh).
         if [ -n "$_job" ]; then
             "$dialog" "$_uuid" "$MAIN_IMAGE_STATE_ID" "$(main_job_text "$_job")"
+            ui_show "$_uuid" "$MAIN_IMAGE_PROGRESS_ID" 1
         else
             "$dialog" "$_uuid" "$MAIN_IMAGE_STATE_ID" "$(main_image_state_text "$_state" "$_failure")"
+            ui_show "$_uuid" "$MAIN_IMAGE_PROGRESS_ID" 0
         fi
 
         # What a guest update adds, when image info said.

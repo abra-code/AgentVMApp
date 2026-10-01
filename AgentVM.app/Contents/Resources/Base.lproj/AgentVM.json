@@ -153,7 +153,10 @@
                   },
                   "children": [
                     { "type": "Text", "id": 321, "properties": { "text": "", "font": "largeTitle", "textSelection": "enabled" } },
-                    { "type": "Text", "id": 322, "properties": { "text": "", "foregroundStyle": "secondary", "textSelection": "enabled" } },
+                    { "type": "HStack", "properties": { "spacing": 8.0 }, "children": [
+                      { "type": "Text", "id": 322, "properties": { "text": "", "foregroundStyle": "secondary", "textSelection": "enabled" } },
+                      { "type": "Button", "id": 324, "properties": { "title": "Progress...", "controlSize": "small", "hidden": true, "actionID": "AgentVM.main.box.progress", "help": "Open the progress window of the box's job: its steps, the end of its log, and Stop." } }
+                    ] },
                     {
                       "type": "HStack",
                       "properties": { "spacing": 8.0 },
@@ -337,7 +340,10 @@
                   },
                   "children": [
                     { "type": "Text", "id": 421, "properties": { "text": "", "font": "largeTitle", "textSelection": "enabled" } },
-                    { "type": "Text", "id": 422, "properties": { "text": "", "foregroundStyle": "secondary", "textSelection": "enabled" } },
+                    { "type": "HStack", "properties": { "spacing": 8.0 }, "children": [
+                      { "type": "Text", "id": 422, "properties": { "text": "", "foregroundStyle": "secondary", "textSelection": "enabled" } },
+                      { "type": "Button", "id": 424, "properties": { "title": "Progress...", "controlSize": "small", "hidden": true, "actionID": "AgentVM.main.image.progress", "help": "Open the progress window of the image's job: its steps, the end of its log, and Stop." } }
+                    ] },
                     {
                       "type": "HStack",
                       "properties": { "spacing": 8.0 },

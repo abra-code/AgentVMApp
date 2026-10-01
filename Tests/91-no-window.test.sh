@@ -6,14 +6,15 @@
 # window's. So the rule for every handler is that it needs its window's uuid before it reads,
 # changes, asks or opens anything, and this file runs each one without a window, in the state
 # where it would do the most harm: the main window open on a stopped box with Delete and Recreate
-# already asked, a network window with edits waiting and an Allow already asked. The same state is
+# already asked, a network window with edits waiting and an Allow already asked, and a job that
+# runs, whose Stop was already asked. The same state is
 # then planted under the empty uuid (the pasteboard keys and the cache folder a handler without
 # its guard would compute), so that a handler missing the guard acts, and is seen, rather than
 # finding nothing to act on.
 #
 # The one handler meant to run without a window is omc.app.handle-url, which only shows
 # (90-url-scheme.test.sh). A window command run by name opens a window that closes itself
-# (32-box-network.test.sh, 33-box-programs.test.sh).
+# (32-box-network.test.sh, 33-box-programs.test.sh, 54-progress-window.test.sh).
 #
 # POSIX sh only. Validate with "sh -n", never "bash -n".
 . "${OMCTEST_LIB:?set OMCTEST_LIB, or run via: appletbuilder test}"
@@ -38,6 +39,8 @@ MAIN_UUID="$OMC_ACTIONUI_WINDOW_UUID"
 APP_PID="${OMC_APP_PROCESS_ID:?91-no-window: OMC_APP_PROCESS_ID is not set}"
 NET_UUID="OMCTEST-network-window-$$"
 BOX=cadabra-spike
+# A job that runs, holding the box: what Progress... would open a window for, and Stop would cancel.
+JOB=20260930-120000-0000d1
 
 in_window() {
     OMC_ACTIONUI_WINDOW_UUID="$1"
@@ -65,13 +68,17 @@ state() {
     printf 'opened: %s\n' "$(/usr/bin/awk 'END { print NR }' "$FAKE_OPEN_LOG")"
     printf 'terminal files: %s\n' "$(/bin/ls "$HOME/Library/Application Support/AgentVM/Terminal" 2>/dev/null | /usr/bin/awk 'END { print NR }')"
     printf 'window calls: %s\n' "$(ui_calls '.')"
-    printf 'chained: %s %s %s\n' "$(chain_asked AgentVM.main)" "$(chain_asked AgentVM.network)" "$(chain_asked AgentVM.programs)"
+    printf 'chained: %s %s %s %s %s\n' "$(chain_asked AgentVM.main)" "$(chain_asked AgentVM.network)" "$(chain_asked AgentVM.programs)" \
+        "$(chain_asked AgentVM.progress)" "$(chain_asked AgentVM.progress.poll)"
     printf 'alert: %s\n' "$(ui_alert_title)"
     printf 'pending: %s|%s|%s|%s\n' "$("$PB" "agentvm_box_delete_$MAIN_UUID" get)" "$("$PB" "agentvm_box_recreate_$MAIN_UUID" get)" \
         "$("$PB" "agentvm_image_delete_$MAIN_UUID" get)" "$("$PB" "agentvm_net_allow_$NET_UUID" get)"
     printf 'selected: %s|%s|%s\n' "$("$PB" "agentvm_box_$MAIN_UUID" get)" "$("$PB" "agentvm_image_$MAIN_UUID" get)" "$("$PB" "agentvm_box_$NET_UUID" get)"
     printf 'edits: %s\n' "$(/bin/cat "$TMPDIR/AgentVM/$NET_UUID/net-$BOX.desired" 2>/dev/null | /usr/bin/paste -sd ' ' -)"
-    printf 'requests: %s|%s|%s\n' "$("$PB" agentvm_open_request_network get)" "$("$PB" agentvm_open_request_programs get)" "$("$PB" agentvm_goto get)"
+    printf 'requests: %s|%s|%s|%s\n' "$("$PB" agentvm_open_request_network get)" "$("$PB" agentvm_open_request_programs get)" \
+        "$("$PB" agentvm_open_request_progress get)" "$("$PB" agentvm_goto get)"
+    printf 'jobs: %s\n' "$(/usr/bin/jq -r 'map(.id + " " + .state) | join(",")' "$FAKE_AGENTVM_DIR/jobs.json" 2>/dev/null)"
+    printf 'no-window job keys: %s|%s\n' "$("$PB" agentvm_job_ get)" "$("$PB" agentvm_job_stop_ get)"
     printf 'no-window keys: %s|%s|%s|%s|%s|%s|%s\n' "$("$PB" agentvm_poll_ get)" "$("$PB" agentvm_box_ get)" "$("$PB" agentvm_image_ get)" \
         "$("$PB" agentvm_box_delete_ get)" "$("$PB" agentvm_box_recreate_ get)" "$("$PB" agentvm_image_delete_ get)" "$("$PB" agentvm_net_allow_ get)"
     printf 'pasteboards: %s\n' "$(/usr/bin/find "$OMCTEST_UI/pb" -type f -exec /usr/bin/cksum {} + | /usr/bin/sort | /usr/bin/cksum)"
@@ -139,7 +146,18 @@ for planted in "boxes 17" "images 11"; do
     /usr/bin/awk -F'\t' -v OFS='\t' -v field="${planted#* }" -v folder="$OMCTEST_WORK" '{ $field = folder; print }' \
         "$TMPDIR/AgentVM/$MAIN_UUID/${planted% *}.tsv" > "$TMPDIR/AgentVM/${planted% *}.tsv"
 done
+# A job that runs and holds the box, as agent-vm and the empty-uuid caches would show it once it
+# had started: the main window's job rows, and a progress window's job with its Stop asked.
+/usr/bin/jq -n --arg id "$JOB" --arg box "$BOX" '[{id: $id, command: ["box", "start", $box, "--json"], targets: ["box:" + $box],
+    state: "running", createdAt: "2026-09-30T12:00:00Z", startedAt: "2026-09-30T12:00:00Z"}]' > "$FAKE_AGENTVM_DIR/jobs.json"
+"$FAKE_AGENTVM" job list --json | /usr/bin/jq -r '.[] | [.id, .state, .targets[0], (.command[0:2] | join(" ")), "-", .createdAt, .startedAt, "-", "-", "-", "-", "-", "-", "-", "-", "-"] | join("\t")' \
+    > "$TMPDIR/AgentVM/jobs.tsv"
+/bin/cp "$TMPDIR/AgentVM/jobs.tsv" "$TMPDIR/AgentVM/job.tsv"
+"$PB" agentvm_job_ set "$JOB"
+"$PB" agentvm_job_stop_ set "$JOB"
 # Guards: without these the checks below would pass with nothing at stake.
+check "a job runs, and holds the box, under the empty uuid" "$JOB${TAB}running${TAB}box:$BOX|$JOB|$JOB" \
+    "$(/usr/bin/cut -f1-3 "$TMPDIR/AgentVM/jobs.tsv")|$("$PB" agentvm_job_ get)|$("$PB" agentvm_job_stop_ get)"
 check "Delete was asked about the box"   "$BOX" "$("$PB" "agentvm_box_delete_$MAIN_UUID" get)"
 check "Recreate too"                     "$BOX" "$("$PB" "agentvm_box_recreate_$MAIN_UUID" get)"
 check "an image's Delete was asked"      "dev-xcode" "$("$PB" "agentvm_image_delete_$MAIN_UUID" get)"
