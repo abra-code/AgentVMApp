@@ -4,7 +4,8 @@
 # Usage: Tests/helpers/refresh_agentvm_fixtures.sh <path to agent-vm>
 #
 # Runs only queries that start and stop nothing: `version`, `doctor`, `status` (which, unlike
-# `box list`, deletes no stopped disposable box) and `image info` of one image, against the
+# `box list`, deletes no stopped disposable box), `image info` of one image and `box info` of one
+# box, against the
 # store agent-vm finds by itself (AGENT_VM_HOME, or ~/Library/Application Support/agent-vm),
 # and `status` again against an empty store in a temporary folder. Each answer is re-serialized
 # with sorted keys, and the home folder in every string is replaced with /Users/you, so a capture
@@ -71,6 +72,14 @@ if [ -n "$info_image" ]; then
     capture image-info image info "$info_image" --json
 else
     printf '  image-info.json left as it was: no ready image built from another in this store\n'
+fi
+
+# The box detail pane reads `box info`: the first box, measured whether it runs or not.
+info_box="$(/usr/bin/jq -r '.boxes[0].box.name // empty' "$fixtures/status.json")"
+if [ -n "$info_box" ]; then
+    capture box-info box info "$info_box" --json
+else
+    printf '  box-info.json left as it was: no box in this store\n'
 fi
 
 /bin/mkdir -p "$work/empty-store"

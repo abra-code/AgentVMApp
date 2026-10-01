@@ -17,8 +17,9 @@
 # READING AND PAINTING ARE SEPARATE. main_read_* run agent-vm and leave its answers in the
 # window's cache folder (lib.agentvm.ui.sh); main_paint_* only read the caches. So a handler that
 # repaints runs no agent-vm, and the poll loop reads only `status`, the one cheap call (doctor asks
-# the virtualization framework and `image info` measures a disk: they are read on opening and
-# activation, and `image info` for the selected image also on selecting it).
+# the virtualization framework, and `box info` and `image info` measure a disk: they are read on
+# opening and activation, and `box info` and `image info` for the selected box or image also on
+# selecting it).
 #
 # THE POLL LOOP keeps the lists current while the window is open, so boxes started from
 # Terminal or Cadabra appear without a click: every MAIN_POLL_IDLE_SECONDS, or every
@@ -54,7 +55,13 @@ MAIN_BOX_STATE_ID=322
 MAIN_BOX_MAINTENANCE_ID=323
 MAIN_RUNNING_BOX_ACTIONS_ID=330
 MAIN_STOPPED_BOX_ACTIONS_ID=340
+MAIN_BOX_VIEW_ID=332
+MAIN_BOX_CONTROL_ID=333
+MAIN_BOX_SHELL_ID=334
 MAIN_BOX_SHOW_ID=342
+MAIN_BOX_AGENT_ID=343
+MAIN_BOX_RECREATE_ID=344
+MAIN_BOX_DELETE_ID=345
 MAIN_BOX_IMAGE_ID=351
 MAIN_BOX_NETWORK_ID=352
 MAIN_BOX_PROJECT_ID=353
@@ -64,6 +71,7 @@ MAIN_BOX_HARDWARE_ID=356
 MAIN_BOX_KEPT_ID=357
 MAIN_BOX_CREATED_ID=358
 MAIN_BOX_FOLDER_ID=359
+MAIN_BOX_SPACE_ID=360
 
 MAIN_IMAGES_ID=411
 MAIN_IMAGES_FOOTER_ID=412
@@ -529,7 +537,82 @@ main_paint_box_detail() {
         else
             ui_enable "$_uuid" "$MAIN_BOX_SHOW_ID" 0
         fi
+
+        # The cached `box info` adds the space, as of when it was last read, and only for this box.
+        local _info="$(main_info "$_uuid" box "$_name")"
+        "$dialog" "$_uuid" "$MAIN_BOX_SPACE_ID" \
+            "$(main_space_text "$(printf '%s\n' "$_info" | /usr/bin/cut -f22)" "$(printf '%s\n' "$_info" | /usr/bin/cut -f23)" \
+                "$(main_info_error "$_uuid" box "$_name")")"
+
+        # The enable rules Cadabra's box window tested. The screen and a shell need a running box
+        # (not a starting one, nor one whose supervisor does not answer); recreating and deleting
+        # need a stopped one, and agent-vm refuses the others anyway. A disposable box belongs to
+        # the chat window that made it and is deleted when it stops: it is neither recreated nor
+        # given to avm. Recreating needs the image the box was made from, ready.
+        local _running=0 _stopped=0 _kept=1 _image_ready=0
+        [ "$_state" = "running" ] && _running=1
+        [ "$_state" = "stopped" ] && _stopped=1
+        [ "$_disposable" = "true" ] && _kept=0
+        [ "$(main_row "$_uuid" images "$_image" | /usr/bin/cut -f2)" = "ready" ] && _image_ready=1
+        ui_enable "$_uuid" "$MAIN_BOX_VIEW_ID" "$_running"
+        ui_enable "$_uuid" "$MAIN_BOX_CONTROL_ID" "$_running"
+        ui_enable "$_uuid" "$MAIN_BOX_SHELL_ID" "$_running"
+        # avm starts a stopped box itself.
+        ui_enable "$_uuid" "$MAIN_BOX_AGENT_ID" "$(( (_running + _stopped) * _kept ))"
+        ui_enable "$_uuid" "$MAIN_BOX_RECREATE_ID" "$(( _stopped * _kept * _image_ready ))"
+        ui_enable "$_uuid" "$MAIN_BOX_DELETE_ID" "$_stopped"
     }
+}
+
+# main_box_delete_question <uuid> <name>  ->  the confirmation's message: what deleting frees, and
+# that the image it was made from stays.
+main_box_delete_question() {
+    local _text="The box's folder and disk are deleted, with everything installed or saved in it"
+    local _size="$(ui_size_text "$(main_info "$1" box "$2" | /usr/bin/cut -f23)")"
+    [ -n "$_size" ] && _text="$_text, which frees about $_size"
+    _text="$_text."
+    local _image="$(main_row "$1" boxes "$2" | /usr/bin/cut -f3)"
+    [ -n "$_image" ] && [ "$_image" != "-" ] && _text="$_text The image it was made from, $_image, is kept."
+    printf '%s This cannot be undone.\n' "$_text"
+}
+
+# main_box_recreate_question <uuid> <name>  ->  the confirmation's message: what stays and what goes.
+main_box_recreate_question() {
+    local _image="$(main_row "$1" boxes "$2" | /usr/bin/cut -f3)"
+    printf 'It is made again from image %s as the image is now, with the same name, processors, memory and network rules. Everything installed or saved in the box, logins included, is deleted. This cannot be undone.\n' "$_image"
+}
+
+# main_box_askable <uuid> <name> <recreate|delete>  ->  0 when the box can be asked about now, from
+# the rows just read: it exists, it is stopped, and for recreate it is kept and its image ready
+# (the rules main_paint_box_detail enables the buttons by).
+main_box_askable() {
+    local _row="$(main_row "$1" boxes "$2")"
+    [ -n "$_row" ] || return 1
+    [ "$(printf '%s\n' "$_row" | /usr/bin/cut -f2)" = "stopped" ] || return 1
+    [ "$3" = "recreate" ] || return 0
+    [ "$(printf '%s\n' "$_row" | /usr/bin/cut -f13)" != "true" ] || return 1
+    [ "$(main_row "$1" images "$(printf '%s\n' "$_row" | /usr/bin/cut -f3)" | /usr/bin/cut -f2)" = "ready" ]
+}
+
+# main_alert <uuid> <title> <message>  ->  an alert on the window with an OK button.
+main_alert() {
+    "$dialog" "$1" omc_window omc_present_alert "$2" "$3" "OK::"
+}
+
+# main_open_terminal <uuid> <box> <.command file or nothing> <status of making it>  ->  Terminal
+# opens the file; when the file could not be made or Terminal could not open it, an alert says why.
+main_open_terminal() {
+    if [ "$4" -ne 0 ]; then
+        main_alert "$1" "Could not open Terminal for box $2" "$(agentvm_last_error "$4")"
+        return 0
+    fi
+    "$open_tool" -a Terminal "$3"
+    local _status=$?
+    if [ "$_status" -ne 0 ]; then
+        /bin/rm -f "$3"
+        main_alert "$1" "Could not open Terminal for box $2" "Terminal could not open $3 (status $_status)."
+    fi
+    return 0
 }
 
 # main_show_folder <uuid> <boxes|images>  ->  the selected box's or image's folder, selected in a
@@ -565,49 +648,81 @@ main_image_state_text() {
     esac
 }
 
-# main_read_image_info <uuid> <name>  ->  agent-vm's status, with `image info` for that image in
-# the cache file image-info.tsv (agentvm_image_info_row's row, or empty after a failure) and why
-# it failed in image-info-error ("<name><TAB><message>", empty after a success). It measures the
-# image's disk (0.1-0.3 s), so it is read for the selected image only: on selecting it, on
-# activation and before Delete asks; never in the poll loop, whose passes reuse the last answer.
-main_read_image_info() {
-    local _error="$(ui_cache "$1" image-info-error)"
+# main_read_info <uuid> <box|image> <name>  ->  agent-vm's status, with `box info` or `image info`
+# for that box or image in the cache file <kind>-info-<name>.tsv (agentvm_box_info_row's or
+# agentvm_image_info_row's row, or empty after a failure) and why it failed in
+# <kind>-info-<name>.error (empty after a success). One pair of files per name: selections'
+# handlers overlap, and a slow answer for one box (a running box's entry comes from its
+# supervisor, which may take seconds not to answer) must not replace another's. Both measure a
+# disk (0.1-0.3 s), so they are read for the selected box and image only: on selecting it, on
+# activation and before a question about it; never in the poll loop, whose passes reuse the last
+# answer. A name agent-vm would refuse is never part of a path.
+main_read_info() {
+    agentvm_valid_name "$3" || return 2
+    local _error="$(ui_cache "$1" "$2-info-$3.error")"
     local _json
-    _json="$(agentvm_image_info "$2")"
+    _json="$(agentvm_"$2"_info "$3")"
     local _status=$?
     if [ "$_status" -ne 0 ]; then
-        : | ui_store "$(ui_cache "$1" image-info.tsv)"
-        printf '%s\t%s\n' "$2" "$(ui_one_line "$(agentvm_last_error "$_status")")" | ui_store "$_error"
+        : | ui_store "$(ui_cache "$1" "$2-info-$3.tsv")"
+        ui_one_line "$(agentvm_last_error "$_status")" | ui_store "$_error"
         return "$_status"
     fi
-    printf '%s\n' "$_json" | agentvm_image_info_row | ui_store "$(ui_cache "$1" image-info.tsv)"
+    printf '%s\n' "$_json" | agentvm_"$2"_info_row | ui_store "$(ui_cache "$1" "$2-info-$3.tsv")"
     : | ui_store "$_error"
     return 0
 }
 
-# main_read_selected_image <uuid>  ->  main_read_image_info for the selected image, when it is
-# still listed; 0 when there is nothing to read.
-main_read_selected_image() {
-    local _name="$(ui_get image "$1")"
+# main_read_selected <uuid> <box|image>  ->  main_read_info for the selected box or image, when it
+# is still listed; 0 when there is nothing to read. A box whose supervisor does not answer is
+# not measured here (on opening and activation, before the window is painted): `box info` would
+# wait for it as long again as `status` just did. Selecting it measures it after painting.
+main_read_selected() {
+    local _name="$(ui_get "$2" "$1")"
     [ -n "$_name" ] || return 0
-    [ -n "$(main_row "$1" images "$_name")" ] || return 0
-    main_read_image_info "$1" "$_name"
+    local _list=images
+    [ "$2" = "box" ] && _list=boxes
+    local _row="$(main_row "$1" "$_list" "$_name")"
+    [ -n "$_row" ] || return 0
+    [ "$2" = "box" ] && [ "$(printf '%s\n' "$_row" | /usr/bin/cut -f2)" = "unresponsive" ] && return 0
+    main_read_info "$1" "$2" "$_name"
 }
 
-# main_image_info <uuid> <name>  ->  the cached `image info` row, when it is that image's.
-main_image_info() {
-    local _file="$(ui_cache "$1" image-info.tsv)"
+# main_info <uuid> <box|image> <name>  ->  the cached `box info` or `image info` row of that box
+# or image, or nothing.
+main_info() {
+    agentvm_valid_name "$3" || return 0
+    local _file="$(ui_cache "$1" "$2-info-$3.tsv")"
     [ -f "$_file" ] || return 0
-    /usr/bin/awk -F'\t' -v name="$2" '$1 == name { print; exit }' "$_file"
+    /usr/bin/awk -F'\t' -v name="$3" '$1 == name { print; exit }' "$_file"
 }
 
-# main_image_info_error <uuid> <name>  ->  why `image info` failed, when the last read was that
-# image's and failed. The name is checked as for the row: selections' handlers overlap.
-main_image_info_error() {
-    [ -z "$(main_image_info "$1" "$2")" ] || return 0
-    local _file="$(ui_cache "$1" image-info-error)"
+# main_info_error <uuid> <box|image> <name>  ->  why the last `box info` or `image info` of that
+# box or image failed, or nothing.
+main_info_error() {
+    agentvm_valid_name "$3" || return 0
+    [ -z "$(main_info "$1" "$2" "$3")" ] || return 0
+    local _file="$(ui_cache "$1" "$2-info-$3.error")"
     [ -f "$_file" ] || return 0
-    /usr/bin/awk -F'\t' -v name="$2" '$1 == name { sub(/^[^\t]*\t/, ""); print; exit }' "$_file"
+    /bin/cat "$_file"
+}
+
+# main_space_text <bytes> <unshared bytes> <info error>  ->  the Space row of a detail pane: all
+# of it and its own part (what Delete frees), or why it was not measured.
+main_space_text() {
+    local _size="$(ui_size_text "$1")"
+    if [ -n "$_size" ]; then
+        local _own="$(ui_size_text "$2")"
+        if [ -n "$_own" ]; then
+            printf '%s; %s its own (what Delete frees)\n' "$_size" "$_own"
+        else
+            printf '%s\n' "$_size"
+        fi
+    elif [ -n "$3" ]; then
+        printf 'not measured: %s\n' "$3"
+    else
+        printf 'not measured\n'
+    fi
 }
 
 # main_paint_image_detail <uuid>  ->  the selected image's detail pane, or the placeholder.
@@ -631,8 +746,8 @@ main_paint_image_detail() {
     "$dialog" "$_uuid" "$MAIN_IMAGE_BOXES_ID" "$(ui_lines_text "$_boxes")"
     local _derived="$(main_rows "$_uuid" images | /usr/bin/awk -F'\t' -v name="$_name" '$6 == name { print $1 }')"
     "$dialog" "$_uuid" "$MAIN_IMAGE_DERIVED_ID" "$(ui_lines_text "$_derived")"
-    local _info="$(main_image_info "$_uuid" "$_name")"
-    local _info_error="$(main_image_info_error "$_uuid" "$_name")"
+    local _info="$(main_info "$_uuid" image "$_name")"
+    local _info_error="$(main_info_error "$_uuid" image "$_name")"
     local _maintenance="$(main_maintenance_text "$_uuid" images "$_name")"
     # The status row's eleven fields, then image info's, or eleven "-" without it.
     local _extra="-${ui_tab}-${ui_tab}-${ui_tab}-${ui_tab}-${ui_tab}-${ui_tab}-${ui_tab}-${ui_tab}-${ui_tab}-${ui_tab}-"
@@ -691,18 +806,9 @@ main_paint_image_detail() {
         [ "$_memory" != "-" ] && _text="${_text:+$_text, }$_memory GB"
         "$dialog" "$_uuid" "$MAIN_IMAGE_HARDWARE_ID" "${_text:--}"
 
-        local _size="$(ui_size_text "$_bytes")"
-        if [ -n "$_size" ]; then
-            _text="$_size"
-            _size="$(ui_size_text "$_unshared")"
-            [ -n "$_size" ] && _text="$_text; $_size its own (what Delete frees)"
-            _size="$(ui_size_text "$_added")"
-            [ -n "$_size" ] && [ "$_based" != "-" ] && _text="$_text; $_size added over $_based"
-        elif [ -n "$_info_error" ]; then
-            _text="not measured: $_info_error"
-        else
-            _text="not measured"
-        fi
+        _text="$(main_space_text "$_bytes" "$_unshared" "$_info_error")"
+        local _added_size="$(ui_size_text "$_added")"
+        [ -n "$(ui_size_text "$_bytes")" ] && [ -n "$_added_size" ] && [ "$_based" != "-" ] && _text="$_text; $_added_size added over $_based"
         "$dialog" "$_uuid" "$MAIN_IMAGE_SPACE_ID" "$_text"
 
         _text="$(ui_date_text "$_created")"
@@ -726,7 +832,7 @@ main_paint_image_detail() {
 # can no longer be recreated, since recreating makes it again from its image).
 main_image_delete_question() {
     local _text="The image's folder and disk are deleted"
-    local _size="$(ui_size_text "$(main_image_info "$1" "$2" | /usr/bin/cut -f21)")"
+    local _size="$(ui_size_text "$(main_info "$1" image "$2" | /usr/bin/cut -f21)")"
     [ -n "$_size" ] && _text="$_text, which frees about $_size"
     _text="$_text."
     local _boxes="$(main_rows "$1" boxes | /usr/bin/awk -F'\t' -v name="$2" '$3 == name { print $1 }')"
@@ -787,8 +893,12 @@ main_refresh() {
         [ "$_mode" = "full" ] && main_read_doctor "$_uuid"
         main_read_status "$_uuid"
         _status=$?
-        # The selected image's measurements: on opening and activation, not in the poll loop.
-        [ "$_mode" = "full" ] && [ "$_status" -eq 0 ] && main_read_selected_image "$_uuid"
+        # The selected box's and image's measurements: on opening and activation, not in the poll
+        # loop.
+        if [ "$_mode" = "full" ] && [ "$_status" -eq 0 ]; then
+            main_read_selected "$_uuid" box
+            main_read_selected "$_uuid" image
+        fi
         # 126 and 127 are the shell's: the binary itself cannot be run any more (removed, or no
         # longer executable), so this pass asks again what can be used rather than showing the
         # shell's message as agent-vm's.

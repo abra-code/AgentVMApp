@@ -23,12 +23,15 @@
 #   version    what --version prints (default: AGENTVM_MIN_VERSION from the library, the oldest
 #              version the app accepts, so raising it needs no change here).
 #   <key>.json the answer to one query, overriding the fixture of that name: version, doctor,
-#              status, image-info-<name>. The fixture image-info.json answers `image info` for
-#              the one image it describes; any other name is not found, as agent-vm says it.
+#              status, image-info-<name>, box-info-<name>. The fixtures image-info.json and
+#              box-info.json answer `image info` and `box info` for the one image or box each
+#              describes; any other name is not found, as agent-vm says it.
 #
 # -- What it implements -------------------------------------------------------------------------
 #   --version, version --json, doctor --json, status --json, image info <name> --json,
-#   image delete <name> --json (which deletes nothing: the test changes status.json to match).
+#   image delete <name> --json, box delete <name> --json and box recreate <name> --json (which
+#   change nothing: the test changes status.json to match), box info <name> --json, and
+#   box view <name> [--interactive] --json (which shows nothing).
 # Anything else fails with status 64, so a test that reaches an unimplemented command finds out.
 
 state="${FAKE_AGENTVM_DIR:?fake_agent_vm: FAKE_AGENTVM_DIR is not set}"
@@ -96,6 +99,19 @@ case "$*" in
             /bin/cat "$fixtures/image-info.json"
         fi ;;
     "image delete "*" --json")
+        ;;
+    "box info "*" --json")
+        if [ -f "$state/box-info-$3.json" ]; then
+            /bin/cat "$state/box-info-$3.json"
+        else
+            described="$(/usr/bin/jq -r .box.name "$fixtures/box-info.json")"
+            if [ "$described" != "$3" ]; then
+                printf 'Error: no box %s; `agent-vm box list` shows the existing ones\n' "$3" >&2
+                exit 1
+            fi
+            /bin/cat "$fixtures/box-info.json"
+        fi ;;
+    "box delete "*" --json"|"box recreate "*" --json"|"box view "*" --json"|"box view "*" --interactive --json")
         ;;
     *)
         printf 'Error: fake_agent_vm does not implement: %s\n' "$*" >&2

@@ -1,0 +1,33 @@
+{
+  "box": {
+    "cpuCount": 4,
+    "createdAt": "2026-09-25T06:53:07Z",
+    "formatVersion": 1,
+    "guestProtocol": 1,
+    "image": "dev-agents",
+    "macAddress": "4a:44:e2:f9:ea:37",
+    "macOSBuild": "26A428",
+    "macOSVersion": "27.0",
+    "memoryBytes": 4294967296,
+    "name": "cadabra-spike",
+    "network": {
+      "allow": [
+        "pack:npm",
+        "opencode.ai",
+        "models.opencode.ai",
+        "pack:anthropic",
+        "html.duckduckgo.com"
+      ],
+      "mode": "allowlist"
+    },
+    "userName": "agent"
+  },
+  "diskUsage": {
+    "bytes": 40161382400,
+    "unsharedBytes": 2042597376
+  },
+  "needs": [],
+  "path": "/Users/you/Library/Application Support/agent-vm/Boxes/cadabra-spike",
+  "running": false,
+  "state": "stopped"
+}

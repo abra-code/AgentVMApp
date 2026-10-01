@@ -29,9 +29,13 @@ check "its window is AgentVM.json"             "AgentVM" "$(command_value '.COMM
 check_exists "and that file exists"            "$APP_RESOURCES/Base.lproj/AgentVM.json"
 check "the window does not block the app"      "false"   "$(command_value '.COMMAND_LIST[0].ACTIONUI_WINDOW.IS_BLOCKING')"
 check "the engine is told macOS 27 as well"    "27.0"    "$(command_value '.COMMAND_LIST[0].REQUIRED_MAC_OS_MIN_VERSION')"
-# One window: images and boxes are shown in its detail panes, not in windows of their own.
-check "the main command is the only one"     "1"       "$(command_value '.COMMAND_LIST | length')"
+# One window: images and boxes are shown in its detail panes, not in windows of their own. The
+# other commands exist only for what a handler cannot ask for itself (a folder chooser).
+check "only the main command has a window"   "AgentVM" "$(command_value '[.COMMAND_LIST[] | select(.ACTIONUI_WINDOW or .NIB_DIALOG) | .COMMAND_ID // (.NAME + ".main")] | join(" ")' | /usr/bin/sed 's/\.main$//')"
 check "and AgentVM.json the only window document" "AgentVM.json" "$(/bin/ls "$APP_RESOURCES/Base.lproj" | /usr/bin/grep -v '^MainMenu\.json$' | /usr/bin/grep '\.json$')"
+# The CHOOSE_FOLDER_DIALOG dictionary is what makes the engine ask before the handler runs.
+check "Run an Agent in Terminal... asks for a folder first" "Run avm Here" \
+    "$(command_value '.COMMAND_LIST[] | select(.COMMAND_ID == "AgentVM.main.box.agent") | .CHOOSE_FOLDER_DIALOG.BUTTON_PROMPT')"
 
 section "the main command"
 omc_run AgentVM.main

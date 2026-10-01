@@ -11,7 +11,7 @@ window_uuid="$OMC_ACTIONUI_WINDOW_UUID"
 name="$OMC_ACTIONUI_TABLE_411_COLUMN_1_VALUE"
 if [ -n "$name" ] && agentvm_valid_name "$name"; then
     ui_set image "$window_uuid" "$name"
-    main_read_image_info "$window_uuid" "$name"
+    main_read_info "$window_uuid" image "$name"
 else
     ui_set image "$window_uuid" ""
 fi

@@ -322,15 +322,171 @@ agentvm_status() {
 #   19 macOSVersion   20 macOSBuild (what the box was made with)   21 createdAt
 # The running fields (6-12) are "-" for a stopped box.
 agentvm_status_box_rows() {
-    /usr/bin/jq -r "$agentvm_jq_defs"' .boxes[] | [
-        .box.name, .state, .box.image,
-        (.box.network.mode // "open"), (.box.network.allow // [] | length),
-        .pid, .ownerPid, .project, .projectReadOnly, .activeExecs, .startedAt, .supervisorVersion,
-        (.box.disposable // false), .statusError,
-        .box.cpuCount, (if .box.memoryBytes == null then null else .box.memoryBytes / 1073741824 | floor end),
-        .path,
-        (.needs // [] | map(.kind) | if length == 0 then null else join(",") end),
-        .box.macOSVersion, .box.macOSBuild, .box.createdAt ] | row'
+    /usr/bin/jq -r "$agentvm_jq_defs$agentvm_jq_box_defs"' .boxes[] | box_cells | row'
+}
+
+# The 21 cells of a box, as agentvm_status_box_rows documents them: `status` gives each box's
+# entry, and `box info` the same entry with its sizes.
+agentvm_jq_box_defs='
+def box_cells: [
+    .box.name, .state, .box.image,
+    (.box.network.mode // "open"), (.box.network.allow // [] | length),
+    .pid, .ownerPid, .project, .projectReadOnly, .activeExecs, .startedAt, .supervisorVersion,
+    (.box.disposable // false), .statusError,
+    .box.cpuCount, (if .box.memoryBytes == null then null else .box.memoryBytes / 1073741824 | floor end),
+    .path,
+    (.needs // [] | map(.kind) | if length == 0 then null else join(",") end),
+    .box.macOSVersion, .box.macOSBuild, .box.createdAt ];'
+
+# agentvm_box_info <name>  ->  `agent-vm box info <name> --json`: the box's status entry and what
+# its disk takes, which agent-vm measures (about 0.1 s), so it is read for the selected box only
+# and never in the poll loop. A running box's entry comes from its supervisor, so a box that does
+# not answer holds this up for as long as it holds up `status`.
+agentvm_box_info() {
+    _agentvm_need_name box "$1" || return $?
+    agentvm_json box info "$1"
+}
+
+# agentvm_box_info_row  <  box info JSON  ->  one row: fields 1-21 as agentvm_status_box_rows,
+# then 22 bytes (the space the box takes)   23 unsharedBytes (what deleting it frees).
+agentvm_box_info_row() {
+    /usr/bin/jq -r "$agentvm_jq_defs$agentvm_jq_box_defs"' box_cells + [.diskUsage.bytes, .diskUsage.unsharedBytes] | row'
+}
+
+# agentvm_box_view <name> [interactive]  ->  0 once the box's supervisor shows its screen in a
+# window, or brought that window to the front. The supervisor owns the window, so the command
+# returns at once and closing the window leaves the box running. "interactive" lets keys and
+# clicks reach the box. agent-vm refuses a box that does not run.
+agentvm_box_view() {
+    _agentvm_need_name box "$1" || return $?
+    if [ "${2:-}" = "interactive" ]; then
+        agentvm_json box view "$1" --interactive >/dev/null
+        return $?
+    fi
+    agentvm_json box view "$1" >/dev/null
+}
+
+# agentvm_box_recreate <name>  ->  0 once the stopped box is made again as a fresh clone of its
+# image as the image is now, with the same name, processors, memory, network rules and disposable
+# flag. Everything written in the old box goes. agent-vm refuses a box that runs, and one whose
+# image is gone. A clone, so it takes a moment, not a job.
+agentvm_box_recreate() {
+    _agentvm_need_name box "$1" || return $?
+    agentvm_json box recreate "$1" >/dev/null
+}
+
+# agentvm_box_delete <name>  ->  0 once the box and its disk are gone. agent-vm refuses a box
+# that runs. The image it was made from is not touched.
+agentvm_box_delete() {
+    _agentvm_need_name box "$1" || return $?
+    agentvm_json box delete "$1" >/dev/null
+}
+
+# -- Terminal ------------------------------------------------------------------------------------
+# A handler has no terminal to hand the user, so what runs in Terminal is written to a .command
+# file, which Terminal runs when it opens one. Each file has a name of its own (the handler's
+# pid) and deletes itself as it starts: the shell reading it keeps it open, and two quick clicks
+# never rewrite a file Terminal has not read yet. The file names the agent-vm and the store in use
+# now, so a changed setting applies to the next one.
+agentvm_terminal_dir="$agentvm_support_dir/Terminal"
+
+# _agentvm_quote <text>  ->  the text as one single-quoted shell word.
+_agentvm_quote() {
+    printf "'%s'\n" "$(printf '%s' "$1" | /usr/bin/sed "s/'/'\\\\''/g")"
+}
+
+# _agentvm_command_file <box> <what> <command line>  ->  the path of a new .command file that
+# runs the command line (already quoted) against the store agentvm_run uses: the app's setting,
+# else the app's own AGENT_VM_HOME, else none. "None" is written out as an unset, because Terminal
+# runs the file from the user's login shell, whose profile may export an AGENT_VM_HOME the app
+# never saw: the box would then be looked for in another store.
+_agentvm_command_file() {
+    /bin/mkdir -p "$agentvm_terminal_dir"
+    local _status=$?
+    if [ "$_status" -ne 0 ]; then
+        _agentvm_refuse 1 "Could not make the folder $agentvm_terminal_dir."
+        return 1
+    fi
+    local _file="$agentvm_terminal_dir/$1-$2-$$.command"
+    local _home="$(agentvm_setting agentVMHome)"
+    [ -n "$_home" ] || _home="${AGENT_VM_HOME:-}"
+    {
+        printf '#!/bin/sh\n'
+        printf '# Written by AgentVM for box %s. It deletes itself as it starts.\n' "$1"
+        printf '/bin/rm -f "$0"\n'
+        if [ -n "$_home" ]; then
+            printf 'AGENT_VM_HOME=%s\nexport AGENT_VM_HOME\n' "$(_agentvm_quote "$_home")"
+        else
+            printf 'unset AGENT_VM_HOME\n'
+        fi
+        printf '%s\n' "$3"
+    } > "$_file"
+    _status=$?
+    if [ "$_status" -eq 0 ]; then
+        /bin/chmod 700 "$_file"
+        _status=$?
+    fi
+    if [ "$_status" -ne 0 ]; then
+        /bin/rm -f "$_file"
+        _agentvm_refuse 1 "Could not write $_file."
+        return 1
+    fi
+    printf '%s\n' "$_file"
+}
+
+# agentvm_shell_file <box>  ->  a .command file that opens a login shell in the running box.
+agentvm_shell_file() {
+    _agentvm_need_name box "$1" || return $?
+    _agentvm_command_file "$1" shell "exec $(_agentvm_quote "$(agentvm_bin)") box shell $1"
+}
+
+# agentvm_avm  ->  the path to run avm as: agent-vm knows it is avm by the name it was started
+# under. The installed one has its link beside it (~/.local/bin/avm); for a developer override or
+# the test seam, the app keeps a link named avm to it in its own folder.
+agentvm_avm() {
+    local _bin="$(agentvm_bin)"
+    local _installed_avm="${agentvm_installed%/*}/avm"
+    if [ "$_bin" = "$agentvm_installed" ] && [ -f "$_installed_avm" ] && [ -x "$_installed_avm" ]; then
+        printf '%s\n' "$_installed_avm"
+        return 0
+    fi
+    local _link="$agentvm_support_dir/bin/avm"
+    /bin/mkdir -p "$agentvm_support_dir/bin"
+    local _status=$?
+    if [ "$_status" -eq 0 ]; then
+        /bin/ln -sfn "$_bin" "$_link"
+        _status=$?
+    fi
+    if [ "$_status" -ne 0 ]; then
+        _agentvm_refuse 1 "Could not make the link $_link to $_bin."
+        return 1
+    fi
+    printf '%s\n' "$_link"
+}
+
+# agentvm_avm_file <box> <folder>  ->  a .command file that runs avm on the box from the folder:
+# avm starts the box when it is stopped, shares the folder into it at the same path, snapshots
+# it, asks what to run (an agent, or a shell), and afterwards reports what changed. The box goes
+# in with --box: as a bare word, a box named like one of avm's subcommands (new, list, agents, to,
+# help) would run that subcommand instead.
+agentvm_avm_file() {
+    _agentvm_need_name box "$1" || return $?
+    case "$2" in
+        /*) ;;
+        *)  _agentvm_refuse 2 "\"$2\" is not a folder's full path."
+            return 2 ;;
+    esac
+    if [ ! -d "$2" ]; then
+        _agentvm_refuse 2 "There is no folder at $2."
+        return 2
+    fi
+    local _avm
+    _avm="$(agentvm_avm)"
+    local _status=$?
+    if [ "$_status" -ne 0 ]; then
+        return "$_status"
+    fi
+    _agentvm_command_file "$1" agent "cd $(_agentvm_quote "$2") && exec $(_agentvm_quote "$_avm") --box $1"
 }
 
 # agentvm_status_image_rows  <  status JSON  ->  one row per image:

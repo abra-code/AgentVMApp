@@ -14,6 +14,17 @@
       },
       "REQUIRED_OMC_VERSION": "5.1",
       "REQUIRED_MAC_OS_MIN_VERSION": "27.0"
+    },
+    {
+      "NAME": "AgentVM",
+      "COMMAND_ID": "AgentVM.main.box.agent",
+      "EXECUTION_MODE": "exe_script_file",
+      "ACTIVATION_MODE": "act_always",
+      "CHOOSE_FOLDER_DIALOG": {
+        "MESSAGE": "Choose the project folder to share with the box. avm shares it at the same path, snapshots it, and afterwards reports what changed.",
+        "BUTTON_PROMPT": "Run avm Here",
+        "DIALOG_IDENTIFIER": "com.abracode.AgentVM.projectFolder"
+      }
     }
   ],
   "VERSION": 2

@@ -168,9 +168,9 @@
                               "properties": { "hidden": true, "spacing": 8.0 },
                               "children": [
                                 { "type": "Button", "id": 331, "properties": { "title": "Stop", "disabled": true } },
-                                { "type": "Button", "id": 332, "properties": { "title": "View", "disabled": true } },
-                                { "type": "Button", "id": 333, "properties": { "title": "View and Control", "disabled": true } },
-                                { "type": "Button", "id": 334, "properties": { "title": "Open Shell", "disabled": true } }
+                                { "type": "Button", "id": 332, "properties": { "title": "View", "disabled": true, "actionID": "AgentVM.main.box.view", "help": "Show the box's screen. Keys and clicks do not reach it." } },
+                                { "type": "Button", "id": 333, "properties": { "title": "View and Control", "disabled": true, "actionID": "AgentVM.main.box.control", "help": "Show the box's screen, and let keys and clicks reach it." } },
+                                { "type": "Button", "id": 334, "properties": { "title": "Open Shell", "disabled": true, "actionID": "AgentVM.main.box.shell", "help": "Open a shell in the box in Terminal." } }
                               ]
                             },
                             {
@@ -188,6 +188,16 @@
                       ]
                     },
                     {
+                      "type": "HStack",
+                      "properties": { "spacing": 8.0 },
+                      "children": [
+                        { "type": "Button", "id": 343, "properties": { "title": "Run an Agent in Terminal...", "disabled": true, "actionID": "AgentVM.main.box.agent", "help": "Choose a project folder; avm starts the box if needed, shares the folder and asks what to run." } },
+                        { "type": "Button", "id": 344, "properties": { "title": "Recreate...", "disabled": true, "actionID": "AgentVM.main.box.recreate", "help": "Make the stopped box again from its image as the image is now." } },
+                        { "type": "Spacer" },
+                        { "type": "Button", "id": 345, "properties": { "title": "Delete...", "disabled": true, "actionID": "AgentVM.main.box.delete" } }
+                      ]
+                    },
+                    {
                       "type": "Form",
                       "children": [
                         { "type": "LabeledContent", "properties": { "title": "Image" }, "children": [ { "type": "Text", "id": 351, "properties": { "text": "", "textSelection": "enabled" } } ] },
@@ -196,6 +206,7 @@
                         { "type": "LabeledContent", "properties": { "title": "Programs running" }, "children": [ { "type": "Text", "id": 354, "properties": { "text": "", "textSelection": "enabled" } } ] },
                         { "type": "LabeledContent", "properties": { "title": "Started by" }, "children": [ { "type": "Text", "id": 355, "properties": { "text": "", "textSelection": "enabled" } } ] },
                         { "type": "LabeledContent", "properties": { "title": "Processors and memory" }, "children": [ { "type": "Text", "id": 356, "properties": { "text": "", "textSelection": "enabled" } } ] },
+                        { "type": "LabeledContent", "properties": { "title": "Space" }, "children": [ { "type": "Text", "id": 360, "properties": { "text": "", "textSelection": "enabled" } } ] },
                         { "type": "LabeledContent", "properties": { "title": "Kept" }, "children": [ { "type": "Text", "id": 357, "properties": { "text": "", "textSelection": "enabled" } } ] },
                         { "type": "LabeledContent", "properties": { "title": "Created" }, "children": [ { "type": "Text", "id": 358, "properties": { "text": "", "textSelection": "enabled" } } ] },
                         { "type": "LabeledContent", "properties": { "title": "Folder" }, "children": [ { "type": "Text", "id": 359, "properties": { "text": "", "textSelection": "enabled" } } ] }

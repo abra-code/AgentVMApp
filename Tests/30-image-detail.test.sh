@@ -70,7 +70,7 @@ asks() {
 
 # pending  ->  the image a Delete question was asked about.
 pending() {
-    "$PB" "agentvm_delete_$UUID" get
+    "$PB" "agentvm_image_delete_$UUID" get
 }
 
 enabled() {
@@ -137,7 +137,7 @@ check "the images built from it" "dev-node and dev-xcode" "$(ui_value "$MAIN_IMA
 # The overlap again, with a failure: dev's failed measuring lands after dev-acp was selected.
 "$PB" "agentvm_image_$UUID" set dev-acp
 poll 1
-check "dev-acp, with dev's failure in the cache: not dev's reason" "not measured" "$(ui_value "$MAIN_IMAGE_SPACE_ID")"
+check "dev-acp after dev's failure: its own last measurement, not dev's reason" "40.0 GB" "$(ui_value "$MAIN_IMAGE_SPACE_ID" | /usr/bin/cut -d';' -f1)"
 select_image dev-node
 check "without image info, a Full Disk Access need says not granted" "not granted" "$(ui_value "$MAIN_IMAGE_FDA_ID")"
 
@@ -281,7 +281,7 @@ omc_run AgentVM.main.image.delete
 check "status fails: no question about rows that may be old" "" "$(ui_alert_title)"
 check "  the note says why" "the store is locked" "$(ui_value "$MAIN_IMAGES_NOTE_ID")"
 /bin/rm -f "$FAKE_AGENTVM_DIR/fail-status"
-"$PB" "agentvm_delete_$UUID" set "-rf"
+"$PB" "agentvm_image_delete_$UUID" set "-rf"
 : > "$FAKE_AGENTVM_DIR/log"
 omc_run AgentVM.main.image.delete.confirmed
 check "a pending name agent-vm would refuse is not passed on" "0" "$(fake_log | /usr/bin/grep -c '^image delete')"

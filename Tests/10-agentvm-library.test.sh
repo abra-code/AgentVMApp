@@ -294,6 +294,117 @@ check "  and agent-vm never ran"      "" "$(fake_log)"
 with_fake agentvm_image_delete dev-acp
 check "a valid name reaches agent-vm" "0${TAB}image delete dev-acp --json" "$?${TAB}$(fake_log)"
 
+section "box info row (box-info.json)"
+row="$(lib agentvm_box_info_row < "$FIXTURES_AGENTVM/box-info.json")"
+name="$(printf '%s\n' "$row" | col 1)"
+check "twenty-three fields"          "23" "$(printf '%s\n' "$row" | field_count)"
+check "the first twenty-one are status's row of the same box" \
+    "$(lib agentvm_status_box_rows < "$FIXTURES_AGENTVM/status.json" | row_named "$name")" "$(printf '%s\n' "$row" | col 1-21)"
+check "its space, and its own"       "40161382400${TAB}2042597376" "$(printf '%s\n' "$row" | col 22-23)"
+check "a volume that does not report its own part: -" "-" \
+    "$(/usr/bin/jq 'del(.diskUsage.unsharedBytes)' "$FIXTURES_AGENTVM/box-info.json" | lib agentvm_box_info_row | col 23)"
+
+section "box commands: names agent-vm would refuse are refused first"
+fake_reset
+for function in agentvm_box_info agentvm_box_view agentvm_box_recreate agentvm_box_delete agentvm_shell_file; do
+    with_fake "$function" "-rf" >/dev/null
+    check "$function"                "2" "$?"
+done
+with_fake agentvm_avm_file "-rf" "$OMCTEST_WORK" >/dev/null
+check "agentvm_avm_file"             "2" "$?"
+check "  with the reason"            "yes" "$(with_fake agentvm_box_delete "S3" 2>/dev/null; lib agentvm_last_error 2 | /usr/bin/grep -q -F '"S3" is not a valid box name' && echo yes)"
+check "  and agent-vm never ran"     "" "$(fake_log)"
+
+section "box commands: what reaches agent-vm"
+fake_reset
+with_fake agentvm_box_view s3
+with_fake agentvm_box_view s3 interactive
+with_fake agentvm_box_recreate s3
+with_fake agentvm_box_delete s3
+with_fake agentvm_box_info cadabra-spike >/dev/null
+check "view, view and control, recreate, delete, info" \
+    "box view s3 --json|box view s3 --interactive --json|box recreate s3 --json|box delete s3 --json|box info cadabra-spike --json" \
+    "$(fake_log | /usr/bin/paste -sd '|' -)"
+printf 'box s3 is running; stop it first\n' > "$FAKE_AGENTVM_DIR/fail-box-delete"
+with_fake agentvm_box_delete s3
+check "a refusal is agent-vm's status" "1" "$?"
+check "  and its words"              "box s3 is running; stop it first" "$(lib agentvm_last_error 1)"
+/bin/rm -f "$FAKE_AGENTVM_DIR/fail-box-delete"
+
+section "Terminal: the .command files"
+TERMINAL_DIR="$HOME/Library/Application Support/AgentVM/Terminal"
+fake_reset
+settings_clear
+file="$(with_fake agentvm_shell_file s3)"
+check "a shell file in the app's Terminal folder" "$TERMINAL_DIR" "$(/usr/bin/dirname "$file")"
+check "  named for the box, and a .command" "yes" "$(case "${file##*/}" in (s3-shell-*.command) echo yes ;; esac)"
+check "  only its owner can read or run it" "-rwx------" "$(/bin/ls -l "$file" | /usr/bin/cut -c1-10)"
+check "  deletes itself, then runs agent-vm's shell, on the store agent-vm finds by itself" \
+    "/bin/rm -f \"\$0\"|unset AGENT_VM_HOME|exec '$FAKE_AGENTVM' box shell s3" \
+    "$(/usr/bin/grep -v '^#' "$file" | /usr/bin/paste -sd '|' -)"
+check "  agent-vm never ran"         "" "$(fake_log)"
+# Terminal runs the file from the user's login shell: an AGENT_VM_HOME its profile exports must
+# not send the file to a store the app does not show. One the app itself runs with is carried.
+file="$(AGENT_VM_HOME="/Volumes/App Store"; export AGENT_VM_HOME; with_fake agentvm_shell_file s3)"
+check "the app's own AGENT_VM_HOME is carried" "AGENT_VM_HOME='/Volumes/App Store'" \
+    "$(/usr/bin/grep '^AGENT_VM_HOME=' "$file")"
+fake_reset
+file="$(with_fake agentvm_shell_file s3)"
+( AGENT_VM_HOME="/Volumes/Profile Store"; export AGENT_VM_HOME; /bin/sh "$file" )
+check "  without one, a login shell's AGENT_VM_HOME does not reach agent-vm" "(unset)" \
+    "$(/bin/cat "$FAKE_AGENTVM_DIR/home")"
+settings_write '{"agentVMHome": "/Volumes/Big Disk/it'"'"'s store"}'
+file="$(AGENT_VM_HOME="/Volumes/App Store"; export AGENT_VM_HOME; with_fake agentvm_shell_file s3)"
+check "the store setting is carried, quoted, over the app's own" "AGENT_VM_HOME='/Volumes/Big Disk/it'\\''s store'" \
+    "$(/usr/bin/grep '^AGENT_VM_HOME=' "$file")"
+settings_clear
+project="$OMCTEST_WORK/it's a project"
+/bin/mkdir -p "$project"
+file="$(with_fake agentvm_avm_file s3 "$project")"
+check "avm, run from the folder, quoted; through the app's link to the agent-vm in use" \
+    "cd '$OMCTEST_WORK/it'\\''s a project' && exec '$HOME/Library/Application Support/AgentVM/bin/avm' --box s3" \
+    "$(/usr/bin/tail -1 "$file")"
+listfile="$(with_fake agentvm_avm_file list "$project")"
+check "  a box named like an avm subcommand goes in as the box, not the subcommand" "--box list" \
+    "$(/usr/bin/tail -1 "$listfile" | /usr/bin/sed 's/^.*avm. //')"
+/bin/rm -f "$listfile"
+check "  the link is named avm and points at that agent-vm" "$FAKE_AGENTVM" \
+    "$(/usr/bin/readlink "$HOME/Library/Application Support/AgentVM/bin/avm")"
+# Two clicks are two handler processes; lib's subshells share this file's pid, so the second
+# click is a process of its own here too.
+other="$(AGENTVM_APP_AGENT_VM="$FAKE_AGENTVM" /bin/sh -c '. "$1/lib.agentvm.sh" && agentvm_avm_file s3 "$2"' sh "$APP_SCRIPTS" "$project")"
+check "  each click's file has a name of its own" "yes" \
+    "$([ -n "$other" ] && [ "$other" != "$file" ] && [ -f "$file" ] && [ -f "$other" ] && echo yes)"
+install_fake
+/bin/ln -sf "$FAKE_AGENTVM" "$HOME/.local/bin/avm"
+file="$(lib agentvm_avm_file s3 "$project")"
+check "the installed agent-vm: its own avm link" "$HOME/.local/bin/avm" \
+    "$(/usr/bin/tail -1 "$file" | /usr/bin/sed "s/^.* && exec '\\(.*\\)' --box s3\$/\\1/")"
+/bin/rm -f "$HOME/.local/bin/avm"
+file="$(lib agentvm_avm_file s3 "$project")"
+check "  without it: the app's link"  "$HOME/Library/Application Support/AgentVM/bin/avm" \
+    "$(/usr/bin/tail -1 "$file" | /usr/bin/sed "s/^.* && exec '\\(.*\\)' --box s3\$/\\1/")"
+uninstall_fake
+with_fake agentvm_avm_file s3 "relative/folder" >/dev/null
+check "a folder that is not a full path is refused" "2" "$?"
+with_fake agentvm_avm_file s3 "$OMCTEST_WORK/no such folder" >/dev/null
+check "  and one that is not there"  "2" "$?"
+check "  saying so"                  "There is no folder at $OMCTEST_WORK/no such folder." "$(lib agentvm_last_error 2)"
+# A file where the folder should be: mkdir -p fails.
+/bin/rm -rf "$TERMINAL_DIR"
+: > "$TERMINAL_DIR"
+with_fake agentvm_shell_file s3 >/dev/null 2>&1
+check "a Terminal folder that cannot be made: refused, not a file elsewhere" "1" "$?"
+/bin/rm -f "$TERMINAL_DIR"
+
+section "Terminal: a file runs as written"
+# The shell file, run as Terminal would run it: it deletes itself and execs the fake's shell.
+fake_reset
+file="$(with_fake agentvm_shell_file s3)"
+/bin/sh "$file"
+check "it ran agent-vm's shell"      "box shell s3" "$(fake_log)"
+check "  and deleted itself"         "no" "$([ -e "$file" ] && echo yes || echo no)"
+
 section "the virtual machine row"
 check "none running, two at most"    "0${TAB}2" "$(lib agentvm_status_vm_row < "$FIXTURES_AGENTVM/status.json")"
 check "one running"                  "1${TAB}2" "$(lib agentvm_status_vm_row < "$FIXTURES_AGENTVM/status-variety.json")"
@@ -323,6 +434,9 @@ missing="$(lib agentvm_status_image_rows < "$FIXTURES_AGENTVM/status.json" | /us
 check "no image field is absent" "" "$missing"
 check "no image info field is absent" "" "$(lib agentvm_image_info_row < "$FIXTURES_AGENTVM/image-info.json" | /usr/bin/awk -F'\t' '
     BEGIN { n = split("12:guestFeatures 14:provisionSeconds 15:fullDiskAccess 16:checkedAt 17:commandLineTools 18:cpus 19:memoryGB 20:bytes 21:unsharedBytes 22:addedBytes", f, " ") }
+    { for (i = 1; i <= n; i++) { split(f[i], p, ":"); if ($p[1] == "-") printf "%s ", p[2] } }')"
+check "no box info field is absent" "" "$(lib agentvm_box_info_row < "$FIXTURES_AGENTVM/box-info.json" | /usr/bin/awk -F'\t' '
+    BEGIN { n = split("1:name 2:state 3:image 15:cpus 16:memoryGB 17:path 22:bytes 23:unsharedBytes", f, " ") }
     { for (i = 1; i <= n; i++) { split(f[i], p, ":"); if ($p[1] == "-") printf "%s ", p[2] } }')"
 check "the virtual machine count is there" "0" \
     "$(lib agentvm_status_vm_row < "$FIXTURES_AGENTVM/status.json" | col 1)"

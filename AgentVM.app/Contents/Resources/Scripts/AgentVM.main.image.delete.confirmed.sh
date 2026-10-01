@@ -8,9 +8,9 @@
 
 window_uuid="$OMC_ACTIONUI_WINDOW_UUID"
 [ -n "$window_uuid" ] || exit 0
-name="$(ui_get delete "$window_uuid")"
+name="$(ui_get image_delete "$window_uuid")"
 # Read once: a second confirmation, or one without a question, deletes nothing.
-ui_set delete "$window_uuid" ""
+ui_set image_delete "$window_uuid" ""
 [ -n "$name" ] && agentvm_valid_name "$name" || exit 0
 agentvm_image_delete "$name"
 status=$?

@@ -12,7 +12,7 @@ window_uuid="$OMC_ACTIONUI_WINDOW_UUID"
 [ -n "$window_uuid" ] || exit 0
 name="$(ui_get image "$window_uuid")"
 [ -n "$name" ] || exit 0
-ui_set delete "$window_uuid" ""
+ui_set image_delete "$window_uuid" ""
 main_read_status "$window_uuid"
 read_status=$?
 # Only a question about what exists now: not when status failed (the rows would be old ones; the
@@ -23,11 +23,11 @@ if [ "$read_status" -ne 0 ]; then
     exit 0
 fi
 if [ -n "$(main_row "$window_uuid" images "$name")" ]; then
-    main_read_image_info "$window_uuid" "$name"
+    main_read_info "$window_uuid" image "$name"
 fi
 main_paint "$window_uuid"
 [ -n "$(main_row "$window_uuid" images "$name")" ] || exit 0
-ui_set delete "$window_uuid" "$name"
+ui_set image_delete "$window_uuid" "$name"
 "$dialog" "$window_uuid" omc_window omc_present_alert "Delete image $name?" \
     "$(main_image_delete_question "$window_uuid" "$name")" \
     "Cancel:cancel:" "Delete:destructive:AgentVM.main.image.delete.confirmed"
