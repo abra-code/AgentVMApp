@@ -1,0 +1,78 @@
+[
+  {
+    "command": ["box", "stop", "s3", "--json"],
+    "createdAt": "2026-09-30T11:40:00Z",
+    "endedAt": "2026-09-30T11:40:09Z",
+    "id": "20260930-114000-000101",
+    "path": "/Users/you/Library/Application Support/agent-vm/Jobs/20260930-114000-000101",
+    "startedAt": "2026-09-30T11:40:00Z",
+    "state": "done",
+    "status": 0,
+    "targets": ["box:s3"]
+  },
+  {
+    "command": ["box", "start", "try1", "--json"],
+    "createdAt": "2026-09-30T11:45:00Z",
+    "endedAt": "2026-09-30T11:45:02Z",
+    "error": "box try1 cannot start: two virtual machines are running already (s3, cadabra-spike); stop one first",
+    "id": "20260930-114500-000102",
+    "path": "/Users/you/Library/Application Support/agent-vm/Jobs/20260930-114500-000102",
+    "startedAt": "2026-09-30T11:45:00Z",
+    "state": "failed",
+    "status": 75,
+    "targets": ["box:try1"]
+  },
+  {
+    "command": ["image", "fetch-ipsw", "--json"],
+    "createdAt": "2026-09-30T11:50:00Z",
+    "endedAt": "2026-09-30T11:52:30Z",
+    "error": "canceled",
+    "id": "20260930-115000-000103",
+    "path": "/Users/you/Library/Application Support/agent-vm/Jobs/20260930-115000-000103",
+    "progress": {"event": "progress", "fraction": 0.31, "message": "Downloading the macOS restore file", "step": "download"},
+    "startedAt": "2026-09-30T11:50:00Z",
+    "state": "canceled",
+    "targets": ["ipsw"]
+  },
+  {
+    "command": ["image", "update-guest", "dev", "--json"],
+    "createdAt": "2026-09-30T11:55:00Z",
+    "endedAt": "2026-09-30T11:56:00Z",
+    "error": "the job ended without recording a result: its runner was stopped",
+    "id": "20260930-115500-000104",
+    "path": "/Users/you/Library/Application Support/agent-vm/Jobs/20260930-115500-000104",
+    "startedAt": "2026-09-30T11:55:00Z",
+    "state": "lost",
+    "targets": ["image:dev"]
+  },
+  {
+    "command": ["image", "create", "dev-new", "--from", "dev-node", "--recipe", "acp-agents", "--json"],
+    "createdAt": "2026-09-30T11:58:00Z",
+    "id": "20260930-115800-000105",
+    "notice": "Homebrew is already installed in the base image",
+    "path": "/Users/you/Library/Application Support/agent-vm/Jobs/20260930-115800-000105",
+    "progress": {"count": 5, "event": "progress", "expectedSeconds": 120, "fraction": 0.45, "image": "dev-new", "index": 2, "message": "Running the recipe\tacp-agents", "step": "provision"},
+    "startedAt": "2026-09-30T11:58:00Z",
+    "state": "running",
+    "targets": ["image:dev-new"]
+  },
+  {
+    "after": "20260930-115800-000105",
+    "command": ["image", "setup", "dev-new", "--json"],
+    "createdAt": "2026-09-30T11:58:01Z",
+    "id": "20260930-115801-000106",
+    "path": "/Users/you/Library/Application Support/agent-vm/Jobs/20260930-115801-000106",
+    "state": "queued",
+    "targets": ["image:dev-new"]
+  },
+  {
+    "command": ["box", "start", "cadabra-spike", "--json"],
+    "createdAt": "2026-09-30T11:59:50Z",
+    "id": "20260930-115950-000107",
+    "path": "/Users/you/Library/Application Support/agent-vm/Jobs/20260930-115950-000107",
+    "progress": {"box": "cadabra-spike", "event": "progress", "message": "  starting", "step": "starting"},
+    "startedAt": "2026-09-30T11:59:50Z",
+    "state": "running",
+    "targets": ["box:cadabra-spike"]
+  }
+]

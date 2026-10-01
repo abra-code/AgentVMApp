@@ -10,6 +10,7 @@ Real `--json` answers of agent-vm, which `Tests/helpers/fake_agent_vm.sh` serves
 - `box-network.json` - `agent-vm box network <name> --json` with no change, which only reads: the same box's mode and rules. The fake answers it for any box, and keeps a change per box in its state folder.
 - `packs.json` - `agent-vm box packs --json`: the host packs of the installed agent-vm.
 - `status-empty.json` - `agent-vm status --json` on an empty store.
+- `job-list.json` - `agent-vm job list --json` after one job (`box start` of a box that does not exist) was started against that empty store, where it can only fail: a job's record as agent-vm writes it. The store's path is written as the default one.
 
 Captured on 2026-09-30 from agent-vm 0.4.4 with `Tests/helpers/refresh_agentvm_fixtures.sh`, which replaces the home folder with `/Users/you` and sorts keys. When agent-vm's JSON changes, run it again with the new agent-vm and rerun the suite: the drift checks fail when a field the library reads is gone.
 
@@ -18,6 +19,8 @@ Captured on 2026-09-30 from agent-vm 0.4.4 with `Tests/helpers/refresh_agentvm_f
 `box-netlog.json` is made by hand, not captured: a real connection log lists what programs in a box reached, which does not belong in a public repository. Its ten connections hold one of each kind the network window treats differently: hosts reached through a pack, a host refused three times over a tunnel to port 443, one refused over plain HTTP to port 80 (allowed by its host name), one refused over a raw tunnel to port 80 and one refused by IP address (neither gets a rule), and a failure to resolve. Its fields are those of a real `box netlog --json` entry on agent-vm 0.4.4.
 
 `box-execlog.json` is made by hand for the same reason: a real program log lists the commands run in a box and the folders they ran in. Its six programs: one that ended at once, one that failed with status 1 in a project folder, exec's own "not found" (127), a login shell that waited on two folder prompts, a program agent-vm stopped at a prompt (143), and one with no end recorded. Its fields are those of a real `box execlog --json` entry on agent-vm 0.4.4 (`ExecLog.Record` in agent-vm's `Sources/AgentVMKit/Boxes/ExecLog.swift`).
+
+`jobs-variety.json` is made by hand: the store this Mac had held no jobs, and a running build cannot be produced on request. Seven jobs, oldest first, one in each state and of each kind the app starts or shows: a box stopped (done), a box that could not start for want of a virtual machine slot (failed, status 75), a download canceled, a guest update whose runner was stopped (lost), an image being built with a progress event that has a fraction, an index, a count and a tab in its message, and a notice; a Full Disk Access job queued after it; and a box starting. The fields are those of agent-vm's `Job` and `ProgressEvent`, and `job-list.json` is the real record they are checked against.
 
 `status-variety.json` is `status.json` edited to hold every state the window shows, since a capture holds only what the store held that day, and a wedged supervisor cannot be produced on request. The edit, which the refresher does not repeat (rerun it by hand after a refresh, and fix the tests that name what changed):
 

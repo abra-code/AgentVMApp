@@ -26,6 +26,13 @@
 #              status, image-info-<name>, box-info-<name>. The fixtures image-info.json and
 #              box-info.json answer `image info` and `box info` for the one image or box each
 #              describes; any other name is not found, as agent-vm says it.
+#   jobs.json  the jobs: what `job list` answers and what `status` carries as its `jobs`. `job start`
+#              appends a running job (queued with --after a job that has not ended), with ids
+#              20260930-120001-000001, -120002-000002 and so on; `job cancel` and `job forget`
+#              change it as agent-vm would. A job never ends by itself: the test edits jobs.json
+#              (and status.json, for what the job did) to move it on.
+#   job-start-state  when present, the state a job is in as `job start` returns ("failed"), with
+#              the text of job-start-error as its error: a job that fails within the moment.
 #
 # -- What it implements -------------------------------------------------------------------------
 #   --version, version --json, doctor --json, status --json, image info <name> --json,
@@ -37,7 +44,9 @@
 #   a change is applied to them and written to box-network-<name>.json, as agent-vm would keep
 #   it), box netlog <name> --last <n> --json (box-netlog-<name>.json in the state directory,
 #   else the fixture box-netlog.json), and box execlog <name> --last <n> --json
-#   (box-execlog-<name>.json in the state directory, else the fixture box-execlog.json).
+#   (box-execlog-<name>.json in the state directory, else the fixture box-execlog.json), and
+#   job start [--after <id>] --json -- <command...>, job list --json, job cancel <id> --json and
+#   job forget <id> --json (see jobs.json above).
 # Anything else fails with status 64, so a test that reaches an unimplemented command finds out.
 
 state="${FAKE_AGENTVM_DIR:?fake_agent_vm: FAKE_AGENTVM_DIR is not set}"
@@ -80,6 +89,15 @@ answer() {
     fi
 }
 
+# jobs  ->  the fake's jobs: jobs.json in the state directory, else none.
+jobs() {
+    if [ -f "$state/jobs.json" ]; then
+        /bin/cat "$state/jobs.json"
+    else
+        printf '[]\n'
+    fi
+}
+
 case "$*" in
     "--version")
         if [ -f "$state/version" ]; then
@@ -92,7 +110,12 @@ case "$*" in
     "doctor --json")
         answer doctor ;;
     "status --json")
-        answer status ;;
+        # The jobs the fake holds, when it holds any, are the store's jobs.
+        if [ -f "$state/jobs.json" ]; then
+            answer status | /usr/bin/jq --slurpfile jobs "$state/jobs.json" '.jobs = $jobs[0]'
+        else
+            answer status
+        fi ;;
     "image info "*" --json")
         if [ -f "$state/image-info-$3.json" ]; then
             /bin/cat "$state/image-info-$3.json"
@@ -151,6 +174,88 @@ case "$*" in
         fi ;;
     "box delete "*" --json"|"box recreate "*" --json"|"box view "*" --json"|"box view "*" --interactive --json")
         ;;
+    "job start "*)
+        shift 2
+        after=""
+        [ "$1" = "--json" ] && shift
+        if [ "$1" = "--after" ]; then
+            after="$2"
+            shift 2
+        fi
+        [ "$1" = "--json" ] && shift
+        [ "$1" = "--" ] || exit 64
+        shift
+        case "$1 $2" in
+            "image create"|"image update-guest"|"image setup"|"image fetch-ipsw"|"box start"|"box stop") ;;
+            *)  printf 'Error: a job runs image create, image update-guest, image setup, image fetch-ipsw, box start and box stop; not `%s`\n' "$*" >&2
+                exit 64 ;;
+        esac
+        job_state="running"
+        # job-start-state, when present: the state the new job is already in when `job start`
+        # returns, with job-start-error as its error (a job that fails within the moment).
+        [ -f "$state/job-start-state" ] && job_state="$(/bin/cat "$state/job-start-state")"
+        if [ -n "$after" ]; then
+            after_state="$(jobs | /usr/bin/jq -r --arg id "$after" '.[] | select(.id == $id) | .state')"
+            case "$after_state" in
+                "")     printf 'Error: %s is not a job id (`agent-vm job list` shows them)\n' "$after" >&2
+                        exit 1 ;;
+                failed|canceled|lost)
+                        printf 'Error: job %s %s, so a job after it would never run\n' "$after" "$after_state" >&2
+                        exit 1 ;;
+                done)   ;;
+                *)      job_state="queued" ;;
+            esac
+        fi
+        count="$(/bin/cat "$state/job-count" 2>/dev/null)"
+        count=$(( ${count:-0} + 1 ))
+        printf '%s\n' "$count" > "$state/job-count"
+        id="$(printf '20260930-1200%02d-%06d' "$count" "$count")"
+        case "$1" in
+            box)   target="box:$3" ;;
+            image) target="image:$3"
+                   [ "$2" = "fetch-ipsw" ] && target="ipsw" ;;
+        esac
+        printf '%s\n' "$@" | /usr/bin/jq -R . | /usr/bin/jq -s --arg id "$id" --arg state "$job_state" --arg target "$target" --arg after "$after" \
+            --arg error "$(/bin/cat "$state/job-start-error" 2>/dev/null)" '
+            { command: (if any(. == "--json") then . else . + ["--json"] end), createdAt: "2026-09-30T12:00:00Z", id: $id,
+              path: ("/Users/you/Library/Application Support/agent-vm/Jobs/" + $id), state: $state, targets: [$target] }
+            | if $state != "queued" then .startedAt = "2026-09-30T12:00:00Z" else . end
+            | if $state == "failed" then . + {endedAt: "2026-09-30T12:00:01Z", status: 1, error: $error} else . end
+            | if $after != "" then .after = $after else . end' > "$state/job-new.json"
+        jobs | /usr/bin/jq --slurpfile new "$state/job-new.json" '. + $new' > "$state/jobs.json.new" \
+            && /bin/mv "$state/jobs.json.new" "$state/jobs.json"
+        /bin/cat "$state/job-new.json"
+        /bin/rm -f "$state/job-new.json" ;;
+    "job list --json")
+        jobs ;;
+    "job cancel "*" --json"|"job forget "*" --json")
+        job_state="$(jobs | /usr/bin/jq -r --arg id "$3" '.[] | select(.id == $id) | .state')"
+        if [ -z "$job_state" ]; then
+            printf 'Error: %s is not a job id (`agent-vm job list` shows them)\n' "$3" >&2
+            exit 1
+        fi
+        jobs | /usr/bin/jq --arg id "$3" '.[] | select(.id == $id)' > "$state/job-was.json"
+        case "$2 $job_state" in
+            "cancel running"|"cancel queued")
+                # The job ends canceled, and so does every job queued after it.
+                jobs | /usr/bin/jq --arg id "$3" '
+                    def ended: . + {state: "canceled", endedAt: "2026-09-30T12:00:30Z", error: "canceled"};
+                    map(if .id == $id then ended elif .after == $id and .state == "queued"
+                        then ended + {error: ("job " + $id + " was canceled")} else . end)' > "$state/jobs.json.new" \
+                    && /bin/mv "$state/jobs.json.new" "$state/jobs.json"
+                jobs | /usr/bin/jq --arg id "$3" '.[] | select(.id == $id)' ;;
+            "cancel "*)
+                printf 'Error: job %s is not running\n' "$3" >&2
+                exit 1 ;;
+            "forget running"|"forget queued")
+                printf 'Error: job %s still runs; cancel it first\n' "$3" >&2
+                exit 1 ;;
+            *)
+                jobs | /usr/bin/jq --arg id "$3" 'map(select(.id != $id))' > "$state/jobs.json.new" \
+                    && /bin/mv "$state/jobs.json.new" "$state/jobs.json"
+                /bin/cat "$state/job-was.json" ;;
+        esac
+        /bin/rm -f "$state/job-was.json" ;;
     *)
         printf 'Error: fake_agent_vm does not implement: %s\n' "$*" >&2
         exit 64 ;;

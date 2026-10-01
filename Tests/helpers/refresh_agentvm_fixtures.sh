@@ -7,7 +7,8 @@
 # `box list`, deletes no stopped disposable box), `image info` of one image, `box info` and the
 # rules (`box network` with no change) of one box, and `box packs`, against the
 # store agent-vm finds by itself (AGENT_VM_HOME, or ~/Library/Application Support/agent-vm),
-# and `status` again against an empty store in a temporary folder. Each answer is re-serialized
+# and, against an empty store in a temporary folder, `status` again and one job that can only
+# fail, for the shape of a job's record. Each answer is re-serialized
 # with sorted keys, and the home folder in every string is replaced with /Users/you, so a capture
 # names no real account.
 #
@@ -91,5 +92,23 @@ capture packs box packs --json
 status=$?
 [ "$status" -eq 0 ] || fail "cannot make an empty store in $work"
 AGENT_VM_HOME="$work/empty-store" capture status-empty status --json
+
+# A job's record: one job started against the empty store, where it can only fail (there is no
+# such box), so nothing outside the temporary folder changes. It ends within a second; the wait
+# is for its runner to record the end. The store's path in the record is replaced like the home
+# folder, since the temporary folder has a new name every time.
+AGENT_VM_HOME="$work/empty-store" "$agentvm" job start -- box start nosuch > /dev/null 2> "$work/job-start.err"
+status=$?
+if [ "$status" -ne 0 ]; then
+    /bin/cat "$work/job-start.err" >&2
+    fail "agent-vm job start failed with status $status"
+fi
+/bin/sleep 2
+AGENT_VM_HOME="$work/empty-store" capture job-list job list --json
+/usr/bin/jq -S 'walk(if type == "string" then sub("^.*/empty-store"; "/Users/you/Library/Application Support/agent-vm") else . end)' \
+    "$fixtures/job-list.json" > "$work/job-list.clean.json"
+status=$?
+[ "$status" -eq 0 ] || fail "cannot rewrite the store path in job-list.json"
+/bin/mv -f "$work/job-list.clean.json" "$fixtures/job-list.json"
 
 printf 'Done. Run the suite; update the README beside the fixtures with the date and version.\n'

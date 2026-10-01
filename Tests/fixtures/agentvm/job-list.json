@@ -1,0 +1,21 @@
+[
+  {
+    "command": [
+      "box",
+      "start",
+      "nosuch",
+      "--json"
+    ],
+    "createdAt": "2026-10-01T09:49:34Z",
+    "endedAt": "2026-10-01T09:49:34Z",
+    "error": "no box nosuch; `agent-vm box list` shows the existing ones",
+    "id": "20261001-094934-164111",
+    "path": "/Users/you/Library/Application Support/agent-vm/Jobs/20261001-094934-164111",
+    "startedAt": "2026-10-01T09:49:34Z",
+    "state": "failed",
+    "status": 1,
+    "targets": [
+      "box:nosuch"
+    ]
+  }
+]

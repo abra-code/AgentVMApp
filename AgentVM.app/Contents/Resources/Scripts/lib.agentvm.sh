@@ -675,3 +675,105 @@ agentvm_image_delete() {
 agentvm_status_vm_row() {
     /usr/bin/jq -r "$agentvm_jq_defs"' [.runningVMs.count, .runningVMs.limit] | row'
 }
+
+# -- Jobs ----------------------------------------------------------------------------------------
+# What takes longer than a handler may wait (starting or stopping a box, building or updating an
+# image, a download) runs as an agent-vm job: a detached process that outlives the handler, the
+# window and the app, with its record in the store, where `status` and `job list` show it to this
+# app, to Cadabra and to Terminal alike. These functions are the only place that knows how jobs
+# are started and read; handlers and tests see nothing of `agent-vm job` itself.
+
+# agentvm_valid_job_id <id>  ->  0 when it has the form of a job id (digits, the hex digits a to f
+# and "-", starting with a digit, as in 20261001-094934-a1b2c3: the time and six random hex
+# digits). Checked because an id is an argv element and comes back from a pasteboard or a table row.
+agentvm_valid_job_id() {
+    case "$1" in
+        [0123456789]*) ;;
+        *) return 1 ;;
+    esac
+    case "$1" in
+        *[!0123456789abcdef-]*) return 1 ;;
+    esac
+    [ "${#1}" -le 40 ]
+}
+
+# _agentvm_need_job <id>  ->  0, or refuses an id agent-vm would not have given.
+_agentvm_need_job() {
+    agentvm_valid_job_id "$1" && return 0
+    _agentvm_refuse 2 "\"$1\" is not a job id."
+}
+
+# _agentvm_job_start <after: a job id, or -> <agent-vm args...>  ->  the new job's id on stdout, and
+# agent-vm's status. `job start` checks the command before the job starts, so a refusal (a
+# command no job runs, a job to wait for that already failed) comes back here; what the command
+# itself finds (an unknown box, no free slot) fails the job in the background.
+# --json belongs before the "--": after it, everything is the job's command.
+_agentvm_job_start() {
+    local _after="$1"
+    shift
+    /bin/rm -f "$agentvm_err_file"
+    local _json _status
+    if [ "$_after" = "-" ]; then
+        _json="$(agentvm_run job start --json -- "$@" 2>"$agentvm_err_file")"
+        _status=$?
+    else
+        _agentvm_need_job "$_after" || return $?
+        _json="$(agentvm_run job start --after "$_after" --json -- "$@" 2>"$agentvm_err_file")"
+        _status=$?
+    fi
+    [ "$_status" -eq 0 ] || return "$_status"
+    /bin/rm -f "$agentvm_err_file"
+    local _id="$(printf '%s\n' "$_json" | /usr/bin/jq -r '.id // empty' 2>/dev/null)"
+    if ! agentvm_valid_job_id "$_id"; then
+        _agentvm_refuse 1 "agent-vm started a job and did not say which."
+        return $?
+    fi
+    printf '%s\n' "$_id"
+}
+
+# agentvm_job_box_start <name>  ->  the id of a job that starts the box, with no owner: it runs
+# until it is stopped, whether or not the app is running, as a box started in Terminal does.
+# agentvm_job_box_stop <name>   ->  the id of a job that stops it.
+agentvm_job_box_start() {
+    _agentvm_need_name box "$1" || return $?
+    _agentvm_job_start - box start "$1"
+}
+agentvm_job_box_stop() {
+    _agentvm_need_name box "$1" || return $?
+    _agentvm_job_start - box stop "$1"
+}
+
+# agentvm_job_list  ->  the jobs as JSON: those that run, and those that ended in the last week.
+# `status` carries those that run or wait and those that ended in the last hour, which is all a
+# window that follows its jobs needs; the week is for a report of what ended while the app was
+# closed.
+agentvm_job_list() {
+    agentvm_json job list
+}
+
+# agentvm_job_rows  <  status JSON, or `job list` JSON  ->  one row per job, oldest first:
+#    1 id   2 state (queued, running, done, failed, canceled, lost)
+#    3 target, the first one ("box:<name>", "image:<name>" or "ipsw")
+#    4 what it does, the command's first two words ("box start", "image create")
+#    5 status (the exit status, once it ended)   6 createdAt   7 startedAt   8 endedAt
+#    9 the last progress event's step   10 its fraction (0-1)   11 its index   12 its count
+#   13 its message   14 the last notice   15 error (after it failed or was canceled)
+#   16 after (the job it waits for)
+agentvm_job_rows() {
+    /usr/bin/jq -r "$agentvm_jq_defs"' (if type == "array" then . else (.jobs // []) end)[]
+        | [.id, .state, (.targets // [])[0], ((.command // [])[0:2] | join(" ")), .status, .createdAt, .startedAt, .endedAt,
+           .progress.step, .progress.fraction, .progress.index, .progress.count, .progress.message, .notice, .error, .after]
+        | row'
+}
+
+# agentvm_job_cancel <id>  ->  0 once the job was asked to stop; it stops at its next safe point and
+# ends canceled. agent-vm refuses a job that is not running or queued.
+# agentvm_job_forget <id>  ->  0 once a finished job's record is gone. agent-vm refuses a running one.
+agentvm_job_cancel() {
+    _agentvm_need_job "$1" || return $?
+    agentvm_json job cancel "$1" >/dev/null
+}
+agentvm_job_forget() {
+    _agentvm_need_job "$1" || return $?
+    agentvm_json job forget "$1" >/dev/null
+}
