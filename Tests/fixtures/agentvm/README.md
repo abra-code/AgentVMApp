@@ -17,6 +17,8 @@ Captured on 2026-09-30 from agent-vm 0.4.4 with `Tests/helpers/refresh_agentvm_f
 
 `box-netlog.json` is made by hand, not captured: a real connection log lists what programs in a box reached, which does not belong in a public repository. Its ten connections hold one of each kind the network window treats differently: hosts reached through a pack, a host refused three times over a tunnel to port 443, one refused over plain HTTP to port 80 (allowed by its host name), one refused over a raw tunnel to port 80 and one refused by IP address (neither gets a rule), and a failure to resolve. Its fields are those of a real `box netlog --json` entry on agent-vm 0.4.4.
 
+`box-execlog.json` is made by hand for the same reason: a real program log lists the commands run in a box and the folders they ran in. Its six programs: one that ended at once, one that failed with status 1 in a project folder, exec's own "not found" (127), a login shell that waited on two folder prompts, a program agent-vm stopped at a prompt (143), and one with no end recorded. Its fields are those of a real `box execlog --json` entry on agent-vm 0.4.4 (`ExecLog.Record` in agent-vm's `Sources/AgentVMKit/Boxes/ExecLog.swift`).
+
 `status-variety.json` is `status.json` edited to hold every state the window shows, since a capture holds only what the store held that day, and a wedged supervisor cannot be produced on request. The edit, which the refresher does not repeat (rerun it by hand after a refresh, and fix the tests that name what changed):
 
 ```sh

@@ -39,6 +39,20 @@
         "WINDOW_DID_ACTIVATE_SUBCOMMAND_ID": "AgentVM.network.activated",
         "END_CANCEL_SUBCOMMAND_ID": "AgentVM.network.close"
       }
+    },
+    {
+      "NAME": "AgentVM",
+      "COMMAND_ID": "AgentVM.programs",
+      "ACTIVATION_MODE": "act_always",
+      "EXECUTION_MODE": "exe_script_file",
+      "ACTIONUI_WINDOW": {
+        "JSON_NAME": "AgentVM.programs",
+        "IS_BLOCKING": false,
+        "WINDOW_TITLE": "Programs",
+        "INIT_SUBCOMMAND_ID": "AgentVM.programs.init",
+        "WINDOW_DID_ACTIVATE_SUBCOMMAND_ID": "AgentVM.programs.activated",
+        "END_CANCEL_SUBCOMMAND_ID": "AgentVM.programs.close"
+      }
     }
   ],
   "VERSION": 2

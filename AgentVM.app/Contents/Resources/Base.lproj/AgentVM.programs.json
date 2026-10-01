@@ -1,0 +1,45 @@
+{
+  "type": "VStack",
+  "properties": {
+    "alignment": "leading",
+    "spacing": 10.0,
+    "padding": 20.0,
+    "frame": { "minWidth": 600.0, "minHeight": 360.0, "idealWidth": 760.0, "idealHeight": 500.0 }
+  },
+  "children": [
+    {
+      "type": "HStack",
+      "properties": { "spacing": 8.0 },
+      "children": [
+        { "type": "Text", "properties": { "text": "Programs run in the box, newest first", "font": "headline" } },
+        { "type": "Spacer" },
+        { "type": "Button", "id": 653, "properties": { "title": "Refresh", "actionID": "AgentVM.programs.refresh" } }
+      ]
+    },
+    {
+      "type": "Table",
+      "id": 651,
+      "properties": {
+        "columns": [ "Started", "Command", "Status", "Took", "User" ],
+        "widths": [ 105, 260, 150, 55, 50 ],
+        "minWidths": [ 90, 120, 80, 40, 40 ],
+        "frame": { "maxWidth": "infinity", "minHeight": 120, "maxHeight": "infinity" }
+      }
+    },
+    {
+      "type": "Text",
+      "id": 652,
+      "properties": {
+        "text": "",
+        "foregroundStyle": "orange",
+        "textSelection": "enabled",
+        "frame": { "maxWidth": "infinity", "alignment": "leading" }
+      }
+    },
+    {
+      "type": "Text",
+      "id": 654,
+      "properties": { "text": "", "font": "caption", "foregroundStyle": "secondary", "textSelection": "enabled" }
+    }
+  ]
+}

@@ -206,7 +206,10 @@
                           { "type": "Button", "id": 361, "properties": { "title": "Details...", "controlSize": "small", "actionID": "AgentVM.main.box.network", "help": "Open the box's network window: what it may reach, and the connections it made lately." } }
                         ] } ] },
                         { "type": "LabeledContent", "properties": { "title": "Project folder" }, "children": [ { "type": "Text", "id": 353, "properties": { "text": "", "textSelection": "enabled" } } ] },
-                        { "type": "LabeledContent", "properties": { "title": "Programs running" }, "children": [ { "type": "Text", "id": 354, "properties": { "text": "", "textSelection": "enabled" } } ] },
+                        { "type": "LabeledContent", "properties": { "title": "Programs running" }, "children": [ { "type": "HStack", "properties": { "spacing": 8.0 }, "children": [
+                          { "type": "Text", "id": 354, "properties": { "text": "", "textSelection": "enabled" } },
+                          { "type": "Button", "id": 362, "properties": { "title": "Details...", "controlSize": "small", "actionID": "AgentVM.main.box.programs", "help": "Open the box's programs window: what ran in it, and the permission prompts programs waited on." } }
+                        ] } ] },
                         { "type": "LabeledContent", "properties": { "title": "Started by" }, "children": [ { "type": "Text", "id": 355, "properties": { "text": "", "textSelection": "enabled" } } ] },
                         { "type": "LabeledContent", "properties": { "title": "Processors and memory" }, "children": [ { "type": "Text", "id": 356, "properties": { "text": "", "textSelection": "enabled" } } ] },
                         { "type": "LabeledContent", "properties": { "title": "Space" }, "children": [ { "type": "Text", "id": 360, "properties": { "text": "", "textSelection": "enabled" } } ] },

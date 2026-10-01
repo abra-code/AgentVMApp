@@ -16,7 +16,7 @@
 #
 # A DETAIL PANE IS AN OVERVIEW. What has work of its own opens in a window of its own, one per
 # box, from a Details... button on the pane's row (lib.agentvm.ui.sh, "Box windows"): a box's
-# network is lib.agentvm.network.sh.
+# network is lib.agentvm.network.sh, and what ran in it lib.agentvm.programs.sh.
 #
 # READING AND PAINTING ARE SEPARATE. main_read_* run agent-vm and leave its answers in the
 # window's cache folder (lib.agentvm.ui.sh); main_paint_* only read the caches. So a handler that
@@ -71,6 +71,7 @@ MAIN_BOX_NETWORK_ID=352
 MAIN_BOX_NETWORK_DETAILS_ID=361
 MAIN_BOX_PROJECT_ID=353
 MAIN_BOX_PROGRAMS_ID=354
+MAIN_BOX_PROGRAMS_DETAILS_ID=362
 MAIN_BOX_OWNER_ID=355
 MAIN_BOX_HARDWARE_ID=356
 MAIN_BOX_KEPT_ID=357

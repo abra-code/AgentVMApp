@@ -474,6 +474,34 @@ agentvm_box_netlog() {
     agentvm_json box netlog "$1" --last "$2"
 }
 
+# agentvm_box_execlog <name> <last>  ->  `agent-vm box execlog <name> --last <last> --json`: the last
+# programs `agent-vm exec` and `box shell` ran in the box, oldest first, for agentvm_execlog_rows.
+agentvm_box_execlog() {
+    _agentvm_need_name box "$1" || return $?
+    case "$2" in
+        ''|*[!0123456789]*) _agentvm_refuse 2 "\"$2\" is not a count."
+                            return 2 ;;
+    esac
+    agentvm_json box execlog "$1" --last "$2"
+}
+
+# agentvm_execlog_rows  <  box execlog JSON  ->  one row per program, newest first:
+#   1 started (this Mac's time zone: "Sep 26 11:04:39")   2 seconds it ran (whole; "-" while it runs
+#   or when no end was recorded)   3 exit status ("-" likewise; 125-127 are exec's own failures)
+#   4 user   5 the command, each argument quoted only when it needs it   6 hostPid (the client
+#   on this Mac)   7 the permission prompts it waited on, "; "-joined   8 stoppedOnPrompt (true when
+#   agent-vm stopped it at one)
+# agent-vm leaves the status empty both while a program runs and when its client died without
+# writing an end; the window tells them apart.
+agentvm_execlog_rows() {
+    /usr/bin/jq -r "$agentvm_jq_defs"' reverse | .[] | [
+        (.started | fromdateiso8601? // null | if . == null then null else strflocaltime("%b %e %H:%M:%S") end),
+        (if .seconds == null then null else .seconds | floor end), .status, .user,
+        (.argv // [] | map(if test("^[A-Za-z0-9_@%+=:,./-]+$") then . else @sh end) | join(" ")),
+        .hostPid, (.prompts // [] | if length == 0 then null else join("; ") end),
+        (.stoppedOnPrompt // false) ] | row'
+}
+
 # agentvm_netlog_rows  <  box netlog JSON  ->  one row per connection: time, decision (allowed,
 # denied or failed), host, port, method, why (the rule that allowed it, else agent-vm's reason).
 agentvm_netlog_rows() {

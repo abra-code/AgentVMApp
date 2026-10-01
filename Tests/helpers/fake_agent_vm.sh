@@ -35,8 +35,9 @@
 #   box network <name> [--net <mode>] [--allow <rule> ...] [--disallow <rule> ...] --json (the
 #   rules from box-network-<name>.json in the state directory, else the fixture box-network.json;
 #   a change is applied to them and written to box-network-<name>.json, as agent-vm would keep
-#   it), and box netlog <name> --last <n> --json (box-netlog-<name>.json in the state directory,
-#   else the fixture box-netlog.json).
+#   it), box netlog <name> --last <n> --json (box-netlog-<name>.json in the state directory,
+#   else the fixture box-netlog.json), and box execlog <name> --last <n> --json
+#   (box-execlog-<name>.json in the state directory, else the fixture box-execlog.json).
 # Anything else fails with status 64, so a test that reaches an unimplemented command finds out.
 
 state="${FAKE_AGENTVM_DIR:?fake_agent_vm: FAKE_AGENTVM_DIR is not set}"
@@ -141,6 +142,12 @@ case "$*" in
             /bin/cat "$state/box-netlog-$3.json"
         else
             /bin/cat "$fixtures/box-netlog.json"
+        fi ;;
+    "box execlog "*" --last "*" --json")
+        if [ -f "$state/box-execlog-$3.json" ]; then
+            /bin/cat "$state/box-execlog-$3.json"
+        else
+            /bin/cat "$fixtures/box-execlog.json"
         fi ;;
     "box delete "*" --json"|"box recreate "*" --json"|"box view "*" --json"|"box view "*" --interactive --json")
         ;;

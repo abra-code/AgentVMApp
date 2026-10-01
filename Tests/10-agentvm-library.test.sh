@@ -461,6 +461,28 @@ check "another port: named"          "example.org:8443" "$(built example.org 844
 check "a raw tunnel to 80, an address, public: none" "- - -" \
     "$(built raw.example.org 80 CONNECT) $(built 203.0.113.9 443 CONNECT) $(built public 443 CONNECT)"
 
+section "a box's programs (box-execlog.json)"
+rows="$( TZ=UTC; export TZ; lib agentvm_execlog_rows < "$FIXTURES_AGENTVM/box-execlog.json")"
+check "eight fields in every row"    "8" "$(printf '%s\n' "$rows" | field_count)"
+check "newest first"                 "claude|/usr/bin/true" \
+    "$(printf '%s\n' "$rows" | /usr/bin/sed -n '1p;$p' | col 5 | /usr/bin/paste -sd '|' -)"
+check "started, in this Mac's time zone (UTC here); whole seconds; the status; the user" \
+    "Sep 30 09:01:00${TAB}47${TAB}1${TAB}agent" "$(printf '%s\n' "$rows" | /usr/bin/sed -n '5p' | col 1-4)"
+check "an argument quoted only when it needs it" "/bin/sh -lc 'npm test'" "$(printf '%s\n' "$rows" | /usr/bin/sed -n '5p' | col 5)"
+check "  quotes inside one kept" "/bin/sh -c 'exec \"\$SHELL\" -l'" "$(printf '%s\n' "$rows" | /usr/bin/sed -n '3p' | col 5)"
+check "no end recorded: no seconds, no status; its client" "-${TAB}-${TAB}70002" \
+    "$(printf '%s\n' "$rows" | /usr/bin/sed -n '1p' | /usr/bin/cut -f2,3,6)"
+check "the prompts it waited on"     "the Downloads folder; the Desktop folder${TAB}false" \
+    "$(printf '%s\n' "$rows" | /usr/bin/sed -n '3p' | col 7-8)"
+check "stopped at a prompt"          "true" "$(printf '%s\n' "$rows" | /usr/bin/sed -n '2p' | col 8)"
+fake_reset
+with_fake agentvm_box_execlog s3 200 >/dev/null
+check "what reaches agent-vm"        "box execlog s3 --last 200 --json" "$(fake_log)"
+with_fake agentvm_box_execlog s3 "all" >/dev/null
+check "a count that is not one is refused" "2" "$?"
+with_fake agentvm_box_execlog "-rf" 200 >/dev/null
+check "  and a name agent-vm would refuse" "2" "$?"
+
 section "the virtual machine row"
 check "none running, two at most"    "0${TAB}2" "$(lib agentvm_status_vm_row < "$FIXTURES_AGENTVM/status.json")"
 check "one running"                  "1${TAB}2" "$(lib agentvm_status_vm_row < "$FIXTURES_AGENTVM/status-variety.json")"

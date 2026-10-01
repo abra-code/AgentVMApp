@@ -1,0 +1,90 @@
+[
+  {
+    "argv": [
+      "/usr/bin/true"
+    ],
+    "guestPid": 801,
+    "hostPid": 70001,
+    "id": "30090000",
+    "seconds": 0.083,
+    "started": "2026-09-30T09:00:00Z",
+    "status": 0,
+    "user": "agent"
+  },
+  {
+    "argv": [
+      "/bin/sh",
+      "-lc",
+      "npm test"
+    ],
+    "cwd": "/Users/you/src/app",
+    "guestPid": 801,
+    "hostPid": 70001,
+    "id": "30090100",
+    "project": "/Users/you/src/app",
+    "readOnly": false,
+    "seconds": 47.722,
+    "started": "2026-09-30T09:01:00Z",
+    "status": 1,
+    "user": "agent"
+  },
+  {
+    "argv": [
+      "nosuchtool"
+    ],
+    "guestPid": 801,
+    "hostPid": 70001,
+    "id": "30090200",
+    "seconds": 0.05,
+    "started": "2026-09-30T09:02:00Z",
+    "status": 127,
+    "user": "agent"
+  },
+  {
+    "argv": [
+      "/bin/sh",
+      "-c",
+      "exec \"$SHELL\" -l"
+    ],
+    "guestPid": 801,
+    "hostPid": 70001,
+    "id": "30090300",
+    "prompts": [
+      "the Downloads folder",
+      "the Desktop folder"
+    ],
+    "seconds": 533.453,
+    "started": "2026-09-30T09:03:00Z",
+    "status": 0,
+    "terminal": true,
+    "user": "agent"
+  },
+  {
+    "argv": [
+      "/usr/bin/open",
+      "/Users/agent/Documents"
+    ],
+    "guestPid": 801,
+    "hostPid": 70001,
+    "id": "30092000",
+    "prompts": [
+      "the Documents folder"
+    ],
+    "seconds": 3.2,
+    "started": "2026-09-30T09:20:00Z",
+    "status": 143,
+    "stoppedOnPrompt": true,
+    "user": "agent"
+  },
+  {
+    "argv": [
+      "claude"
+    ],
+    "guestPid": 801,
+    "hostPid": 70002,
+    "id": "30093000",
+    "started": "2026-09-30T09:30:00Z",
+    "terminal": true,
+    "user": "agent"
+  }
+]
