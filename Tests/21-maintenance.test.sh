@@ -95,6 +95,14 @@ open_with '(.images[] | select(.name == "latest-test")).needs = [{kind: "full-di
 check "is still not marked: its card says Failed" "$TAB" "$(image_mark latest-test)"
 check "  and its pane lists nothing" "" "$(image_lines latest-test)"
 
+section "an image behind the newest macOS"
+open_with "$QUIET"' | (.images[] | select(.name == "dev-node")) |= (.needs = [{kind: "full-disk-access", reason: "not-granted"}]
+    | .macOSUpdate = {version: "27.0.1", build: "26A434", checkedAt: "2026-09-29T09:00:00Z"})'
+check "marked" "$MARK" "$(image_mark dev-node)"
+check "the newer macOS comes after what the image needs" \
+    "Needs maintenance|Needs Full Disk Access, or programs in its boxes cannot open Desktop, Documents or Downloads.|macOS 27.0.1 is available. Update... installs it, in about 15 minutes." \
+    "$(image_lines dev-node)"
+
 section "nothing needs doing"
 open_with "$QUIET"
 check "no card is marked" "" "$( { ui_rows "$MAIN_IMAGES_ID"; ui_rows "$MAIN_BOXES_ID"; } | col 4-5 | /usr/bin/tr -d "$TAB\n")"

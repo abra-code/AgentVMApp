@@ -127,7 +127,7 @@ case "$*" in
         answer version ;;
     "doctor --json")
         answer doctor ;;
-    "status --json")
+    "status --json"|"status --check-updates --json")
         # The jobs the fake holds, when it holds any, are the store's jobs.
         if [ -f "$state/jobs.json" ]; then
             jobs > "$state/jobs-now.json"

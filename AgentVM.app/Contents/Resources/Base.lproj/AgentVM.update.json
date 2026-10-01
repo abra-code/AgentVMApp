@@ -1,0 +1,80 @@
+{
+  "type": "VStack",
+  "properties": {
+    "alignment": "leading",
+    "spacing": 14.0,
+    "padding": 20.0,
+    "frame": { "minWidth": 600.0, "minHeight": 540.0, "idealWidth": 640.0, "idealHeight": 580.0 }
+  },
+  "children": [
+    {
+      "type": "VStack",
+      "properties": { "alignment": "leading", "spacing": 4.0 },
+      "children": [
+        { "type": "Text", "id": 801, "properties": { "text": "", "font": "title2", "textSelection": "enabled" } },
+        { "type": "Text", "id": 802, "properties": { "text": "", "foregroundStyle": "secondary", "textSelection": "enabled" } }
+      ]
+    },
+    { "type": "Divider" },
+    {
+      "type": "VStack",
+      "properties": { "alignment": "leading", "spacing": 4.0 },
+      "children": [
+        {
+          "type": "HStack",
+          "properties": { "spacing": 8.0 },
+          "children": [
+            { "type": "Toggle", "id": 811, "properties": { "title": "macOS", "style": "checkbox", "actionID": "AgentVM.update.choice" } },
+            { "type": "Spacer" },
+            { "type": "Button", "id": 813, "properties": { "title": "Check Now", "controlSize": "small", "actionID": "AgentVM.update.check", "help": "Ask Apple which macOS is the newest. Needs the internet; nothing is installed." } }
+          ]
+        },
+        { "type": "Text", "id": 812, "properties": { "text": "", "foregroundStyle": "secondary", "textSelection": "enabled", "padding": { "leading": 20 }, "frame": { "maxWidth": "infinity", "alignment": "leading" } } }
+      ]
+    },
+    {
+      "type": "VStack",
+      "properties": { "alignment": "leading", "spacing": 4.0 },
+      "children": [
+        { "type": "Toggle", "id": 821, "properties": { "title": "Tools", "style": "checkbox", "actionID": "AgentVM.update.choice" } },
+        { "type": "Text", "id": 822, "properties": { "text": "", "foregroundStyle": "secondary", "textSelection": "enabled", "padding": { "leading": 20 }, "frame": { "maxWidth": "infinity", "alignment": "leading" } } }
+      ]
+    },
+    {
+      "type": "VStack",
+      "properties": { "alignment": "leading", "spacing": 4.0 },
+      "children": [
+        { "type": "Toggle", "id": 831, "properties": { "title": "Guest daemon", "style": "checkbox", "actionID": "AgentVM.update.choice" } },
+        { "type": "Text", "id": 832, "properties": { "text": "", "foregroundStyle": "secondary", "textSelection": "enabled", "padding": { "leading": 20 }, "frame": { "maxWidth": "infinity", "alignment": "leading" } } }
+      ]
+    },
+    { "type": "Divider" },
+    {
+      "type": "VStack",
+      "properties": { "alignment": "leading", "spacing": 4.0 },
+      "children": [
+        { "type": "Text", "properties": { "text": "Afterwards", "font": "headline" } },
+        { "type": "Text", "id": 841, "properties": { "text": "", "textSelection": "enabled", "frame": { "maxWidth": "infinity", "alignment": "leading" } } }
+      ]
+    },
+    {
+      "type": "VStack",
+      "properties": { "alignment": "leading", "spacing": 4.0 },
+      "children": [
+        { "type": "Text", "properties": { "text": "The command", "font": "headline" } },
+        { "type": "Text", "id": 851, "properties": { "text": "", "font": { "size": 12, "design": "monospaced" }, "textSelection": "enabled", "frame": { "maxWidth": "infinity", "alignment": "leading" } } }
+      ]
+    },
+    { "type": "Text", "id": 861, "properties": { "text": "", "foregroundStyle": "orange", "textSelection": "enabled", "frame": { "maxWidth": "infinity", "alignment": "leading" } } },
+    { "type": "Spacer" },
+    {
+      "type": "HStack",
+      "properties": { "spacing": 8.0 },
+      "children": [
+        { "type": "Spacer" },
+        { "type": "Button", "id": 871, "properties": { "title": "Cancel", "role": "cancel", "actionID": "AgentVM.update.cancel" } },
+        { "type": "Button", "id": 872, "properties": { "title": "Update", "disabled": true, "buttonStyle": "borderedProminent", "actionID": "AgentVM.update.start", "help": "Start the update as a job, and open its progress window. The job goes on when this app is closed." } }
+      ]
+    }
+  ]
+}

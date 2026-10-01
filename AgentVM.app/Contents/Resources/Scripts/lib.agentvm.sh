@@ -311,6 +311,15 @@ agentvm_status() {
     agentvm_json status
 }
 
+# agentvm_status_checked  ->  `agent-vm status --check-updates --json`: the same answer, after
+# agent-vm asked Apple for the newest macOS (it needs the internet, and takes a few seconds) and
+# kept what it learned in the store, so that this and every later `status` names the images that
+# are behind. Nothing is installed. A lookup that failed is `newestMacOSError` in the answer, not
+# a failure of the call.
+agentvm_status_checked() {
+    agentvm_json status --check-updates
+}
+
 # agentvm_status_box_rows  <  status JSON  ->  one row per box:
 #    1 name        2 state (stopped, starting, running, stopping, unresponsive)   3 image
 #    4 netMode (allowlist, off, open; a box made before network rules is open)
@@ -774,6 +783,33 @@ agentvm_job_box_start() {
 agentvm_job_box_stop() {
     _agentvm_need_name box "$1" || return $?
     _agentvm_job_start - box stop "$1"
+}
+
+# agentvm_image_update_flags <macos: 1 or 0> <tools> <guest>  ->  the options of `image update` for
+# those parts ("--macos --guest"), or nothing when none is asked for. One function for the job and
+# for the command line a window shows, so the two cannot differ.
+agentvm_image_update_flags() {
+    local _flags=""
+    [ "${1:-}" = "1" ] && _flags="--macos"
+    [ "${2:-}" = "1" ] && _flags="${_flags:+$_flags }--tools"
+    [ "${3:-}" = "1" ] && _flags="${_flags:+$_flags }--guest"
+    printf '%s\n' "$_flags"
+}
+
+# agentvm_job_image_update <name> <macos: 1 or 0> <tools> <guest>  ->  the id of a job that updates
+# the ready image in place: the macOS update Apple offers within its major version, the update
+# steps of the recipes it keeps, and this agent-vm's guest daemon, each when asked for. The update
+# works on a copy and takes the image's place only when everything succeeded. With no part asked
+# for, nothing is started: agent-vm would take that for all three.
+agentvm_job_image_update() {
+    _agentvm_need_name image "$1" || return $?
+    local _flags="$(agentvm_image_update_flags "${2:-}" "${3:-}" "${4:-}")"
+    if [ -z "$_flags" ]; then
+        _agentvm_refuse 2 "Nothing was chosen to update in image $1."
+        return 2
+    fi
+    # Unquoted on purpose: the flags are this library's own words, one option each.
+    _agentvm_job_start - image update "$1" $_flags
 }
 
 # agentvm_job_list  ->  the jobs as JSON: those that run, and those that ended in the last week.

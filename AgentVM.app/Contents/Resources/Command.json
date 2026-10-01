@@ -73,6 +73,20 @@
         "WINDOW_DID_ACTIVATE_SUBCOMMAND_ID": "AgentVM.progress.activated",
         "END_CANCEL_SUBCOMMAND_ID": "AgentVM.progress.close"
       }
+    },
+    {
+      "NAME": "AgentVM",
+      "COMMAND_ID": "AgentVM.update",
+      "ACTIVATION_MODE": "act_always",
+      "EXECUTION_MODE": "exe_script_file",
+      "ACTIONUI_WINDOW": {
+        "JSON_NAME": "AgentVM.update",
+        "IS_BLOCKING": false,
+        "WINDOW_TITLE": "Update",
+        "INIT_SUBCOMMAND_ID": "AgentVM.update.init",
+        "WINDOW_DID_ACTIVATE_SUBCOMMAND_ID": "AgentVM.update.activated",
+        "END_CANCEL_SUBCOMMAND_ID": "AgentVM.update.close"
+      }
     }
   ],
   "VERSION": 2

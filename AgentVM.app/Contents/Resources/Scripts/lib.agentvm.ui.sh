@@ -206,7 +206,8 @@ ui_size_text() {
 # and closes itself.
 #
 # A job's progress window (lib.agentvm.progress.sh) is kept the same way, one per job: its kind is
-# "progress", and the name is the job's id, which has the form of a name.
+# "progress", and the name is the job's id, which has the form of a name. So is an image's update
+# window (lib.agentvm.update.sh): its kind is "update", and the name is the image's.
 
 # The request key of a kind is this, an underscore and the kind.
 AGENTVM_OPEN_REQUEST_KEY="agentvm_open_request"

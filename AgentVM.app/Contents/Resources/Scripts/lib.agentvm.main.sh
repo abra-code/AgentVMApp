@@ -18,7 +18,8 @@
 # box, from a Details... button on the pane's row (lib.agentvm.ui.sh, "Box windows"): a box's
 # network is lib.agentvm.network.sh, and what ran in it lib.agentvm.programs.sh. A job that holds
 # a box or an image has a window too, one per job, from the Progress... button beside the pane's
-# state line (lib.agentvm.progress.sh).
+# state line (lib.agentvm.progress.sh). Updating an image is asked for in a window per image, from
+# Update... in the image pane (lib.agentvm.update.sh).
 #
 # READING AND PAINTING ARE SEPARATE. main_read_* run agent-vm and leave its answers in the
 # window's cache folder (lib.agentvm.ui.sh); main_paint_* only read the caches. So a handler that
@@ -96,6 +97,7 @@ MAIN_IMAGE_MAINTENANCE_ID=423
 MAIN_IMAGE_PROGRESS_ID=424
 MAIN_IMAGE_SHOW_ID=433
 MAIN_IMAGE_DELETE_ID=434
+MAIN_IMAGE_UPDATE_ID=435
 MAIN_IMAGE_MACOS_ID=451
 MAIN_IMAGE_BASE_ID=452
 MAIN_IMAGE_TOOLS_ID=453
@@ -152,14 +154,20 @@ main_read_doctor() {
     printf '%s\n' "$_rows" | ui_store "$(ui_cache "$1" doctor.tsv)"
 }
 
-# main_read_status <uuid>  ->  0, with the cache files boxes.tsv, images.tsv, updates.tsv, vm.tsv and jobs.tsv
-# holding the rows lib.agentvm.sh documents; or agent-vm's status, with the previous rows kept and its
-# message in the cache file "status-error" (empty after a success).
+# main_read_status <uuid> [check]  ->  0, with the cache files boxes.tsv, images.tsv, updates.tsv,
+# newest.tsv, vm.tsv and jobs.tsv holding the rows lib.agentvm.sh documents; or agent-vm's status,
+# with the previous rows kept and its message in the cache file "status-error" (empty after a
+# success). "check" has agent-vm ask Apple for the newest macOS first (agentvm_status_checked).
 main_read_status() {
     local _error="$(ui_cache "$1" status-error)"
-    local _json
-    _json="$(agentvm_status)"
-    local _status=$?
+    local _json _status
+    if [ "${2:-}" = "check" ]; then
+        _json="$(agentvm_status_checked)"
+        _status=$?
+    else
+        _json="$(agentvm_status)"
+        _status=$?
+    fi
     if [ "$_status" -ne 0 ]; then
         ui_one_line "$(agentvm_last_error "$_status")" | ui_store "$_error"
         return "$_status"
@@ -167,13 +175,14 @@ main_read_status() {
     printf '%s\n' "$_json" | agentvm_status_box_rows | ui_store "$(ui_cache "$1" boxes.tsv)"
     printf '%s\n' "$_json" | agentvm_status_image_rows | ui_store "$(ui_cache "$1" images.tsv)"
     printf '%s\n' "$_json" | agentvm_status_update_rows | ui_store "$(ui_cache "$1" updates.tsv)"
+    printf '%s\n' "$_json" | agentvm_status_newest_row | ui_store "$(ui_cache "$1" newest.tsv)"
     printf '%s\n' "$_json" | agentvm_status_vm_row | ui_store "$(ui_cache "$1" vm.tsv)"
     printf '%s\n' "$_json" | agentvm_job_rows | ui_store "$(ui_cache "$1" jobs.tsv)"
     : | ui_store "$_error"
     return 0
 }
 
-# main_rows <uuid> <boxes|images|updates|doctor|vm|jobs>  ->  that cache file's rows, nothing when it is missing.
+# main_rows <uuid> <boxes|images|updates|newest|doctor|vm|jobs>  ->  that cache file's rows, nothing when it is missing.
 main_rows() {
     local _file="$(ui_cache "$1" "$2.tsv")"
     [ -f "$_file" ] || return 0
@@ -528,7 +537,8 @@ main_getstarted_text() {
 #     it stops;
 #   - a running box whose supervisor is another agent-vm version: each version is installed in
 #     a folder of its own, so a box keeps the version it started with until it is stopped;
-#   - an image that needs a guest update (after an agent-vm update), or Full Disk Access.
+#   - an image that needs a guest update (after an agent-vm update), or Full Disk Access, or
+#     for which a newer macOS is known (agent-vm learned it when it last asked Apple).
 # A failed image is not maintenance: its card is red and says Failed.
 main_maintenance() {
     local _version="$(main_agentvm_line "$1" 2)"
@@ -549,7 +559,9 @@ main_maintenance() {
                 (","$8",") ~ /,guest-update,/ {
                     printf "%s\tNeeds a guest update for agent-vm %s.\n", $1, current }
                 (","$8",") ~ /,full-disk-access,/ {
-                    printf "%s\tNeeds Full Disk Access, or programs in its boxes cannot open Desktop, Documents or Downloads.\n", $1 }' ;;
+                    printf "%s\tNeeds Full Disk Access, or programs in its boxes cannot open Desktop, Documents or Downloads.\n", $1 }'
+            main_rows "$1" updates | /usr/bin/awk -F'\t' '
+                $6 != "-" { printf "%s\tmacOS %s is available. Update... installs it, in about 15 minutes.\n", $1, $6 }' ;;
     esac
 }
 
@@ -1091,6 +1103,9 @@ main_paint_image_detail() {
 
         local _text="$_macos"
         [ "$_macos" != "-" ] && [ "$_build" != "-" ] && _text="$_macos ($_build)"
+        # When it was last updated, from status's update row.
+        local _updated="$(ui_date_text "$(main_row "$_uuid" updates "$_name" | /usr/bin/cut -f3)")"
+        [ -n "$_updated" ] && _text="$_text, updated $_updated"
         "$dialog" "$_uuid" "$MAIN_IMAGE_MACOS_ID" "$_text"
         _text="$_based"
         [ "$_based" = "-" ] && _text="a macOS restore file"
@@ -1150,8 +1165,15 @@ main_paint_image_detail() {
     # made from it), and says so.
     if [ -n "$(main_job "$_uuid" image "$_name")" ] || main_image_busy "$_uuid" "$_name"; then
         ui_enable "$_uuid" "$MAIN_IMAGE_DELETE_ID" 0
+        ui_enable "$_uuid" "$MAIN_IMAGE_UPDATE_ID" 0
+        return 0
+    fi
+    ui_enable "$_uuid" "$MAIN_IMAGE_DELETE_ID" 1
+    # Update... opens the image's update window (lib.agentvm.update.sh): for a ready image only.
+    if [ "$(printf '%s\n' "$_row" | /usr/bin/cut -f2)" = "ready" ]; then
+        ui_enable "$_uuid" "$MAIN_IMAGE_UPDATE_ID" 1
     else
-        ui_enable "$_uuid" "$MAIN_IMAGE_DELETE_ID" 1
+        ui_enable "$_uuid" "$MAIN_IMAGE_UPDATE_ID" 0
     fi
 }
 
