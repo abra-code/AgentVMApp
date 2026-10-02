@@ -195,7 +195,8 @@ main_rows() {
 
 # main_row <uuid> <boxes|images|updates> <name>  ->  the cached row of that box or image, or nothing.
 main_row() {
-    main_rows "$1" "$2" | /usr/bin/awk -F'\t' -v name="$3" '$1 == name { print; exit }'
+    # Compared as text: to awk, "1" and "01" are the same number, and both can be names.
+    main_rows "$1" "$2" | /usr/bin/awk -F'\t' -v name="$3" '$1 "" == name { print; exit }'
 }
 
 # main_face <uuid>  ->  getstarted or status (see the header).
@@ -643,7 +644,7 @@ main_maintenance() {
 # main_maintenance_text <uuid> <boxes|images> <name>  ->  "Needs maintenance" and one line per
 # thing to do, for the detail pane; nothing when there is none.
 main_maintenance_text() {
-    local _lines="$(main_maintenance "$1" "$2" | /usr/bin/awk -F'\t' -v name="$3" '$1 == name { print $2 }')"
+    local _lines="$(main_maintenance "$1" "$2" | /usr/bin/awk -F'\t' -v name="$3" '$1 "" == name { print $2 }')"
     [ -n "$_lines" ] || return 0
     printf 'Needs maintenance\n%s\n' "$_lines"
 }
@@ -1093,7 +1094,7 @@ main_info() {
     agentvm_valid_name "$3" || return 0
     local _file="$(ui_cache "$1" "$2-info-$3.tsv")"
     [ -f "$_file" ] || return 0
-    /usr/bin/awk -F'\t' -v name="$3" '$1 == name { print; exit }' "$_file"
+    /usr/bin/awk -F'\t' -v name="$3" '$1 "" == name { print; exit }' "$_file"
 }
 
 # main_info_error <uuid> <box|image> <name>  ->  why the last `box info` or `image info` of that
@@ -1141,9 +1142,9 @@ main_paint_image_detail() {
     ui_show "$_uuid" "$MAIN_IMAGE_NONE_ID" 0
     ui_show "$_uuid" "$MAIN_IMAGE_DETAIL_ID" 1
     "$dialog" "$_uuid" "$MAIN_IMAGE_NAME_ID" "$_name"
-    local _boxes="$(main_rows "$_uuid" boxes | /usr/bin/awk -F'\t' -v name="$_name" '$3 == name { printf "%s (%s)\n", $1, $2 }')"
+    local _boxes="$(main_rows "$_uuid" boxes | /usr/bin/awk -F'\t' -v name="$_name" '$3 "" == name { printf "%s (%s)\n", $1, $2 }')"
     "$dialog" "$_uuid" "$MAIN_IMAGE_BOXES_ID" "$(ui_lines_text "$_boxes")"
-    local _derived="$(main_rows "$_uuid" images | /usr/bin/awk -F'\t' -v name="$_name" '$6 == name { print $1 }')"
+    local _derived="$(main_rows "$_uuid" images | /usr/bin/awk -F'\t' -v name="$_name" '$6 "" == name { print $1 }')"
     "$dialog" "$_uuid" "$MAIN_IMAGE_DERIVED_ID" "$(ui_lines_text "$_derived")"
     local _info="$(main_info "$_uuid" image "$_name")"
     local _info_error="$(main_info_error "$_uuid" image "$_name")"
@@ -1275,9 +1276,9 @@ main_image_delete_question() {
     local _size="$(ui_size_text "$(main_info "$1" image "$2" | /usr/bin/cut -f21)")"
     [ -n "$_size" ] && _text="$_text, which frees about $_size"
     _text="$_text."
-    local _boxes="$(main_rows "$1" boxes | /usr/bin/awk -F'\t' -v name="$2" '$3 == name { print $1 }')"
+    local _boxes="$(main_rows "$1" boxes | /usr/bin/awk -F'\t' -v name="$2" '$3 "" == name { print $1 }')"
     [ -n "$_boxes" ] && _text="$_text Boxes made from it ($(ui_lines_text "$_boxes")) keep working, but cannot be recreated."
-    local _derived="$(main_rows "$1" images | /usr/bin/awk -F'\t' -v name="$2" '$6 == name { print $1 }')"
+    local _derived="$(main_rows "$1" images | /usr/bin/awk -F'\t' -v name="$2" '$6 "" == name { print $1 }')"
     [ -n "$_derived" ] && _text="$_text Images built from it ($(ui_lines_text "$_derived")) keep working."
     printf '%s This cannot be undone.\n' "$_text"
 }

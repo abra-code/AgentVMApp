@@ -445,6 +445,16 @@ store status-variety.json
 omc_run AgentVM.main.activated
 check_absent "a refresh that ends after the close leaves no cache folder" "$CACHE"
 
+section "names that look like numbers are different names"
+# To awk, "1", "01" and "1.0" are one number; to agent-vm they are three names.
+NUMBERS="OMCTEST-numbers-$$"
+/bin/mkdir -p "$TMPDIR/AgentVM/$NUMBERS"
+printf '01\tready\n1\tfailed\n1.0\tbuilding\n' > "$TMPDIR/AgentVM/$NUMBERS/images.tsv"
+check "each is looked up as itself" "1${TAB}failed|1.0${TAB}building|01${TAB}ready" \
+    "$( . "$APP_SCRIPTS/lib.agentvm.main.sh" >/dev/null 2>&1
+        printf '%s|%s|%s\n' "$(main_row "$NUMBERS" images 1)" "$(main_row "$NUMBERS" images 1.0)" "$(main_row "$NUMBERS" images 01)" )"
+/bin/rm -rf "$TMPDIR/AgentVM/$NUMBERS"
+
 section "no writes to views the window does not have"
 check "no undeclared ids"   "" "$(ui_unknown_writes)"
 check "no clobbered tables" "" "$(ui_suspect_writes)"

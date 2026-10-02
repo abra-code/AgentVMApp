@@ -159,7 +159,7 @@ newbox_unreadable() {
 
 # newbox_image_row <uuid> <name>  ->  that image's row of build.tsv, or nothing.
 newbox_image_row() {
-    main_rows "$1" build | /usr/bin/awk -F'\t' -v name="$2" '$1 == name { print; exit }'
+    main_rows "$1" build | /usr/bin/awk -F'\t' -v name="$2" '$1 "" == name { print; exit }'
 }
 
 # -- The image -----------------------------------------------------------------------------------

@@ -11,6 +11,8 @@ window_uuid="$OMC_ACTIONUI_WINDOW_UUID"
 [ -n "$window_uuid" ] || exit 0
 image="$(update_image "$window_uuid")"
 [ -n "$image" ] || exit 0
+# One click at a time: a second Update clicked while agent-vm is read would start a second job.
+wizard_enter "$window_uuid" || exit 0
 update_read "$window_uuid"
 # The window closed while agent-vm was read: nothing is started, and the cache folder the reading
 # made again goes.
@@ -19,6 +21,12 @@ if [ -z "$(update_image "$window_uuid")" ]; then
     exit 0
 fi
 update_paint "$window_uuid"
+# The window closed while this painted: the same. Asked again here because a cache that is gone
+# has nothing that stands in the way, and painting made its folder again.
+if [ -z "$(update_image "$window_uuid")" ]; then
+    ui_cache_clear "$window_uuid"
+    exit 0
+fi
 [ -z "$(update_blocker "$window_uuid" "$image")" ] || exit 0
 choices="$(update_choices "$window_uuid" "$image")"
 [ -n "$(update_flags "$window_uuid" "$image")" ] || exit 0

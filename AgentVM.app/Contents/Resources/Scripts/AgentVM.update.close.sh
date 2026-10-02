@@ -11,5 +11,6 @@ image="$(update_image "$window_uuid")"
 [ -n "$image" ] && ui_item_release update "$image" "$window_uuid"
 ui_set image "$window_uuid" ""
 ui_set choices "$window_uuid" ""
+ui_set busy "$window_uuid" ""
 ui_cache_clear "$window_uuid"
 exit 0

@@ -188,12 +188,12 @@ newimage_unreadable() {
 
 # newimage_image_row <uuid> <name>  ->  that image's row of build.tsv, or nothing.
 newimage_image_row() {
-    main_rows "$1" build | /usr/bin/awk -F'\t' -v name="$2" '$1 == name { print; exit }'
+    main_rows "$1" build | /usr/bin/awk -F'\t' -v name="$2" '$1 "" == name { print; exit }'
 }
 
 # newimage_ipsw_row <uuid> <file name>  ->  that restore file's row of ipsw.tsv, or nothing.
 newimage_ipsw_row() {
-    main_rows "$1" ipsw | /usr/bin/awk -F'\t' -v name="$2" '$1 == name { print; exit }'
+    main_rows "$1" ipsw | /usr/bin/awk -F'\t' -v name="$2" '$1 "" == name { print; exit }'
 }
 
 # -- The start -----------------------------------------------------------------------------------
@@ -547,7 +547,7 @@ newimage_tools_text() {
 # newimage_recipe_note <uuid> <name>  ->  the note beside a recipe: that the start image has it,
 # or what it needs that is neither ticked nor in the start image.
 newimage_recipe_note() {
-    local _need="$(newimage_missing "$1" | /usr/bin/awk -F'\t' -v name="$2" '$1 == name { print $2; exit }')"
+    local _need="$(newimage_missing "$1" | /usr/bin/awk -F'\t' -v name="$2" '$1 "" == name { print $2; exit }')"
     if [ -n "$_need" ]; then
         printf 'needs %s\n' "$_need"
         return 0
@@ -575,7 +575,7 @@ newimage_value() {
     local _file="$(ui_cache "$1" values.tsv)"
     local _kept=""
     if [ -f "$_file" ]; then
-        _kept="$(/usr/bin/awk -F'\t' -v kind="$2" -v name="$3" '$1 == kind && $2 == name { print "=" $3; exit }' "$_file")"
+        _kept="$(/usr/bin/awk -F'\t' -v kind="$2" -v name="$3" '$1 == kind && $2 "" == name { print "=" $3; exit }' "$_file")"
     fi
     if [ -n "$_kept" ]; then
         printf '%s\n' "${_kept#=}"
@@ -590,7 +590,7 @@ newimage_keep_value() {
     local _file="$(ui_cache "$1" values.tsv)"
     [ -f "$_file" ] || : > "$_file"
     {
-        /usr/bin/awk -F'\t' -v kind="$2" -v name="$3" '!($1 == kind && $2 == name)' "$_file"
+        /usr/bin/awk -F'\t' -v kind="$2" -v name="$3" '!($1 == kind && $2 "" == name)' "$_file"
         printf '%s\t%s\t%s\n' "$2" "$3" "$4"
     } | ui_store "$_file"
 }

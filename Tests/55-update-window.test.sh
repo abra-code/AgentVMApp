@@ -502,6 +502,47 @@ check "Check Now: Apple was being asked" "status --check-updates --json" "$(fake
 check "  the closed window keeps no ticks, and no cache" "||" \
     "$("$PB" "agentvm_choices_$UUID" get)|$("$PB" "agentvm_image_$UUID" get)|$(/bin/ls "$TMPDIR/AgentVM/$UUID" 2>/dev/null)"
 
+section "a second Update while the first is worked on, and a window that closes while it is painted"
+store "$BEHIND"
+open_update dev-acp
+"$PB" "agentvm_busy_$UUID" set "click-$$"
+: > "$FAKE_AGENTVM_DIR/log"
+omc_run AgentVM.update.start
+check "a second click: agent-vm is not run, nothing is started" "|" "$(fake_log)|$(started)"
+check "  the other click's mark is not taken away" "click-$$" "$("$PB" "agentvm_busy_$UUID" get)"
+"$PB" "agentvm_busy_$UUID" set ""
+# The window's tools, with one that does what closing the window does before the first write of
+# the window's title line: the painting that follows reads the cache, which makes its folder again.
+REAL_TOOLS="$OMC_OMC_SUPPORT_PATH"
+CLOSING_TOOLS="$OMCTEST_WORK/closing_tools"
+CLOSE_MARK="$OMCTEST_WORK/closed-once"
+/bin/mkdir -p "$CLOSING_TOOLS"
+/bin/cat > "$CLOSING_TOOLS/closing_tool" <<'TOOL'
+#!/bin/sh
+tool="${0##*/}"
+case "$tool $*" in
+    $CLOSE_BEFORE)
+        if [ ! -e "$CLOSE_MARK" ]; then
+            printf '' > "$CLOSE_MARK"
+            OMC_OMC_SUPPORT_PATH="$REAL_TOOLS" /bin/sh "$OMC_APP_BUNDLE_PATH/Contents/Resources/Scripts/AgentVM.update.close.sh"
+        fi ;;
+esac
+exec "$REAL_TOOLS/$tool" "$@"
+TOOL
+/bin/chmod +x "$CLOSING_TOOLS/closing_tool"
+for tool in "$REAL_TOOLS"/*; do
+    /bin/ln -sf "$tool" "$CLOSING_TOOLS/${tool##*/}"
+done
+/bin/rm -f "$CLOSING_TOOLS/omc_dialog_control"
+/bin/cp "$CLOSING_TOOLS/closing_tool" "$CLOSING_TOOLS/omc_dialog_control"
+/bin/rm -f "$CLOSE_MARK"
+: > "$FAKE_AGENTVM_DIR/log"
+( CLOSE_BEFORE="omc_dialog_control $UUID $UPDATE_TITLE_ID *"; OMC_OMC_SUPPORT_PATH="$CLOSING_TOOLS"
+  export CLOSE_BEFORE CLOSE_MARK REAL_TOOLS OMC_OMC_SUPPORT_PATH
+  omc_run AgentVM.update.start )
+check "closed while Update painted: nothing is started, and no cache folder is left" "closed||no" \
+    "$([ -e "$CLOSE_MARK" ] && echo closed)|$(started)|$([ -d "$TMPDIR/AgentVM/$UUID" ] && echo yes || echo no)"
+
 section "the library: the parts as options, and the job"
 check "all three, in agent-vm's order" "--macos --tools --guest" "$(lib agentvm_image_update_flags 1 1 1)"
 check "one"                          "--tools" "$(lib agentvm_image_update_flags 0 1 0)"

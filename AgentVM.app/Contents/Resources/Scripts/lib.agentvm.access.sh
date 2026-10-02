@@ -243,9 +243,9 @@ access_after_text() {
         printf 'Images built from it since the grant have it too. An image built earlier is set up by itself.\n'
     else
         printf 'Boxes and images made from it after the grant have it.\n'
-        local _boxes="$(main_rows "$1" boxes | /usr/bin/awk -F'\t' -v name="$2" '$3 == name && $13 != "true" { print $1 }')"
+        local _boxes="$(main_rows "$1" boxes | /usr/bin/awk -F'\t' -v name="$2" '$3 "" == name && $13 != "true" { print $1 }')"
         [ -n "$_boxes" ] && printf 'Boxes made from it so far (%s) get it when they are recreated.\n' "$(ui_lines_text "$_boxes")"
-        local _derived="$(main_rows "$1" images | /usr/bin/awk -F'\t' -v name="$2" '$6 == name { print $1 }')"
+        local _derived="$(main_rows "$1" images | /usr/bin/awk -F'\t' -v name="$2" '$6 "" == name { print $1 }')"
         [ -n "$_derived" ] && printf 'Images built from it so far (%s) do not get it: each is set up by itself.\n' "$(ui_lines_text "$_derived")"
     fi
     printf "An update that replaces the image's guest daemon may take the grant away; the image then says that it needs it again.\n"

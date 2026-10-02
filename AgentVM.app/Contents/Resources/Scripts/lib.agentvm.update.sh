@@ -30,6 +30,7 @@
 __AGENTVM_APP_UPDATE_LIB=1
 
 . "$OMC_APP_BUNDLE_PATH/Contents/Resources/Scripts/lib.agentvm.main.sh"
+. "$OMC_APP_BUNDLE_PATH/Contents/Resources/Scripts/lib.agentvm.wizard.sh"
 
 UPDATE_TITLE_ID=801
 UPDATE_STATE_ID=802
@@ -255,9 +256,9 @@ update_guest_text() {
 # update_after_text <uuid> <name>  ->  what an update means for what was made from the image, and
 # what a failure leaves, one line each.
 update_after_text() {
-    local _boxes="$(main_rows "$1" boxes | /usr/bin/awk -F'\t' -v name="$2" '$3 == name && $13 != "true" { print $1 }')"
+    local _boxes="$(main_rows "$1" boxes | /usr/bin/awk -F'\t' -v name="$2" '$3 "" == name && $13 != "true" { print $1 }')"
     [ -n "$_boxes" ] && printf 'Boxes made from it (%s) keep what they have until they are recreated.\n' "$(ui_lines_text "$_boxes")"
-    local _derived="$(main_rows "$1" images | /usr/bin/awk -F'\t' -v name="$2" '$6 == name { print $1 }')"
+    local _derived="$(main_rows "$1" images | /usr/bin/awk -F'\t' -v name="$2" '$6 "" == name { print $1 }')"
     [ -n "$_derived" ] && printf 'Images built from it (%s) are not updated with it: each is updated by itself.\n' "$(ui_lines_text "$_derived")"
     printf 'The image can be used meanwhile: a box made during the update gets the image as it was.\n'
     printf 'An update that fails or is stopped leaves the image as it is now.\n'
