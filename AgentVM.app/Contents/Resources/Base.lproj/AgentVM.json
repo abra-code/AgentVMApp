@@ -363,7 +363,10 @@
                         { "type": "LabeledContent", "properties": { "title": "Built from" }, "children": [ { "type": "Text", "id": 452, "properties": { "text": "", "textSelection": "enabled" } } ] },
                         { "type": "LabeledContent", "properties": { "title": "Tools" }, "children": [ { "type": "Text", "id": 453, "properties": { "text": "", "textSelection": "enabled" } } ] },
                         { "type": "LabeledContent", "properties": { "title": "Guest daemon" }, "children": [ { "type": "Text", "id": 454, "properties": { "text": "", "textSelection": "enabled" } } ] },
-                        { "type": "LabeledContent", "properties": { "title": "Full Disk Access" }, "children": [ { "type": "Text", "id": 459, "properties": { "text": "", "textSelection": "enabled" } } ] },
+                        { "type": "LabeledContent", "properties": { "title": "Full Disk Access" }, "children": [ { "type": "HStack", "properties": { "spacing": 8.0 }, "children": [
+                          { "type": "Text", "id": 459, "properties": { "text": "", "textSelection": "enabled" } },
+                          { "type": "Button", "id": 462, "properties": { "title": "Set Up...", "controlSize": "small", "disabled": true, "actionID": "AgentVM.main.image.access", "help": "Open the image's Full Disk Access guide: what to do on the image's own screen, and where it is in it." } }
+                        ] } ] },
                         { "type": "LabeledContent", "properties": { "title": "Processors and memory" }, "children": [ { "type": "Text", "id": 460, "properties": { "text": "", "textSelection": "enabled" } } ] },
                         { "type": "LabeledContent", "properties": { "title": "Space" }, "children": [ { "type": "Text", "id": 461, "properties": { "text": "", "textSelection": "enabled" } } ] },
                         { "type": "LabeledContent", "properties": { "title": "Created" }, "children": [ { "type": "Text", "id": 455, "properties": { "text": "", "textSelection": "enabled" } } ] },

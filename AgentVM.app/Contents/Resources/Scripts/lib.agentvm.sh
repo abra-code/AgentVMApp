@@ -812,6 +812,16 @@ agentvm_job_image_update() {
     _agentvm_job_start - image update "$1" $_flags
 }
 
+# agentvm_job_image_setup <name>  ->  the id of a job that boots the ready image and shows its screen
+# in a window of agent-vm's, with System Settings on Full Disk Access, for the one-time steps only
+# a person can do there. Closing that window shuts the image down and ends the job; whether the
+# guest daemon has Full Disk Access is then in the image's record (its `needs` in `status`). The
+# job needs a login session on this Mac and one virtual machine slot.
+agentvm_job_image_setup() {
+    _agentvm_need_name image "$1" || return $?
+    _agentvm_job_start - image setup "$1"
+}
+
 # agentvm_job_list  ->  the jobs as JSON: those that run, and those that ended in the last week.
 # `status` carries those that run or wait and those that ended in the last hour, which is all a
 # window that follows its jobs needs; the week is for a report of what ended while the app was

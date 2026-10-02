@@ -335,12 +335,3 @@ update_refresh() {
     [ -n "$(update_image "$1")" ] || ui_cache_clear "$1"
     return 0
 }
-
-# update_tell_main <job id>  ->  the open main window, if there is one, watches the job and reads
-# the lists again, so its card and pane follow the update from now and not from its next poll.
-update_tell_main() {
-    local _main="$(ui_item_window main window)"
-    [ -n "$_main" ] || return 0
-    printf '%s\n' "$1" >> "$(ui_cache "$_main" jobs-watched)"
-    main_refresh "$_main" status
-}

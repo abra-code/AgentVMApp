@@ -83,10 +83,10 @@ check "no box needs anything" "$TAB$TAB$TAB" "$(box_mark s3)$(box_mark try1)$(bo
 check "the guest update, for this agent-vm" \
     "Needs maintenance|Needs a guest update for agent-vm $VERSION." "$(image_lines dev)"
 check "Full Disk Access, and what is lost without it" \
-    "Needs maintenance|Needs Full Disk Access, or programs in its boxes cannot open Desktop, Documents or Downloads." \
+    "Needs maintenance|Needs Full Disk Access, or programs in its boxes cannot open Desktop, Documents or Downloads. Set Up... above is the guide." \
     "$(image_lines dev-xcode)"
 check "both, the guest update first" \
-    "Needs maintenance|Needs a guest update for agent-vm $VERSION.|Needs Full Disk Access, or programs in its boxes cannot open Desktop, Documents or Downloads." \
+    "Needs maintenance|Needs a guest update for agent-vm $VERSION.|Needs Full Disk Access, or programs in its boxes cannot open Desktop, Documents or Downloads. Set Up... above is the guide." \
     "$(image_lines dev-node)"
 check "nothing: no text at all" "" "$(image_lines dev-acp)"
 
@@ -100,7 +100,7 @@ open_with "$QUIET"' | (.images[] | select(.name == "dev-node")) |= (.needs = [{k
     | .macOSUpdate = {version: "27.0.1", build: "26A434", checkedAt: "2026-09-29T09:00:00Z"})'
 check "marked" "$MARK" "$(image_mark dev-node)"
 check "the newer macOS comes after what the image needs" \
-    "Needs maintenance|Needs Full Disk Access, or programs in its boxes cannot open Desktop, Documents or Downloads.|macOS 27.0.1 is available. Update... installs it, in about 15 minutes." \
+    "Needs maintenance|Needs Full Disk Access, or programs in its boxes cannot open Desktop, Documents or Downloads. Set Up... above is the guide.|macOS 27.0.1 is available. Update... installs it, in about 15 minutes." \
     "$(image_lines dev-node)"
 
 section "nothing needs doing"

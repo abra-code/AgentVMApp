@@ -87,6 +87,20 @@
         "WINDOW_DID_ACTIVATE_SUBCOMMAND_ID": "AgentVM.update.activated",
         "END_CANCEL_SUBCOMMAND_ID": "AgentVM.update.close"
       }
+    },
+    {
+      "NAME": "AgentVM",
+      "COMMAND_ID": "AgentVM.access",
+      "ACTIVATION_MODE": "act_always",
+      "EXECUTION_MODE": "exe_script_file",
+      "ACTIONUI_WINDOW": {
+        "JSON_NAME": "AgentVM.access",
+        "IS_BLOCKING": false,
+        "WINDOW_TITLE": "Full Disk Access",
+        "INIT_SUBCOMMAND_ID": "AgentVM.access.init",
+        "WINDOW_DID_ACTIVATE_SUBCOMMAND_ID": "AgentVM.access.activated",
+        "END_CANCEL_SUBCOMMAND_ID": "AgentVM.access.close"
+      }
     }
   ],
   "VERSION": 2

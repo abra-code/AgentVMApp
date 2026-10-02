@@ -7,7 +7,8 @@
 # changes, asks or opens anything, and this file runs each one without a window, in the state
 # where it would do the most harm: the main window open on a stopped box with Delete and Recreate
 # already asked, a network window with edits waiting and an Allow already asked, a job that
-# runs, whose Stop was already asked, and an image's update with its parts ticked. The same state is
+# runs, whose Stop was already asked, an image's update with its parts ticked, an image that
+# Open the Image would start, and a guide already offered. The same state is
 # then planted under the empty uuid (the pasteboard keys and the cache folder a handler without
 # its guard would compute), so that a handler missing the guard acts, and is seen, rather than
 # finding nothing to act on.
@@ -15,7 +16,7 @@
 # The one handler meant to run without a window is omc.app.handle-url, which only shows
 # (90-url-scheme.test.sh). A window command run by name opens a window that closes itself
 # (32-box-network.test.sh, 33-box-programs.test.sh, 54-progress-window.test.sh,
-# 55-update-window.test.sh).
+# 55-update-window.test.sh, 56-access-window.test.sh).
 #
 # POSIX sh only. Validate with "sh -n", never "bash -n".
 . "${OMCTEST_LIB:?set OMCTEST_LIB, or run via: appletbuilder test}"
@@ -69,17 +70,20 @@ state() {
     printf 'opened: %s\n' "$(/usr/bin/awk 'END { print NR }' "$FAKE_OPEN_LOG")"
     printf 'terminal files: %s\n' "$(/bin/ls "$HOME/Library/Application Support/AgentVM/Terminal" 2>/dev/null | /usr/bin/awk 'END { print NR }')"
     printf 'window calls: %s\n' "$(ui_calls '.')"
-    printf 'chained: %s %s %s %s %s %s\n' "$(chain_asked AgentVM.main)" "$(chain_asked AgentVM.network)" "$(chain_asked AgentVM.programs)" \
-        "$(chain_asked AgentVM.progress)" "$(chain_asked AgentVM.progress.poll)" "$(chain_asked AgentVM.update)"
+    printf 'chained: %s %s %s %s %s %s %s %s\n' "$(chain_asked AgentVM.main)" "$(chain_asked AgentVM.network)" "$(chain_asked AgentVM.programs)" \
+        "$(chain_asked AgentVM.progress)" "$(chain_asked AgentVM.progress.poll)" "$(chain_asked AgentVM.update)" \
+        "$(chain_asked AgentVM.access)" "$(chain_asked AgentVM.access.poll)"
     printf 'alert: %s\n' "$(ui_alert_title)"
     printf 'pending: %s|%s|%s|%s\n' "$("$PB" "agentvm_box_delete_$MAIN_UUID" get)" "$("$PB" "agentvm_box_recreate_$MAIN_UUID" get)" \
         "$("$PB" "agentvm_image_delete_$MAIN_UUID" get)" "$("$PB" "agentvm_net_allow_$NET_UUID" get)"
     printf 'selected: %s|%s|%s\n' "$("$PB" "agentvm_box_$MAIN_UUID" get)" "$("$PB" "agentvm_image_$MAIN_UUID" get)" "$("$PB" "agentvm_box_$NET_UUID" get)"
     printf 'edits: %s\n' "$(/bin/cat "$TMPDIR/AgentVM/$NET_UUID/net-$BOX.desired" 2>/dev/null | /usr/bin/paste -sd ' ' -)"
-    printf 'requests: %s|%s|%s|%s|%s\n' "$("$PB" agentvm_open_request_network get)" "$("$PB" agentvm_open_request_programs get)" \
-        "$("$PB" agentvm_open_request_progress get)" "$("$PB" agentvm_open_request_update get)" "$("$PB" agentvm_goto get)"
+    printf 'requests: %s|%s|%s|%s|%s|%s\n' "$("$PB" agentvm_open_request_network get)" "$("$PB" agentvm_open_request_programs get)" \
+        "$("$PB" agentvm_open_request_progress get)" "$("$PB" agentvm_open_request_update get)" "$("$PB" agentvm_open_request_access get)" \
+        "$("$PB" agentvm_goto get)"
     printf 'jobs: %s\n' "$(/usr/bin/jq -r 'map(.id + " " + .state) | join(",")' "$FAKE_AGENTVM_DIR/jobs.json" 2>/dev/null)"
-    printf 'no-window job keys: %s|%s|%s\n' "$("$PB" agentvm_job_ get)" "$("$PB" agentvm_job_stop_ get)" "$("$PB" agentvm_choices_ get)"
+    printf 'no-window job keys: %s|%s|%s|%s\n' "$("$PB" agentvm_job_ get)" "$("$PB" agentvm_job_stop_ get)" "$("$PB" agentvm_choices_ get)" \
+        "$("$PB" agentvm_access_offer_ get)"
     printf 'no-window keys: %s|%s|%s|%s|%s|%s|%s\n' "$("$PB" agentvm_poll_ get)" "$("$PB" agentvm_box_ get)" "$("$PB" agentvm_image_ get)" \
         "$("$PB" agentvm_box_delete_ get)" "$("$PB" agentvm_box_recreate_ get)" "$("$PB" agentvm_image_delete_ get)" "$("$PB" agentvm_net_allow_ get)"
     printf 'pasteboards: %s\n' "$(/usr/bin/find "$OMCTEST_UI/pb" -type f -exec /usr/bin/cksum {} + | /usr/bin/sort | /usr/bin/cksum)"
@@ -161,11 +165,18 @@ done
 # An image's update with a part ticked, as its window would keep it: the image is the one planted
 # as the selection (ready, held by no job), so that an Update without its guard starts a job.
 "$PB" agentvm_choices_ set "1 0 1"
+# The same image is one Open the Image would start (ready, in need of Full Disk Access, with a
+# virtual machine slot free), and one whose guide the main window has offered: so that an Open
+# the Image, or a Grant It Again..., without its guard acts.
+"$PB" agentvm_access_offer_ set dev-xcode
 # Guards: without these the checks below would pass with nothing at stake.
 check "a job runs, and holds the box, under the empty uuid" "$JOB${TAB}running${TAB}box:$BOX|$JOB|$JOB" \
     "$(/usr/bin/cut -f1-3 "$TMPDIR/AgentVM/jobs.tsv")|$("$PB" agentvm_job_ get)|$("$PB" agentvm_job_stop_ get)"
 check "an update could start under the empty uuid: a ready image, its parts ticked, agent-vm usable" "dev-xcode${TAB}ready|1 0 1|0" \
     "$(/usr/bin/awk -F'\t' '$1 == "dev-xcode"' "$TMPDIR/AgentVM/images.tsv" | /usr/bin/cut -f1,2)|$("$PB" agentvm_choices_ get)|$(/usr/bin/sed -n '1p' "$TMPDIR/AgentVM/agentvm")"
+check "a setup could start, and a guide open, under the empty uuid: the image needs the grant, a slot is free, the guide was offered" \
+    "full-disk-access|1${TAB}2|dev-xcode" \
+    "$(/usr/bin/awk -F'\t' '$1 == "dev-xcode"' "$TMPDIR/AgentVM/images.tsv" | /usr/bin/cut -f8)|$(/bin/cat "$TMPDIR/AgentVM/vm.tsv")|$("$PB" agentvm_access_offer_ get)"
 check "Delete was asked about the box"   "$BOX" "$("$PB" "agentvm_box_delete_$MAIN_UUID" get)"
 check "Recreate too"                     "$BOX" "$("$PB" "agentvm_box_recreate_$MAIN_UUID" get)"
 check "an image's Delete was asked"      "dev-xcode" "$("$PB" "agentvm_image_delete_$MAIN_UUID" get)"

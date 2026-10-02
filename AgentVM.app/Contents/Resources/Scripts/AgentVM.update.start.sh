@@ -35,5 +35,5 @@ if [ "$status" -ne 0 ]; then
 fi
 ui_item_open progress "$job" "$OMC_CURRENT_COMMAND_GUID"
 "$dialog" "$window_uuid" omc_window omc_terminate_cancel
-update_tell_main "$job"
+main_follow_job "$job"
 exit 0

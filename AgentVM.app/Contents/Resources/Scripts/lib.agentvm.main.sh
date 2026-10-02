@@ -98,6 +98,7 @@ MAIN_IMAGE_PROGRESS_ID=424
 MAIN_IMAGE_SHOW_ID=433
 MAIN_IMAGE_DELETE_ID=434
 MAIN_IMAGE_UPDATE_ID=435
+MAIN_IMAGE_ACCESS_ID=462
 MAIN_IMAGE_MACOS_ID=451
 MAIN_IMAGE_BASE_ID=452
 MAIN_IMAGE_TOOLS_ID=453
@@ -373,6 +374,9 @@ main_report_jobs() {
     local _done="$(printf '%s\n' "$_ended" | /usr/bin/awk -F'\t' '$2 == "done"')"
     if [ -n "$_done" ]; then
         "$dialog" "$1" omc_window omc_present_toast "$(main_job_lines "$_done" | /usr/bin/paste -sd ' ' -)" "$MAIN_TOAST_SECONDS"
+        # Asked before a failure's alert is raised: a window shows one alert, the newest, and a
+        # failure must not be the one lost. The image's maintenance line says it either way.
+        main_offer_access "$1" "$_done"
     fi
     local _failed="$(printf '%s\n' "$_ended" | /usr/bin/awk -F'\t' '$2 == "failed" || $2 == "lost"')"
     [ -n "$_failed" ] || return 0
@@ -384,6 +388,74 @@ main_report_jobs() {
         return 0
     fi
     main_alert "$1" "$_count jobs failed" "$(main_job_lines "$_failed")"
+}
+
+# main_access_lost <uuid> <job rows>  ->  the images among those jobs' whose update ended well and
+# left them needing Full Disk Access that they did not need at the reading before (the cache file
+# "access-needed", which main_note_access keeps): macOS ties the grant to the daemon it was made
+# for, and an update may replace it. An image that needed it before is not named: nothing
+# was lost. Nothing before the window's first reading.
+main_access_lost() {
+    local _before="$(ui_cache "$1" access-needed)"
+    local _images="$(ui_cache "$1" images.tsv)"
+    [ -f "$_before" ] && [ -f "$_images" ] || return 0
+    printf '%s\n' "$2" | /usr/bin/awk -F'\t' -v before="$_before" -v images="$_images" '
+        BEGIN {
+            while ((getline line < before) > 0) needed[line] = 1
+            while ((getline line < images) > 0) {
+                split(line, cell, "\t")
+                if ((","cell[8]",") ~ /,full-disk-access,/) needs[cell[1]] = 1
+            }
+        }
+        $2 == "done" && ($4 == "image update" || $4 == "image update-guest") && $3 ~ /^image:/ {
+            name = substr($3, 7)
+            if ((name in needs) && !(name in needed)) print name
+        }'
+}
+
+# main_note_access <uuid>  ->  keeps the images that need Full Disk Access as of this reading (the
+# cache file "access-needed"), for main_access_lost at the next one. An image that an update job
+# holds is left as it was noted before: agent-vm writes the updated image's record a moment before
+# the job ends, and a reading in between would otherwise note the need as one from before the
+# update, and the question would never be asked.
+main_note_access() {
+    local _before="$(ui_cache "$1" access-needed)"
+    local _jobs="$(ui_cache "$1" jobs.tsv)"
+    [ -f "$_before" ] || _before="/dev/null"
+    [ -f "$_jobs" ] || _jobs="/dev/null"
+    main_rows "$1" images | /usr/bin/awk -F'\t' -v before="$_before" -v jobs="$_jobs" '
+        BEGIN {
+            while ((getline line < before) > 0) needed[line] = 1
+            while ((getline line < jobs) > 0) {
+                split(line, cell, "\t")
+                if ((cell[2] == "running" || cell[2] == "queued") && (cell[4] == "image update" || cell[4] == "image update-guest") && cell[3] ~ /^image:/)
+                    held[substr(cell[3], 7)] = 1
+            }
+        }
+        ($1 in held) { if ($1 in needed) print $1; next }
+        (","$8",") ~ /,full-disk-access,/ { print $1 }' | ui_store "$(ui_cache "$1" access-needed)"
+}
+
+# main_offer_access <uuid> <job rows>  ->  asks whether to open the Full Disk Access guide of the
+# first image main_access_lost names, which is kept as the window's pending offer; Grant It
+# Again... in the question runs AgentVM.main.image.access.offered. Nothing when no image lost it.
+main_offer_access() {
+    local _name="$(main_access_lost "$1" "$2" | /usr/bin/sed -n '1p')"
+    agentvm_valid_name "$_name" || return 0
+    ui_set access_offer "$1" "$_name"
+    "$dialog" "$1" omc_window omc_present_alert "Image $_name lost Full Disk Access in its update" \
+        "agent-vm-guest had the grant in this image before the update, and does not have it now: macOS ties the grant to the daemon it was made for. Until it is granted again, programs in boxes made from $_name from now on wait, when they open Desktop, Documents or Downloads, on a question nobody sees." \
+        "Later:cancel:" "Grant It Again...::AgentVM.main.image.access.offered"
+}
+
+# main_follow_job <job id>  ->  the open main window, if there is one, watches the job and reads
+# the lists again, so its card and pane follow the job from now and not from its next poll: for
+# a window that started a job (an image's update window, its Full Disk Access guide).
+main_follow_job() {
+    local _main="$(ui_item_window main window)"
+    [ -n "$_main" ] || return 0
+    printf '%s\n' "$1" >> "$(ui_cache "$_main" jobs-watched)"
+    main_refresh "$_main" status
 }
 
 # -- What ended while the app was closed -----------------------------------------------------------
@@ -559,7 +631,7 @@ main_maintenance() {
                 (","$8",") ~ /,guest-update,/ {
                     printf "%s\tNeeds a guest update for agent-vm %s.\n", $1, current }
                 (","$8",") ~ /,full-disk-access,/ {
-                    printf "%s\tNeeds Full Disk Access, or programs in its boxes cannot open Desktop, Documents or Downloads.\n", $1 }'
+                    printf "%s\tNeeds Full Disk Access, or programs in its boxes cannot open Desktop, Documents or Downloads. Set Up... above is the guide.\n", $1 }'
             main_rows "$1" updates | /usr/bin/awk -F'\t' '
                 $6 != "-" { printf "%s\tmacOS %s is available. Update... installs it, in about 15 minutes.\n", $1, $6 }' ;;
     esac
@@ -1160,6 +1232,13 @@ main_paint_image_detail() {
             ui_enable "$_uuid" "$MAIN_IMAGE_SHOW_ID" 0
         fi
     }
+    # Set Up... opens the image's Full Disk Access guide (lib.agentvm.access.sh): for a ready
+    # image, also while a setup holds it, which the guide then follows.
+    if [ "$(printf '%s\n' "$_row" | /usr/bin/cut -f2)" = "ready" ]; then
+        ui_enable "$_uuid" "$MAIN_IMAGE_ACCESS_ID" 1
+    else
+        ui_enable "$_uuid" "$MAIN_IMAGE_ACCESS_ID" 0
+    fi
     # Not while a job holds the image, or another command changes it. agent-vm also refuses to
     # delete an image another agent-vm process uses (a build started without a job, a box being
     # made from it), and says so.
@@ -1290,6 +1369,7 @@ main_refresh() {
         if [ "$_status" -eq 0 ]; then
             main_report_jobs "$_uuid"
             main_mark_jobs_seen "$_looked"
+            main_note_access "$_uuid"
         fi
         # The selected box's and image's measurements: on opening and activation, not in the poll
         # loop.
