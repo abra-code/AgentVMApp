@@ -39,11 +39,11 @@
 __AGENTVM_APP_NEWIMAGE_LIB=1
 
 . "$OMC_APP_BUNDLE_PATH/Contents/Resources/Scripts/lib.agentvm.main.sh"
+. "$OMC_APP_BUNDLE_PATH/Contents/Resources/Scripts/lib.agentvm.wizard.sh"
 
+# The frame's views are this base plus what lib.agentvm.wizard.sh lists.
+NEW_BASE=1000
 NEW_HEADER_ID=1001
-# The rail's marks of step n: to do 1010 + n, now 1020 + n, done 1030 + n. Its panel: 1040 + n.
-NEW_RAIL_BASE=1010
-NEW_PANEL_BASE=1040
 NEW_SOURCES_ID=1051
 NEW_TOOLS_TEXT_ID=1061
 NEW_OPTIONS_TEXT_ID=1062
@@ -105,42 +105,16 @@ newimage_step() {
     esac
 }
 
-# newimage_enter <uuid>  ->  0 when the handler that runs may act on a click: no other click of
-# the window is still being worked on. A second click on Continue or Back made while the first
-# one's step is being filled carries a snapshot of fields that were half filled, and would keep
-# them as the next step's; a second click on Build would start a second job. The mark is
-# "click-<the handler's process>", and goes when the handler exits; one whose process is gone (a
-# handler that was killed) holds nothing.
+# newimage_enter <uuid>  ->  0 when the handler that runs may act on a click (wizard_enter): a
+# second click on Continue or Back made while the first one's step is being filled would keep
+# half-filled fields as the next step's, and a second click on Build would start a second job.
 newimage_enter() {
-    local _holder="$(ui_get busy "$1")"
-    case "$_holder" in
-        click-|click-0*|click-*[!0123456789]*) ;;
-        click-*)
-            kill -0 "${_holder#click-}" 2>/dev/null && return 1 ;;
-    esac
-    ui_set busy "$1" "click-$$"
-    newimage_busy_uuid="$1"
-    trap 'newimage_leave' EXIT
-    return 0
-}
-
-# newimage_leave  ->  the mark of newimage_enter goes, if this handler's it still is.
-newimage_leave() {
-    [ -n "${newimage_busy_uuid:-}" ] || return 0
-    [ "$(ui_get busy "$newimage_busy_uuid")" = "click-$$" ] || return 0
-    ui_set busy "$newimage_busy_uuid" ""
+    wizard_enter "$1"
 }
 
 # newimage_listed <word> <lines>  ->  0 when the word is one of the lines.
 newimage_listed() {
-    case "
-$2
-" in
-        *"
-$1
-"*) return 0 ;;
-    esac
-    return 1
+    wizard_listed "$1" "$2"
 }
 
 # newimage_step_title <n>
@@ -680,10 +654,7 @@ newimage_take_sizes() {
 
 # newimage_number <text>  ->  0 when it is a whole number, 1 or more, of at most 5 digits.
 newimage_number() {
-    case "$1" in
-        ''|*[!0123456789]*|0*) return 1 ;;
-    esac
-    [ "${#1}" -le 5 ]
+    wizard_number "$1"
 }
 
 # newimage_sizes_blocker <uuid>  ->  why the name or a size cannot be used, or nothing.
@@ -949,42 +920,7 @@ newimage_paint_check() {
 # panel of the step shown, Back, Continue or Build, and the note line.
 newimage_paint_frame() {
     local _step="$(newimage_step "$1")"
-    "$dialog" "$1" "$NEW_HEADER_ID" "Step $_step of $NEW_STEPS - $(newimage_step_title "$_step")"
-    local _n=0 _todo _now _done
-    while [ "$_n" -lt "$NEW_STEPS" ]; do
-        _n=$((_n + 1))
-        _todo=0
-        _now=0
-        _done=0
-        if [ "$_n" -lt "$_step" ]; then
-            _done=1
-        elif [ "$_n" -eq "$_step" ]; then
-            _now=1
-        else
-            _todo=1
-        fi
-        ui_show "$1" "$((NEW_RAIL_BASE + _n))" "$_todo"
-        ui_show "$1" "$((NEW_RAIL_BASE + 10 + _n))" "$_now"
-        ui_show "$1" "$((NEW_RAIL_BASE + 20 + _n))" "$_done"
-        if [ "$_n" -eq "$_step" ]; then
-            ui_show "$1" "$((NEW_PANEL_BASE + _n))" 1
-        else
-            ui_show "$1" "$((NEW_PANEL_BASE + _n))" 0
-        fi
-    done
-    if [ "$_step" -gt 1 ]; then
-        ui_enable "$1" "$NEW_BACK_ID" 1
-    else
-        ui_enable "$1" "$NEW_BACK_ID" 0
-    fi
-    if [ "$_step" -eq "$NEW_STEPS" ]; then
-        ui_show "$1" "$NEW_NEXT_ID" 0
-        ui_show "$1" "$NEW_BUILD_ID" 1
-    else
-        ui_show "$1" "$NEW_BUILD_ID" 0
-        ui_show "$1" "$NEW_NEXT_ID" 1
-    fi
-    "$dialog" "$1" "$NEW_NOTE_ID" "${2:-}"
+    wizard_paint_frame "$1" "$NEW_BASE" "$NEW_STEPS" "$_step" "$(newimage_step_title "$_step")" "${2:-}"
 }
 
 # newimage_show <uuid> <step>  ->  that step shown, its fields filled first: the step is kept,

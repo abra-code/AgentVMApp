@@ -118,6 +118,20 @@
     },
     {
       "NAME": "AgentVM",
+      "COMMAND_ID": "AgentVM.newbox",
+      "ACTIVATION_MODE": "act_always",
+      "EXECUTION_MODE": "exe_script_file",
+      "ACTIONUI_WINDOW": {
+        "JSON_NAME": "AgentVM.newbox",
+        "IS_BLOCKING": false,
+        "WINDOW_TITLE": "New Box",
+        "INIT_SUBCOMMAND_ID": "AgentVM.newbox.init",
+        "WINDOW_DID_ACTIVATE_SUBCOMMAND_ID": "AgentVM.newbox.activated",
+        "END_CANCEL_SUBCOMMAND_ID": "AgentVM.newbox.close"
+      }
+    },
+    {
+      "NAME": "AgentVM",
       "COMMAND_ID": "AgentVM.newimage.choose",
       "EXECUTION_MODE": "exe_script_file",
       "ACTIVATION_MODE": "act_always",

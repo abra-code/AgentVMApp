@@ -104,7 +104,7 @@
                       "content": {
                         "type": "Button",
                         "id": 314,
-                        "properties": { "systemImage": "plus", "help": "New Box...", "disabled": true }
+                        "properties": { "systemImage": "plus", "help": "New Box...", "actionID": "AgentVM.main.box.new" }
                       }
                     }
                   ]
@@ -348,7 +348,7 @@
                       "type": "HStack",
                       "properties": { "spacing": 8.0 },
                       "children": [
-                        { "type": "Button", "id": 431, "properties": { "title": "New Box from It...", "disabled": true } },
+                        { "type": "Button", "id": 431, "properties": { "title": "New Box from It...", "disabled": true, "actionID": "AgentVM.main.box.new", "help": "Make a box that is a copy of this image." } },
                         { "type": "Button", "id": 432, "properties": { "title": "New Image from This...", "disabled": true, "actionID": "AgentVM.main.image.new", "help": "Build a new image that starts as a copy of this one, with more tools." } },
                         { "type": "Button", "id": 435, "properties": { "title": "Update...", "disabled": true, "actionID": "AgentVM.main.image.update", "help": "Choose what to update in the image: macOS, the tools its recipes installed, the guest daemon." } },
                         { "type": "Spacer" },

@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "agents": [
+    { "id": "claude", "name": "Claude Code", "command": ["claude"], "allow": ["pack:anthropic"] },
+    { "id": "codex", "name": "Codex", "command": ["codex"], "allow": ["pack:openai"] },
+    { "id": "opencode", "name": "opencode", "command": ["opencode"], "allow": ["opencode.ai", "Models.OpenCode.ai."] },
+    { "id": "node", "name": "A Rule That Is None", "command": ["node"], "allow": ["--net", "10.0.0.1", "pack:npm"] },
+    { "id": "Bad Id", "name": "Left Out", "command": ["x"], "allow": ["example.com"] },
+    { "id": "quiet", "name": "No Hosts", "command": ["quiet"] }
+  ]
+}

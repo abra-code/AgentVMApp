@@ -150,7 +150,10 @@ ui_lines_text() {
     local _saved="$IFS"
     IFS='
 '
+    # Without file name matching: a line may be a network rule ("*.example.com").
+    set -f
     set -- $1
+    set +f
     IFS="$_saved"
     ui_names_text "$@"
 }
@@ -210,13 +213,15 @@ ui_size_text() {
 # window (lib.agentvm.update.sh): its kind is "update", and the name is the image's; and its Full
 # Disk Access guide (lib.agentvm.access.sh), with the kind "access". The New Image window
 # (lib.agentvm.newimage.sh) is one for the whole app: its kind is "newimage", and the name is
-# the word "window".
+# the word "window". So is the New Box window (lib.agentvm.newbox.sh), with the kind "newbox".
 
 # The request key of a kind is this, an underscore and the kind.
 AGENTVM_OPEN_REQUEST_KEY="agentvm_open_request"
 # The image a New Image window that opens now starts from, as "<app pid> <image>": set by the
 # main window with its request, read once by the window's init handler.
 AGENTVM_NEWIMAGE_FROM_KEY="agentvm_newimage_from"
+# The image a New Box window that opens now makes its box from, kept and read the same way.
+AGENTVM_NEWBOX_FROM_KEY="agentvm_newbox_from"
 
 # ui_item_key <network|programs> <box>  ->  the pasteboard key naming that box's window of that kind.
 ui_item_key() {

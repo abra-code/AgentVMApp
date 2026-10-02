@@ -299,8 +299,7 @@ net_connection_rule() {
 
 # net_allowable <uuid> <host> <port> <rule shown> <decision>  ->  net_connection_rule for the window's
 # box, and only while its mode is allowlist: with the network off every host is refused whatever
-# the rules say, and in open mode a refusal is for this Mac or the local network, which no rule
-# opens.
+# the rules say, and in open mode nothing goes through the proxy that the rules steer.
 net_allowable() {
     local _box="$(ui_get box "$1")"
     [ -n "$_box" ] && agentvm_valid_name "$_box" || return 0
@@ -344,7 +343,7 @@ net_mode_text() {
     case "$1" in
         allowlist) _text="Only what the packs and hosts below allow." ;;
         off)       _text="No network: every connection is refused, whatever the rules say." ;;
-        open)      _text="Any host but this Mac and your local network; the rules are kept for later." ;;
+        open)      _text="Any host, your local network included, and no connection is logged; the rules are kept for later." ;;
     esac
     [ "$2" = "stopped" ] || _text="${_text:+$_text }The mode changes only while the box is stopped."
     printf '%s\n' "$_text"

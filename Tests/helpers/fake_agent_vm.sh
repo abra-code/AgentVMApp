@@ -34,6 +34,7 @@
 #   job-log-<id>.json  a job's log: {"events": [...], "lines": [...]}, what `job log <id>` answers
 #              with the job's record; a job without one has no events. The job's `progress` and
 #              `notice`, in `status`, `job list` and `job log`, are then the log's last ones.
+#   status.json  also what `box create` adds the new box to, as agent-vm's store would hold it.
 #   job-start-state  when present, the state a job is in as `job start` returns ("failed"), with
 #              the text of job-start-error as its error: a job that fails within the moment.
 #
@@ -43,6 +44,9 @@
 #   image delete <name> --json, box delete <name> --json and box recreate <name> --json (which
 #   change nothing: the test changes status.json to match), box info <name> --json, and
 #   box view <name> [--interactive] --json (which shows nothing), box packs --json,
+#   box create <name> --image <image> [--cpus <n>] [--memory-gb <n>] [--net <mode>] [--allow <rule> ...]
+#   --json (the box is added, stopped, to what `status` answers; a name that is taken, an image
+#   that is not listed or not ready, and an option it does not know are refused),
 #   box network <name> [--net <mode>] [--allow <rule> ...] [--disallow <rule> ...] --json (the
 #   rules from box-network-<name>.json in the state directory, else the fixture box-network.json;
 #   a change is applied to them and written to box-network-<name>.json, as agent-vm would keep
@@ -165,6 +169,50 @@ case "$*" in
         fi ;;
     "box packs --json")
         answer packs ;;
+    "box create "*)
+        box="$3"
+        shift 3
+        image=""
+        cpus=""
+        memory=""
+        mode="allowlist"
+        : > "$state/box-allow.tmp"
+        while [ "$#" -gt 1 ]; do
+            case "$1" in
+                --image)     image="$2" ;;
+                --cpus)      cpus="$2" ;;
+                --memory-gb) memory="$2" ;;
+                --net)       mode="$2" ;;
+                --allow)     printf '%s\n' "$2" >> "$state/box-allow.tmp" ;;
+                *)           printf 'Error: fake_agent_vm does not implement box create %s\n' "$1" >&2
+                             exit 64 ;;
+            esac
+            shift 2
+        done
+        [ "$1" = "--json" ] || exit 64
+        answer status > "$state/status-was.json"
+        if [ -n "$(/usr/bin/jq -r --arg name "$box" '.boxes[] | select(.box.name == $name) | .box.name' "$state/status-was.json")" ]; then
+            printf 'Error: a box named %s already exists\n' "$box" >&2
+            exit 1
+        fi
+        if [ "$(/usr/bin/jq -r --arg name "$image" '.images[] | select(.name == $name) | .state' "$state/status-was.json")" != "ready" ]; then
+            printf 'Error: no ready image %s; `agent-vm image list` shows the existing ones\n' "$image" >&2
+            exit 1
+        fi
+        /usr/bin/jq -R . "$state/box-allow.tmp" | /usr/bin/jq -s . > "$state/box-allow.json"
+        /usr/bin/jq --arg name "$box" --arg image "$image" --arg cpus "$cpus" --arg memory "$memory" --arg mode "$mode" \
+            --slurpfile allow "$state/box-allow.json" '
+            (.images[] | select(.name == $image)) as $from
+            | .boxes += [{ box: { cpuCount: (if $cpus == "" then $from.cpuCount else ($cpus | tonumber) end),
+                                  createdAt: "2026-09-30T12:00:00Z", disposable: false, image: $image,
+                                  macOSBuild: $from.macOSBuild, macOSVersion: $from.macOSVersion,
+                                  memoryBytes: (if $memory == "" then $from.memoryBytes else ($memory | tonumber) * 1073741824 end),
+                                  name: $name, network: { allow: $allow[0], mode: $mode } },
+                           needs: [], path: ("/Users/you/Library/Application Support/agent-vm/Boxes/" + $name),
+                           running: false, state: "stopped" }]' "$state/status-was.json" > "$state/status.json.new" \
+            && /bin/mv "$state/status.json.new" "$state/status.json"
+        /usr/bin/jq --arg name "$box" '.boxes[] | select(.box.name == $name) | .box' "$state/status.json"
+        /bin/rm -f "$state/status-was.json" "$state/box-allow.tmp" "$state/box-allow.json" ;;
     "box network "*)
         box="$3"
         shift 3

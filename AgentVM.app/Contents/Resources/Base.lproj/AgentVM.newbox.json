@@ -1,0 +1,916 @@
+{
+  "type": "HStack",
+  "properties": {
+    "alignment": "top",
+    "spacing": 16,
+    "padding": 20,
+    "frame": {
+      "minWidth": 860,
+      "minHeight": 620,
+      "idealWidth": 900,
+      "idealHeight": 640
+    }
+  },
+  "children": [
+    {
+      "type": "VStack",
+      "properties": {
+        "alignment": "leading",
+        "spacing": 12,
+        "frame": {
+          "width": 150,
+          "alignment": "topLeading"
+        }
+      },
+      "children": [
+        {
+          "type": "Text",
+          "properties": {
+            "text": "New Box",
+            "font": "title2"
+          }
+        },
+        {
+          "type": "HStack",
+          "properties": {
+            "spacing": 8
+          },
+          "children": [
+            {
+              "type": "ZStack",
+              "children": [
+                {
+                  "type": "Image",
+                  "id": 2011,
+                  "properties": {
+                    "systemName": "circle",
+                    "foregroundStyle": "secondary"
+                  }
+                },
+                {
+                  "type": "Image",
+                  "id": 2021,
+                  "properties": {
+                    "systemName": "arrow.right.circle.fill",
+                    "foregroundStyle": "blue",
+                    "hidden": true
+                  }
+                },
+                {
+                  "type": "Image",
+                  "id": 2031,
+                  "properties": {
+                    "systemName": "checkmark.circle.fill",
+                    "foregroundStyle": "green",
+                    "hidden": true
+                  }
+                }
+              ]
+            },
+            {
+              "type": "Text",
+              "properties": {
+                "text": "Image"
+              }
+            }
+          ]
+        },
+        {
+          "type": "HStack",
+          "properties": {
+            "spacing": 8
+          },
+          "children": [
+            {
+              "type": "ZStack",
+              "children": [
+                {
+                  "type": "Image",
+                  "id": 2012,
+                  "properties": {
+                    "systemName": "circle",
+                    "foregroundStyle": "secondary"
+                  }
+                },
+                {
+                  "type": "Image",
+                  "id": 2022,
+                  "properties": {
+                    "systemName": "arrow.right.circle.fill",
+                    "foregroundStyle": "blue",
+                    "hidden": true
+                  }
+                },
+                {
+                  "type": "Image",
+                  "id": 2032,
+                  "properties": {
+                    "systemName": "checkmark.circle.fill",
+                    "foregroundStyle": "green",
+                    "hidden": true
+                  }
+                }
+              ]
+            },
+            {
+              "type": "Text",
+              "properties": {
+                "text": "Network"
+              }
+            }
+          ]
+        },
+        {
+          "type": "HStack",
+          "properties": {
+            "spacing": 8
+          },
+          "children": [
+            {
+              "type": "ZStack",
+              "children": [
+                {
+                  "type": "Image",
+                  "id": 2013,
+                  "properties": {
+                    "systemName": "circle",
+                    "foregroundStyle": "secondary"
+                  }
+                },
+                {
+                  "type": "Image",
+                  "id": 2023,
+                  "properties": {
+                    "systemName": "arrow.right.circle.fill",
+                    "foregroundStyle": "blue",
+                    "hidden": true
+                  }
+                },
+                {
+                  "type": "Image",
+                  "id": 2033,
+                  "properties": {
+                    "systemName": "checkmark.circle.fill",
+                    "foregroundStyle": "green",
+                    "hidden": true
+                  }
+                }
+              ]
+            },
+            {
+              "type": "Text",
+              "properties": {
+                "text": "Name and size"
+              }
+            }
+          ]
+        },
+        {
+          "type": "HStack",
+          "properties": {
+            "spacing": 8
+          },
+          "children": [
+            {
+              "type": "ZStack",
+              "children": [
+                {
+                  "type": "Image",
+                  "id": 2014,
+                  "properties": {
+                    "systemName": "circle",
+                    "foregroundStyle": "secondary"
+                  }
+                },
+                {
+                  "type": "Image",
+                  "id": 2024,
+                  "properties": {
+                    "systemName": "arrow.right.circle.fill",
+                    "foregroundStyle": "blue",
+                    "hidden": true
+                  }
+                },
+                {
+                  "type": "Image",
+                  "id": 2034,
+                  "properties": {
+                    "systemName": "checkmark.circle.fill",
+                    "foregroundStyle": "green",
+                    "hidden": true
+                  }
+                }
+              ]
+            },
+            {
+              "type": "Text",
+              "properties": {
+                "text": "Check"
+              }
+            }
+          ]
+        },
+        {
+          "type": "Spacer"
+        },
+        {
+          "type": "Text",
+          "properties": {
+            "text": "A box is made at once. Starting it takes 10 to 20 seconds, and goes on when this app is closed.",
+            "font": "caption",
+            "foregroundStyle": "secondary",
+            "frame": {
+              "maxWidth": "infinity",
+              "alignment": "leading"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "type": "Divider"
+    },
+    {
+      "type": "VStack",
+      "properties": {
+        "alignment": "leading",
+        "spacing": 12,
+        "frame": {
+          "maxWidth": "infinity",
+          "maxHeight": "infinity",
+          "alignment": "topLeading"
+        }
+      },
+      "children": [
+        {
+          "type": "Text",
+          "id": 2001,
+          "properties": {
+            "text": "",
+            "font": "title3"
+          }
+        },
+        {
+          "type": "ZStack",
+          "properties": {
+            "alignment": "topLeading",
+            "frame": {
+              "maxWidth": "infinity",
+              "maxHeight": "infinity",
+              "alignment": "topLeading"
+            }
+          },
+          "children": [
+            {
+              "type": "VStack",
+              "id": 2041,
+              "properties": {
+                "alignment": "leading",
+                "spacing": 10,
+                "frame": {
+                  "maxWidth": "infinity",
+                  "maxHeight": "infinity",
+                  "alignment": "topLeading"
+                }
+              },
+              "children": [
+                {
+                  "type": "Text",
+                  "properties": {
+                    "text": "The image the box is a copy of. The box starts with everything the image holds, and what is done in the box stays in the box.",
+                    "frame": {
+                      "maxWidth": "infinity",
+                      "alignment": "leading"
+                    }
+                  }
+                },
+                {
+                  "type": "Table",
+                  "id": 2051,
+                  "properties": {
+                    "columns": [
+                      "Name",
+                      "macOS",
+                      "Holds",
+                      "State"
+                    ],
+                    "widths": [
+                      160,
+                      60,
+                      210,
+                      130
+                    ],
+                    "minWidths": [
+                      100,
+                      50,
+                      100,
+                      100
+                    ],
+                    "actionID": "AgentVM.newbox.image",
+                    "frame": {
+                      "maxWidth": "infinity",
+                      "minHeight": 160,
+                      "maxHeight": "infinity"
+                    }
+                  }
+                },
+                {
+                  "type": "HStack",
+                  "properties": {
+                    "alignment": "top",
+                    "spacing": 8
+                  },
+                  "children": [
+                    {
+                      "type": "Text",
+                      "id": 2052,
+                      "properties": {
+                        "text": "",
+                        "foregroundStyle": "secondary",
+                        "textSelection": "enabled",
+                        "frame": {
+                          "maxWidth": "infinity",
+                          "alignment": "leading"
+                        }
+                      }
+                    },
+                    {
+                      "type": "Button",
+                      "id": 2053,
+                      "properties": {
+                        "title": "Set Up...",
+                        "disabled": true,
+                        "actionID": "AgentVM.newbox.access",
+                        "help": "Open the selected image's Full Disk Access guide."
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "VStack",
+              "id": 2042,
+              "properties": {
+                "alignment": "leading",
+                "spacing": 10,
+                "frame": {
+                  "maxWidth": "infinity",
+                  "maxHeight": "infinity",
+                  "alignment": "topLeading"
+                },
+                "hidden": true
+              },
+              "children": [
+                {
+                  "type": "Text",
+                  "id": 2060,
+                  "properties": {
+                    "text": "",
+                    "frame": {
+                      "maxWidth": "infinity",
+                      "alignment": "leading"
+                    }
+                  }
+                },
+                {
+                  "type": "HStack",
+                  "properties": {
+                    "spacing": 8
+                  },
+                  "children": [
+                    {
+                      "type": "Text",
+                      "properties": {
+                        "text": "Mode",
+                        "font": "headline",
+                        "frame": {
+                          "width": 60,
+                          "alignment": "leading"
+                        }
+                      }
+                    },
+                    {
+                      "type": "Picker",
+                      "id": 2061,
+                      "properties": {
+                        "title": "Mode",
+                        "labelsHidden": true,
+                        "pickerStyle": "segmented",
+                        "options": [
+                          "Allowlist",
+                          "Off",
+                          "Open"
+                        ],
+                        "actionID": "AgentVM.newbox.mode",
+                        "frame": {
+                          "maxWidth": 260
+                        }
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "Text",
+                  "id": 2062,
+                  "properties": {
+                    "text": "",
+                    "font": "caption",
+                    "foregroundStyle": "secondary",
+                    "frame": {
+                      "maxWidth": "infinity",
+                      "alignment": "leading"
+                    }
+                  }
+                },
+                {
+                  "type": "Text",
+                  "properties": {
+                    "text": "Packs",
+                    "font": "headline"
+                  }
+                },
+                {
+                  "type": "LazyVGrid",
+                  "id": 2063,
+                  "properties": {
+                    "columns": [
+                      {
+                        "flexible": true
+                      },
+                      {
+                        "flexible": true
+                      },
+                      {
+                        "flexible": true
+                      }
+                    ],
+                    "spacing": 6,
+                    "alignment": "leading"
+                  },
+                  "template": {
+                    "type": "HStack",
+                    "properties": {
+                      "spacing": 6,
+                      "padding": 2,
+                      "actionID": "AgentVM.newbox.pack",
+                      "help": "$3",
+                      "frame": {
+                        "maxWidth": "infinity",
+                        "alignment": "leading"
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "Image",
+                        "properties": {
+                          "systemName": "$1",
+                          "foregroundStyle": "$4"
+                        }
+                      },
+                      {
+                        "type": "Text",
+                        "properties": {
+                          "text": "$2"
+                        }
+                      }
+                    ]
+                  }
+                },
+                {
+                  "type": "HStack",
+                  "id": 2064,
+                  "properties": {
+                    "spacing": 6,
+                    "padding": 2,
+                    "actionID": "AgentVM.newbox.public",
+                    "help": "Any host name that resolves to a public address, logged like every connection. Never an IP address, a local name, this Mac or your local network."
+                  },
+                  "children": [
+                    {
+                      "type": "Image",
+                      "id": 2065,
+                      "properties": {
+                        "systemName": "square"
+                      }
+                    },
+                    {
+                      "type": "Text",
+                      "properties": {
+                        "text": "Any public host name"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "Text",
+                  "properties": {
+                    "text": "Other hosts",
+                    "font": "headline"
+                  }
+                },
+                {
+                  "type": "Table",
+                  "id": 2066,
+                  "properties": {
+                    "columns": [
+                      "Rule",
+                      "Note"
+                    ],
+                    "widths": [
+                      320,
+                      200
+                    ],
+                    "minWidths": [
+                      120,
+                      80
+                    ],
+                    "actionID": "AgentVM.newbox.host.selected",
+                    "frame": {
+                      "maxWidth": "infinity",
+                      "minHeight": 80,
+                      "maxHeight": "infinity"
+                    }
+                  }
+                },
+                {
+                  "type": "HStack",
+                  "properties": {
+                    "spacing": 8
+                  },
+                  "children": [
+                    {
+                      "type": "TextField",
+                      "id": 2067,
+                      "properties": {
+                        "title": "Host",
+                        "prompt": "host, *.domain or host:port",
+                        "labelsHidden": true,
+                        "frame": {
+                          "maxWidth": 300
+                        }
+                      }
+                    },
+                    {
+                      "type": "Button",
+                      "id": 2068,
+                      "properties": {
+                        "title": "Add",
+                        "actionID": "AgentVM.newbox.add"
+                      }
+                    },
+                    {
+                      "type": "Button",
+                      "id": 2069,
+                      "properties": {
+                        "title": "Remove",
+                        "disabled": true,
+                        "actionID": "AgentVM.newbox.remove"
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "VStack",
+              "id": 2043,
+              "properties": {
+                "hidden": true,
+                "frame": {
+                  "maxWidth": "infinity",
+                  "maxHeight": "infinity",
+                  "alignment": "topLeading"
+                }
+              },
+              "children": [
+                {
+                  "type": "ScrollView",
+                  "properties": {
+                    "frame": {
+                      "maxWidth": "infinity",
+                      "maxHeight": "infinity"
+                    }
+                  },
+                  "content": {
+                    "type": "VStack",
+                    "properties": {
+                      "alignment": "leading",
+                      "spacing": 10,
+                      "frame": {
+                        "maxWidth": "infinity",
+                        "alignment": "topLeading"
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "HStack",
+                        "properties": {
+                          "spacing": 8
+                        },
+                        "children": [
+                          {
+                            "type": "Text",
+                            "properties": {
+                              "text": "Name",
+                              "frame": {
+                                "width": 120,
+                                "alignment": "leading"
+                              }
+                            }
+                          },
+                          {
+                            "type": "TextField",
+                            "id": 2071,
+                            "properties": {
+                              "title": "Name",
+                              "labelsHidden": true,
+                              "frame": {
+                                "width": 260
+                              }
+                            }
+                          }
+                        ]
+                      },
+                      {
+                        "type": "Text",
+                        "properties": {
+                          "text": "Lower-case letters, digits, \".\", \"_\" and \"-\", starting with a letter or a digit.",
+                          "font": "caption",
+                          "foregroundStyle": "secondary",
+                          "padding": {
+                            "leading": 128
+                          },
+                          "frame": {
+                            "maxWidth": "infinity",
+                            "alignment": "leading"
+                          }
+                        }
+                      },
+                      {
+                        "type": "HStack",
+                        "properties": {
+                          "spacing": 8
+                        },
+                        "children": [
+                          {
+                            "type": "Text",
+                            "properties": {
+                              "text": "Processors",
+                              "frame": {
+                                "width": 120,
+                                "alignment": "leading"
+                              }
+                            }
+                          },
+                          {
+                            "type": "TextField",
+                            "id": 2072,
+                            "properties": {
+                              "title": "Processors",
+                              "labelsHidden": true,
+                              "frame": {
+                                "width": 80
+                              }
+                            }
+                          },
+                          {
+                            "type": "Text",
+                            "properties": {
+                              "text": "virtual CPUs",
+                              "foregroundStyle": "secondary"
+                            }
+                          }
+                        ]
+                      },
+                      {
+                        "type": "HStack",
+                        "properties": {
+                          "spacing": 8
+                        },
+                        "children": [
+                          {
+                            "type": "Text",
+                            "properties": {
+                              "text": "Memory",
+                              "frame": {
+                                "width": 120,
+                                "alignment": "leading"
+                              }
+                            }
+                          },
+                          {
+                            "type": "TextField",
+                            "id": 2073,
+                            "properties": {
+                              "title": "Memory",
+                              "labelsHidden": true,
+                              "frame": {
+                                "width": 80
+                              }
+                            }
+                          },
+                          {
+                            "type": "Text",
+                            "properties": {
+                              "text": "GB",
+                              "foregroundStyle": "secondary"
+                            }
+                          }
+                        ]
+                      },
+                      {
+                        "type": "Text",
+                        "id": 2075,
+                        "properties": {
+                          "text": "",
+                          "foregroundStyle": "secondary",
+                          "frame": {
+                            "maxWidth": "infinity",
+                            "alignment": "leading"
+                          }
+                        }
+                      },
+                      {
+                        "type": "Toggle",
+                        "id": 2074,
+                        "properties": {
+                          "title": "Start the box when it is made",
+                          "style": "checkbox",
+                          "isOn": true
+                        }
+                      },
+                      {
+                        "type": "Text",
+                        "properties": {
+                          "text": "A box started here has no owner: it runs until it is stopped, as one started in Terminal does.",
+                          "font": "caption",
+                          "foregroundStyle": "secondary",
+                          "frame": {
+                            "maxWidth": "infinity",
+                            "alignment": "leading"
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "type": "VStack",
+              "id": 2044,
+              "properties": {
+                "hidden": true,
+                "frame": {
+                  "maxWidth": "infinity",
+                  "maxHeight": "infinity",
+                  "alignment": "topLeading"
+                }
+              },
+              "children": [
+                {
+                  "type": "ScrollView",
+                  "properties": {
+                    "frame": {
+                      "maxWidth": "infinity",
+                      "maxHeight": "infinity"
+                    }
+                  },
+                  "content": {
+                    "type": "VStack",
+                    "properties": {
+                      "alignment": "leading",
+                      "spacing": 10,
+                      "frame": {
+                        "maxWidth": "infinity",
+                        "alignment": "topLeading"
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "Text",
+                        "id": 2081,
+                        "properties": {
+                          "text": "",
+                          "textSelection": "enabled",
+                          "frame": {
+                            "maxWidth": "infinity",
+                            "alignment": "leading"
+                          }
+                        }
+                      },
+                      {
+                        "type": "Text",
+                        "id": 2083,
+                        "properties": {
+                          "text": "",
+                          "foregroundStyle": "secondary",
+                          "textSelection": "enabled",
+                          "frame": {
+                            "maxWidth": "infinity",
+                            "alignment": "leading"
+                          }
+                        }
+                      },
+                      {
+                        "type": "Text",
+                        "properties": {
+                          "text": "The command",
+                          "font": "headline"
+                        }
+                      },
+                      {
+                        "type": "Text",
+                        "id": 2082,
+                        "properties": {
+                          "text": "",
+                          "font": {
+                            "size": 12,
+                            "design": "monospaced"
+                          },
+                          "textSelection": "enabled",
+                          "frame": {
+                            "maxWidth": "infinity",
+                            "alignment": "leading"
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "Text",
+          "id": 2091,
+          "properties": {
+            "text": "",
+            "foregroundStyle": "orange",
+            "textSelection": "enabled",
+            "frame": {
+              "maxWidth": "infinity",
+              "alignment": "leading"
+            }
+          }
+        },
+        {
+          "type": "HStack",
+          "properties": {
+            "spacing": 8
+          },
+          "children": [
+            {
+              "type": "Spacer"
+            },
+            {
+              "type": "Button",
+              "id": 2092,
+              "properties": {
+                "title": "Cancel",
+                "role": "cancel",
+                "actionID": "AgentVM.newbox.cancel"
+              }
+            },
+            {
+              "type": "Button",
+              "id": 2093,
+              "properties": {
+                "title": "Back",
+                "disabled": true,
+                "actionID": "AgentVM.newbox.back"
+              }
+            },
+            {
+              "type": "ZStack",
+              "children": [
+                {
+                  "type": "Button",
+                  "id": 2094,
+                  "properties": {
+                    "title": "Continue",
+                    "buttonStyle": "borderedProminent",
+                    "actionID": "AgentVM.newbox.next"
+                  }
+                },
+                {
+                  "type": "Button",
+                  "id": 2095,
+                  "properties": {
+                    "title": "Create",
+                    "hidden": true,
+                    "buttonStyle": "borderedProminent",
+                    "actionID": "AgentVM.newbox.create",
+                    "help": "Make the box, and start it when that was chosen."
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

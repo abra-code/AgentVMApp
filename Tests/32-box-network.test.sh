@@ -351,7 +351,7 @@ store '.'
 omc_run AgentVM.network.activated
 mode 3
 check "open wanted, and what open means" \
-    "Not applied yet: mode open.|Any host but this Mac and your local network; the rules are kept for later." \
+    "Not applied yet: mode open.|Any host, your local network included, and no connection is logged; the rules are kept for later." \
     "$(ui_value "$NET_CHANGES_ID")|$(ui_value "$NET_MODE_NOTE_ID")"
 pack homebrew
 # The box starts, and the window is not told: Apply reads the box's state itself.

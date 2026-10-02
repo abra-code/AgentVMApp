@@ -8,7 +8,8 @@
 # where it would do the most harm: the main window open on a stopped box with Delete and Recreate
 # already asked, a network window with edits waiting and an Allow already asked, a job that
 # runs, whose Stop was already asked, an image's update with its parts ticked, an image that
-# Open the Image would start, and a guide already offered. The same state is
+# Open the Image would start, a guide already offered, and a New Image and a New Box window
+# each on its last step. The same state is
 # then planted under the empty uuid (the pasteboard keys and the cache folder a handler without
 # its guard would compute), so that a handler missing the guard acts, and is seen, rather than
 # finding nothing to act on.
@@ -73,7 +74,9 @@ state() {
     printf 'chained: %s %s %s %s %s %s %s %s\n' "$(chain_asked AgentVM.main)" "$(chain_asked AgentVM.network)" "$(chain_asked AgentVM.programs)" \
         "$(chain_asked AgentVM.progress)" "$(chain_asked AgentVM.progress.poll)" "$(chain_asked AgentVM.update)" \
         "$(chain_asked AgentVM.access)" "$(chain_asked AgentVM.access.poll)"
-    printf 'chained too: %s\n' "$(chain_asked AgentVM.newimage)"
+    printf 'chained too: %s %s\n' "$(chain_asked AgentVM.newimage)" "$(chain_asked AgentVM.newbox)"
+    printf 'new box: %s|%s|%s|%s|%s\n' "$("$PB" agentvm_open_request_newbox get)" "$("$PB" agentvm_newbox_from get)" \
+        "$("$PB" agentvm_newbox_ get)" "$("$PB" agentvm_picked_ get)" "$("$PB" agentvm_mode_ get)"
     printf 'new image: %s|%s|%s|%s|%s\n' "$("$PB" agentvm_open_request_newimage get)" "$("$PB" agentvm_newimage_from get)" \
         "$("$PB" agentvm_newimage_ get)" "$("$PB" agentvm_step_ get)" "$("$PB" agentvm_ticks_ get)"
     printf 'alert: %s\n' "$(ui_alert_title)"
@@ -107,6 +110,12 @@ without_window() {
       OMC_DLG_CHOOSE_FILE_PATH="$OMCTEST_WORK/chosen.xip"; OMC_ACTIONUI_TABLE_1051_COLUMN_5_VALUE="image dev"
       OMC_ACTIONUI_TABLE_1051_COLUMN_1_VALUE="dev"; OMC_ACTIONUI_VIEW_1111_VALUE="true"
       export OMC_DLG_CHOOSE_FILE_PATH OMC_ACTIONUI_TABLE_1051_COLUMN_5_VALUE OMC_ACTIONUI_TABLE_1051_COLUMN_1_VALUE OMC_ACTIONUI_VIEW_1111_VALUE
+      OMC_ACTIONUI_TABLE_2051_COLUMN_5_VALUE="dev"; OMC_ACTIONUI_TABLE_2051_COLUMN_1_VALUE="dev"
+      OMC_ACTIONUI_TABLE_2066_COLUMN_1_VALUE="pack:npm"; OMC_ACTIONUI_VIEW_2067_VALUE="example.com"; OMC_ACTIONUI_VIEW_2061_VALUE="3"
+      OMC_ACTIONUI_VIEW_2071_VALUE="stray"; OMC_ACTIONUI_VIEW_2072_VALUE="2"; OMC_ACTIONUI_VIEW_2073_VALUE="2"; OMC_ACTIONUI_VIEW_2074_VALUE="true"
+      export OMC_ACTIONUI_TABLE_2051_COLUMN_5_VALUE OMC_ACTIONUI_TABLE_2051_COLUMN_1_VALUE OMC_ACTIONUI_TABLE_2066_COLUMN_1_VALUE \
+          OMC_ACTIONUI_VIEW_2067_VALUE OMC_ACTIONUI_VIEW_2061_VALUE OMC_ACTIONUI_VIEW_2071_VALUE OMC_ACTIONUI_VIEW_2072_VALUE \
+          OMC_ACTIONUI_VIEW_2073_VALUE OMC_ACTIONUI_VIEW_2074_VALUE
       export OMC_ACTIONUI_WINDOW_UUID ACTIONUI_WINDOW_UUID OMC_OBJ_TEXT OMC_ACTIONUI_TABLE_311_COLUMN_1_VALUE \
           OMC_ACTIONUI_TABLE_411_COLUMN_1_VALUE OMC_ACTIONUI_TABLE_604_COLUMN_1_VALUE OMC_ACTIONUI_VIEW_605_VALUE \
           OMC_ACTIONUI_VIEW_601_VALUE OMC_ACTIONUI_TRIGGER_VIEW_PART_ID OMC_ACTIONUI_TABLE_613_COLUMN_1_VALUE \
@@ -185,6 +194,14 @@ done
 "$PB" agentvm_memory_ set 8
 "$PB" agentvm_disk_ set 128
 lib agentvm_status_build_rows < "$FAKE_AGENTVM_DIR/status.json" > "$TMPDIR/AgentVM/build.tsv"
+# A New Box window, as it would keep itself: a box of that free name from the same image (the
+# image and the name are the values planted above), with a rule and the packs read. Its last
+# step is the fourth, and the New Image window's the fifth, in the same value: the loop below
+# runs with the fifth, and the New Box handlers are run again with the fourth.
+"$PB" agentvm_newbox_ set 1
+"$PB" agentvm_picked_ set dev-xcode
+printf 'pack:npm\n' > "$TMPDIR/AgentVM/rules"
+lib agentvm_packs_rows < "$FIXTURES_AGENTVM/packs.json" > "$TMPDIR/AgentVM/packs.tsv"
 # Guards: without these the checks below would pass with nothing at stake.
 check "a job runs, and holds the box, under the empty uuid" "$JOB${TAB}running${TAB}box:$BOX|$JOB|$JOB" \
     "$(/usr/bin/cut -f1-3 "$TMPDIR/AgentVM/jobs.tsv")|$("$PB" agentvm_job_ get)|$("$PB" agentvm_job_stop_ get)"
@@ -196,6 +213,9 @@ check "a setup could start, and a guide open, under the empty uuid: the image ne
 check "a build could start under the empty uuid: a New Image window on its last step, a ready start, a free name" \
     "1|5|image dev-xcode|dev-xcode${TAB}ready${TAB}false|" \
     "$("$PB" agentvm_newimage_ get)|$("$PB" agentvm_step_ get)|$("$PB" agentvm_start_ get)|$(/usr/bin/awk -F'\t' '$1 == "dev-xcode"' "$TMPDIR/AgentVM/build.tsv" | /usr/bin/cut -f1-3)|$(/usr/bin/awk -F'\t' '$1 == "planted"' "$TMPDIR/AgentVM/build.tsv")"
+check "a box could be made under the empty uuid: a New Box window, a ready image, a free name, sizes, a rule" \
+    "1|dev-xcode|planted|4|8|pack:npm|" \
+    "$("$PB" agentvm_newbox_ get)|$("$PB" agentvm_image_ get)|$("$PB" agentvm_name_ get)|$("$PB" agentvm_cpus_ get)|$("$PB" agentvm_memory_ get)|$(/bin/cat "$TMPDIR/AgentVM/rules")|$(/usr/bin/awk -F'\t' '$1 == "planted"' "$TMPDIR/AgentVM/boxes.tsv")"
 check "Delete was asked about the box"   "$BOX" "$("$PB" "agentvm_box_delete_$MAIN_UUID" get)"
 check "Recreate too"                     "$BOX" "$("$PB" "agentvm_box_recreate_$MAIN_UUID" get)"
 check "an image's Delete was asked"      "dev-xcode" "$("$PB" "agentvm_image_delete_$MAIN_UUID" get)"
@@ -227,6 +247,30 @@ for handler in $(handlers); do
     fi
 done
 check "none asks agent-vm, opens, writes, chains, alerts, or touches a pending question" "" "$offenders"
+check "each exits cleanly"               "" "$failed"
+
+section "the New Box handlers, without a window, on its last step and on its network step"
+offenders=""
+failed=""
+count=0
+for step in 4 2; do
+    "$PB" agentvm_step_ set "$step"
+    before="$(state)"
+    for handler in $(handlers | /usr/bin/grep '^AgentVM\.newbox'); do
+        count=$((count + 1))
+        without_window "$handler"
+        status=$?
+        [ "$status" -eq 0 ] || failed="$failed $handler($status)"
+        after="$(state)"
+        if [ "$after" != "$before" ]; then
+            offenders="$offenders $handler"
+            printf '%s changed:\n%s\n' "$handler" "$(printf '%s\n%s\n' "$before" "$after" | /usr/bin/sort | /usr/bin/uniq -u)" >&2
+            before="$after"
+        fi
+    done
+done
+check "there are New Box handlers to run" "yes" "$([ "$count" -ge 20 ] && echo yes)"
+check "none makes a box, asks agent-vm, writes, chains or alerts" "" "$offenders"
 check "each exits cleanly"               "" "$failed"
 
 section "the same handlers act in their window"

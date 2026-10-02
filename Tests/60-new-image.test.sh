@@ -27,8 +27,10 @@ import_view_ids "$APP_SCRIPTS/lib.agentvm.main.sh" "$APP_SCRIPTS/lib.agentvm.new
 base() {
     /usr/bin/sed -n "s/^$1=\\([0-9][0-9]*\\)\$/\\1/p" "$APP_SCRIPTS/lib.agentvm.newimage.sh"
 }
-RAIL="$(base NEW_RAIL_BASE)"
-PANEL="$(base NEW_PANEL_BASE)"
+# The frame: the rail's marks and the panels are the window's base plus 10 and 40 (lib.agentvm.wizard.sh).
+FRAME="$(base NEW_BASE)"
+RAIL=$((${FRAME:-0} + 10))
+PANEL=$((${FRAME:-0} + 40))
 R_ROW="$(base NEW_RECIPE_ROW_BASE)"
 R_TICK="$(base NEW_RECIPE_TICK_BASE)"
 R_NAME="$(base NEW_RECIPE_NAME_BASE)"
@@ -39,7 +41,7 @@ O_LABEL="$(base NEW_OPTION_LABEL_BASE)"
 O_FIELD="$(base NEW_OPTION_FIELD_BASE)"
 O_CHOOSE="$(base NEW_OPTION_CHOOSE_BASE)"
 O_TEXT="$(base NEW_OPTION_TEXT_BASE)"
-[ -n "$RAIL" ] && [ -n "$PANEL" ] && [ -n "$R_ROW" ] && [ -n "$R_TICK" ] && [ -n "$R_NAME" ] && [ -n "$R_TEXT" ] && [ -n "$R_NOTE" ] \
+[ -n "$FRAME" ] && [ -n "$R_ROW" ] && [ -n "$R_TICK" ] && [ -n "$R_NAME" ] && [ -n "$R_TEXT" ] && [ -n "$R_NOTE" ] \
     && [ -n "$O_ROW" ] && [ -n "$O_LABEL" ] && [ -n "$O_FIELD" ] && [ -n "$O_CHOOSE" ] && [ -n "$O_TEXT" ] || {
     printf '60-new-image: the slot bases were not found in the library\n' >&2
     exit 1
@@ -188,7 +190,7 @@ store '.'
 # -----------------------------------------------------------------------------------------------
 section "the library: what a build from an image needs to know"
 rows="$(lib agentvm_status_build_rows < "$FIXTURES_AGENTVM/status-variety.json")"
-check "eleven fields"                "11" "$(printf '%s\n' "$rows" | field_count)"
+check "twelve fields"                "12" "$(printf '%s\n' "$rows" | field_count)"
 check "a plain image: ready, not being changed, its macOS, 4 CPUs, 8 GB, a 64 GB disk, the Command Line Tools" \
     "dev${TAB}ready${TAB}false${TAB}27.0${TAB}4${TAB}8${TAB}64${TAB}-${TAB}-${TAB}Command Line Tools for Xcode 27.0-27.0" \
     "$(printf '%s\n' "$rows" | row_named dev | col 1-10)"
@@ -197,6 +199,8 @@ check "an old image: a description, and no list of recipes" "-${TAB}Homebrew and
 check "its needs"                    "full-disk-access,guest-update" "$(printf '%s\n' "$rows" | row_named dev-node | col 11)"
 check "the recipes an image keeps, in order" "homebrew,node" \
     "$(/usr/bin/jq "$LISTED" "$FIXTURES_AGENTVM/status-variety.json" | lib agentvm_status_build_rows | row_named dev-node | col 8)"
+check "  and their descriptions"     "Homebrew; Node" \
+    "$(/usr/bin/jq "$LISTED" "$FIXTURES_AGENTVM/status-variety.json" | lib agentvm_status_build_rows | row_named dev-node | col 12)"
 check "an image another command is changing" "true" \
     "$(/usr/bin/jq '(.images[] | select(.name == "dev")).updating = true' "$FIXTURES_AGENTVM/status-variety.json" | lib agentvm_status_build_rows | row_named dev | col 3)"
 check "an empty store: no rows"      "" "$(lib agentvm_status_build_rows < "$FIXTURES_AGENTVM/status-empty.json")"

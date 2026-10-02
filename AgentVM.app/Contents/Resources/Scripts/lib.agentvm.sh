@@ -895,6 +895,7 @@ agentvm_job_forget() {
 #    8 the recipes it keeps (names, comma-joined, in the order they ran; "-" for none, and for an
 #      image built before agent-vm listed them)
 #    9 its recipe's description   10 its Command Line Tools   11 needs (kinds, comma-joined)
+#   12 the descriptions of the recipes it keeps, joined with "; " ("-" for none)
 agentvm_status_build_rows() {
     /usr/bin/jq -r "$agentvm_jq_defs"' .images[] | [
         .name, .state, (.updating // false), .macOSVersion, .cpuCount,
@@ -902,7 +903,8 @@ agentvm_status_build_rows() {
         (if .diskBytes == null then null else .diskBytes / 1073741824 | floor end),
         ([.recipes // [] | .[] | select(.folder != null) | .name // empty] | if length == 0 then null else join(",") end),
         .recipe.description, .commandLineTools,
-        (.needs // [] | map(.kind) | if length == 0 then null else join(",") end) ] | row'
+        (.needs // [] | map(.kind) | if length == 0 then null else join(",") end),
+        ([.recipes // [] | .[] | .description // empty] | if length == 0 then null else join("; ") end) ] | row'
 }
 
 # agentvm_ipsw_list  ->  `agent-vm image fetch-ipsw --list --json`: the macOS restore files
@@ -1060,4 +1062,109 @@ agentvm_job_image_create() {
         _option=""
     done
     _agentvm_job_start - image create "$@"
+}
+
+# -- Making a box ----------------------------------------------------------------------------------
+# A box is a copy of a ready image, made at once (the disk is cloned, not copied), with its own
+# processors, memory and network rules.
+
+# agentvm_agents_file  ->  the file of the agents that come with the agent-vm in use (what avm
+# offers to run, and the hosts each needs), or nothing: AGENTVM_APP_AGENTS (the tests' seam); else
+# agents.json beside the real executable, where agent-vm's installer puts it; else, for a
+# developer's build inside an agent-vm working tree, Resources/agents.json of the nearest folder
+# above the executable that also holds Package.swift.
+agentvm_agents_file() {
+    if [ -n "${AGENTVM_APP_AGENTS:-}" ]; then
+        printf '%s\n' "$AGENTVM_APP_AGENTS"
+        return 0
+    fi
+    local _real
+    _real="$(/bin/realpath "$(agentvm_bin)" 2>/dev/null)"
+    local _status=$?
+    if [ "$_status" -ne 0 ] || [ -z "$_real" ]; then
+        return 0
+    fi
+    local _dir="${_real%/*}"
+    if [ -f "$_dir/agents.json" ]; then
+        printf '%s\n' "$_dir/agents.json"
+        return 0
+    fi
+    local _up=0
+    while [ "$_up" -lt 6 ] && [ -n "$_dir" ]; do
+        _dir="${_dir%/*}"
+        if [ -f "$_dir/Resources/agents.json" ] && [ -f "$_dir/Package.swift" ]; then
+            printf '%s\n' "$_dir/Resources/agents.json"
+            return 0
+        fi
+        _up=$((_up + 1))
+    done
+    return 0
+}
+
+# agentvm_agent_rows  ->  one row per agent in agentvm_agents_file: its id, its name, and the
+# network rules it needs, comma-joined ("-" for none). An id that is not lower-case letters,
+# digits and "-" is left out. Nothing when there is no such file, or it is not JSON.
+agentvm_agent_rows() {
+    local _file="$(agentvm_agents_file)"
+    [ -n "$_file" ] && [ -f "$_file" ] || return 0
+    /usr/bin/jq -r "$agentvm_jq_defs"' .agents // [] | .[]
+        | select((.id // "") | test("^[a-z0-9][a-z0-9-]*$"))
+        | [.id, (.name // .id), (.allow // [] | if length == 0 then null else join(",") end)] | row' "$_file" 2>/dev/null
+}
+
+# agentvm_box_create  <  the arguments of `box create`, one per line: the new box's name, then
+# options and their values (--image <image> first, then any of --cpus <n>, --memory-gb <n>,
+# --net <mode>, --allow <rule>)
+#   ->  0 once agent-vm made the box. One list for the call and for the command line a window
+# shows (agentvm_args_text), so the two cannot differ. Everything is checked again here, since
+# each line becomes an argument: an option is one of those above, a name is one agent-vm
+# accepts, a number is digits, a mode is one of the three, and a rule is one word that does not
+# begin with "-". A kept box only: --disposable is not passed.
+agentvm_box_create() {
+    set --
+    local _line
+    while IFS= read -r _line; do
+        set -- "$@" "$_line"
+    done
+    if [ "$#" -lt 3 ] || [ $(( $# % 2 )) -ne 1 ]; then
+        _agentvm_refuse 2 "The box's arguments are not a name and options with their values."
+        return 2
+    fi
+    _agentvm_need_name box "$1" || return $?
+    if [ "$2" != "--image" ]; then
+        _agentvm_refuse 2 "A box is made from an image."
+        return 2
+    fi
+    local _option="" _word _ok _count=0
+    for _word; do
+        _count=$((_count + 1))
+        [ "$_count" -eq 1 ] && continue
+        if [ -z "$_option" ]; then
+            _option="$_word"
+            continue
+        fi
+        _ok=1
+        case "$_option" in
+            --image)
+                agentvm_valid_name "$_word" || _ok=0 ;;
+            --cpus|--memory-gb)
+                case "$_word" in
+                    ''|*[!0123456789]*) _ok=0 ;;
+                esac ;;
+            --net)
+                case "$_word" in
+                    allowlist|off|open) ;;
+                    *) _ok=0 ;;
+                esac ;;
+            --allow)
+                _agentvm_need_rule "$_word" || return $? ;;
+            *)  _ok=0 ;;
+        esac
+        if [ "$_ok" -ne 1 ]; then
+            _agentvm_refuse 2 "\"$_option $_word\" is not something this app passes to box create."
+            return 2
+        fi
+        _option=""
+    done
+    agentvm_json box create "$@" >/dev/null
 }
