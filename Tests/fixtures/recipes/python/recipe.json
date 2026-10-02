@@ -1,0 +1,6 @@
+{
+  "version": 1,
+  "description": "A current Python and uv, from Homebrew (needs Homebrew: put Recipes/homebrew before it)",
+  "steps": [ { "name": "Python", "run": "true" } ],
+  "checks": [ "python --version" ]
+}

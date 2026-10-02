@@ -97,6 +97,7 @@ MAIN_IMAGE_MAINTENANCE_ID=423
 MAIN_IMAGE_PROGRESS_ID=424
 MAIN_IMAGE_SHOW_ID=433
 MAIN_IMAGE_DELETE_ID=434
+MAIN_IMAGE_DERIVE_ID=432
 MAIN_IMAGE_UPDATE_ID=435
 MAIN_IMAGE_ACCESS_ID=462
 MAIN_IMAGE_MACOS_ID=451
@@ -1234,10 +1235,14 @@ main_paint_image_detail() {
     }
     # Set Up... opens the image's Full Disk Access guide (lib.agentvm.access.sh): for a ready
     # image, also while a setup holds it, which the guide then follows.
+    # New Image from This... opens the New Image window (lib.agentvm.newimage.sh) with the image
+    # as the start: for a ready image, and the window says when something is changing it.
     if [ "$(printf '%s\n' "$_row" | /usr/bin/cut -f2)" = "ready" ]; then
         ui_enable "$_uuid" "$MAIN_IMAGE_ACCESS_ID" 1
+        ui_enable "$_uuid" "$MAIN_IMAGE_DERIVE_ID" 1
     else
         ui_enable "$_uuid" "$MAIN_IMAGE_ACCESS_ID" 0
+        ui_enable "$_uuid" "$MAIN_IMAGE_DERIVE_ID" 0
     fi
     # Not while a job holds the image, or another command changes it. agent-vm also refuses to
     # delete an image another agent-vm process uses (a build started without a job, a box being

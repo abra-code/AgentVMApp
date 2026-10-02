@@ -882,3 +882,182 @@ agentvm_job_forget() {
     _agentvm_need_job "$1" || return $?
     agentvm_json job forget "$1" >/dev/null
 }
+
+# -- Building an image ---------------------------------------------------------------------------
+# A new image starts from a ready image or from a macOS restore file agent-vm downloaded, and gets
+# the tools of the recipes named, in the order given. The recipes offered are the ones that come
+# with the agent-vm in use.
+
+# agentvm_status_build_rows  <  status JSON  ->  one row per image, with what a build that starts
+# from it needs to know:
+#    1 name   2 state   3 updating (true while an agent-vm command changes it)   4 macOS
+#    5 CPUs   6 memory, in GB   7 disk, in GB
+#    8 the recipes it keeps (names, comma-joined, in the order they ran; "-" for none, and for an
+#      image built before agent-vm listed them)
+#    9 its recipe's description   10 its Command Line Tools   11 needs (kinds, comma-joined)
+agentvm_status_build_rows() {
+    /usr/bin/jq -r "$agentvm_jq_defs"' .images[] | [
+        .name, .state, (.updating // false), .macOSVersion, .cpuCount,
+        (if .memoryBytes == null then null else .memoryBytes / 1073741824 | floor end),
+        (if .diskBytes == null then null else .diskBytes / 1073741824 | floor end),
+        ([.recipes // [] | .[] | select(.folder != null) | .name // empty] | if length == 0 then null else join(",") end),
+        .recipe.description, .commandLineTools,
+        (.needs // [] | map(.kind) | if length == 0 then null else join(",") end) ] | row'
+}
+
+# agentvm_ipsw_list  ->  `agent-vm image fetch-ipsw --list --json`: the macOS restore files
+# agent-vm downloaded, which only reads its cache folder.
+agentvm_ipsw_list() {
+    agentvm_json image fetch-ipsw --list
+}
+
+# agentvm_ipsw_rows  <  that JSON  ->  one row per restore file: name, macOS, build, bytes, latest
+# (true for the newest), path.
+agentvm_ipsw_rows() {
+    /usr/bin/jq -r "$agentvm_jq_defs"' .[] | [.name, .macOSVersion, .macOSBuild, .bytes, (.latest // false), .path] | row'
+}
+
+# agentvm_recipes_dir  ->  the folder of the recipes that come with the agent-vm in use, or
+# nothing: AGENTVM_APP_RECIPES (the tests' seam); else Recipes beside the real executable, where
+# agent-vm's installer puts it (the link in ~/.local/bin resolved); else, for a developer's build
+# inside an agent-vm working tree, the Recipes of the nearest folder above the executable that
+# also holds Package.swift.
+agentvm_recipes_dir() {
+    if [ -n "${AGENTVM_APP_RECIPES:-}" ]; then
+        printf '%s\n' "$AGENTVM_APP_RECIPES"
+        return 0
+    fi
+    local _real
+    _real="$(/bin/realpath "$(agentvm_bin)" 2>/dev/null)"
+    local _status=$?
+    if [ "$_status" -ne 0 ] || [ -z "$_real" ]; then
+        return 0
+    fi
+    local _dir="${_real%/*}"
+    if [ -d "$_dir/Recipes" ]; then
+        printf '%s\n' "$_dir/Recipes"
+        return 0
+    fi
+    local _up=0
+    while [ "$_up" -lt 6 ] && [ -n "$_dir" ]; do
+        _dir="${_dir%/*}"
+        if [ -d "$_dir/Recipes" ] && [ -f "$_dir/Package.swift" ]; then
+            printf '%s\n' "$_dir/Recipes"
+            return 0
+        fi
+        _up=$((_up + 1))
+    done
+    return 0
+}
+
+# agentvm_recipe_rows  ->  one row per recipe in agentvm_recipes_dir, in the folder's order:
+#    1 name (its folder's, as agent-vm names a kept recipe)   2 description   3 how many input
+#    files it asks for   4 how many parameters it has   5 the path of its recipe.json
+# A folder whose name agent-vm would not accept as a name, or whose recipe.json is not JSON, is
+# left out: agent-vm reads the recipe itself, and refuses a broken one before anything is built.
+agentvm_recipe_rows() {
+    local _dir="$(agentvm_recipes_dir)"
+    [ -n "$_dir" ] && [ -d "$_dir" ] || return 0
+    local _file _name
+    for _file in "$_dir"/*/recipe.json; do
+        [ -f "$_file" ] || continue
+        _name="${_file%/recipe.json}"
+        _name="${_name##*/}"
+        agentvm_valid_name "$_name" || continue
+        /usr/bin/jq -r --arg name "$_name" --arg path "$_file" "$agentvm_jq_defs"'
+            [$name, .description, (.inputs // {} | length), (.parameters // {} | length), $path] | row' "$_file" 2>/dev/null
+    done
+    return 0
+}
+
+# agentvm_recipe_option_rows <path of a recipe.json>  ->  one row per thing the recipe asks for,
+# its input files first:
+#    1 kind (input: a file, given with --input; set: a parameter, given with --set)   2 name
+#    3 default ("-" for an input, and for a parameter whose default is empty)   4 description
+# A name that is not letters, digits and "_" is left out: it becomes part of an argument.
+agentvm_recipe_option_rows() {
+    [ -f "$1" ] || return 0
+    /usr/bin/jq -r "$agentvm_jq_defs"'
+        ((.inputs // {} | to_entries[] | ["input", .key, null, .value.description]),
+         (.parameters // {} | to_entries[] | ["set", .key, .value.default, .value.description]))
+        | select(.[1] | test("^[A-Za-z_][A-Za-z0-9_]*$")) | row' "$1" 2>/dev/null
+}
+
+# agentvm_args_text  <  arguments, one per line  ->  them on one line as they would be typed in
+# Terminal: an argument with anything but plain characters in it is quoted.
+agentvm_args_text() {
+    local _text="" _line
+    while IFS= read -r _line; do
+        case "$_line" in
+            ''|*[!ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_@%+=:,./-]*)
+                _line="$(_agentvm_quote "$_line")" ;;
+        esac
+        _text="${_text:+$_text }$_line"
+    done
+    printf '%s\n' "$_text"
+}
+
+# agentvm_job_image_create  <  the arguments of `image create`, one per line: the new image's
+# name, then options and their values (--from <image> or --ipsw <path> first, then any of
+# --recipe <path>, --input <name=path>, --set <name=value>, --cpus, --memory-gb, --disk-gb <n>)
+#   ->  the id of a job that builds the image. One list for the job and for the command line a
+# window shows (agentvm_args_text), so the two cannot differ. Everything is checked again here,
+# since each line becomes an argument: an option is one of those above, a name is one agent-vm
+# accepts, a path is absolute, a number is digits, and no value begins with "-".
+agentvm_job_image_create() {
+    set --
+    local _line
+    while IFS= read -r _line; do
+        set -- "$@" "$_line"
+    done
+    if [ "$#" -lt 3 ] || [ $(( $# % 2 )) -ne 1 ]; then
+        _agentvm_refuse 2 "The build's arguments are not a name and options with their values."
+        return 2
+    fi
+    _agentvm_need_name image "$1" || return $?
+    case "$2" in
+        --from|--ipsw) ;;
+        *)  _agentvm_refuse 2 "A build starts from an image or from a restore file."
+            return 2 ;;
+    esac
+    local _option="" _word _ok _count=0
+    for _word; do
+        _count=$((_count + 1))
+        [ "$_count" -eq 1 ] && continue
+        if [ -z "$_option" ]; then
+            _option="$_word"
+            continue
+        fi
+        _ok=1
+        case "$_option" in
+            --from)
+                agentvm_valid_name "$_word" || _ok=0 ;;
+            --ipsw|--recipe)
+                case "$_word" in
+                    /*) ;;
+                    *) _ok=0 ;;
+                esac ;;
+            --input)
+                case "$_word" in
+                    [ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz_]*=/*) ;;
+                    *) _ok=0 ;;
+                esac ;;
+            --set)
+                case "$_word" in
+                    [ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz_]*=*) ;;
+                    *) _ok=0 ;;
+                esac ;;
+            --cpus|--memory-gb|--disk-gb)
+                case "$_word" in
+                    ''|*[!0123456789]*) _ok=0 ;;
+                esac ;;
+            *)  _ok=0 ;;
+        esac
+        if [ "$_ok" -ne 1 ]; then
+            _agentvm_refuse 2 "\"$_option $_word\" is not something this app passes to image create."
+            return 2
+        fi
+        _option=""
+    done
+    _agentvm_job_start - image create "$@"
+}

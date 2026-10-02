@@ -1,0 +1,6 @@
+{
+  "version": 1,
+  "description": "Claude Code, Codex and opencode (needs Node: put Recipes/homebrew and Recipes/node before it)",
+  "steps": [ { "name": "Agent command-line tools", "run": "true" } ],
+  "checks": [ "claude --version" ]
+}

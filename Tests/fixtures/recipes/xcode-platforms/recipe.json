@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "description": "Simulator runtimes and Xcode components (needs Xcode: build from an image with Recipes/xcode)",
+  "parameters": {
+    "platforms": { "description": "simulator runtimes, separated by spaces: iOS, watchOS, tvOS or visionOS; about 8 GB each; empty for none", "default": "iOS" },
+    "components": { "description": "Xcode components, separated by spaces; empty for none", "default": "MetalToolchain" }
+  },
+  "steps": [ { "name": "Simulator runtimes", "run": "true" } ],
+  "checks": [ "true" ]
+}

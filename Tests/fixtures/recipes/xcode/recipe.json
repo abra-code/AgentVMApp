@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "description": "Xcode from a .xip you downloaded (next: Recipes/xcode-platforms for simulator runtimes)",
+  "commandLineTools": true,
+  "inputs": {
+    "xcode": { "description": "an Xcode .xip from https://developer.apple.com/download/all/ (any Apple ID; Apple does not offer it without one)" }
+  },
+  "steps": [ { "name": "Xcode", "run": "true" } ],
+  "checks": [ "xcodebuild -version" ]
+}

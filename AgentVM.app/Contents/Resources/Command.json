@@ -101,6 +101,31 @@
         "WINDOW_DID_ACTIVATE_SUBCOMMAND_ID": "AgentVM.access.activated",
         "END_CANCEL_SUBCOMMAND_ID": "AgentVM.access.close"
       }
+    },
+    {
+      "NAME": "AgentVM",
+      "COMMAND_ID": "AgentVM.newimage",
+      "ACTIVATION_MODE": "act_always",
+      "EXECUTION_MODE": "exe_script_file",
+      "ACTIONUI_WINDOW": {
+        "JSON_NAME": "AgentVM.newimage",
+        "IS_BLOCKING": false,
+        "WINDOW_TITLE": "New Image",
+        "INIT_SUBCOMMAND_ID": "AgentVM.newimage.init",
+        "WINDOW_DID_ACTIVATE_SUBCOMMAND_ID": "AgentVM.newimage.activated",
+        "END_CANCEL_SUBCOMMAND_ID": "AgentVM.newimage.close"
+      }
+    },
+    {
+      "NAME": "AgentVM",
+      "COMMAND_ID": "AgentVM.newimage.choose",
+      "EXECUTION_MODE": "exe_script_file",
+      "ACTIVATION_MODE": "act_always",
+      "CHOOSE_FILE_DIALOG": {
+        "MESSAGE": "Choose the file the recipe asks for. It is sent into the image while it is built, and stays where it is on this Mac.",
+        "BUTTON_PROMPT": "Choose",
+        "DIALOG_IDENTIFIER": "com.abracode.AgentVM.recipeInput"
+      }
     }
   ],
   "VERSION": 2

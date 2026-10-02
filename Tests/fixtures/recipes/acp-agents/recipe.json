@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "description": "ACP agents: Claude Agent ACP, Codex ACP and opencode (needs Node: put Recipes/homebrew and Recipes/node before it)",
+  "parameters": {
+    "claude_acp": { "description": "version of @agentclientprotocol/claude-agent-acp (latest, or empty, for the newest)", "default": "0.81.2" },
+    "codex_acp": { "description": "version of @agentclientprotocol/codex-acp (latest, or empty, for the newest)", "default": "1.13.1" },
+    "opencode": { "description": "version of opencode-ai (latest, or empty, for the newest)", "default": "1.18.32" },
+    "extras": { "description": "more npm packages to install, separated by spaces; empty for none", "default": "" }
+  },
+  "steps": [ { "name": "ACP agents", "run": "true" } ],
+  "checks": [ "opencode --version" ]
+}

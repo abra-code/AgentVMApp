@@ -87,6 +87,9 @@ else
     printf '  box-info.json and box-network.json left as they were: no box in this store\n'
 fi
 capture packs box packs --json
+# The restore files agent-vm downloaded: the New Image window lists them. Only its cache folder
+# is read.
+capture ipsw-list image fetch-ipsw --list --json
 
 /bin/mkdir -p "$work/empty-store"
 status=$?

@@ -291,7 +291,7 @@
                       "content": {
                         "type": "Button",
                         "id": 414,
-                        "properties": { "systemImage": "plus", "help": "New Image...", "disabled": true }
+                        "properties": { "systemImage": "plus", "help": "New Image...", "actionID": "AgentVM.main.image.new" }
                       }
                     }
                   ]
@@ -349,7 +349,7 @@
                       "properties": { "spacing": 8.0 },
                       "children": [
                         { "type": "Button", "id": 431, "properties": { "title": "New Box from It...", "disabled": true } },
-                        { "type": "Button", "id": 432, "properties": { "title": "New Image from This...", "disabled": true } },
+                        { "type": "Button", "id": 432, "properties": { "title": "New Image from This...", "disabled": true, "actionID": "AgentVM.main.image.new", "help": "Build a new image that starts as a copy of this one, with more tools." } },
                         { "type": "Button", "id": 435, "properties": { "title": "Update...", "disabled": true, "actionID": "AgentVM.main.image.update", "help": "Choose what to update in the image: macOS, the tools its recipes installed, the guest daemon." } },
                         { "type": "Spacer" },
                         { "type": "Button", "id": 433, "properties": { "title": "Show in Finder", "disabled": true, "actionID": "AgentVM.main.image.show" } },

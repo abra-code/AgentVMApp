@@ -1,0 +1,6 @@
+{
+  "version": 1,
+  "description": "Homebrew",
+  "steps": [ { "name": "Homebrew", "run": "true" } ],
+  "checks": [ "brew --version" ]
+}

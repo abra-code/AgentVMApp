@@ -73,6 +73,9 @@ state() {
     printf 'chained: %s %s %s %s %s %s %s %s\n' "$(chain_asked AgentVM.main)" "$(chain_asked AgentVM.network)" "$(chain_asked AgentVM.programs)" \
         "$(chain_asked AgentVM.progress)" "$(chain_asked AgentVM.progress.poll)" "$(chain_asked AgentVM.update)" \
         "$(chain_asked AgentVM.access)" "$(chain_asked AgentVM.access.poll)"
+    printf 'chained too: %s\n' "$(chain_asked AgentVM.newimage)"
+    printf 'new image: %s|%s|%s|%s|%s\n' "$("$PB" agentvm_open_request_newimage get)" "$("$PB" agentvm_newimage_from get)" \
+        "$("$PB" agentvm_newimage_ get)" "$("$PB" agentvm_step_ get)" "$("$PB" agentvm_ticks_ get)"
     printf 'alert: %s\n' "$(ui_alert_title)"
     printf 'pending: %s|%s|%s|%s\n' "$("$PB" "agentvm_box_delete_$MAIN_UUID" get)" "$("$PB" "agentvm_box_recreate_$MAIN_UUID" get)" \
         "$("$PB" "agentvm_image_delete_$MAIN_UUID" get)" "$("$PB" "agentvm_net_allow_$NET_UUID" get)"
@@ -101,6 +104,9 @@ without_window() {
       OMC_ACTIONUI_TABLE_613_COLUMN_6_VALUE="registry.yarnpkg.com"; OMC_ACTIONUI_TABLE_613_COLUMN_7_VALUE="denied"
       OMC_DLG_CHOOSE_FOLDER_PATH="$OMCTEST_WORK"; AGENTVM_APP_POLL_PASSES=1
       OMC_ACTIONUI_VIEW_811_VALUE="true"; OMC_ACTIONUI_VIEW_821_VALUE="true"; OMC_ACTIONUI_VIEW_831_VALUE="true"
+      OMC_DLG_CHOOSE_FILE_PATH="$OMCTEST_WORK/chosen.xip"; OMC_ACTIONUI_TABLE_1051_COLUMN_5_VALUE="image dev"
+      OMC_ACTIONUI_TABLE_1051_COLUMN_1_VALUE="dev"; OMC_ACTIONUI_VIEW_1111_VALUE="true"
+      export OMC_DLG_CHOOSE_FILE_PATH OMC_ACTIONUI_TABLE_1051_COLUMN_5_VALUE OMC_ACTIONUI_TABLE_1051_COLUMN_1_VALUE OMC_ACTIONUI_VIEW_1111_VALUE
       export OMC_ACTIONUI_WINDOW_UUID ACTIONUI_WINDOW_UUID OMC_OBJ_TEXT OMC_ACTIONUI_TABLE_311_COLUMN_1_VALUE \
           OMC_ACTIONUI_TABLE_411_COLUMN_1_VALUE OMC_ACTIONUI_TABLE_604_COLUMN_1_VALUE OMC_ACTIONUI_VIEW_605_VALUE \
           OMC_ACTIONUI_VIEW_601_VALUE OMC_ACTIONUI_TRIGGER_VIEW_PART_ID OMC_ACTIONUI_TABLE_613_COLUMN_1_VALUE \
@@ -169,6 +175,16 @@ done
 # virtual machine slot free), and one whose guide the main window has offered: so that an Open
 # the Image, or a Grant It Again..., without its guard acts.
 "$PB" agentvm_access_offer_ set dev-xcode
+# A New Image window on its last step, as it would keep itself: a copy of that image under a free
+# name, with what the window read of agent-vm, so that a Build without its guard starts a job.
+"$PB" agentvm_newimage_ set 1
+"$PB" agentvm_step_ set 5
+"$PB" agentvm_start_ set "image dev-xcode"
+"$PB" agentvm_name_ set planted
+"$PB" agentvm_cpus_ set 4
+"$PB" agentvm_memory_ set 8
+"$PB" agentvm_disk_ set 128
+lib agentvm_status_build_rows < "$FAKE_AGENTVM_DIR/status.json" > "$TMPDIR/AgentVM/build.tsv"
 # Guards: without these the checks below would pass with nothing at stake.
 check "a job runs, and holds the box, under the empty uuid" "$JOB${TAB}running${TAB}box:$BOX|$JOB|$JOB" \
     "$(/usr/bin/cut -f1-3 "$TMPDIR/AgentVM/jobs.tsv")|$("$PB" agentvm_job_ get)|$("$PB" agentvm_job_stop_ get)"
@@ -177,6 +193,9 @@ check "an update could start under the empty uuid: a ready image, its parts tick
 check "a setup could start, and a guide open, under the empty uuid: the image needs the grant, a slot is free, the guide was offered" \
     "full-disk-access|1${TAB}2|dev-xcode" \
     "$(/usr/bin/awk -F'\t' '$1 == "dev-xcode"' "$TMPDIR/AgentVM/images.tsv" | /usr/bin/cut -f8)|$(/bin/cat "$TMPDIR/AgentVM/vm.tsv")|$("$PB" agentvm_access_offer_ get)"
+check "a build could start under the empty uuid: a New Image window on its last step, a ready start, a free name" \
+    "1|5|image dev-xcode|dev-xcode${TAB}ready${TAB}false|" \
+    "$("$PB" agentvm_newimage_ get)|$("$PB" agentvm_step_ get)|$("$PB" agentvm_start_ get)|$(/usr/bin/awk -F'\t' '$1 == "dev-xcode"' "$TMPDIR/AgentVM/build.tsv" | /usr/bin/cut -f1-3)|$(/usr/bin/awk -F'\t' '$1 == "planted"' "$TMPDIR/AgentVM/build.tsv")"
 check "Delete was asked about the box"   "$BOX" "$("$PB" "agentvm_box_delete_$MAIN_UUID" get)"
 check "Recreate too"                     "$BOX" "$("$PB" "agentvm_box_recreate_$MAIN_UUID" get)"
 check "an image's Delete was asked"      "dev-xcode" "$("$PB" "agentvm_image_delete_$MAIN_UUID" get)"

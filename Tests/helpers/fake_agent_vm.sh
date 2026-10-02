@@ -23,7 +23,7 @@
 #   version    what --version prints (default: AGENTVM_MIN_VERSION from the library, the oldest
 #              version the app accepts, so raising it needs no change here).
 #   <key>.json the answer to one query, overriding the fixture of that name: version, doctor,
-#              status, image-info-<name>, box-info-<name>. The fixtures image-info.json and
+#              status, ipsw-list, image-info-<name>, box-info-<name>. The fixtures image-info.json and
 #              box-info.json answer `image info` and `box info` for the one image or box each
 #              describes; any other name is not found, as agent-vm says it.
 #   jobs.json  the jobs: what `job list` answers and what `status` carries as its `jobs`. `job start`
@@ -38,7 +38,8 @@
 #              the text of job-start-error as its error: a job that fails within the moment.
 #
 # -- What it implements -------------------------------------------------------------------------
-#   --version, version --json, doctor --json, status --json, image info <name> --json,
+#   --version, version --json, doctor --json, status --json, image fetch-ipsw --list --json,
+#   image info <name> --json,
 #   image delete <name> --json, box delete <name> --json and box recreate <name> --json (which
 #   change nothing: the test changes status.json to match), box info <name> --json, and
 #   box view <name> [--interactive] --json (which shows nothing), box packs --json,
@@ -149,6 +150,8 @@ case "$*" in
         fi ;;
     "image delete "*" --json")
         ;;
+    "image fetch-ipsw --list --json")
+        answer ipsw-list ;;
     "box info "*" --json")
         if [ -f "$state/box-info-$3.json" ]; then
             /bin/cat "$state/box-info-$3.json"

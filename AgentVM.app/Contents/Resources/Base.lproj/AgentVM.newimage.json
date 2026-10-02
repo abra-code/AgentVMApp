@@ -1,0 +1,2052 @@
+{
+  "type": "HStack",
+  "properties": {
+    "alignment": "top",
+    "spacing": 16,
+    "padding": 20,
+    "frame": {
+      "minWidth": 860,
+      "minHeight": 620,
+      "idealWidth": 900,
+      "idealHeight": 640
+    }
+  },
+  "children": [
+    {
+      "type": "VStack",
+      "properties": {
+        "alignment": "leading",
+        "spacing": 12,
+        "frame": {
+          "width": 150,
+          "alignment": "topLeading"
+        }
+      },
+      "children": [
+        {
+          "type": "Text",
+          "properties": {
+            "text": "New Image",
+            "font": "title2"
+          }
+        },
+        {
+          "type": "HStack",
+          "properties": {
+            "spacing": 8
+          },
+          "children": [
+            {
+              "type": "ZStack",
+              "children": [
+                {
+                  "type": "Image",
+                  "id": 1011,
+                  "properties": {
+                    "systemName": "circle",
+                    "foregroundStyle": "secondary"
+                  }
+                },
+                {
+                  "type": "Image",
+                  "id": 1021,
+                  "properties": {
+                    "systemName": "arrow.right.circle.fill",
+                    "foregroundStyle": "blue",
+                    "hidden": true
+                  }
+                },
+                {
+                  "type": "Image",
+                  "id": 1031,
+                  "properties": {
+                    "systemName": "checkmark.circle.fill",
+                    "foregroundStyle": "green",
+                    "hidden": true
+                  }
+                }
+              ]
+            },
+            {
+              "type": "Text",
+              "properties": {
+                "text": "Start from"
+              }
+            }
+          ]
+        },
+        {
+          "type": "HStack",
+          "properties": {
+            "spacing": 8
+          },
+          "children": [
+            {
+              "type": "ZStack",
+              "children": [
+                {
+                  "type": "Image",
+                  "id": 1012,
+                  "properties": {
+                    "systemName": "circle",
+                    "foregroundStyle": "secondary"
+                  }
+                },
+                {
+                  "type": "Image",
+                  "id": 1022,
+                  "properties": {
+                    "systemName": "arrow.right.circle.fill",
+                    "foregroundStyle": "blue",
+                    "hidden": true
+                  }
+                },
+                {
+                  "type": "Image",
+                  "id": 1032,
+                  "properties": {
+                    "systemName": "checkmark.circle.fill",
+                    "foregroundStyle": "green",
+                    "hidden": true
+                  }
+                }
+              ]
+            },
+            {
+              "type": "Text",
+              "properties": {
+                "text": "Tools"
+              }
+            }
+          ]
+        },
+        {
+          "type": "HStack",
+          "properties": {
+            "spacing": 8
+          },
+          "children": [
+            {
+              "type": "ZStack",
+              "children": [
+                {
+                  "type": "Image",
+                  "id": 1013,
+                  "properties": {
+                    "systemName": "circle",
+                    "foregroundStyle": "secondary"
+                  }
+                },
+                {
+                  "type": "Image",
+                  "id": 1023,
+                  "properties": {
+                    "systemName": "arrow.right.circle.fill",
+                    "foregroundStyle": "blue",
+                    "hidden": true
+                  }
+                },
+                {
+                  "type": "Image",
+                  "id": 1033,
+                  "properties": {
+                    "systemName": "checkmark.circle.fill",
+                    "foregroundStyle": "green",
+                    "hidden": true
+                  }
+                }
+              ]
+            },
+            {
+              "type": "Text",
+              "properties": {
+                "text": "Options"
+              }
+            }
+          ]
+        },
+        {
+          "type": "HStack",
+          "properties": {
+            "spacing": 8
+          },
+          "children": [
+            {
+              "type": "ZStack",
+              "children": [
+                {
+                  "type": "Image",
+                  "id": 1014,
+                  "properties": {
+                    "systemName": "circle",
+                    "foregroundStyle": "secondary"
+                  }
+                },
+                {
+                  "type": "Image",
+                  "id": 1024,
+                  "properties": {
+                    "systemName": "arrow.right.circle.fill",
+                    "foregroundStyle": "blue",
+                    "hidden": true
+                  }
+                },
+                {
+                  "type": "Image",
+                  "id": 1034,
+                  "properties": {
+                    "systemName": "checkmark.circle.fill",
+                    "foregroundStyle": "green",
+                    "hidden": true
+                  }
+                }
+              ]
+            },
+            {
+              "type": "Text",
+              "properties": {
+                "text": "Name and size"
+              }
+            }
+          ]
+        },
+        {
+          "type": "HStack",
+          "properties": {
+            "spacing": 8
+          },
+          "children": [
+            {
+              "type": "ZStack",
+              "children": [
+                {
+                  "type": "Image",
+                  "id": 1015,
+                  "properties": {
+                    "systemName": "circle",
+                    "foregroundStyle": "secondary"
+                  }
+                },
+                {
+                  "type": "Image",
+                  "id": 1025,
+                  "properties": {
+                    "systemName": "arrow.right.circle.fill",
+                    "foregroundStyle": "blue",
+                    "hidden": true
+                  }
+                },
+                {
+                  "type": "Image",
+                  "id": 1035,
+                  "properties": {
+                    "systemName": "checkmark.circle.fill",
+                    "foregroundStyle": "green",
+                    "hidden": true
+                  }
+                }
+              ]
+            },
+            {
+              "type": "Text",
+              "properties": {
+                "text": "Check"
+              }
+            }
+          ]
+        },
+        {
+          "type": "Spacer"
+        },
+        {
+          "type": "Text",
+          "properties": {
+            "text": "The build runs as a job: it goes on when this window, or the app, is closed.",
+            "font": "caption",
+            "foregroundStyle": "secondary",
+            "frame": {
+              "maxWidth": "infinity",
+              "alignment": "leading"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "type": "Divider"
+    },
+    {
+      "type": "VStack",
+      "properties": {
+        "alignment": "leading",
+        "spacing": 12,
+        "frame": {
+          "maxWidth": "infinity",
+          "maxHeight": "infinity",
+          "alignment": "topLeading"
+        }
+      },
+      "children": [
+        {
+          "type": "Text",
+          "id": 1001,
+          "properties": {
+            "text": "",
+            "font": "title3"
+          }
+        },
+        {
+          "type": "ZStack",
+          "properties": {
+            "alignment": "topLeading",
+            "frame": {
+              "maxWidth": "infinity",
+              "maxHeight": "infinity",
+              "alignment": "topLeading"
+            }
+          },
+          "children": [
+            {
+              "type": "VStack",
+              "id": 1041,
+              "properties": {
+                "alignment": "leading",
+                "spacing": 10,
+                "frame": {
+                  "maxWidth": "infinity",
+                  "maxHeight": "infinity",
+                  "alignment": "topLeading"
+                }
+              },
+              "children": [
+                {
+                  "type": "Text",
+                  "properties": {
+                    "text": "An image the new one starts as a copy of, or a macOS restore file to install macOS from.",
+                    "frame": {
+                      "maxWidth": "infinity",
+                      "alignment": "leading"
+                    }
+                  }
+                },
+                {
+                  "type": "Table",
+                  "id": 1051,
+                  "properties": {
+                    "columns": [
+                      "Name",
+                      "macOS",
+                      "Holds",
+                      "State"
+                    ],
+                    "widths": [
+                      160,
+                      60,
+                      210,
+                      130
+                    ],
+                    "minWidths": [
+                      100,
+                      50,
+                      100,
+                      100
+                    ],
+                    "frame": {
+                      "maxWidth": "infinity",
+                      "minHeight": 160,
+                      "maxHeight": "infinity"
+                    }
+                  }
+                },
+                {
+                  "type": "Text",
+                  "properties": {
+                    "text": "A copy keeps what its image has, the Full Disk Access grant included, and takes about a minute before its tools are installed. From a restore file, macOS is installed anew (about 6 minutes), and Full Disk Access is granted once afterwards.",
+                    "foregroundStyle": "secondary",
+                    "frame": {
+                      "maxWidth": "infinity",
+                      "alignment": "leading"
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "type": "VStack",
+              "id": 1042,
+              "properties": {
+                "hidden": true,
+                "frame": {
+                  "maxWidth": "infinity",
+                  "maxHeight": "infinity",
+                  "alignment": "topLeading"
+                }
+              },
+              "children": [
+                {
+                  "type": "ScrollView",
+                  "properties": {
+                    "frame": {
+                      "maxWidth": "infinity",
+                      "maxHeight": "infinity"
+                    }
+                  },
+                  "content": {
+                    "type": "VStack",
+                    "properties": {
+                      "alignment": "leading",
+                      "spacing": 10,
+                      "frame": {
+                        "maxWidth": "infinity",
+                        "alignment": "topLeading"
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "Text",
+                        "id": 1061,
+                        "properties": {
+                          "text": "",
+                          "frame": {
+                            "maxWidth": "infinity",
+                            "alignment": "leading"
+                          }
+                        }
+                      },
+                      {
+                        "type": "HStack",
+                        "id": 1101,
+                        "properties": {
+                          "alignment": "top",
+                          "spacing": 8,
+                          "hidden": true
+                        },
+                        "children": [
+                          {
+                            "type": "Toggle",
+                            "id": 1111,
+                            "properties": {
+                              "title": "",
+                              "style": "checkbox",
+                              "labelsHidden": true,
+                              "actionID": "AgentVM.newimage.tick"
+                            }
+                          },
+                          {
+                            "type": "VStack",
+                            "properties": {
+                              "alignment": "leading",
+                              "spacing": 2
+                            },
+                            "children": [
+                              {
+                                "type": "HStack",
+                                "properties": {
+                                  "spacing": 8
+                                },
+                                "children": [
+                                  {
+                                    "type": "Text",
+                                    "id": 1121,
+                                    "properties": {
+                                      "text": "",
+                                      "font": "headline"
+                                    }
+                                  },
+                                  {
+                                    "type": "Text",
+                                    "id": 1141,
+                                    "properties": {
+                                      "text": "",
+                                      "foregroundStyle": "orange"
+                                    }
+                                  }
+                                ]
+                              },
+                              {
+                                "type": "Text",
+                                "id": 1131,
+                                "properties": {
+                                  "text": "",
+                                  "foregroundStyle": "secondary",
+                                  "frame": {
+                                    "maxWidth": "infinity",
+                                    "alignment": "leading"
+                                  }
+                                }
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "type": "HStack",
+                        "id": 1102,
+                        "properties": {
+                          "alignment": "top",
+                          "spacing": 8,
+                          "hidden": true
+                        },
+                        "children": [
+                          {
+                            "type": "Toggle",
+                            "id": 1112,
+                            "properties": {
+                              "title": "",
+                              "style": "checkbox",
+                              "labelsHidden": true,
+                              "actionID": "AgentVM.newimage.tick"
+                            }
+                          },
+                          {
+                            "type": "VStack",
+                            "properties": {
+                              "alignment": "leading",
+                              "spacing": 2
+                            },
+                            "children": [
+                              {
+                                "type": "HStack",
+                                "properties": {
+                                  "spacing": 8
+                                },
+                                "children": [
+                                  {
+                                    "type": "Text",
+                                    "id": 1122,
+                                    "properties": {
+                                      "text": "",
+                                      "font": "headline"
+                                    }
+                                  },
+                                  {
+                                    "type": "Text",
+                                    "id": 1142,
+                                    "properties": {
+                                      "text": "",
+                                      "foregroundStyle": "orange"
+                                    }
+                                  }
+                                ]
+                              },
+                              {
+                                "type": "Text",
+                                "id": 1132,
+                                "properties": {
+                                  "text": "",
+                                  "foregroundStyle": "secondary",
+                                  "frame": {
+                                    "maxWidth": "infinity",
+                                    "alignment": "leading"
+                                  }
+                                }
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "type": "HStack",
+                        "id": 1103,
+                        "properties": {
+                          "alignment": "top",
+                          "spacing": 8,
+                          "hidden": true
+                        },
+                        "children": [
+                          {
+                            "type": "Toggle",
+                            "id": 1113,
+                            "properties": {
+                              "title": "",
+                              "style": "checkbox",
+                              "labelsHidden": true,
+                              "actionID": "AgentVM.newimage.tick"
+                            }
+                          },
+                          {
+                            "type": "VStack",
+                            "properties": {
+                              "alignment": "leading",
+                              "spacing": 2
+                            },
+                            "children": [
+                              {
+                                "type": "HStack",
+                                "properties": {
+                                  "spacing": 8
+                                },
+                                "children": [
+                                  {
+                                    "type": "Text",
+                                    "id": 1123,
+                                    "properties": {
+                                      "text": "",
+                                      "font": "headline"
+                                    }
+                                  },
+                                  {
+                                    "type": "Text",
+                                    "id": 1143,
+                                    "properties": {
+                                      "text": "",
+                                      "foregroundStyle": "orange"
+                                    }
+                                  }
+                                ]
+                              },
+                              {
+                                "type": "Text",
+                                "id": 1133,
+                                "properties": {
+                                  "text": "",
+                                  "foregroundStyle": "secondary",
+                                  "frame": {
+                                    "maxWidth": "infinity",
+                                    "alignment": "leading"
+                                  }
+                                }
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "type": "HStack",
+                        "id": 1104,
+                        "properties": {
+                          "alignment": "top",
+                          "spacing": 8,
+                          "hidden": true
+                        },
+                        "children": [
+                          {
+                            "type": "Toggle",
+                            "id": 1114,
+                            "properties": {
+                              "title": "",
+                              "style": "checkbox",
+                              "labelsHidden": true,
+                              "actionID": "AgentVM.newimage.tick"
+                            }
+                          },
+                          {
+                            "type": "VStack",
+                            "properties": {
+                              "alignment": "leading",
+                              "spacing": 2
+                            },
+                            "children": [
+                              {
+                                "type": "HStack",
+                                "properties": {
+                                  "spacing": 8
+                                },
+                                "children": [
+                                  {
+                                    "type": "Text",
+                                    "id": 1124,
+                                    "properties": {
+                                      "text": "",
+                                      "font": "headline"
+                                    }
+                                  },
+                                  {
+                                    "type": "Text",
+                                    "id": 1144,
+                                    "properties": {
+                                      "text": "",
+                                      "foregroundStyle": "orange"
+                                    }
+                                  }
+                                ]
+                              },
+                              {
+                                "type": "Text",
+                                "id": 1134,
+                                "properties": {
+                                  "text": "",
+                                  "foregroundStyle": "secondary",
+                                  "frame": {
+                                    "maxWidth": "infinity",
+                                    "alignment": "leading"
+                                  }
+                                }
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "type": "HStack",
+                        "id": 1105,
+                        "properties": {
+                          "alignment": "top",
+                          "spacing": 8,
+                          "hidden": true
+                        },
+                        "children": [
+                          {
+                            "type": "Toggle",
+                            "id": 1115,
+                            "properties": {
+                              "title": "",
+                              "style": "checkbox",
+                              "labelsHidden": true,
+                              "actionID": "AgentVM.newimage.tick"
+                            }
+                          },
+                          {
+                            "type": "VStack",
+                            "properties": {
+                              "alignment": "leading",
+                              "spacing": 2
+                            },
+                            "children": [
+                              {
+                                "type": "HStack",
+                                "properties": {
+                                  "spacing": 8
+                                },
+                                "children": [
+                                  {
+                                    "type": "Text",
+                                    "id": 1125,
+                                    "properties": {
+                                      "text": "",
+                                      "font": "headline"
+                                    }
+                                  },
+                                  {
+                                    "type": "Text",
+                                    "id": 1145,
+                                    "properties": {
+                                      "text": "",
+                                      "foregroundStyle": "orange"
+                                    }
+                                  }
+                                ]
+                              },
+                              {
+                                "type": "Text",
+                                "id": 1135,
+                                "properties": {
+                                  "text": "",
+                                  "foregroundStyle": "secondary",
+                                  "frame": {
+                                    "maxWidth": "infinity",
+                                    "alignment": "leading"
+                                  }
+                                }
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "type": "HStack",
+                        "id": 1106,
+                        "properties": {
+                          "alignment": "top",
+                          "spacing": 8,
+                          "hidden": true
+                        },
+                        "children": [
+                          {
+                            "type": "Toggle",
+                            "id": 1116,
+                            "properties": {
+                              "title": "",
+                              "style": "checkbox",
+                              "labelsHidden": true,
+                              "actionID": "AgentVM.newimage.tick"
+                            }
+                          },
+                          {
+                            "type": "VStack",
+                            "properties": {
+                              "alignment": "leading",
+                              "spacing": 2
+                            },
+                            "children": [
+                              {
+                                "type": "HStack",
+                                "properties": {
+                                  "spacing": 8
+                                },
+                                "children": [
+                                  {
+                                    "type": "Text",
+                                    "id": 1126,
+                                    "properties": {
+                                      "text": "",
+                                      "font": "headline"
+                                    }
+                                  },
+                                  {
+                                    "type": "Text",
+                                    "id": 1146,
+                                    "properties": {
+                                      "text": "",
+                                      "foregroundStyle": "orange"
+                                    }
+                                  }
+                                ]
+                              },
+                              {
+                                "type": "Text",
+                                "id": 1136,
+                                "properties": {
+                                  "text": "",
+                                  "foregroundStyle": "secondary",
+                                  "frame": {
+                                    "maxWidth": "infinity",
+                                    "alignment": "leading"
+                                  }
+                                }
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "type": "HStack",
+                        "id": 1107,
+                        "properties": {
+                          "alignment": "top",
+                          "spacing": 8,
+                          "hidden": true
+                        },
+                        "children": [
+                          {
+                            "type": "Toggle",
+                            "id": 1117,
+                            "properties": {
+                              "title": "",
+                              "style": "checkbox",
+                              "labelsHidden": true,
+                              "actionID": "AgentVM.newimage.tick"
+                            }
+                          },
+                          {
+                            "type": "VStack",
+                            "properties": {
+                              "alignment": "leading",
+                              "spacing": 2
+                            },
+                            "children": [
+                              {
+                                "type": "HStack",
+                                "properties": {
+                                  "spacing": 8
+                                },
+                                "children": [
+                                  {
+                                    "type": "Text",
+                                    "id": 1127,
+                                    "properties": {
+                                      "text": "",
+                                      "font": "headline"
+                                    }
+                                  },
+                                  {
+                                    "type": "Text",
+                                    "id": 1147,
+                                    "properties": {
+                                      "text": "",
+                                      "foregroundStyle": "orange"
+                                    }
+                                  }
+                                ]
+                              },
+                              {
+                                "type": "Text",
+                                "id": 1137,
+                                "properties": {
+                                  "text": "",
+                                  "foregroundStyle": "secondary",
+                                  "frame": {
+                                    "maxWidth": "infinity",
+                                    "alignment": "leading"
+                                  }
+                                }
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "type": "HStack",
+                        "id": 1108,
+                        "properties": {
+                          "alignment": "top",
+                          "spacing": 8,
+                          "hidden": true
+                        },
+                        "children": [
+                          {
+                            "type": "Toggle",
+                            "id": 1118,
+                            "properties": {
+                              "title": "",
+                              "style": "checkbox",
+                              "labelsHidden": true,
+                              "actionID": "AgentVM.newimage.tick"
+                            }
+                          },
+                          {
+                            "type": "VStack",
+                            "properties": {
+                              "alignment": "leading",
+                              "spacing": 2
+                            },
+                            "children": [
+                              {
+                                "type": "HStack",
+                                "properties": {
+                                  "spacing": 8
+                                },
+                                "children": [
+                                  {
+                                    "type": "Text",
+                                    "id": 1128,
+                                    "properties": {
+                                      "text": "",
+                                      "font": "headline"
+                                    }
+                                  },
+                                  {
+                                    "type": "Text",
+                                    "id": 1148,
+                                    "properties": {
+                                      "text": "",
+                                      "foregroundStyle": "orange"
+                                    }
+                                  }
+                                ]
+                              },
+                              {
+                                "type": "Text",
+                                "id": 1138,
+                                "properties": {
+                                  "text": "",
+                                  "foregroundStyle": "secondary",
+                                  "frame": {
+                                    "maxWidth": "infinity",
+                                    "alignment": "leading"
+                                  }
+                                }
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "type": "HStack",
+                        "id": 1109,
+                        "properties": {
+                          "alignment": "top",
+                          "spacing": 8,
+                          "hidden": true
+                        },
+                        "children": [
+                          {
+                            "type": "Toggle",
+                            "id": 1119,
+                            "properties": {
+                              "title": "",
+                              "style": "checkbox",
+                              "labelsHidden": true,
+                              "actionID": "AgentVM.newimage.tick"
+                            }
+                          },
+                          {
+                            "type": "VStack",
+                            "properties": {
+                              "alignment": "leading",
+                              "spacing": 2
+                            },
+                            "children": [
+                              {
+                                "type": "HStack",
+                                "properties": {
+                                  "spacing": 8
+                                },
+                                "children": [
+                                  {
+                                    "type": "Text",
+                                    "id": 1129,
+                                    "properties": {
+                                      "text": "",
+                                      "font": "headline"
+                                    }
+                                  },
+                                  {
+                                    "type": "Text",
+                                    "id": 1149,
+                                    "properties": {
+                                      "text": "",
+                                      "foregroundStyle": "orange"
+                                    }
+                                  }
+                                ]
+                              },
+                              {
+                                "type": "Text",
+                                "id": 1139,
+                                "properties": {
+                                  "text": "",
+                                  "foregroundStyle": "secondary",
+                                  "frame": {
+                                    "maxWidth": "infinity",
+                                    "alignment": "leading"
+                                  }
+                                }
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "type": "HStack",
+                        "id": 1110,
+                        "properties": {
+                          "alignment": "top",
+                          "spacing": 8,
+                          "hidden": true
+                        },
+                        "children": [
+                          {
+                            "type": "Toggle",
+                            "id": 1120,
+                            "properties": {
+                              "title": "",
+                              "style": "checkbox",
+                              "labelsHidden": true,
+                              "actionID": "AgentVM.newimage.tick"
+                            }
+                          },
+                          {
+                            "type": "VStack",
+                            "properties": {
+                              "alignment": "leading",
+                              "spacing": 2
+                            },
+                            "children": [
+                              {
+                                "type": "HStack",
+                                "properties": {
+                                  "spacing": 8
+                                },
+                                "children": [
+                                  {
+                                    "type": "Text",
+                                    "id": 1130,
+                                    "properties": {
+                                      "text": "",
+                                      "font": "headline"
+                                    }
+                                  },
+                                  {
+                                    "type": "Text",
+                                    "id": 1150,
+                                    "properties": {
+                                      "text": "",
+                                      "foregroundStyle": "orange"
+                                    }
+                                  }
+                                ]
+                              },
+                              {
+                                "type": "Text",
+                                "id": 1140,
+                                "properties": {
+                                  "text": "",
+                                  "foregroundStyle": "secondary",
+                                  "frame": {
+                                    "maxWidth": "infinity",
+                                    "alignment": "leading"
+                                  }
+                                }
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "type": "VStack",
+              "id": 1043,
+              "properties": {
+                "hidden": true,
+                "frame": {
+                  "maxWidth": "infinity",
+                  "maxHeight": "infinity",
+                  "alignment": "topLeading"
+                }
+              },
+              "children": [
+                {
+                  "type": "ScrollView",
+                  "properties": {
+                    "frame": {
+                      "maxWidth": "infinity",
+                      "maxHeight": "infinity"
+                    }
+                  },
+                  "content": {
+                    "type": "VStack",
+                    "properties": {
+                      "alignment": "leading",
+                      "spacing": 10,
+                      "frame": {
+                        "maxWidth": "infinity",
+                        "alignment": "topLeading"
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "Text",
+                        "id": 1062,
+                        "properties": {
+                          "text": "",
+                          "frame": {
+                            "maxWidth": "infinity",
+                            "alignment": "leading"
+                          }
+                        }
+                      },
+                      {
+                        "type": "VStack",
+                        "id": 1201,
+                        "properties": {
+                          "alignment": "leading",
+                          "spacing": 2,
+                          "hidden": true
+                        },
+                        "children": [
+                          {
+                            "type": "HStack",
+                            "properties": {
+                              "spacing": 8
+                            },
+                            "children": [
+                              {
+                                "type": "Text",
+                                "id": 1211,
+                                "properties": {
+                                  "text": "",
+                                  "font": {
+                                    "size": 12,
+                                    "design": "monospaced"
+                                  },
+                                  "frame": {
+                                    "width": 120,
+                                    "alignment": "leading"
+                                  }
+                                }
+                              },
+                              {
+                                "type": "TextField",
+                                "id": 1221,
+                                "properties": {
+                                  "title": "",
+                                  "labelsHidden": true,
+                                  "frame": {
+                                    "maxWidth": "infinity"
+                                  }
+                                }
+                              },
+                              {
+                                "type": "Button",
+                                "id": 1231,
+                                "properties": {
+                                  "title": "Choose...",
+                                  "controlSize": "small",
+                                  "hidden": true,
+                                  "actionID": "AgentVM.newimage.choose"
+                                }
+                              }
+                            ]
+                          },
+                          {
+                            "type": "Text",
+                            "id": 1241,
+                            "properties": {
+                              "text": "",
+                              "font": "caption",
+                              "foregroundStyle": "secondary",
+                              "padding": {
+                                "leading": 128
+                              },
+                              "frame": {
+                                "maxWidth": "infinity",
+                                "alignment": "leading"
+                              }
+                            }
+                          }
+                        ]
+                      },
+                      {
+                        "type": "VStack",
+                        "id": 1202,
+                        "properties": {
+                          "alignment": "leading",
+                          "spacing": 2,
+                          "hidden": true
+                        },
+                        "children": [
+                          {
+                            "type": "HStack",
+                            "properties": {
+                              "spacing": 8
+                            },
+                            "children": [
+                              {
+                                "type": "Text",
+                                "id": 1212,
+                                "properties": {
+                                  "text": "",
+                                  "font": {
+                                    "size": 12,
+                                    "design": "monospaced"
+                                  },
+                                  "frame": {
+                                    "width": 120,
+                                    "alignment": "leading"
+                                  }
+                                }
+                              },
+                              {
+                                "type": "TextField",
+                                "id": 1222,
+                                "properties": {
+                                  "title": "",
+                                  "labelsHidden": true,
+                                  "frame": {
+                                    "maxWidth": "infinity"
+                                  }
+                                }
+                              },
+                              {
+                                "type": "Button",
+                                "id": 1232,
+                                "properties": {
+                                  "title": "Choose...",
+                                  "controlSize": "small",
+                                  "hidden": true,
+                                  "actionID": "AgentVM.newimage.choose"
+                                }
+                              }
+                            ]
+                          },
+                          {
+                            "type": "Text",
+                            "id": 1242,
+                            "properties": {
+                              "text": "",
+                              "font": "caption",
+                              "foregroundStyle": "secondary",
+                              "padding": {
+                                "leading": 128
+                              },
+                              "frame": {
+                                "maxWidth": "infinity",
+                                "alignment": "leading"
+                              }
+                            }
+                          }
+                        ]
+                      },
+                      {
+                        "type": "VStack",
+                        "id": 1203,
+                        "properties": {
+                          "alignment": "leading",
+                          "spacing": 2,
+                          "hidden": true
+                        },
+                        "children": [
+                          {
+                            "type": "HStack",
+                            "properties": {
+                              "spacing": 8
+                            },
+                            "children": [
+                              {
+                                "type": "Text",
+                                "id": 1213,
+                                "properties": {
+                                  "text": "",
+                                  "font": {
+                                    "size": 12,
+                                    "design": "monospaced"
+                                  },
+                                  "frame": {
+                                    "width": 120,
+                                    "alignment": "leading"
+                                  }
+                                }
+                              },
+                              {
+                                "type": "TextField",
+                                "id": 1223,
+                                "properties": {
+                                  "title": "",
+                                  "labelsHidden": true,
+                                  "frame": {
+                                    "maxWidth": "infinity"
+                                  }
+                                }
+                              },
+                              {
+                                "type": "Button",
+                                "id": 1233,
+                                "properties": {
+                                  "title": "Choose...",
+                                  "controlSize": "small",
+                                  "hidden": true,
+                                  "actionID": "AgentVM.newimage.choose"
+                                }
+                              }
+                            ]
+                          },
+                          {
+                            "type": "Text",
+                            "id": 1243,
+                            "properties": {
+                              "text": "",
+                              "font": "caption",
+                              "foregroundStyle": "secondary",
+                              "padding": {
+                                "leading": 128
+                              },
+                              "frame": {
+                                "maxWidth": "infinity",
+                                "alignment": "leading"
+                              }
+                            }
+                          }
+                        ]
+                      },
+                      {
+                        "type": "VStack",
+                        "id": 1204,
+                        "properties": {
+                          "alignment": "leading",
+                          "spacing": 2,
+                          "hidden": true
+                        },
+                        "children": [
+                          {
+                            "type": "HStack",
+                            "properties": {
+                              "spacing": 8
+                            },
+                            "children": [
+                              {
+                                "type": "Text",
+                                "id": 1214,
+                                "properties": {
+                                  "text": "",
+                                  "font": {
+                                    "size": 12,
+                                    "design": "monospaced"
+                                  },
+                                  "frame": {
+                                    "width": 120,
+                                    "alignment": "leading"
+                                  }
+                                }
+                              },
+                              {
+                                "type": "TextField",
+                                "id": 1224,
+                                "properties": {
+                                  "title": "",
+                                  "labelsHidden": true,
+                                  "frame": {
+                                    "maxWidth": "infinity"
+                                  }
+                                }
+                              },
+                              {
+                                "type": "Button",
+                                "id": 1234,
+                                "properties": {
+                                  "title": "Choose...",
+                                  "controlSize": "small",
+                                  "hidden": true,
+                                  "actionID": "AgentVM.newimage.choose"
+                                }
+                              }
+                            ]
+                          },
+                          {
+                            "type": "Text",
+                            "id": 1244,
+                            "properties": {
+                              "text": "",
+                              "font": "caption",
+                              "foregroundStyle": "secondary",
+                              "padding": {
+                                "leading": 128
+                              },
+                              "frame": {
+                                "maxWidth": "infinity",
+                                "alignment": "leading"
+                              }
+                            }
+                          }
+                        ]
+                      },
+                      {
+                        "type": "VStack",
+                        "id": 1205,
+                        "properties": {
+                          "alignment": "leading",
+                          "spacing": 2,
+                          "hidden": true
+                        },
+                        "children": [
+                          {
+                            "type": "HStack",
+                            "properties": {
+                              "spacing": 8
+                            },
+                            "children": [
+                              {
+                                "type": "Text",
+                                "id": 1215,
+                                "properties": {
+                                  "text": "",
+                                  "font": {
+                                    "size": 12,
+                                    "design": "monospaced"
+                                  },
+                                  "frame": {
+                                    "width": 120,
+                                    "alignment": "leading"
+                                  }
+                                }
+                              },
+                              {
+                                "type": "TextField",
+                                "id": 1225,
+                                "properties": {
+                                  "title": "",
+                                  "labelsHidden": true,
+                                  "frame": {
+                                    "maxWidth": "infinity"
+                                  }
+                                }
+                              },
+                              {
+                                "type": "Button",
+                                "id": 1235,
+                                "properties": {
+                                  "title": "Choose...",
+                                  "controlSize": "small",
+                                  "hidden": true,
+                                  "actionID": "AgentVM.newimage.choose"
+                                }
+                              }
+                            ]
+                          },
+                          {
+                            "type": "Text",
+                            "id": 1245,
+                            "properties": {
+                              "text": "",
+                              "font": "caption",
+                              "foregroundStyle": "secondary",
+                              "padding": {
+                                "leading": 128
+                              },
+                              "frame": {
+                                "maxWidth": "infinity",
+                                "alignment": "leading"
+                              }
+                            }
+                          }
+                        ]
+                      },
+                      {
+                        "type": "VStack",
+                        "id": 1206,
+                        "properties": {
+                          "alignment": "leading",
+                          "spacing": 2,
+                          "hidden": true
+                        },
+                        "children": [
+                          {
+                            "type": "HStack",
+                            "properties": {
+                              "spacing": 8
+                            },
+                            "children": [
+                              {
+                                "type": "Text",
+                                "id": 1216,
+                                "properties": {
+                                  "text": "",
+                                  "font": {
+                                    "size": 12,
+                                    "design": "monospaced"
+                                  },
+                                  "frame": {
+                                    "width": 120,
+                                    "alignment": "leading"
+                                  }
+                                }
+                              },
+                              {
+                                "type": "TextField",
+                                "id": 1226,
+                                "properties": {
+                                  "title": "",
+                                  "labelsHidden": true,
+                                  "frame": {
+                                    "maxWidth": "infinity"
+                                  }
+                                }
+                              },
+                              {
+                                "type": "Button",
+                                "id": 1236,
+                                "properties": {
+                                  "title": "Choose...",
+                                  "controlSize": "small",
+                                  "hidden": true,
+                                  "actionID": "AgentVM.newimage.choose"
+                                }
+                              }
+                            ]
+                          },
+                          {
+                            "type": "Text",
+                            "id": 1246,
+                            "properties": {
+                              "text": "",
+                              "font": "caption",
+                              "foregroundStyle": "secondary",
+                              "padding": {
+                                "leading": 128
+                              },
+                              "frame": {
+                                "maxWidth": "infinity",
+                                "alignment": "leading"
+                              }
+                            }
+                          }
+                        ]
+                      },
+                      {
+                        "type": "VStack",
+                        "id": 1207,
+                        "properties": {
+                          "alignment": "leading",
+                          "spacing": 2,
+                          "hidden": true
+                        },
+                        "children": [
+                          {
+                            "type": "HStack",
+                            "properties": {
+                              "spacing": 8
+                            },
+                            "children": [
+                              {
+                                "type": "Text",
+                                "id": 1217,
+                                "properties": {
+                                  "text": "",
+                                  "font": {
+                                    "size": 12,
+                                    "design": "monospaced"
+                                  },
+                                  "frame": {
+                                    "width": 120,
+                                    "alignment": "leading"
+                                  }
+                                }
+                              },
+                              {
+                                "type": "TextField",
+                                "id": 1227,
+                                "properties": {
+                                  "title": "",
+                                  "labelsHidden": true,
+                                  "frame": {
+                                    "maxWidth": "infinity"
+                                  }
+                                }
+                              },
+                              {
+                                "type": "Button",
+                                "id": 1237,
+                                "properties": {
+                                  "title": "Choose...",
+                                  "controlSize": "small",
+                                  "hidden": true,
+                                  "actionID": "AgentVM.newimage.choose"
+                                }
+                              }
+                            ]
+                          },
+                          {
+                            "type": "Text",
+                            "id": 1247,
+                            "properties": {
+                              "text": "",
+                              "font": "caption",
+                              "foregroundStyle": "secondary",
+                              "padding": {
+                                "leading": 128
+                              },
+                              "frame": {
+                                "maxWidth": "infinity",
+                                "alignment": "leading"
+                              }
+                            }
+                          }
+                        ]
+                      },
+                      {
+                        "type": "VStack",
+                        "id": 1208,
+                        "properties": {
+                          "alignment": "leading",
+                          "spacing": 2,
+                          "hidden": true
+                        },
+                        "children": [
+                          {
+                            "type": "HStack",
+                            "properties": {
+                              "spacing": 8
+                            },
+                            "children": [
+                              {
+                                "type": "Text",
+                                "id": 1218,
+                                "properties": {
+                                  "text": "",
+                                  "font": {
+                                    "size": 12,
+                                    "design": "monospaced"
+                                  },
+                                  "frame": {
+                                    "width": 120,
+                                    "alignment": "leading"
+                                  }
+                                }
+                              },
+                              {
+                                "type": "TextField",
+                                "id": 1228,
+                                "properties": {
+                                  "title": "",
+                                  "labelsHidden": true,
+                                  "frame": {
+                                    "maxWidth": "infinity"
+                                  }
+                                }
+                              },
+                              {
+                                "type": "Button",
+                                "id": 1238,
+                                "properties": {
+                                  "title": "Choose...",
+                                  "controlSize": "small",
+                                  "hidden": true,
+                                  "actionID": "AgentVM.newimage.choose"
+                                }
+                              }
+                            ]
+                          },
+                          {
+                            "type": "Text",
+                            "id": 1248,
+                            "properties": {
+                              "text": "",
+                              "font": "caption",
+                              "foregroundStyle": "secondary",
+                              "padding": {
+                                "leading": 128
+                              },
+                              "frame": {
+                                "maxWidth": "infinity",
+                                "alignment": "leading"
+                              }
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "type": "VStack",
+              "id": 1044,
+              "properties": {
+                "hidden": true,
+                "frame": {
+                  "maxWidth": "infinity",
+                  "maxHeight": "infinity",
+                  "alignment": "topLeading"
+                }
+              },
+              "children": [
+                {
+                  "type": "ScrollView",
+                  "properties": {
+                    "frame": {
+                      "maxWidth": "infinity",
+                      "maxHeight": "infinity"
+                    }
+                  },
+                  "content": {
+                    "type": "VStack",
+                    "properties": {
+                      "alignment": "leading",
+                      "spacing": 10,
+                      "frame": {
+                        "maxWidth": "infinity",
+                        "alignment": "topLeading"
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "HStack",
+                        "properties": {
+                          "spacing": 8
+                        },
+                        "children": [
+                          {
+                            "type": "Text",
+                            "properties": {
+                              "text": "Name",
+                              "frame": {
+                                "width": 120,
+                                "alignment": "leading"
+                              }
+                            }
+                          },
+                          {
+                            "type": "TextField",
+                            "id": 1071,
+                            "properties": {
+                              "title": "Name",
+                              "labelsHidden": true,
+                              "frame": {
+                                "width": 260
+                              }
+                            }
+                          }
+                        ]
+                      },
+                      {
+                        "type": "Text",
+                        "properties": {
+                          "text": "Lower-case letters, digits, \".\", \"_\" and \"-\", starting with a letter or a digit.",
+                          "font": "caption",
+                          "foregroundStyle": "secondary",
+                          "padding": {
+                            "leading": 128
+                          },
+                          "frame": {
+                            "maxWidth": "infinity",
+                            "alignment": "leading"
+                          }
+                        }
+                      },
+                      {
+                        "type": "HStack",
+                        "properties": {
+                          "spacing": 8
+                        },
+                        "children": [
+                          {
+                            "type": "Text",
+                            "properties": {
+                              "text": "Processors",
+                              "frame": {
+                                "width": 120,
+                                "alignment": "leading"
+                              }
+                            }
+                          },
+                          {
+                            "type": "TextField",
+                            "id": 1072,
+                            "properties": {
+                              "title": "Processors",
+                              "labelsHidden": true,
+                              "frame": {
+                                "width": 80
+                              }
+                            }
+                          },
+                          {
+                            "type": "Text",
+                            "properties": {
+                              "text": "virtual CPUs",
+                              "foregroundStyle": "secondary"
+                            }
+                          }
+                        ]
+                      },
+                      {
+                        "type": "HStack",
+                        "properties": {
+                          "spacing": 8
+                        },
+                        "children": [
+                          {
+                            "type": "Text",
+                            "properties": {
+                              "text": "Memory",
+                              "frame": {
+                                "width": 120,
+                                "alignment": "leading"
+                              }
+                            }
+                          },
+                          {
+                            "type": "TextField",
+                            "id": 1073,
+                            "properties": {
+                              "title": "Memory",
+                              "labelsHidden": true,
+                              "frame": {
+                                "width": 80
+                              }
+                            }
+                          },
+                          {
+                            "type": "Text",
+                            "properties": {
+                              "text": "GB",
+                              "foregroundStyle": "secondary"
+                            }
+                          }
+                        ]
+                      },
+                      {
+                        "type": "HStack",
+                        "properties": {
+                          "spacing": 8
+                        },
+                        "children": [
+                          {
+                            "type": "Text",
+                            "properties": {
+                              "text": "Disk",
+                              "frame": {
+                                "width": 120,
+                                "alignment": "leading"
+                              }
+                            }
+                          },
+                          {
+                            "type": "TextField",
+                            "id": 1074,
+                            "properties": {
+                              "title": "Disk",
+                              "labelsHidden": true,
+                              "frame": {
+                                "width": 80
+                              }
+                            }
+                          },
+                          {
+                            "type": "Text",
+                            "properties": {
+                              "text": "GB",
+                              "foregroundStyle": "secondary"
+                            }
+                          }
+                        ]
+                      },
+                      {
+                        "type": "Text",
+                        "id": 1075,
+                        "properties": {
+                          "text": "",
+                          "foregroundStyle": "secondary",
+                          "frame": {
+                            "maxWidth": "infinity",
+                            "alignment": "leading"
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "type": "VStack",
+              "id": 1045,
+              "properties": {
+                "hidden": true,
+                "frame": {
+                  "maxWidth": "infinity",
+                  "maxHeight": "infinity",
+                  "alignment": "topLeading"
+                }
+              },
+              "children": [
+                {
+                  "type": "ScrollView",
+                  "properties": {
+                    "frame": {
+                      "maxWidth": "infinity",
+                      "maxHeight": "infinity"
+                    }
+                  },
+                  "content": {
+                    "type": "VStack",
+                    "properties": {
+                      "alignment": "leading",
+                      "spacing": 10,
+                      "frame": {
+                        "maxWidth": "infinity",
+                        "alignment": "topLeading"
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "Text",
+                        "id": 1081,
+                        "properties": {
+                          "text": "",
+                          "textSelection": "enabled",
+                          "frame": {
+                            "maxWidth": "infinity",
+                            "alignment": "leading"
+                          }
+                        }
+                      },
+                      {
+                        "type": "Text",
+                        "id": 1083,
+                        "properties": {
+                          "text": "",
+                          "foregroundStyle": "secondary",
+                          "textSelection": "enabled",
+                          "frame": {
+                            "maxWidth": "infinity",
+                            "alignment": "leading"
+                          }
+                        }
+                      },
+                      {
+                        "type": "Text",
+                        "properties": {
+                          "text": "The command",
+                          "font": "headline"
+                        }
+                      },
+                      {
+                        "type": "Text",
+                        "id": 1082,
+                        "properties": {
+                          "text": "",
+                          "font": {
+                            "size": 12,
+                            "design": "monospaced"
+                          },
+                          "textSelection": "enabled",
+                          "frame": {
+                            "maxWidth": "infinity",
+                            "alignment": "leading"
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "Text",
+          "id": 1091,
+          "properties": {
+            "text": "",
+            "foregroundStyle": "orange",
+            "textSelection": "enabled",
+            "frame": {
+              "maxWidth": "infinity",
+              "alignment": "leading"
+            }
+          }
+        },
+        {
+          "type": "HStack",
+          "properties": {
+            "spacing": 8
+          },
+          "children": [
+            {
+              "type": "Spacer"
+            },
+            {
+              "type": "Button",
+              "id": 1092,
+              "properties": {
+                "title": "Cancel",
+                "role": "cancel",
+                "actionID": "AgentVM.newimage.cancel"
+              }
+            },
+            {
+              "type": "Button",
+              "id": 1093,
+              "properties": {
+                "title": "Back",
+                "disabled": true,
+                "actionID": "AgentVM.newimage.back"
+              }
+            },
+            {
+              "type": "ZStack",
+              "children": [
+                {
+                  "type": "Button",
+                  "id": 1094,
+                  "properties": {
+                    "title": "Continue",
+                    "buttonStyle": "borderedProminent",
+                    "actionID": "AgentVM.newimage.next"
+                  }
+                },
+                {
+                  "type": "Button",
+                  "id": 1095,
+                  "properties": {
+                    "title": "Build",
+                    "hidden": true,
+                    "buttonStyle": "borderedProminent",
+                    "actionID": "AgentVM.newimage.build",
+                    "help": "Start the build as a job, and open its progress window. The job goes on when this app is closed."
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
