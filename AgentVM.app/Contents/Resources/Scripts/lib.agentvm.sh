@@ -919,6 +919,26 @@ agentvm_ipsw_rows() {
     /usr/bin/jq -r "$agentvm_jq_defs"' .[] | [.name, .macOSVersion, .macOSBuild, .bytes, (.latest // false), .path] | row'
 }
 
+# agentvm_ipsw_check  ->  `agent-vm image fetch-ipsw --check --json`: the newest macOS restore file
+# Apple offers for this Mac, whether it is downloaded, and whether the rest fits. It asks Apple
+# (a few seconds, and the network) and downloads nothing.
+agentvm_ipsw_check() {
+    agentvm_json image fetch-ipsw --check
+}
+
+# agentvm_ipsw_check_row  <  that JSON  ->  one row: state (ready: downloaded and checked;
+# partial: begun, and resumable; missing), macOS, build, bytes of the whole file, bytes got so
+# far, bytes free on the store's volume, fits (true or false), path.
+agentvm_ipsw_check_row() {
+    /usr/bin/jq -r "$agentvm_jq_defs"' [.state, .macOSVersion, .macOSBuild, .totalBytes, .partialBytes, .freeBytes, .fits, .path] | row'
+}
+
+# agentvm_job_fetch_ipsw  ->  the id of a job that downloads that restore file. A download that
+# was stopped keeps what it got, and this one goes on from there.
+agentvm_job_fetch_ipsw() {
+    _agentvm_job_start - image fetch-ipsw
+}
+
 # agentvm_recipes_dir  ->  the folder of the recipes that come with the agent-vm in use, or
 # nothing: AGENTVM_APP_RECIPES (the tests' seam); else Recipes beside the real executable, where
 # agent-vm's installer puts it (the link in ~/.local/bin resolved); else, for a developer's build

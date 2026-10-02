@@ -90,6 +90,9 @@ capture packs box packs --json
 # The restore files agent-vm downloaded: the New Image window lists them. Only its cache folder
 # is read.
 capture ipsw-list image fetch-ipsw --list --json
+# What Apple offers now, and whether it is downloaded and fits: the Get macOS window shows it.
+# It asks Apple (the network) and downloads nothing.
+capture ipsw-check image fetch-ipsw --check --json
 
 /bin/mkdir -p "$work/empty-store"
 status=$?

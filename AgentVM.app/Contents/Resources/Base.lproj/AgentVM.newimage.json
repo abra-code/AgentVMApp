@@ -359,15 +359,34 @@
                   }
                 },
                 {
-                  "type": "Text",
+                  "type": "HStack",
                   "properties": {
-                    "text": "A copy keeps what its image has, the Full Disk Access grant included, and takes about a minute before its tools are installed. From a restore file, macOS is installed anew (about 6 minutes), and Full Disk Access is granted once afterwards.",
-                    "foregroundStyle": "secondary",
-                    "frame": {
-                      "maxWidth": "infinity",
-                      "alignment": "leading"
+                    "alignment": "top",
+                    "spacing": 8
+                  },
+                  "children": [
+                    {
+                      "type": "Text",
+                      "properties": {
+                        "text": "A copy keeps what its image has, the Full Disk Access grant included, and takes about a minute before its tools are installed. From a restore file, macOS is installed anew (about 6 minutes), and Full Disk Access is granted once afterwards.",
+                        "foregroundStyle": "secondary",
+                        "frame": {
+                          "maxWidth": "infinity",
+                          "alignment": "leading"
+                        }
+                      }
+                    },
+                    {
+                      "type": "Button",
+                      "id": 1052,
+                      "properties": {
+                        "title": "Get macOS...",
+                        "controlSize": "small",
+                        "actionID": "AgentVM.getmacos.open",
+                        "help": "See the newest macOS restore file Apple offers for this Mac, and download it."
+                      }
                     }
-                  }
+                  ]
                 }
               ]
             },

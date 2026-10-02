@@ -10,6 +10,7 @@ Real `--json` answers of agent-vm, which `Tests/helpers/fake_agent_vm.sh` serves
 - `box-network.json` - `agent-vm box network <name> --json` with no change, which only reads: the same box's mode and rules. The fake answers it for any box, and keeps a change per box in its state folder.
 - `packs.json` - `agent-vm box packs --json`: the host packs of the installed agent-vm.
 - `ipsw-list.json` - `agent-vm image fetch-ipsw --list --json`: the one macOS restore file agent-vm downloaded on this Mac. The New Image window lists it as a start.
+- `ipsw-check.json` - `agent-vm image fetch-ipsw --check --json`: the newest restore file Apple offered on 2026-10-02 (macOS 27.0.1), not downloaded on this Mac, with the room left; the Get macOS window shows it. The tests edit it for the other states (partly downloaded, downloaded, no room).
 - `status-empty.json` - `agent-vm status --json` on an empty store.
 - `job-list.json` - `agent-vm job list --json` after one job (`box start` of a box that does not exist) was started against that empty store, where it can only fail: a job's record as agent-vm writes it. The store's path is written as the default one.
 - `job-log.json` - `agent-vm job log <id> --json` of that same job: its record under `job`, and `events` and `lines`, both empty, since it failed before its command reported a step.

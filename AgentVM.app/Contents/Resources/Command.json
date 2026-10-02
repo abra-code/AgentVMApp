@@ -132,6 +132,20 @@
     },
     {
       "NAME": "AgentVM",
+      "COMMAND_ID": "AgentVM.getmacos",
+      "ACTIVATION_MODE": "act_always",
+      "EXECUTION_MODE": "exe_script_file",
+      "ACTIONUI_WINDOW": {
+        "JSON_NAME": "AgentVM.getmacos",
+        "IS_BLOCKING": false,
+        "WINDOW_TITLE": "Get macOS",
+        "INIT_SUBCOMMAND_ID": "AgentVM.getmacos.init",
+        "WINDOW_DID_ACTIVATE_SUBCOMMAND_ID": "AgentVM.getmacos.activated",
+        "END_CANCEL_SUBCOMMAND_ID": "AgentVM.getmacos.close"
+      }
+    },
+    {
+      "NAME": "AgentVM",
       "COMMAND_ID": "AgentVM.newimage.choose",
       "EXECUTION_MODE": "exe_script_file",
       "ACTIVATION_MODE": "act_always",

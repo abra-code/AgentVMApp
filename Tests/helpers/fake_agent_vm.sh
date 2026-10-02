@@ -23,7 +23,7 @@
 #   version    what --version prints (default: AGENTVM_MIN_VERSION from the library, the oldest
 #              version the app accepts, so raising it needs no change here).
 #   <key>.json the answer to one query, overriding the fixture of that name: version, doctor,
-#              status, ipsw-list, image-info-<name>, box-info-<name>. The fixtures image-info.json and
+#              status, ipsw-list, ipsw-check, image-info-<name>, box-info-<name>. The fixtures image-info.json and
 #              box-info.json answer `image info` and `box info` for the one image or box each
 #              describes; any other name is not found, as agent-vm says it.
 #   jobs.json  the jobs: what `job list` answers and what `status` carries as its `jobs`. `job start`
@@ -40,6 +40,7 @@
 #
 # -- What it implements -------------------------------------------------------------------------
 #   --version, version --json, doctor --json, status --json, image fetch-ipsw --list --json,
+#   image fetch-ipsw --check --json,
 #   image info <name> --json,
 #   image delete <name> --json, box delete <name> --json and box recreate <name> --json (which
 #   change nothing: the test changes status.json to match), box info <name> --json, and
@@ -156,6 +157,10 @@ case "$*" in
         ;;
     "image fetch-ipsw --list --json")
         answer ipsw-list ;;
+    "image fetch-ipsw --check --json")
+        # As agent-vm does, a progress event on stderr first.
+        printf '{"event":"progress","message":"Asking Apple for the latest restore image this Mac supports","step":"resolve"}\n' >&2
+        answer ipsw-check ;;
     "box info "*" --json")
         if [ -f "$state/box-info-$3.json" ]; then
             /bin/cat "$state/box-info-$3.json"

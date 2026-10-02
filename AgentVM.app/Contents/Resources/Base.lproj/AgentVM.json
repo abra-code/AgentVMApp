@@ -293,6 +293,15 @@
                         "id": 414,
                         "properties": { "systemImage": "plus", "help": "New Image...", "actionID": "AgentVM.main.image.new" }
                       }
+                    },
+                    {
+                      "type": "ToolbarItem",
+                      "properties": { "placement": "primaryAction" },
+                      "content": {
+                        "type": "Button",
+                        "id": 415,
+                        "properties": { "systemImage": "arrow.down.circle", "help": "Get macOS...", "actionID": "AgentVM.getmacos.open" }
+                      }
                     }
                   ]
                 },

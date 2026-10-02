@@ -74,7 +74,8 @@ state() {
     printf 'chained: %s %s %s %s %s %s %s %s\n' "$(chain_asked AgentVM.main)" "$(chain_asked AgentVM.network)" "$(chain_asked AgentVM.programs)" \
         "$(chain_asked AgentVM.progress)" "$(chain_asked AgentVM.progress.poll)" "$(chain_asked AgentVM.update)" \
         "$(chain_asked AgentVM.access)" "$(chain_asked AgentVM.access.poll)"
-    printf 'chained too: %s %s\n' "$(chain_asked AgentVM.newimage)" "$(chain_asked AgentVM.newbox)"
+    printf 'chained too: %s %s %s\n' "$(chain_asked AgentVM.newimage)" "$(chain_asked AgentVM.newbox)" "$(chain_asked AgentVM.getmacos)"
+    printf 'get macos: %s|%s\n' "$("$PB" agentvm_open_request_getmacos get)" "$("$PB" agentvm_getmacos_ get)"
     printf 'new box: %s|%s|%s|%s|%s\n' "$("$PB" agentvm_open_request_newbox get)" "$("$PB" agentvm_newbox_from get)" \
         "$("$PB" agentvm_newbox_ get)" "$("$PB" agentvm_picked_ get)" "$("$PB" agentvm_mode_ get)"
     printf 'new image: %s|%s|%s|%s|%s\n' "$("$PB" agentvm_open_request_newimage get)" "$("$PB" agentvm_newimage_from get)" \
@@ -202,7 +203,14 @@ lib agentvm_status_build_rows < "$FAKE_AGENTVM_DIR/status.json" > "$TMPDIR/Agent
 "$PB" agentvm_picked_ set dev-xcode
 printf 'pack:npm\n' > "$TMPDIR/AgentVM/rules"
 lib agentvm_packs_rows < "$FIXTURES_AGENTVM/packs.json" > "$TMPDIR/AgentVM/packs.tsv"
+# A Get macOS window with a restore file that could be downloaded: not here, with room, and no
+# download running.
+"$PB" agentvm_getmacos_ set 1
+lib agentvm_ipsw_check_row < "$FIXTURES_AGENTVM/ipsw-check.json" > "$TMPDIR/AgentVM/check.tsv"
 # Guards: without these the checks below would pass with nothing at stake.
+check "a download could start under the empty uuid: a Get macOS window, a file that is not here and fits, no download running" \
+    "1|missing${TAB}true|0" \
+    "$("$PB" agentvm_getmacos_ get)|$(/usr/bin/cut -f1,7 "$TMPDIR/AgentVM/check.tsv")|$(/usr/bin/awk -F'\t' '$3 == "ipsw"' "$TMPDIR/AgentVM/jobs.tsv" | /usr/bin/awk 'END { print NR }')"
 check "a job runs, and holds the box, under the empty uuid" "$JOB${TAB}running${TAB}box:$BOX|$JOB|$JOB" \
     "$(/usr/bin/cut -f1-3 "$TMPDIR/AgentVM/jobs.tsv")|$("$PB" agentvm_job_ get)|$("$PB" agentvm_job_stop_ get)"
 check "an update could start under the empty uuid: a ready image, its parts ticked, agent-vm usable" "dev-xcode${TAB}ready|1 0 1|0" \
@@ -272,6 +280,19 @@ done
 check "there are New Box handlers to run" "yes" "$([ "$count" -ge 20 ] && echo yes)"
 check "none makes a box, asks agent-vm, writes, chains or alerts" "" "$offenders"
 check "each exits cleanly"               "" "$failed"
+
+section "Progress... of the Get macOS window, without a window, while a download runs"
+# The state above has no download running, so that Download could start one; Progress... needs
+# one to have a window to open.
+DOWNLOAD=20260930-120001-0000d2
+/bin/cp "$TMPDIR/AgentVM/jobs.tsv" "$OMCTEST_WORK/jobs.tsv.kept"
+printf '%s\trunning\tipsw\timage fetch-ipsw\n' "$DOWNLOAD" >> "$TMPDIR/AgentVM/jobs.tsv"
+check "a download runs under the empty uuid" "$DOWNLOAD" "$(/usr/bin/awk -F'\t' '$3 == "ipsw" && $2 == "running" { print $1 }' "$TMPDIR/AgentVM/jobs.tsv")"
+before="$(state)"
+without_window AgentVM.getmacos.progress
+status=$?
+check "it opens no progress window, changes nothing, and exits cleanly" "same|0" "$([ "$(state)" = "$before" ] && echo same)|$status"
+/bin/cp "$OMCTEST_WORK/jobs.tsv.kept" "$TMPDIR/AgentVM/jobs.tsv"
 
 section "the same handlers act in their window"
 # The positive control: the loop above is not quiet because the handlers are broken.
