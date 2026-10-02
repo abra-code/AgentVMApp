@@ -446,7 +446,7 @@ check "  the Settings tab does not: the rules are still shown" "$ALLOWLIST_TEXT 
     "$(ui_value "$NET_MODE_NOTE_ID")|$(cell anthropic)"
 printf '[]\n' > "$FAKE_AGENTVM_DIR/box-netlog-s3.json"
 omc_run AgentVM.network.refresh
-check "an empty log says so"     "No connections logged yet. A connection is logged when it ends, so one still open shows up when it closes." \
+check "an empty log says so"     "No connections logged yet. A connection is listed from the moment it opens." \
     "$(ui_value "$NET_NOTE_ID")"
 /bin/rm -f "$FAKE_AGENTVM_DIR/box-netlog-s3.json"
 printf 'the rules are unreadable\n' > "$FAKE_AGENTVM_DIR/fail-box-network"

@@ -23,8 +23,8 @@
     "userName": "agent"
   },
   "diskUsage": {
-    "bytes": 40161345536,
-    "unsharedBytes": 2048749568
+    "bytes": 40191254528,
+    "unsharedBytes": 2083131392
   },
   "needs": [],
   "path": "/Users/you/Library/Application Support/agent-vm/Boxes/cadabra-spike",

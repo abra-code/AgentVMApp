@@ -430,7 +430,7 @@ net_paint_activity() {
     elif [ ! -f "$_connections" ]; then
         "$dialog" "$_uuid" "$NET_NOTE_ID" "The connections have not been read yet."
     elif [ ! -s "$_connections" ]; then
-        "$dialog" "$_uuid" "$NET_NOTE_ID" "No connections logged yet. A connection is logged when it ends, so one still open shows up when it closes."
+        "$dialog" "$_uuid" "$NET_NOTE_ID" "No connections logged yet. A connection is listed from the moment it opens."
     else
         "$dialog" "$_uuid" "$NET_NOTE_ID" "The last $NET_NETLOG_LAST connections, one row per host, port and result."
     fi

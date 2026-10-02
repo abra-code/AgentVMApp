@@ -114,8 +114,8 @@
       "diskBytes": 68719476736,
       "formatVersion": 1,
       "fullDiskAccess": {
-        "checkedAt": "2026-10-01T18:56:39Z",
-        "granted": false,
+        "checkedAt": "2026-10-02T02:40:30Z",
+        "granted": true,
         "guestDigest": "85bd24505bf01029b79aefda228e3050db914086af4e90526107cb4b87a7775a",
         "guestRequirement": "identifier \"com.abracode.agent-vm-guest\" and anchor apple generic and certificate 1[field.1.2.840.113635.100.6.2.6] /* exists */ and certificate leaf[field.1.2.840.113635.100.6.1.13] /* exists */ and certificate leaf[subject.OU] = T9NM2ZLDTY"
       },
@@ -141,12 +141,7 @@
       "macOSVersion": "27.0",
       "memoryBytes": 8589934592,
       "name": "dev-acp",
-      "needs": [
-        {
-          "kind": "full-disk-access",
-          "reason": "not-granted"
-        }
-      ],
+      "needs": [],
       "path": "/Users/you/Library/Application Support/agent-vm/Images/dev-acp",
       "provisionSeconds": 92.596060833,
       "recipe": {
@@ -398,7 +393,56 @@
       "userName": "agent"
     }
   ],
-  "jobs": [],
+  "jobs": [
+    {
+      "command": [
+        "image",
+        "setup",
+        "dev-acp",
+        "--json"
+      ],
+      "createdAt": "2026-10-02T02:39:32Z",
+      "endedAt": "2026-10-02T02:40:30Z",
+      "id": "20261002-023932-ef4134",
+      "path": "/Users/you/Library/Application Support/agent-vm/Jobs/20261002-023932-ef4134",
+      "progress": {
+        "event": "progress",
+        "image": "dev-acp",
+        "message": "Shutting down",
+        "step": "shutdown"
+      },
+      "startedAt": "2026-10-02T02:39:32Z",
+      "state": "done",
+      "status": 0,
+      "targets": [
+        "image:dev-acp"
+      ]
+    },
+    {
+      "command": [
+        "box",
+        "stop",
+        "cadabra-spike",
+        "--json"
+      ],
+      "createdAt": "2026-10-02T02:53:55Z",
+      "endedAt": "2026-10-02T02:54:00Z",
+      "id": "20261002-025355-a76cd5",
+      "path": "/Users/you/Library/Application Support/agent-vm/Jobs/20261002-025355-a76cd5",
+      "progress": {
+        "box": "cadabra-spike",
+        "event": "progress",
+        "message": "Stopping box cadabra-spike",
+        "step": "shutdown"
+      },
+      "startedAt": "2026-10-02T02:53:55Z",
+      "state": "done",
+      "status": 0,
+      "targets": [
+        "box:cadabra-spike"
+      ]
+    }
+  ],
   "newestMacOS": {
     "build": "26A434",
     "checkedAt": "2026-10-01T17:30:02Z",

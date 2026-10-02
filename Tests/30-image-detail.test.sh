@@ -92,10 +92,10 @@ check "its tools: the recipe and the Command Line Tools" \
     "$(ui_value "$MAIN_IMAGE_TOOLS_ID")"
 check "the guest daemon and its features" \
     "0.2.18: terminal, prompt-notices, wallpaper, time-sync, user-session, terminal-pixels" "$(ui_value "$MAIN_IMAGE_GUEST_ID")"
-check "Full Disk Access, and when it was checked" "not granted (checked Oct 1, 2026)" "$(ui_value "$MAIN_IMAGE_FDA_ID")"
+check "Full Disk Access, and when it was checked" "granted (checked Oct 2, 2026)" "$(ui_value "$MAIN_IMAGE_FDA_ID")"
 check "processors and memory"   "4 CPUs, 8 GB" "$(ui_value "$MAIN_IMAGE_HARDWARE_ID")"
 check "the space: all, its own, and what it added over its base" \
-    "38.8 GB; 1.5 GB its own (what Delete frees); 1.5 GB added over dev-node" "$(ui_value "$MAIN_IMAGE_SPACE_ID")"
+    "38.8 GB; 1.7 GB its own (what Delete frees); 1.7 GB added over dev-node" "$(ui_value "$MAIN_IMAGE_SPACE_ID")"
 check "the day it was made, and how long the build took" "Sep 26, 2026, built in 2 min" "$(ui_value "$MAIN_IMAGE_CREATED_ID")"
 check "the box made from it"    "s3 (running)" "$(ui_value "$MAIN_IMAGE_BOXES_ID")"
 check "Delete is enabled"       "1" "$(enabled "$MAIN_IMAGE_DELETE_ID")"
@@ -150,12 +150,12 @@ select_image dev-acp
 check "what the update adds" \
     "Needs maintenance|Needs a guest update for agent-vm $VERSION, which adds terminal-pixels, wallpaper.|Needs Full Disk Access, or programs in its boxes cannot open Desktop, Documents or Downloads. Set Up... above is the guide." \
     "$(ui_value "$MAIN_IMAGE_MAINTENANCE_ID" | /usr/bin/paste -sd '|' -)"
-check "Full Disk Access not granted, and when it was checked" "not granted (checked Oct 1, 2026)" "$(ui_value "$MAIN_IMAGE_FDA_ID")"
+check "Full Disk Access not granted, and when it was checked" "not granted (checked Oct 2, 2026)" "$(ui_value "$MAIN_IMAGE_FDA_ID")"
 info '.fullDiskAccess.granted = true'
 store '.'
 poll 1
 select_image dev-acp
-check "granted, and when it was checked" "granted (checked Oct 1, 2026)" "$(ui_value "$MAIN_IMAGE_FDA_ID")"
+check "granted, and when it was checked" "granted (checked Oct 2, 2026)" "$(ui_value "$MAIN_IMAGE_FDA_ID")"
 info 'del(.fullDiskAccess)'
 store '.'
 poll 1
@@ -215,7 +215,7 @@ check "reads status and measures the image again first" "status --json|image inf
     "$(fake_log | /usr/bin/paste -sd '|' -)"
 check "asks" "Delete image dev-acp?" "$(ui_alert_title)"
 check "  what it frees, the box made from it, and that it is final" \
-    "The image's folder and disk are deleted, which frees about 1.5 GB. Boxes made from it (s3) keep working, but cannot be recreated. This cannot be undone." \
+    "The image's folder and disk are deleted, which frees about 1.7 GB. Boxes made from it (s3) keep working, but cannot be recreated. This cannot be undone." \
     "$(ui_alert_message)"
 check "  Delete confirms" "AgentVM.main.image.delete.confirmed" "$(ui_alert_action Delete)"
 check "  Cancel does nothing" "" "$(ui_alert_action Cancel)"

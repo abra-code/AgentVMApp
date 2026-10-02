@@ -1,7 +1,7 @@
 {
   "controlProtocol": 1,
   "guestDaemon": {
-    "digest": "569d48831f8084a9437736e347a92296dc62329726ee1f8088fa4520df8082d2",
+    "digest": "5a1eb8d30e78baf5d7cd549359e25f7c6eaac9c2b26015d237678b379c7c28c6",
     "features": [
       "terminal",
       "prompt-notices",
@@ -10,12 +10,12 @@
       "user-session",
       "terminal-pixels"
     ],
-    "path": "/Users/you/.local/share/agent-vm/versions/0.5.9/agent-vm-guest",
+    "path": "/Users/you/.local/share/agent-vm/versions/0.5.13/agent-vm-guest",
     "protocol": 1,
     "requirement": "identifier \"com.abracode.agent-vm-guest\" and anchor apple generic and certificate 1[field.1.2.840.113635.100.6.2.6] /* exists */ and certificate leaf[field.1.2.840.113635.100.6.1.13] /* exists */ and certificate leaf[subject.OU] = T9NM2ZLDTY",
-    "version": "0.5.9"
+    "version": "0.5.13"
   },
   "guestProtocol": 1,
-  "path": "/Users/you/.local/share/agent-vm/versions/0.5.9/agent-vm",
-  "version": "0.5.9"
+  "path": "/Users/you/.local/share/agent-vm/versions/0.5.13/agent-vm",
+  "version": "0.5.13"
 }

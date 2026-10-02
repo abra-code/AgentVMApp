@@ -1,6 +1,6 @@
 {
   "addedOverBase": {
-    "bytes": 1548103680,
+    "bytes": 1658654720,
     "image": "dev-node"
   },
   "commandLineTools": "Command Line Tools for Xcode 27.0-27.0",
@@ -13,13 +13,13 @@
   },
   "diskBytes": 68719476736,
   "diskUsage": {
-    "bytes": 38752391168,
-    "unsharedBytes": 1549213696
+    "bytes": 38831345664,
+    "unsharedBytes": 1659764736
   },
   "formatVersion": 1,
   "fullDiskAccess": {
-    "checkedAt": "2026-10-01T18:56:39Z",
-    "granted": false,
+    "checkedAt": "2026-10-02T02:40:30Z",
+    "granted": true,
     "guestDigest": "85bd24505bf01029b79aefda228e3050db914086af4e90526107cb4b87a7775a",
     "guestRequirement": "identifier \"com.abracode.agent-vm-guest\" and anchor apple generic and certificate 1[field.1.2.840.113635.100.6.2.6] /* exists */ and certificate leaf[field.1.2.840.113635.100.6.1.13] /* exists */ and certificate leaf[subject.OU] = T9NM2ZLDTY"
   },
@@ -45,12 +45,7 @@
   "macOSVersion": "27.0",
   "memoryBytes": 8589934592,
   "name": "dev-acp",
-  "needs": [
-    {
-      "kind": "full-disk-access",
-      "reason": "not-granted"
-    }
-  ],
+  "needs": [],
   "path": "/Users/you/Library/Application Support/agent-vm/Images/dev-acp",
   "provisionSeconds": 92.596060833,
   "recipe": {

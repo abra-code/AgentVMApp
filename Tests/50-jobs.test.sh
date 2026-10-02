@@ -68,9 +68,10 @@ check "running, a box starting"      "running${TAB}box:cadabra-spike${TAB}box st
 section "job rows: from status"
 check "status carries the same jobs: the same rows" "$rows" \
     "$(/usr/bin/jq --slurpfile jobs "$VARIETY" '.jobs = $jobs[0]' "$FIXTURES_AGENTVM/status.json" | lib agentvm_job_rows)"
-# status.json is a real capture, taken when no job had run within the hour.
-check "a real status with no jobs: the field is there, and no rows" "array|" \
-    "$(/usr/bin/jq -r '.jobs | type' "$FIXTURES_AGENTVM/status.json")|$(lib agentvm_job_rows < "$FIXTURES_AGENTVM/status.json")"
+# status.json is a real capture: it carries the jobs that ended within the hour before it, or none.
+check "a real status: the field is there, and a row for each of its jobs" \
+    "array|$(/usr/bin/jq -r '.jobs | length' "$FIXTURES_AGENTVM/status.json")" \
+    "$(/usr/bin/jq -r '.jobs | type' "$FIXTURES_AGENTVM/status.json")|$(lib agentvm_job_rows < "$FIXTURES_AGENTVM/status.json" | /usr/bin/grep -c .)"
 check "an empty store: no rows"      "" "$(lib agentvm_job_rows < "$FIXTURES_AGENTVM/status-empty.json")"
 check "  nor from a status without the field" "" "$(printf '{"boxes": []}\n' | lib agentvm_job_rows)"
 check "no jobs: no rows"             "" "$(printf '[]\n' | lib agentvm_job_rows)"
@@ -187,7 +188,7 @@ check "the steps, oldest first"      "clone boot recipe recipe-step recipe-step 
     "$(printf '%s\n' "$events" | /usr/bin/awk -F'\t' '$1 == "progress" { print $2 }' | /usr/bin/paste -sd ' ' -)"
 check "a step with its fraction, index, count and message" "progress${TAB}recipe-step${TAB}0.3333333333333333${TAB}2${TAB}3${TAB}[2/3] Node${TAB}-${TAB}-" \
     "$(printf '%s\n' "$events" | /usr/bin/sed -n '9p')"
-check "a log line of agent-vm's own" "log${TAB}-${TAB}-${TAB}-${TAB}-${TAB}agent-vm-guest 0.5.9 answers over vsock${TAB}-${TAB}-" \
+check "a log line of agent-vm's own" "log${TAB}-${TAB}-${TAB}-${TAB}-${TAB}agent-vm-guest 0.5.13 answers over vsock${TAB}-${TAB}-" \
     "$(printf '%s\n' "$events" | /usr/bin/sed -n '3p')"
 check "a guest program's line is marked" "==> Installation successful!${TAB}true" "$(printf '%s\n' "$events" | /usr/bin/sed -n '7p' | col 6-7)"
 check "a tab inside a line is a space" "a line with a tab in it" "$(printf '%s\n' "$events" | /usr/bin/sed -n '11p' | col 6)"

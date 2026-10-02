@@ -307,9 +307,9 @@ check "the first eleven are status's row of the same image" \
 check "its guest daemon's features" "terminal,prompt-notices,wallpaper,time-sync,user-session,terminal-pixels" "$(printf '%s\n' "$row" | col 12)"
 check "  none missing"                "-"    "$(printf '%s\n' "$row" | col 13)"
 check "the build took 92 s"          "92"  "$(printf '%s\n' "$row" | col 14)"
-check "Full Disk Access, and when"   "not-granted${TAB}2026-10-01T18:56:39Z" "$(printf '%s\n' "$row" | col 15-16)"
+check "Full Disk Access, and when"   "granted${TAB}2026-10-02T02:40:30Z" "$(printf '%s\n' "$row" | col 15-16)"
 check "4 CPUs, 8 GB"                 "4${TAB}8" "$(printf '%s\n' "$row" | col 18-19)"
-check "its space, its own, and added over its base" "38752391168${TAB}1549213696${TAB}1548103680" "$(printf '%s\n' "$row" | col 20-22)"
+check "its space, its own, and added over its base" "38831345664${TAB}1659764736${TAB}1658654720" "$(printf '%s\n' "$row" | col 20-22)"
 check "what a guest update adds"     "terminal-pixels,wallpaper" \
     "$(/usr/bin/jq '.needs = [{kind: "full-disk-access"}, {kind: "guest-update", missing: ["terminal-pixels", "wallpaper"]}]' \
         "$FIXTURES_AGENTVM/image-info.json" | lib agentvm_image_info_row | col 13)"
@@ -335,7 +335,7 @@ name="$(printf '%s\n' "$row" | col 1)"
 check "twenty-four fields"           "24" "$(printf '%s\n' "$row" | field_count)"
 check "the first twenty-two are status's row of the same box" \
     "$(lib agentvm_status_box_rows < "$FIXTURES_AGENTVM/status.json" | row_named "$name")" "$(printf '%s\n' "$row" | col 1-22)"
-check "its space, and its own"       "40161345536${TAB}2048749568" "$(printf '%s\n' "$row" | col 23-24)"
+check "its space, and its own"       "40191254528${TAB}2083131392" "$(printf '%s\n' "$row" | col 23-24)"
 check "a volume that does not report its own part: -" "-" \
     "$(/usr/bin/jq 'del(.diskUsage.unsharedBytes)' "$FIXTURES_AGENTVM/box-info.json" | lib agentvm_box_info_row | col 24)"
 
