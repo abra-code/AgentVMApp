@@ -114,7 +114,7 @@ check "marked" "$MARK" "$(box_mark s3)"
 check "which image, and what recreating costs" \
     "Needs maintenance|Made before image dev-acp was updated. Recreate it to get the update; what was changed inside it is lost." \
     "$(box_lines s3)"
-open_with "$QUIET"' | (.boxes[] | select(.box.name == "s3")).needs = [{kind: "recreate", reason: "guest-update", guestVersion: "0.5.7"}]'
+open_with "$QUIET"' | (.boxes[] | select(.box.name == "s3")).needs = [{kind: "recreate", reason: "guest-update", guestVersion: "0.5.9"}]'
 check "the image's guest daemon was replaced" \
     "Needs maintenance|Made before image dev-acp had its guest daemon replaced. Recreate it to get the new one; what was changed inside it is lost." \
     "$(box_lines s3)"

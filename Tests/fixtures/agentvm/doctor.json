@@ -1,7 +1,7 @@
 {
   "checks": [
     {
-      "detail": "macOS 27.0.0",
+      "detail": "macOS 27.0.1",
       "name": "macOS",
       "status": "ok"
     },
@@ -21,7 +21,7 @@
       "status": "ok"
     },
     {
-      "detail": "64 GB free on the volume of /Users/you/Library/Application Support/agent-vm",
+      "detail": "104 GB free on the volume of /Users/you/Library/Application Support/agent-vm",
       "name": "disk space",
       "status": "ok"
     },

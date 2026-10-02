@@ -3,7 +3,7 @@
 Real `--json` answers of agent-vm, which `Tests/helpers/fake_agent_vm.sh` serves to the tests, and which `Tests/10-agentvm-library.test.sh` feeds to the library's row filters directly.
 
 - `version.json` - `agent-vm version --json`.
-- `doctor.json` - `agent-vm doctor --json` (64 GB free). Every check `ok`, the signature included (the installed, Developer ID signed agent-vm); no virtual machine ran.
+- `doctor.json` - `agent-vm doctor --json` (104 GB free). Every check `ok`, the signature included (the installed, Developer ID signed agent-vm); no virtual machine ran.
 - `status.json` - `agent-vm status --json` on a store with six images (`dev`, `dev-acp`, `dev-agents`, `dev-node`, `dev-xcode`, `dev-xcode-ios`) and two stopped boxes (`cadabra-spike`, `s3`). Four images need Full Disk Access, and nothing needs a guest update or recreating. It was taken after `status --check-updates` and one `image update`, so it has the update fields: `newestMacOS`, `macOSUpdate` on the five images behind it, `revision`, `updatedAt`, `macOSCheckedAt` and `toolsCheckedAt` on `dev` (updated once), and `recipes` on `dev-acp` (built after agent-vm began to list them). `jobs` is empty: no job had run within the hour. With every box stopped, the fields a running box adds (`pid`, `ownerPid`, `project` and the rest) are absent; `status-variety.json` carries them.
 - `image-info.json` - `agent-vm image info <name> --json` of the first ready image built from another (`dev-acp`, built from `dev-node`, without Full Disk Access): the record with what its disk takes (`diskUsage`) and what it added over its base (`addedOverBase`). The fake answers it for that image only; any other name is not found, unless a test leaves `image-info-<name>.json` in the fake's state folder.
 - `box-info.json` - `agent-vm box info <name> --json` of the first box (`cadabra-spike`, stopped, made from `dev-agents`): its status entry with what its disk takes (`diskUsage`). The fake answers it for that box only; any other name is not found, unless a test leaves `box-info-<name>.json` in the fake's state folder.
@@ -13,7 +13,7 @@ Real `--json` answers of agent-vm, which `Tests/helpers/fake_agent_vm.sh` serves
 - `job-list.json` - `agent-vm job list --json` after one job (`box start` of a box that does not exist) was started against that empty store, where it can only fail: a job's record as agent-vm writes it. The store's path is written as the default one.
 - `job-log.json` - `agent-vm job log <id> --json` of that same job: its record under `job`, and `events` and `lines`, both empty, since it failed before its command reported a step.
 
-Captured on 2026-10-01 from agent-vm 0.5.7 with `Tests/helpers/refresh_agentvm_fixtures.sh`, which replaces the home folder with `/Users/you` and sorts keys. When agent-vm's JSON changes, run it again with the new agent-vm and rerun the suite: the drift checks fail when a field the library reads is gone.
+Captured on 2026-10-01 from agent-vm 0.5.9 with `Tests/helpers/refresh_agentvm_fixtures.sh`, which replaces the home folder with `/Users/you` and sorts keys. When agent-vm's JSON changes, run it again with the new agent-vm and rerun the suite: the drift checks fail when a field the library reads is gone.
 
 ## Made by hand
 
