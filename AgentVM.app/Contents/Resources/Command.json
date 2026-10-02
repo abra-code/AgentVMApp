@@ -140,6 +140,17 @@
         "BUTTON_PROMPT": "Choose",
         "DIALOG_IDENTIFIER": "com.abracode.AgentVM.recipeInput"
       }
+    },
+    {
+      "NAME": "AgentVM",
+      "COMMAND_ID": "AgentVM.newimage.recipe",
+      "EXECUTION_MODE": "exe_script_file",
+      "ACTIVATION_MODE": "act_always",
+      "CHOOSE_FILE_DIALOG": {
+        "MESSAGE": "Choose a recipe file of your own: a recipe.json in its folder, or any JSON recipe. Its steps run inside the image while it is built.",
+        "BUTTON_PROMPT": "Add",
+        "DIALOG_IDENTIFIER": "com.abracode.AgentVM.recipeFile"
+      }
     }
   ],
   "VERSION": 2

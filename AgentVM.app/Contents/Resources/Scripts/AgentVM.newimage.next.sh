@@ -26,7 +26,8 @@ case "$step" in
         [ -n "$blocker" ] || blocker="$(newimage_start_blocker "$window_uuid")" ;;
     2)
         newimage_take_ticks "$window_uuid"
-        blocker="$(newimage_tools_blocker "$window_uuid")" ;;
+        blocker="$(newimage_tools_blocker "$window_uuid")"
+        [ -n "$blocker" ] || blocker="$(newimage_recipes_blocker "$window_uuid")" ;;
     3)
         newimage_take_options "$window_uuid"
         blocker="$(newimage_options_blocker "$window_uuid")" ;;

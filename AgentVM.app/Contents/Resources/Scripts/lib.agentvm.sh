@@ -972,6 +972,38 @@ agentvm_recipe_rows() {
     return 0
 }
 
+# agentvm_recipe_name <path of a recipe file>  ->  what agent-vm calls the recipe: its folder's
+# name when the file is recipe.json, else the file's name without its extension; only letters,
+# digits, ".", "_" and "-" are kept (anything else becomes "-"), at most 40 characters, and
+# "recipe" when nothing but dots and dashes is left. agent-vm's own rule, for display.
+agentvm_recipe_name() {
+    local _raw="${1##*/}"
+    if [ "$_raw" = "recipe.json" ]; then
+        _raw="${1%/*}"
+        _raw="${_raw##*/}"
+    else
+        case "$_raw" in
+            ?*.*) _raw="${_raw%.*}" ;;
+        esac
+    fi
+    _raw="$(printf '%s' "$_raw" | LC_ALL=C /usr/bin/tr -c 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789._-' '-' | /usr/bin/cut -c1-40)"
+    case "$_raw" in
+        *[!.-]*) printf '%s\n' "$_raw" ;;
+        *)       printf 'recipe\n' ;;
+    esac
+}
+
+# agentvm_recipe_row <path of a recipe file>  ->  its row, as agentvm_recipe_rows gives one (name,
+# description, input files, parameters, path), for a recipe file anywhere on this Mac, under
+# agent-vm's name for it. Nothing when the file is not there, is not JSON, or is not an object
+# with steps: agent-vm reads the recipe itself, and says what is wrong with one it refuses.
+agentvm_recipe_row() {
+    [ -f "$1" ] || return 0
+    /usr/bin/jq -r --arg name "$(agentvm_recipe_name "$1")" --arg path "$1" "$agentvm_jq_defs"'
+        select(type == "object" and (.steps | type) == "array")
+        | [$name, .description, (.inputs // {} | length), (.parameters // {} | length), $path] | row' "$1" 2>/dev/null
+}
+
 # agentvm_recipe_option_rows <path of a recipe.json>  ->  one row per thing the recipe asks for,
 # its input files first:
 #    1 kind (input: a file, given with --input; set: a parameter, given with --set)   2 name

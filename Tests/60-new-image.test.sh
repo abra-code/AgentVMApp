@@ -19,7 +19,7 @@ import_view_ids "$APP_SCRIPTS/lib.agentvm.main.sh" "$APP_SCRIPTS/lib.agentvm.new
     && [ -n "$NEW_SOURCES_ID" ] && [ -n "$NEW_TOOLS_TEXT_ID" ] && [ -n "$NEW_OPTIONS_TEXT_ID" ] && [ -n "$NEW_NAME_ID" ] \
     && [ -n "$NEW_CPUS_ID" ] && [ -n "$NEW_MEMORY_ID" ] && [ -n "$NEW_DISK_ID" ] && [ -n "$NEW_SIZE_TEXT_ID" ] \
     && [ -n "$NEW_SUMMARY_ID" ] && [ -n "$NEW_COMMAND_ID" ] && [ -n "$NEW_ADVICE_ID" ] && [ -n "$NEW_NOTE_ID" ] \
-    && [ -n "$NEW_BACK_ID" ] && [ -n "$NEW_NEXT_ID" ] && [ -n "$NEW_BUILD_ID" ] || {
+    && [ -n "$NEW_BACK_ID" ] && [ -n "$NEW_NEXT_ID" ] && [ -n "$NEW_BUILD_ID" ] && [ -n "$NEW_ADD_RECIPE_ID" ] || {
     printf '60-new-image: no view ids imported from the libraries\n' >&2
     exit 1
 }
@@ -384,7 +384,7 @@ printf '0\n%s\ntest\n%s\n' "$(lib_value AGENTVM_MIN_VERSION)" "$FAKE_AGENTVM" > 
 : > "$FAKE_AGENTVM_DIR/log"
 pick "image dev" dev
 omc_control "$((R_TICK + 1))" "true"
-for planted in "next 1" "tick 2" "choose 3" "back 4" "build 5" "activated 5"; do
+for planted in "next 1" "tick 2" "recipe 2" "choose 3" "back 4" "build 5" "activated 5"; do
     "$PB" "agentvm_step_$OTHER_UUID" set "${planted#* }"
     omc_dialog_answer choose_file "/tmp/planted.xip"
     omc_trigger "$((O_CHOOSE + 1))"
@@ -806,6 +806,179 @@ pick "image dev-xcode" dev-xcode
 next
 next
 check "another start: its name and sizes" "dev-xcode-copy|4|128" "$(ui_value "$NEW_NAME_ID")|$(ui_value "$NEW_CPUS_ID")|$(ui_value "$NEW_DISK_ID")"
+omc_run AgentVM.newimage.close
+
+# -----------------------------------------------------------------------------------------------
+section "the library: a recipe file of one's own"
+OWN="$OMCTEST_WORK/My Recipes"
+/bin/mkdir -p "$OWN/team-tools" "$OWN/---" "$OWN/node"
+printf '%s\n' '{ "version": 1, "description": "The linters of the team (needs Node: put Recipes/node before it)", "inputs": { "license": { "description": "the license file" } }, "parameters": { "channel": { "description": "release channel", "default": "stable" } }, "steps": [ { "name": "Linters", "run": "true" } ] }' > "$OWN/team-tools/recipe.json"
+printf '%s\n' '{ "version": 1, "steps": [ { "name": "Extra", "run": "true" } ] }' > "$OWN/Extra Things.json"
+printf '%s\n' '{ "version": 1, "description": "Another Node", "steps": [] }' > "$OWN/node/recipe.json"
+for n in third fourth fifth; do
+    printf '{ "version": 1, "description": "The %s", "steps": [] }\n' "$n" > "$OWN/$n.json"
+done
+printf 'not json\n' > "$OWN/broken.json"
+printf '{ "version": 1, "description": "no steps" }\n' > "$OWN/nosteps.json"
+printf '[ 1, 2 ]\n' > "$OWN/list.json"
+check "a recipe.json is named by its folder" "team-tools" "$(lib agentvm_recipe_name "$OWN/team-tools/recipe.json")"
+check "another file by its name without the extension, with what cannot be in a name as a dash" "Extra-Things" "$(lib agentvm_recipe_name "$OWN/Extra Things.json")"
+check "a file with no extension by its name" "tools" "$(lib agentvm_recipe_name "/x/tools")"
+check "nothing but dots and dashes left: recipe" "recipe" "$(lib agentvm_recipe_name "$OWN/---/recipe.json")"
+check "at most 40 characters"        "40" "$(lib agentvm_recipe_name "/x/a123456789b123456789c123456789d123456789e123456789.json" | /usr/bin/awk '{ print length($0) }')"
+check "its row: name, description, one input file, one parameter, its path" \
+    "team-tools${TAB}The linters of the team (needs Node: put Recipes/node before it)${TAB}1${TAB}1${TAB}$OWN/team-tools/recipe.json" \
+    "$(lib agentvm_recipe_row "$OWN/team-tools/recipe.json")"
+check "a recipe without a description" "Extra-Things${TAB}-${TAB}0${TAB}0${TAB}$OWN/Extra Things.json" "$(lib agentvm_recipe_row "$OWN/Extra Things.json")"
+check "what is not a recipe has no row: not JSON, no steps, not an object, not there" "|||" \
+    "$(lib agentvm_recipe_row "$OWN/broken.json")|$(lib agentvm_recipe_row "$OWN/nosteps.json")|$(lib agentvm_recipe_row "$OWN/list.json")|$(lib agentvm_recipe_row "$OWN/none.json")"
+
+section "step 2: a recipe of one's own joins the list"
+# add_own <path>  ->  Add a Recipe File..., with that file chosen in the dialog ("" is Cancel).
+add_own() {
+    [ -n "$1" ] && omc_dialog_answer choose_file "$1"
+    omc_trigger "$NEW_ADD_RECIPE_ID"
+    omc_run AgentVM.newimage.recipe
+}
+
+# listed  ->  the names in the slots shown, and whether Add a Recipe File... is on.
+listed() {
+    local _slot=0 _names=""
+    while [ "$_slot" -lt 10 ]; do
+        _slot=$((_slot + 1))
+        [ "$(ui_visible $((R_ROW + _slot)))" = "1" ] && _names="$_names$(ui_value $((R_NAME + _slot))) "
+    done
+    printf '%s|%s\n' "${_names% }" "$(enabled "$NEW_ADD_RECIPE_ID")"
+}
+SHIPPED="homebrew node python agent-clis acp-agents xcode xcode-platforms"
+
+fake_reset
+store '.'
+open_new dev
+check "agent-vm's recipes, and Add a Recipe File... is on" "$SHIPPED|1" "$(listed)"
+ticked homebrew
+add_own "$OWN/team-tools/recipe.json"
+check "a recipe added: the next slot, and the checkboxes kept as the click saw them" "$SHIPPED team-tools|1|homebrew" "$(listed)|$(kept ticks)"
+check "  its description, without the advice, and where its file is" "The linters of the team, from $OWN/team-tools/recipe.json" "$(ui_value $((R_TEXT + 8)))"
+check "  it is not ticked for the user: the note says to tick it" "team-tools is in the list now. Tick it to install it.|0" \
+    "$(note)|$(ui_calls "${UUID}${TAB}$((R_TICK + 8))${TAB}")"
+add_own ""
+check "a file dialog that was canceled changes nothing" "$SHIPPED team-tools|1" "$(listed)"
+add_own "$OWN/team-tools/recipe.json"
+check "the same file again"          "That is the recipe team-tools, which is in the list already.|$SHIPPED team-tools|1" "$(note)|$(listed)"
+add_own "$RECIPES/node/recipe.json"
+check "one of agent-vm's own recipes" "That is the recipe node, which is in the list already." "$(note)"
+add_own "$OWN/node/recipe.json"
+check "another recipe of a name in the list" \
+    "A recipe named node is in the list already. A recipe is named by its folder, or by its file when that is not recipe.json: rename one to add this recipe.|$SHIPPED team-tools|1" "$(note)|$(listed)"
+add_own "$OWN/broken.json"
+check "a file that is not a recipe"  "$OWN/broken.json is not a recipe: a recipe is a JSON file with steps (Docs/image-recipes.md in agent-vm).|$SHIPPED team-tools|1" "$(note)|$(listed)"
+add_own "$OWN/none.json"
+check "a file that is not there"     "$OWN/none.json is not a file on this Mac." "$(note)"
+add_own "relative/recipe.json"
+check "a path that is not a full one" "Choose a recipe file." "$(note)"
+add_own "$OWN/Extra Things.json"
+check "a second, without a description" "$SHIPPED team-tools Extra-Things|1|Your recipe, from $OWN/Extra Things.json" "$(listed)|$(ui_value $((R_TEXT + 9)))"
+"$PB" "agentvm_busy_$UUID" set "click-$$"
+add_own "$OWN/third.json"
+check "a click while another one is worked on adds nothing" "$SHIPPED team-tools Extra-Things|1" "$(listed)"
+# Rows that are not a recipe's, should the file of the recipes added ever hold one: not listed,
+# and gone when the file is next written.
+printf 'junk\nfifth\tThe fifth\t0\t0\trelative/fifth.json\n' >> "$TMPDIR/AgentVM/$UUID/own.tsv"
+"$PB" "agentvm_busy_$UUID" set ""
+add_own "$OWN/third.json"
+check "a third: every slot is taken, and Add a Recipe File... is off" "$SHIPPED team-tools Extra-Things third|0" "$(listed)"
+check "  a row without its fields, or without a full path, was not taken for a recipe" "3" "$(/usr/bin/awk 'END { print NR }' "$TMPDIR/AgentVM/$UUID/own.tsv")"
+add_own "$OWN/fourth.json"
+check "one more is refused"          "This window lists 10 recipes. With more, build the image with agent-vm image create in Terminal.|$SHIPPED team-tools Extra-Things third|0" "$(note)|$(listed)"
+
+printf '%s\n' '{ "version": 1, "steps": [] }' > "$OWN/omc_hide.json"
+before="$(listed)"
+add_own "$OWN/omc_hide.json"
+check "a name the window tool would read as an instruction is refused" \
+    "A recipe cannot be listed under the name omc_hide. Rename the file or its folder to add this recipe.|$before" "$(note)|$(listed)"
+printf 'a b\tA name with a space\t0\t0\t/x/a b.json\n' >> "$TMPDIR/AgentVM/$UUID/own.tsv"
+check "a row whose name could not be a recipe's is not one" "" \
+    "$( . "$APP_SCRIPTS/lib.agentvm.newimage.sh" >/dev/null 2>&1; newimage_own_rows "$UUID" | /usr/bin/grep -c 'a b' | /usr/bin/grep -v '^0$' )"
+
+section "a build with recipes of one's own"
+omc_control "$((R_TICK + 1))" "true"
+omc_control "$((R_TICK + 2))" "true"
+omc_control "$((R_TICK + 8))" "true"
+omc_control "$((R_TICK + 9))" "true"
+omc_run AgentVM.newimage.tick
+check "ticked: agent-vm's recipes in their order, then one's own in the order added" "homebrew node team-tools Extra-Things" "$(kept ticks)"
+next
+check "what they ask for: the file first, then the parameter with its default" \
+    "Step 3 of 5 - Options|license=/11|channel=stable/10" \
+    "$(ui_value "$NEW_HEADER_ID")|$(ui_value $((O_LABEL + 1)))=$(ui_value $((O_FIELD + 1)))/$(ui_visible $((O_ROW + 1)))$(ui_visible $((O_CHOOSE + 1)))|$(ui_value $((O_LABEL + 2)))=$(ui_value $((O_FIELD + 2)))/$(ui_visible $((O_ROW + 2)))$(ui_visible $((O_CHOOSE + 2)))"
+LICENSE="$OMCTEST_WORK/license.txt"
+: > "$LICENSE"
+omc_control "$((O_FIELD + 1))" "$LICENSE"
+omc_control "$((O_FIELD + 2))" "stable"
+next
+check "several tools name the image" "Step 4 of 5 - Name and size|dev-tools" "$(ui_value "$NEW_HEADER_ID")|$(ui_value "$NEW_NAME_ID")"
+seen "$NEW_NAME_ID" "$NEW_CPUS_ID" "$NEW_MEMORY_ID" "$NEW_DISK_ID"
+next
+check "what is built"                "Tools, installed in this order: homebrew, node, team-tools and Extra-Things." "$(ui_value "$NEW_SUMMARY_ID" | /usr/bin/sed -n '2p')"
+OWN_EXPECTED="dev-tools|--from|dev|--recipe|$RECIPES/homebrew/recipe.json|--recipe|$RECIPES/node/recipe.json|--recipe|$OWN/team-tools/recipe.json|--recipe|$OWN/Extra Things.json|--input|license=$LICENSE"
+check "the command"                  "agent-vm image create $(printf '%s\n' "$OWN_EXPECTED" | /usr/bin/tr '|' '\n' | lib agentvm_args_text)" "$(ui_value "$NEW_COMMAND_ID")"
+check "nothing stands in the way"    "|1" "$(note)|$(enabled "$NEW_BUILD_ID")"
+/bin/mv "$OWN/Extra Things.json" "$OWN/moved.json"
+omc_run AgentVM.newimage.activated
+check "a recipe file that is gone: Build is off, and says why" "The recipe file $OWN/Extra Things.json is not there any more, or is not a recipe now. Untick Extra-Things.|0" "$(note)|$(enabled "$NEW_BUILD_ID")"
+: > "$FAKE_AGENTVM_DIR/log"
+omc_run AgentVM.newimage.build
+check "  Build, clicked anyway, starts nothing" "0" "$(started)"
+/bin/mv "$OWN/moved.json" "$OWN/Extra Things.json"
+omc_run AgentVM.newimage.activated
+: > "$FAKE_AGENTVM_DIR/log"
+omc_run AgentVM.newimage.build
+check "Build: the job's command is the one listed" "image|create|$OWN_EXPECTED" "$(job_args | /usr/bin/paste -sd '|' -)"
+check "the command line shown is the one run" "$(ui_value "$NEW_COMMAND_ID")" "agent-vm $(job_args | lib agentvm_args_text)"
+omc_run AgentVM.newimage.close
+check_absent "closing forgets the recipes added" "$TMPDIR/AgentVM/$UUID"
+"$PB" agentvm_open_request_progress set ""
+
+section "one's own recipe alone"
+fake_reset
+store '.'
+open_new dev
+ticked
+add_own "$OWN/Extra Things.json"
+omc_control "$((R_TICK + 8))" "true"
+/bin/mv "$OWN/Extra Things.json" "$OWN/moved.json"
+next
+check "Continue with a ticked recipe whose file is gone: the step stays, and says why" \
+    "Step 2 of 5 - Tools|The recipe file $OWN/Extra Things.json is not there any more, or is not a recipe now. Untick Extra-Things." "$(ui_value "$NEW_HEADER_ID")|$(note)"
+/bin/mv "$OWN/moved.json" "$OWN/Extra Things.json"
+next
+check "it asks for nothing: step 4, named by the recipe, in lower case" "Step 4 of 5 - Name and size|dev-extra-things" "$(ui_value "$NEW_HEADER_ID")|$(ui_value "$NEW_NAME_ID")"
+omc_run AgentVM.newimage.close
+
+section "one's own recipes: paths and names that are easy to take for another"
+CR="$(printf '\r')"
+for n in "tab${TAB}name" "tab name" "cr${CR}name" "cr name" "1" "1.0" 'back\tslash'; do
+    printf '{ "version": 1, "description": "The %s", "steps": [] }\n' "$(printf '%s' "$n" | /usr/bin/tr '\t\r\\' '___')" > "$OWN/$n.json"
+done
+fake_reset
+store '.'
+open_new dev
+ticked
+add_own "$OWN/tab${TAB}name.json"
+check "a path with a tab in it is refused, and the file whose path has a space there is not taken for it" \
+    "The path of that file has a tab or a line break in it. Rename the file or its folder to add this recipe.|$SHIPPED|1" "$(note)|$(listed)"
+add_own "$OWN/cr${CR}name.json"
+check "so is a path with a line break in it" \
+    "The path of that file has a tab or a line break in it. Rename the file or its folder to add this recipe.|$SHIPPED|1" "$(note)|$(listed)"
+add_own "$OWN/1.json"
+add_own "$OWN/1.0.json"
+check "two names that are the same number are two recipes" "$SHIPPED 1 1.0|1|The 1, from $OWN/1.json|The 1.0, from $OWN/1.0.json" \
+    "$(listed)|$(ui_value $((R_TEXT + 8)))|$(ui_value $((R_TEXT + 9)))"
+add_own "$OWN/back\\tslash.json"
+check "a path with a backslash in it" "$SHIPPED 1 1.0 back-tslash|0|The back_tslash, from $OWN/back\\tslash.json" "$(listed)|$(ui_value $((R_TEXT + 10)))"
+add_own "$OWN/back\\tslash.json"
+check "  the same file again is known by its path" "That is the recipe back-tslash, which is in the list already." "$(note)"
 omc_run AgentVM.newimage.close
 
 section "a window that closes while agent-vm is read"

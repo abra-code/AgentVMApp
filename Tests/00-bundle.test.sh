@@ -44,6 +44,8 @@ check "Run an Agent in Terminal... asks for a folder first" "Run avm Here" \
 
 check "Choose..., for a recipe's file, asks for a file first" "Choose" \
     "$(command_value '.COMMAND_LIST[] | select(.COMMAND_ID == "AgentVM.newimage.choose") | .CHOOSE_FILE_DIALOG.BUTTON_PROMPT')"
+check "Add a Recipe File... asks for a file first" "Add" \
+    "$(command_value '.COMMAND_LIST[] | select(.COMMAND_ID == "AgentVM.newimage.recipe") | .CHOOSE_FILE_DIALOG.BUTTON_PROMPT')"
 
 section "the main command"
 omc_run AgentVM.main

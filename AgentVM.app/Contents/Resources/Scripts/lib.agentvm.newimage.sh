@@ -11,7 +11,8 @@
 # THE STEPS. 1 Start from: a ready image, of which the new one starts as a copy, or a macOS
 # restore file agent-vm downloaded. 2 Tools: the recipes that come with the agent-vm in use, each
 # with a checkbox; they are applied in the order listed, which is an order that satisfies what
-# each needs. 3 Options: the input files and parameters the ticked recipes declare (skipped when
+# each needs; a recipe file of the user's own, added with Add a Recipe File..., joins the list
+# after them. 3 Options: the input files and parameters the ticked recipes declare (skipped when
 # they declare none). 4 Name and size. 5 Check: what will be built, what stands in the way, the
 # command line, and Build.
 #
@@ -20,8 +21,9 @@
 # "memory", "disk", "auto_name" and "auto_disk" (the last suggestions put into those fields,
 # so that a suggestion the user did not change follows a changed start or tool), and "busy" (the
 # click being worked on: newimage_enter). The values of
-# the options are the cache file values.tsv (kind, name, value). Everything kept is checked again
-# when it is read back, and a start is looked up in what agent-vm last listed.
+# the options are the cache file values.tsv (kind, name, value), and the recipes the user added
+# the cache file own.tsv (a row each, as agentvm_recipe_row gives it). Everything kept is checked
+# again when it is read back, and a start is looked up in what agent-vm last listed.
 #
 # THE FIELDS ARE READ WHEN A BUTTON IS CLICKED, never per keystroke: a handler's view of the
 # fields is a snapshot from the moment of its click, and the fields of a step are filled before
@@ -47,6 +49,7 @@ NEW_HEADER_ID=1001
 NEW_SOURCES_ID=1051
 NEW_TOOLS_TEXT_ID=1061
 NEW_OPTIONS_TEXT_ID=1062
+NEW_ADD_RECIPE_ID=1063
 NEW_NAME_ID=1071
 NEW_CPUS_ID=1072
 NEW_MEMORY_ID=1073
@@ -342,14 +345,103 @@ newimage_source_rows() {
 
 # -- The tools -----------------------------------------------------------------------------------
 
-# newimage_recipe_names <uuid>  ->  the recipes the window has a slot for, one per line.
+# newimage_own_rows <uuid>  ->  the recipes the user added, a row each (agentvm_recipe_row), as
+# far as a row has its five fields and a full path (the rows come back from a file).
+newimage_own_rows() {
+    main_rows "$1" own | /usr/bin/awk -F'\t' 'NF == 5 && $5 ~ /^\// && $1 ~ /^[ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789._-]+$/'
+}
+
+# newimage_recipe_list <uuid>  ->  the rows of the recipes the window has a slot for: the ones
+# that come with agent-vm, in the order they are applied, then the ones the user added, in the
+# order added. A name is listed once.
+newimage_recipe_list() {
+    {
+        main_rows "$1" recipes
+        newimage_own_rows "$1"
+    } | /usr/bin/awk -F'\t' -v slots="$NEW_RECIPE_SLOTS" '!seen[$1]++ && ++n <= slots'
+}
+
+# newimage_recipe_names <uuid>  ->  the names of those recipes, one per line.
 newimage_recipe_names() {
-    main_rows "$1" recipes | /usr/bin/sed -n "1,${NEW_RECIPE_SLOTS}p" | /usr/bin/cut -f1
+    newimage_recipe_list "$1" | /usr/bin/cut -f1
 }
 
 # newimage_recipe_field <uuid> <name> <n>  ->  field n of that recipe's row (agentvm_recipe_rows).
+# A name is compared as text ($1 ""): awk compares two things that look like numbers as numbers,
+# and "1" and "1.0" are two names.
 newimage_recipe_field() {
-    main_rows "$1" recipes | /usr/bin/awk -F'\t' -v name="$2" -v n="$3" '$1 == name { print $n; exit }'
+    newimage_recipe_list "$1" | /usr/bin/awk -F'\t' -v name="$2" -v n="$3" '$1 "" == name { print $n; exit }'
+}
+
+# newimage_is_own <uuid> <name>  ->  0 when that recipe is one the user added.
+newimage_is_own() {
+    [ -n "$(newimage_own_rows "$1" | /usr/bin/awk -F'\t' -v name="$2" '$1 "" == name { print "yes"; exit }')" ]
+}
+
+# newimage_add_own <uuid> <path>  ->  adds that recipe file to the list, or prints why it cannot
+# be added. Adding is not ticking: the checkboxes are the user's.
+newimage_add_own() {
+    case "$2" in
+        /*) ;;
+        *)  printf 'Choose a recipe file.\n'
+            return 0 ;;
+    esac
+    if [ ! -f "$2" ]; then
+        printf '%s is not a file on this Mac.\n' "$(agentvm_display_path "$2")"
+        return 0
+    fi
+    local _row="$(agentvm_recipe_row "$2")"
+    if [ -z "$_row" ]; then
+        printf '%s is not a recipe: a recipe is a JSON file with steps (Docs/image-recipes.md in agent-vm).\n' "$(agentvm_display_path "$2")"
+        return 0
+    fi
+    # The row holds the path as text on one line. A path that does not come back as it went in
+    # (a tab or a line break in it) would be looked up later as another path.
+    if [ "${_row##*"$ui_tab"}" != "$2" ]; then
+        printf 'The path of that file has a tab or a line break in it. Rename the file or its folder to add this recipe.\n'
+        return 0
+    fi
+    local _list="$(newimage_recipe_list "$1")"
+    # The path goes to awk in the environment: -v would read a backslash in it as an escape.
+    local _there="$(printf '%s\n' "$_list" | NEW_RECIPE_PATH="$2" /usr/bin/awk -F'\t' '$5 == ENVIRON["NEW_RECIPE_PATH"] { print $1; exit }')"
+    if [ -n "$_there" ]; then
+        printf 'That is the recipe %s, which is in the list already.\n' "$_there"
+        return 0
+    fi
+    local _name="${_row%%"$ui_tab"*}"
+    # The name is written into the window as a text, and the window tool reads a text that
+    # begins like one of its instructions as that instruction.
+    case "$_name" in
+        omc_*)
+            printf 'A recipe cannot be listed under the name %s. Rename the file or its folder to add this recipe.\n' "$_name"
+            return 0 ;;
+    esac
+    if [ -n "$(printf '%s\n' "$_list" | /usr/bin/awk -F'\t' -v name="$_name" '$1 "" == name { print "yes"; exit }')" ]; then
+        printf 'A recipe named %s is in the list already. A recipe is named by its folder, or by its file when that is not recipe.json: rename one to add this recipe.\n' "$_name"
+        return 0
+    fi
+    local _count="$(printf '%s\n' "$_list" | /usr/bin/awk 'NF { n++ } END { print n + 0 }')"
+    if [ "$_count" -ge "$NEW_RECIPE_SLOTS" ]; then
+        printf 'This window lists %s recipes. With more, build the image with agent-vm image create in Terminal.\n' "$NEW_RECIPE_SLOTS"
+        return 0
+    fi
+    {
+        newimage_own_rows "$1"
+        printf '%s\n' "$_row"
+    } | ui_store "$(ui_cache "$1" own.tsv)"
+}
+
+# newimage_recipes_blocker <uuid>  ->  why a recipe ticked cannot be used now, or nothing: its
+# file is gone, or is not a recipe any more (a file of the user's own can move at any time).
+newimage_recipes_blocker() {
+    local _name _path
+    for _name in $(newimage_ticks "$1"); do
+        _path="$(newimage_recipe_field "$1" "$_name" 5)"
+        if [ -z "$(agentvm_recipe_row "$_path")" ]; then
+            printf 'The recipe file %s is not there any more, or is not a recipe now. Untick %s.\n' "$(agentvm_display_path "$_path")" "$_name"
+            return 0
+        fi
+    done
 }
 
 # newimage_recipe_text <description>  ->  agent-vm's description of a recipe without its closing
@@ -579,8 +671,9 @@ newimage_name_taken() {
 }
 
 # newimage_suggested_name <uuid>  ->  a free name for the new image: for a copy, the start's name
-# and the tool ticked ("dev-node"), "-tools" for several, "-copy" for none; "dev" for a build from
-# a restore file; with a number when that is taken.
+# and the tool ticked ("dev-node"; in lower case, and "-tools" when that cannot be a name, as a
+# recipe of the user's own may be called anything), "-tools" for several, "-copy" for none; "dev"
+# for a build from a restore file; with a number when that is taken.
 newimage_suggested_name() {
     local _base="dev"
     local _ticks _count
@@ -589,7 +682,8 @@ newimage_suggested_name() {
         _count="$(printf '%s\n' "$_ticks" | /usr/bin/awk 'NF { n++ } END { print n + 0 }')"
         case "$_count" in
             0) _base="$(newimage_start_name "$1")-copy" ;;
-            1) _base="$(newimage_start_name "$1")-$_ticks" ;;
+            1) _base="$(newimage_start_name "$1")-$(printf '%s\n' "$_ticks" | /usr/bin/tr 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' 'abcdefghijklmnopqrstuvwxyz')"
+               agentvm_valid_name "$_base" || _base="$(newimage_start_name "$1")-tools" ;;
             *) _base="$(newimage_start_name "$1")-tools" ;;
         esac
     fi
@@ -780,6 +874,7 @@ newimage_blocker() {
     local _why="$(newimage_unreadable "$1")"
     [ -n "$_why" ] || _why="$(newimage_start_blocker "$1")"
     [ -n "$_why" ] || _why="$(newimage_tools_blocker "$1")"
+    [ -n "$_why" ] || _why="$(newimage_recipes_blocker "$1")"
     [ -n "$_why" ] || _why="$(newimage_options_blocker "$1")"
     [ -n "$_why" ] || _why="$(newimage_sizes_blocker "$1")"
     if [ -n "$_why" ]; then
@@ -848,16 +943,27 @@ newimage_paint_recipe_notes() {
 }
 
 # newimage_paint_recipes <uuid>  ->  the recipe slots: one shown per recipe, with its name and
-# description. The checkboxes are the user's and are not set.
+# description, and for one the user added, where its file is. The checkboxes are the user's and
+# are not set. Add a Recipe File... is on while a slot is free.
 newimage_paint_recipes() {
     "$dialog" "$1" "$NEW_TOOLS_TEXT_ID" "$(newimage_tools_text "$1")"
-    local _slot=0 _name
+    local _slot=0 _name _text
     for _name in $(newimage_recipe_names "$1"); do
         _slot=$((_slot + 1))
+        _text="$(newimage_recipe_text "$(newimage_recipe_field "$1" "$_name" 2)")"
+        if newimage_is_own "$1" "$_name"; then
+            [ "$_text" = "-" ] && _text="Your recipe"
+            _text="$_text, from $(agentvm_display_path "$(newimage_recipe_field "$1" "$_name" 5)")"
+        fi
         "$dialog" "$1" "$((NEW_RECIPE_NAME_BASE + _slot))" "$_name"
-        "$dialog" "$1" "$((NEW_RECIPE_TEXT_BASE + _slot))" "$(newimage_recipe_text "$(newimage_recipe_field "$1" "$_name" 2)")"
+        "$dialog" "$1" "$((NEW_RECIPE_TEXT_BASE + _slot))" "$_text"
         ui_show "$1" "$((NEW_RECIPE_ROW_BASE + _slot))" 1
     done
+    if [ "$_slot" -lt "$NEW_RECIPE_SLOTS" ]; then
+        ui_enable "$1" "$NEW_ADD_RECIPE_ID" 1
+    else
+        ui_enable "$1" "$NEW_ADD_RECIPE_ID" 0
+    fi
     newimage_paint_recipe_notes "$1"
 }
 

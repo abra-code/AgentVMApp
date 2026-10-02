@@ -6,9 +6,9 @@
     "padding": 20,
     "frame": {
       "minWidth": 860,
-      "minHeight": 620,
+      "minHeight": 650,
       "idealWidth": 900,
-      "idealHeight": 640
+      "idealHeight": 680
     }
   },
   "children": [
@@ -375,6 +375,8 @@
               "type": "VStack",
               "id": 1042,
               "properties": {
+                "alignment": "leading",
+                "spacing": 8,
                 "hidden": true,
                 "frame": {
                   "maxWidth": "infinity",
@@ -1075,6 +1077,37 @@
                       }
                     ]
                   }
+                },
+                {
+                  "type": "HStack",
+                  "properties": {
+                    "alignment": "center",
+                    "spacing": 8
+                  },
+                  "children": [
+                    {
+                      "type": "Button",
+                      "id": 1063,
+                      "properties": {
+                        "title": "Add a Recipe File...",
+                        "controlSize": "small",
+                        "actionID": "AgentVM.newimage.recipe",
+                        "help": "Add a recipe file of your own to the list: a recipe.json in its folder, or any JSON recipe."
+                      }
+                    },
+                    {
+                      "type": "Text",
+                      "properties": {
+                        "text": "A recipe runs its steps inside the image, some as root. Add only one you wrote or have read.",
+                        "font": "caption",
+                        "foregroundStyle": "secondary",
+                        "frame": {
+                          "maxWidth": "infinity",
+                          "alignment": "leading"
+                        }
+                      }
+                    }
+                  ]
                 }
               ]
             },
