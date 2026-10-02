@@ -471,9 +471,7 @@ omc_run AgentVM.access.progress
 check "a job id that is not one opens no progress window" "0|" "$(chain_asked AgentVM.progress)|$("$PB" agentvm_open_request_progress get)"
 "$PB" "agentvm_job_$UUID" set ""
 
-section "Close, and closing"
-omc_run AgentVM.access.cancel
-check "Close closes the window"      "1" "$(ui_calls "${UUID}${TAB}omc_window${TAB}omc_terminate_cancel")"
+section "closing"
 check "  and starts nothing"         "" "$(started)"
 omc_run AgentVM.access.open
 check "a setup runs when the window closes" "$FIRST" "$("$PB" "agentvm_job_$UUID" get)"

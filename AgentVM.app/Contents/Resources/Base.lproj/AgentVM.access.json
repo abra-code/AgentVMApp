@@ -124,7 +124,6 @@
       "children": [
         { "type": "Button", "id": 951, "properties": { "title": "Progress...", "hidden": true, "actionID": "AgentVM.access.progress", "help": "Open the progress window of the image's setup: its log, and Stop." } },
         { "type": "Spacer" },
-        { "type": "Button", "id": 952, "properties": { "title": "Close", "role": "cancel", "actionID": "AgentVM.access.cancel", "help": "Close this window. A setup that runs goes on until the image's own window is closed." } },
         { "type": "Button", "id": 953, "properties": { "title": "Open the Image", "disabled": true, "buttonStyle": "borderedProminent", "actionID": "AgentVM.access.open", "help": "Start the image and show its screen in a window, as a job. It needs one of this Mac's virtual machine slots." } }
       ]
     }
