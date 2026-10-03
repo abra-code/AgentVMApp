@@ -146,7 +146,7 @@ progress_status_text() {
     printf '%s: %s\n' "$(main_job_outcome "$_job")" "$_error"
 }
 
-# progress_elapsed_text <uuid>  ->  "2 min so far" for a job that runs, "took 2 min" for one that
+# progress_elapsed_text <uuid>  ->  "Elapsed 2 min" for a job that runs, "took 2 min" for one that
 # ended after starting, nothing for one that waits or never started.
 progress_elapsed_text() {
     local _job="$(progress_job "$1")"
@@ -157,7 +157,7 @@ progress_elapsed_text() {
         queued) return 0 ;;
         running)
             _seconds=$(( $(main_now) - _since ))
-            [ "$_seconds" -ge 0 ] && printf '%s so far\n' "$(ui_duration_text "$_seconds")" ;;
+            [ "$_seconds" -ge 0 ] && printf 'Elapsed %s\n' "$(ui_duration_text "$_seconds")" ;;
         *)
             local _until="$(ui_seconds_since_epoch "$(printf '%s\n' "$_job" | /usr/bin/cut -f8)")"
             [ -n "$_until" ] || return 0

@@ -228,7 +228,7 @@ check "  and the guide says what to expect" "Starting the image. Its window open
 check "Open the Image is off, and Progress... is there" "0|1" "$(enabled "$ACCESS_OPEN_ID")|$(ui_visible "$ACCESS_PROGRESS_ID")"
 check "the poll loop is chained"     "1" "$(chain_asked AgentVM.access.poll)"
 check "no alert, and the guide stays open" "|0" "$(ui_alert_title)|$(ui_calls "${UUID}${TAB}omc_window${TAB}omc_terminate_cancel")"
-check "the main window read the lists again, and follows the job" "Setting up, 12 s so far" "$(ui_value "$MAIN_IMAGE_STATE_ID" "$MAIN_UUID")"
+check "the main window read the lists again, and follows the job" "Setting up, elapsed 12 s" "$(ui_value "$MAIN_IMAGE_STATE_ID" "$MAIN_UUID")"
 check "  it watches the job, so its end is said" "$FIRST" "$(/usr/bin/grep -x "$FIRST" "$TMPDIR/AgentVM/$MAIN_UUID/jobs-watched")"
 : > "$FAKE_AGENTVM_DIR/log"
 omc_run AgentVM.access.open
@@ -410,7 +410,7 @@ store '.'
     state: "running", createdAt: "2026-09-30T12:00:00Z", startedAt: "2026-09-30T12:00:00Z"}]' > "$JOBS"
 chains_reset
 omc_run AgentVM.access.activated
-check "a job of another kind holds the image" "A job holds this image now (Updating, 12 s so far). It can be opened when the job ends.|0" \
+check "a job of another kind holds the image" "A job holds this image now (Updating, elapsed 12 s). It can be opened when the job ends.|0" \
     "$(ui_value "$ACCESS_NOTE_ID")|$(enabled "$ACCESS_OPEN_ID")"
 check "  the steps are to do, it is not followed, and no loop runs for it" "todo todo todo todo|0|0" \
     "$(marks)|$(ui_visible "$ACCESS_PROGRESS_ID")|$(chain_asked AgentVM.access.poll)"

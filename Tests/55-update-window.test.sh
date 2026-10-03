@@ -320,7 +320,7 @@ store "$BEHIND"
 /usr/bin/jq -n '[{id: "20260930-120000-0000e1", command: ["image", "setup", "dev-acp", "--json"], targets: ["image:dev-acp"],
     state: "running", createdAt: "2026-09-30T12:00:00Z", startedAt: "2026-09-30T12:00:00Z"}]' > "$JOBS"
 omc_run AgentVM.update.activated
-check "a job holds the image"        "A job holds this image now (Setting up, 12 s so far). It can be updated when the job ends.|0" \
+check "a job holds the image"        "A job holds this image now (Setting up, elapsed 12 s). It can be updated when the job ends.|0" \
     "$(ui_value "$UPDATE_NOTE_ID")|$(enabled "$UPDATE_START_ID")"
 : > "$FAKE_AGENTVM_DIR/log"
 omc_run AgentVM.update.start
@@ -362,7 +362,7 @@ check "the command line shown is the one run" "$shown_command" "agent-vm $(start
 check "the job's progress window is asked for" "1|$APP_PID progress:$FIRST" "$(chain_asked AgentVM.progress)|$("$PB" agentvm_open_request_progress get)"
 check "the update window closes, its Update off since the job started" "1|0" "$(ui_calls "${UUID}${TAB}omc_window${TAB}omc_terminate_cancel")|$(enabled "$UPDATE_START_ID")"
 check "no alert"                     "" "$(ui_alert_title)"
-check "the main window read the lists again, and follows the job" "hammer.fill${TAB}Updating - macOS 27.0 - from dev-node|Updating, 12 s so far" \
+check "the main window read the lists again, and follows the job" "hammer.fill${TAB}Updating - macOS 27.0 - from dev-node|Updating, elapsed 12 s" \
     "$(ui_rows "$MAIN_IMAGES_ID" "$MAIN_UUID" | row_named dev-acp | /usr/bin/cut -f2,3)|$(ui_value "$MAIN_IMAGE_STATE_ID" "$MAIN_UUID")"
 check "  it watches the job, so its end is said" "$FIRST" "$(/usr/bin/grep -x "$FIRST" "$TMPDIR/AgentVM/$MAIN_UUID/jobs-watched")"
 check "  and its Update... is off"   "0" "$(ui_enabled "$MAIN_IMAGE_UPDATE_ID" "$MAIN_UUID")"

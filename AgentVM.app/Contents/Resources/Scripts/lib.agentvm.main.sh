@@ -282,7 +282,7 @@ main_job_verb() {
 
 # main_job_text <job row>  ->  what the job does, for a pane's state line: main_job_verb's words,
 # with how long it has run so far, when agent-vm says when it started, and for an image's job the
-# step it is at, in agent-vm's words ("Building, 4 min so far: [2/3] Node"). A box's steps are
+# step it is at, in agent-vm's words ("Building, elapsed 4 min: [2/3] Node"). A box's steps are
 # what the verb already says.
 main_job_text() {
     local _state="$(printf '%s\n' "$1" | /usr/bin/cut -f2)"
@@ -295,7 +295,7 @@ main_job_text() {
     local _since="$(ui_seconds_since_epoch "$(printf '%s\n' "$1" | /usr/bin/cut -f7)")"
     if [ -n "$_since" ]; then
         local _seconds=$(( $(main_now) - _since ))
-        [ "$_seconds" -ge 0 ] && _text="$_text, $(ui_duration_text "$_seconds") so far"
+        [ "$_seconds" -ge 0 ] && _text="$_text, elapsed $(ui_duration_text "$_seconds")"
     fi
     local _message="$(printf '%s\n' "$1" | /usr/bin/cut -f13)"
     case "$_what" in

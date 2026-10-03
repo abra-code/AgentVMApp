@@ -128,7 +128,7 @@ check_status "the handler exits cleanly" 0
 check "status is read, the job started with no owner, and status read again" \
     "status --json|job start --json -- box start cadabra-spike|status --json" "$(fake_log | /usr/bin/paste -sd '|' -)"
 check "the poll loop is begun anew" "1" "$(chain_asked AgentVM.main.poll)"
-check "the pane says what the job does, and for how long" "Starting, 12 s so far" "$(ui_value "$MAIN_BOX_STATE_ID")"
+check "the pane says what the job does, and for how long" "Starting, elapsed 12 s" "$(ui_value "$MAIN_BOX_STATE_ID")"
 check "the card too, drawn as a box in between" "circle.dotted|yes" \
     "$(card cadabra-spike | /usr/bin/cut -d'|' -f1)|$(card cadabra-spike | /usr/bin/grep -q '|Starting - dev-agents' && echo yes)"
 check "every button of the pane is off while the job holds the box" "0 0 0 0 0 0 0" "$(buttons)"
@@ -240,7 +240,7 @@ clear_alerts
 omc_run AgentVM.main.box.stop
 check "is stopped at once, as a job" "job start --json -- box stop try1" "$(started)"
 check "  with no question"       "" "$(ui_alert_title)"
-check "the pane and the card say Stopping" "Stopping, 12 s so far|circle.dotted|yes" \
+check "the pane and the card say Stopping" "Stopping, elapsed 12 s|circle.dotted|yes" \
     "$(ui_value "$MAIN_BOX_STATE_ID")|$(card try1 | /usr/bin/cut -d'|' -f1)|$(card try1 | /usr/bin/grep -q '|Stopping - ' && echo yes)"
 check "  every button off"       "0 0 0 0 0 0 0" "$(buttons)"
 : > "$FAKE_AGENTVM_DIR/log"
@@ -307,7 +307,7 @@ omc_run AgentVM.main.close
 open_window
 check "a job that had failed before the window opened is not reported" "" "$(ui_alert_title)"
 select_box cadabra-spike
-check "a box being started in Terminal or Cadabra: the pane says so" "Starting, 22 s so far" "$(ui_value "$MAIN_BOX_STATE_ID")"
+check "a box being started in Terminal or Cadabra: the pane says so" "Starting, elapsed 22 s" "$(ui_value "$MAIN_BOX_STATE_ID")"
 check "  its card too, and its buttons are off" "yes|0 0 0 0 0 0 0" \
     "$(card cadabra-spike | /usr/bin/grep -q '|Starting - ' && echo yes)|$(buttons)"
 select_box s3

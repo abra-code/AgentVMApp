@@ -99,13 +99,13 @@ check "no alert and no toast for jobs that run" "|0" "$(ui_alert_title)|$(ui_cal
 
 section "the pane of an image a job holds"
 select_image dev
-check "being updated: what the job does, for how long, and its step" "Updating, 12 s so far: Booting" "$(ui_value "$MAIN_IMAGE_STATE_ID")"
+check "being updated: what the job does, for how long, and its step" "Updating, elapsed 12 s: Booting" "$(ui_value "$MAIN_IMAGE_STATE_ID")"
 check "  Delete is off"              "0" "$(enabled "$MAIN_IMAGE_DELETE_ID")"
 select_image dev-node
 check "waiting"                      "Waiting to be set up" "$(ui_value "$MAIN_IMAGE_STATE_ID")"
 check "  Delete is off"              "0" "$(enabled "$MAIN_IMAGE_DELETE_ID")"
 select_image dev-new
-check "being built: the job's step in place of the image's state" "Building, 12 s so far: [2/3] Node" "$(ui_value "$MAIN_IMAGE_STATE_ID")"
+check "being built: the job's step in place of the image's state" "Building, elapsed 12 s: [2/3] Node" "$(ui_value "$MAIN_IMAGE_STATE_ID")"
 check "  Delete is off"              "0" "$(enabled "$MAIN_IMAGE_DELETE_ID")"
 select_image dev-acp
 check "an image no job holds"        "Ready|1" "$(ui_value "$MAIN_IMAGE_STATE_ID")|$(enabled "$MAIN_IMAGE_DELETE_ID")"
@@ -116,7 +116,7 @@ job_edit '. + [.[0] + {id: "20260930-120005-0000b4", command: ["image", "update"
 omc_run AgentVM.main.image.delete
 check "no question"                  "" "$(ui_alert_title)"
 check "  nothing is pending"         "" "$("$PB" "agentvm_image_delete_$UUID" get)"
-check "  and the pane says why"      "Updating, 12 s so far|0" "$(ui_value "$MAIN_IMAGE_STATE_ID")|$(enabled "$MAIN_IMAGE_DELETE_ID")"
+check "  and the pane says why"      "Updating, elapsed 12 s|0" "$(ui_value "$MAIN_IMAGE_STATE_ID")|$(enabled "$MAIN_IMAGE_DELETE_ID")"
 job_edit 'map(select(.id != "20260930-120005-0000b4"))'
 
 section "the poll loop looks often while an image's job runs"
@@ -129,7 +129,7 @@ job_log "$UPDATE" '[{event: "progress", image: "dev", step: "boot", message: "Bo
     {event: "progress", image: "dev", step: "macos-download", message: "Downloading macOS 27.1", fraction: 0.4}]'
 select_image dev
 poll 1
-check "the pane follows its step"    "Updating, 12 s so far: Downloading macOS 27.1" "$(ui_value "$MAIN_IMAGE_STATE_ID")"
+check "the pane follows its step"    "Updating, elapsed 12 s: Downloading macOS 27.1" "$(ui_value "$MAIN_IMAGE_STATE_ID")"
 
 section "the update ends well"
 job_edit "map(if .id == \"$UPDATE\" then . + {state: \"done\", status: 0, endedAt: \"2026-09-30T12:00:20Z\"} else . end)"

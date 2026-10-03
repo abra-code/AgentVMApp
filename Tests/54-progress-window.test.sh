@@ -145,7 +145,7 @@ check "becomes the job's window"     "$APP_PID $UUID" "$(registered "$START")"
 check "one call to agent-vm: the job's log" "job log $START --json" "$(fake_log)"
 check "the title says what the job is" "Starting box cadabra-spike" "$(ui_title)"
 check "the headline is its step, with a capital" "Starting" "$(ui_value "$PROGRESS_STATUS_ID")"
-check "how long so far"              "12 s so far" "$(ui_value "$PROGRESS_ELAPSED_ID")"
+check "how long so far"              "Elapsed 12 s" "$(ui_value "$PROGRESS_ELAPSED_ID")"
 check "the step, which is where it is" "Starting=now" "$(steps)"
 check "no fraction: no bar"          "0" "$(shown "$PROGRESS_BAR_ID")"
 check "no log, no notice"            "|" "$(ui_value "$PROGRESS_LOG_ID")|$(ui_value "$PROGRESS_NOTICE_ID")"
@@ -354,7 +354,7 @@ select_image dev-new
 check "a job holds it: the button is there" "1" "$(shown "$MAIN_IMAGE_PROGRESS_ID")"
 chains_reset
 omc_run AgentVM.main.image.progress
-check "a build with a setup waiting after it: the pane and the card show the build" "Building, 12 s so far: [3/3] Agents|hammer.fill${TAB}Building - macOS 27.0" \
+check "a build with a setup waiting after it: the pane and the card show the build" "Building, elapsed 12 s: [3/3] Agents|hammer.fill${TAB}Building - macOS 27.0" \
     "$(ui_value "$MAIN_IMAGE_STATE_ID")|$(ui_rows "$MAIN_IMAGES_ID" | row_named dev-new | /usr/bin/cut -f2,3)"
 check "it asks for the window of the job that runs, not the one that waits" "1|$APP_PID progress:$BUILD" "$(chain_asked AgentVM.progress)|$(request)"
 job_state "$BUILD" '{state: "done", status: 0, endedAt: "2026-09-30T12:05:00Z"}'
