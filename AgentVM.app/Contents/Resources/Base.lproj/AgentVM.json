@@ -189,9 +189,9 @@
                               "id": 330,
                               "properties": { "hidden": true, "spacing": 8.0 },
                               "children": [
-                                { "type": "Button", "id": 331, "properties": { "title": "Stop", "disabled": true, "actionID": "AgentVM.main.box.stop", "help": "Shut the box down. Asks first when another program started it or programs run in it." } },
-                                { "type": "Button", "id": 332, "properties": { "title": "View", "disabled": true, "actionID": "AgentVM.main.box.view", "help": "Show the box's screen in a window. Keys and clicks reach the box." } },
-                                { "type": "Button", "id": 334, "properties": { "title": "Open Shell", "disabled": true, "actionID": "AgentVM.main.box.shell", "help": "Open a shell in the box in Terminal." } }
+                                { "type": "Button", "id": 331, "properties": { "title": "Stop", "systemImage": "stop.fill", "imageScale": "large", "disabled": true, "actionID": "AgentVM.main.box.stop", "help": "Shut the box down. Asks first when another program started it or programs run in it." } },
+                                { "type": "Button", "id": 332, "properties": { "title": "View", "systemImage": "display", "imageScale": "large", "disabled": true, "actionID": "AgentVM.main.box.view", "help": "Show the box's screen in a window. Keys and clicks reach the box." } },
+                                { "type": "Button", "id": 334, "properties": { "title": "Connect", "systemImage": "apple.terminal.fill", "imageScale": "large", "disabled": true, "actionID": "AgentVM.main.box.shell", "help": "Open a shell in the box in Terminal." } }
                               ]
                             },
                             {
@@ -199,7 +199,7 @@
                               "id": 340,
                               "properties": { "hidden": true, "spacing": 8.0 },
                               "children": [
-                                { "type": "Button", "id": 341, "properties": { "title": "Start", "disabled": true, "actionID": "AgentVM.main.box.start", "help": "Start the box. It runs until it is stopped, whether or not this app is open." } }
+                                { "type": "Button", "id": 341, "properties": { "title": "Start", "systemImage": "play.fill", "imageScale": "large", "disabled": true, "actionID": "AgentVM.main.box.start", "help": "Start the box. It runs until it is stopped, whether or not this app is open." } }
                               ]
                             }
                           ]
@@ -210,8 +210,8 @@
                       "type": "HStack",
                       "properties": { "spacing": 8.0 },
                       "children": [
-                        { "type": "Button", "id": 343, "properties": { "title": "Run an Agent in Terminal...", "disabled": true, "actionID": "AgentVM.main.box.agent", "help": "Choose a project folder; avm starts the box if needed, shares the folder and asks what to run." } },
-                        { "type": "Button", "id": 344, "properties": { "title": "Recreate...", "disabled": true, "actionID": "AgentVM.main.box.recreate", "help": "Make the stopped box again from its image as the image is now." } }
+                        { "type": "Button", "id": 343, "properties": { "title": "Run an Agent", "systemImage": "rectangle.badge.sparkles.fill", "imageScale": "large", "disabled": true, "actionID": "AgentVM.main.box.agent", "help": "Choose a project folder; avm starts the box if needed, shares the folder and asks what to run." } },
+                        { "type": "Button", "id": 344, "properties": { "title": "Recreate", "systemImage": "arrow.trianglehead.clockwise.rotate.90", "imageScale": "large", "disabled": true, "actionID": "AgentVM.main.box.recreate", "help": "Make the stopped box again from its image as the image is now." } }
                       ]
                     },
                     {
@@ -381,9 +381,9 @@
                       "type": "HStack",
                       "properties": { "spacing": 8.0 },
                       "children": [
-                        { "type": "Button", "id": 431, "properties": { "title": "New Box from It...", "disabled": true, "actionID": "AgentVM.main.box.new", "help": "Make a box that is a copy of this image." } },
-                        { "type": "Button", "id": 432, "properties": { "title": "New Image from This...", "disabled": true, "actionID": "AgentVM.main.image.new", "help": "Build a new image that starts as a copy of this one, with more tools." } },
-                        { "type": "Button", "id": 435, "properties": { "title": "Update...", "disabled": true, "actionID": "AgentVM.main.image.update", "help": "Choose what to update in the image: macOS, the tools its recipes installed, the guest daemon." } }
+                        { "type": "Button", "id": 431, "properties": { "title": "New Box", "systemImage": "shippingbox", "imageScale": "large", "disabled": true, "actionID": "AgentVM.main.box.new", "help": "Make a box that is a copy of this image." } },
+                        { "type": "Button", "id": 432, "properties": { "title": "New Image","systemImage": "square.3.layers.3d.top.filled", "imageScale": "large",  "disabled": true, "actionID": "AgentVM.main.image.new", "help": "Build a new image that starts as a copy of this one, with more tools." } },
+                        { "type": "Button", "id": 435, "properties": { "title": "Update", "systemImage": "arrow.trianglehead.2.clockwise.rotate.90", "imageScale": "large", "disabled": true, "actionID": "AgentVM.main.image.update", "help": "Choose what to update in the image: macOS, the tools its recipes installed, the guest daemon." } }
                       ]
                     },
                     {
@@ -432,7 +432,7 @@
                   {
                     "type": "LabeledContent",
                     "properties": { "title": "Updates" },
-                    "children": [ { "type": "Button", "id": 503, "properties": { "title": "Check for Updates...", "disabled": true } } ]
+                    "children": [ { "type": "Button", "id": 503, "properties": { "title": "Check for Updates", "systemImage": "arrow.trianglehead.2.clockwise.rotate.90", "imageScale": "large", "disabled": true } } ]
                   }
                 ]
               },
@@ -443,7 +443,7 @@
                   {
                     "type": "LabeledContent",
                     "properties": { "title": "Keys and tokens" },
-                    "children": [ { "type": "Button", "id": 521, "properties": { "title": "Agent Keys...", "actionID": "AgentVM.keys.open", "help": "See which keys the agents can use and which are stored in your login Keychain; store or remove one." } } ]
+                    "children": [ { "type": "Button", "id": 521, "properties": { "title": "Agent Keys", "systemImage": "key", "imageScale": "large", "actionID": "AgentVM.keys.open", "help": "See which keys the agents can use and which are stored in your login Keychain; store or remove one." } } ]
                   }
                 ]
               },
