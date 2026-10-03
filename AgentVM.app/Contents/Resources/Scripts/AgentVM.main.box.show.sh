@@ -1,6 +1,6 @@
 #!/bin/sh
 # AgentVM.main.box.show.sh
-# Show in Finder, in the box detail pane: the selected box's folder in the store, selected in a
+# Show in Finder, in the bar under the box list: the selected box's folder in the store, selected in a
 # Finder window.
 
 . "$OMC_APP_BUNDLE_PATH/Contents/Resources/Scripts/lib.agentvm.main.sh"

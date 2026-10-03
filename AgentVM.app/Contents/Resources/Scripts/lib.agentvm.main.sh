@@ -72,7 +72,6 @@ MAIN_RUNNING_BOX_ACTIONS_ID=330
 MAIN_STOPPED_BOX_ACTIONS_ID=340
 MAIN_BOX_STOP_ID=331
 MAIN_BOX_VIEW_ID=332
-MAIN_BOX_CONTROL_ID=333
 MAIN_BOX_SHELL_ID=334
 MAIN_BOX_START_ID=341
 MAIN_BOX_SHOW_ID=342
@@ -942,6 +941,9 @@ main_paint_box_detail() {
     [ -n "$_name" ] && _row="$(main_row "$_uuid" boxes "$_name")"
     if [ -z "$_row" ]; then
         ui_show "$_uuid" "$MAIN_BOX_DETAIL_ID" 0
+        # The bar under the list stays in view with no box selected: its buttons go off.
+        ui_enable "$_uuid" "$MAIN_BOX_SHOW_ID" 0
+        ui_enable "$_uuid" "$MAIN_BOX_DELETE_ID" 0
         # With no box at all, a placeholder of its own says what a box is and how one is made. Two
         # fixed placeholders, not one changed: a title set while the window is open is not shown.
         if [ -z "$(main_rows "$_uuid" boxes)" ]; then
@@ -1070,7 +1072,6 @@ main_paint_box_detail() {
         ui_enable "$_uuid" "$MAIN_BOX_STOP_ID" "$(( _stoppable * _free ))"
         ui_enable "$_uuid" "$MAIN_BOX_START_ID" "$(( _stopped * _free ))"
         ui_enable "$_uuid" "$MAIN_BOX_VIEW_ID" "$(( _running * _free ))"
-        ui_enable "$_uuid" "$MAIN_BOX_CONTROL_ID" "$(( _running * _free ))"
         ui_enable "$_uuid" "$MAIN_BOX_SHELL_ID" "$(( _running * _free ))"
         # avm starts a stopped box itself.
         ui_enable "$_uuid" "$MAIN_BOX_AGENT_ID" "$(( (_running + _stopped) * _kept * _free ))"
@@ -1270,6 +1271,9 @@ main_paint_image_detail() {
     [ -n "$_name" ] && _row="$(main_row "$_uuid" images "$_name")"
     if [ -z "$_row" ]; then
         ui_show "$_uuid" "$MAIN_IMAGE_DETAIL_ID" 0
+        # The bar under the list stays in view with no image selected: its buttons go off.
+        ui_enable "$_uuid" "$MAIN_IMAGE_SHOW_ID" 0
+        ui_enable "$_uuid" "$MAIN_IMAGE_DELETE_ID" 0
         ui_show "$_uuid" "$MAIN_IMAGE_NONE_ID" 1
         return 0
     fi

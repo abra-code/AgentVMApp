@@ -1,6 +1,6 @@
 #!/bin/sh
 # AgentVM.main.image.show.sh
-# Show in Finder, in the image detail pane: the selected image's folder in the store, selected in a
+# Show in Finder, in the bar under the image list: the selected image's folder in the store, selected in a
 # Finder window.
 
 . "$OMC_APP_BUNDLE_PATH/Contents/Resources/Scripts/lib.agentvm.main.sh"

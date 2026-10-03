@@ -74,11 +74,11 @@ enabled() {
     [ "$(ui_enabled "$1")" = "1" ] && echo 1 || echo 0
 }
 
-# buttons  ->  the pane's buttons, enabled (1) or not: Start, Stop, View, View and Control, Open
-# Shell, Run an Agent, Recreate, Delete.
+# buttons  ->  the box's buttons, enabled (1) or not: Start, Stop, View, Open Shell, Run an Agent,
+# Recreate, Delete.
 buttons() {
-    printf '%s %s %s %s %s %s %s %s\n' "$(enabled "$MAIN_BOX_START_ID")" "$(enabled "$MAIN_BOX_STOP_ID")" \
-        "$(enabled "$MAIN_BOX_VIEW_ID")" "$(enabled "$MAIN_BOX_CONTROL_ID")" "$(enabled "$MAIN_BOX_SHELL_ID")" \
+    printf '%s %s %s %s %s %s %s\n' "$(enabled "$MAIN_BOX_START_ID")" "$(enabled "$MAIN_BOX_STOP_ID")" \
+        "$(enabled "$MAIN_BOX_VIEW_ID")" "$(enabled "$MAIN_BOX_SHELL_ID")" \
         "$(enabled "$MAIN_BOX_AGENT_ID")" "$(enabled "$MAIN_BOX_RECREATE_ID")" "$(enabled "$MAIN_BOX_DELETE_ID")"
 }
 
@@ -131,7 +131,7 @@ check "the poll loop is begun anew" "1" "$(chain_asked AgentVM.main.poll)"
 check "the pane says what the job does, and for how long" "Starting, 12 s so far" "$(ui_value "$MAIN_BOX_STATE_ID")"
 check "the card too, drawn as a box in between" "circle.dotted|yes" \
     "$(card cadabra-spike | /usr/bin/cut -d'|' -f1)|$(card cadabra-spike | /usr/bin/grep -q '|Starting - dev-agents' && echo yes)"
-check "every button of the pane is off while the job holds the box" "0 0 0 0 0 0 0 0" "$(buttons)"
+check "every button of the pane is off while the job holds the box" "0 0 0 0 0 0 0" "$(buttons)"
 check "another box's card is as it was" "play.circle.fill" "$(card s3 | /usr/bin/cut -d'|' -f1)"
 : > "$FAKE_SLEEP_LOG"
 poll 1
@@ -242,7 +242,7 @@ check "is stopped at once, as a job" "job start --json -- box stop try1" "$(star
 check "  with no question"       "" "$(ui_alert_title)"
 check "the pane and the card say Stopping" "Stopping, 12 s so far|circle.dotted|yes" \
     "$(ui_value "$MAIN_BOX_STATE_ID")|$(card try1 | /usr/bin/cut -d'|' -f1)|$(card try1 | /usr/bin/grep -q '|Stopping - ' && echo yes)"
-check "  every button off"       "0 0 0 0 0 0 0 0" "$(buttons)"
+check "  every button off"       "0 0 0 0 0 0 0" "$(buttons)"
 : > "$FAKE_AGENTVM_DIR/log"
 omc_run AgentVM.main.box.stop
 check "a second Stop while the job holds the box stops nothing more" "" "$(started)"
@@ -308,7 +308,7 @@ open_window
 check "a job that had failed before the window opened is not reported" "" "$(ui_alert_title)"
 select_box cadabra-spike
 check "a box being started in Terminal or Cadabra: the pane says so" "Starting, 22 s so far" "$(ui_value "$MAIN_BOX_STATE_ID")"
-check "  its card too, and its buttons are off" "yes|0 0 0 0 0 0 0 0" \
+check "  its card too, and its buttons are off" "yes|0 0 0 0 0 0 0" \
     "$(card cadabra-spike | /usr/bin/grep -q '|Starting - ' && echo yes)|$(buttons)"
 select_box s3
 check "a job that waits for another" "Waiting to start" "$(ui_value "$MAIN_BOX_STATE_ID")"

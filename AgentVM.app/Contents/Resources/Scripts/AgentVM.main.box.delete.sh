@@ -1,6 +1,6 @@
 #!/bin/sh
 # AgentVM.main.box.delete.sh
-# Delete... in the box detail pane: asks first, saying what deleting frees, about the box as it is
+# Delete... in the bar under the box list: asks first, saying what deleting frees, about the box as it is
 # now (status is read and the box measured again; a box that started meanwhile is not asked
 # about). The box asked about is kept as the window's pending delete: the confirmation's handler
 # deletes that one, whatever the selection is by then. Delete in the question runs

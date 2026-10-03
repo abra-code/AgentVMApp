@@ -112,6 +112,16 @@
                     }
                   ]
                 },
+                { "type": "Divider" },
+                {
+                  "type": "HStack",
+                  "properties": { "spacing": 14.0, "buttonStyle": "borderless", "padding": { "top": 8, "leading": 16, "bottom": 2, "trailing": 12 } },
+                  "children": [
+                    { "type": "Button", "id": 342, "properties": { "systemImage": "folder", "imageScale": "large", "disabled": true, "actionID": "AgentVM.main.box.show", "help": "Show the selected box in Finder" } },
+                    { "type": "Button", "id": 345, "properties": { "systemImage": "trash", "imageScale": "large", "disabled": true, "actionID": "AgentVM.main.box.delete", "help": "Delete the selected box..." } },
+                    { "type": "Spacer" }
+                  ]
+                },
                 {
                   "type": "VStack",
                   "properties": {
@@ -179,8 +189,7 @@
                               "properties": { "hidden": true, "spacing": 8.0 },
                               "children": [
                                 { "type": "Button", "id": 331, "properties": { "title": "Stop", "disabled": true, "actionID": "AgentVM.main.box.stop", "help": "Shut the box down. Asks first when another program started it or programs run in it." } },
-                                { "type": "Button", "id": 332, "properties": { "title": "View", "disabled": true, "actionID": "AgentVM.main.box.view", "help": "Show the box's screen. Keys and clicks do not reach it." } },
-                                { "type": "Button", "id": 333, "properties": { "title": "View and Control", "disabled": true, "actionID": "AgentVM.main.box.control", "help": "Show the box's screen, and let keys and clicks reach it." } },
+                                { "type": "Button", "id": 332, "properties": { "title": "View", "disabled": true, "actionID": "AgentVM.main.box.view", "help": "Show the box's screen in a window. Keys and clicks reach the box." } },
                                 { "type": "Button", "id": 334, "properties": { "title": "Open Shell", "disabled": true, "actionID": "AgentVM.main.box.shell", "help": "Open a shell in the box in Terminal." } }
                               ]
                             },
@@ -193,9 +202,7 @@
                               ]
                             }
                           ]
-                        },
-                        { "type": "Spacer" },
-                        { "type": "Button", "id": 342, "properties": { "title": "Show in Finder", "disabled": true, "actionID": "AgentVM.main.box.show" } }
+                        }
                       ]
                     },
                     {
@@ -203,9 +210,7 @@
                       "properties": { "spacing": 8.0 },
                       "children": [
                         { "type": "Button", "id": 343, "properties": { "title": "Run an Agent in Terminal...", "disabled": true, "actionID": "AgentVM.main.box.agent", "help": "Choose a project folder; avm starts the box if needed, shares the folder and asks what to run." } },
-                        { "type": "Button", "id": 344, "properties": { "title": "Recreate...", "disabled": true, "actionID": "AgentVM.main.box.recreate", "help": "Make the stopped box again from its image as the image is now." } },
-                        { "type": "Spacer" },
-                        { "type": "Button", "id": 345, "properties": { "title": "Delete...", "disabled": true, "actionID": "AgentVM.main.box.delete" } }
+                        { "type": "Button", "id": 344, "properties": { "title": "Recreate...", "disabled": true, "actionID": "AgentVM.main.box.recreate", "help": "Make the stopped box again from its image as the image is now." } }
                       ]
                     },
                     {
@@ -313,6 +318,16 @@
                     }
                   ]
                 },
+                { "type": "Divider" },
+                {
+                  "type": "HStack",
+                  "properties": { "spacing": 14.0, "buttonStyle": "borderless", "padding": { "top": 8, "leading": 16, "bottom": 2, "trailing": 12 } },
+                  "children": [
+                    { "type": "Button", "id": 433, "properties": { "systemImage": "folder", "imageScale": "large", "disabled": true, "actionID": "AgentVM.main.image.show", "help": "Show the selected image in Finder" } },
+                    { "type": "Button", "id": 434, "properties": { "systemImage": "trash", "imageScale": "large", "disabled": true, "actionID": "AgentVM.main.image.delete", "help": "Delete the selected image..." } },
+                    { "type": "Spacer" }
+                  ]
+                },
                 {
                   "type": "VStack",
                   "properties": {
@@ -367,10 +382,7 @@
                       "children": [
                         { "type": "Button", "id": 431, "properties": { "title": "New Box from It...", "disabled": true, "actionID": "AgentVM.main.box.new", "help": "Make a box that is a copy of this image." } },
                         { "type": "Button", "id": 432, "properties": { "title": "New Image from This...", "disabled": true, "actionID": "AgentVM.main.image.new", "help": "Build a new image that starts as a copy of this one, with more tools." } },
-                        { "type": "Button", "id": 435, "properties": { "title": "Update...", "disabled": true, "actionID": "AgentVM.main.image.update", "help": "Choose what to update in the image: macOS, the tools its recipes installed, the guest daemon." } },
-                        { "type": "Spacer" },
-                        { "type": "Button", "id": 433, "properties": { "title": "Show in Finder", "disabled": true, "actionID": "AgentVM.main.image.show" } },
-                        { "type": "Button", "id": 434, "properties": { "title": "Delete...", "disabled": true, "actionID": "AgentVM.main.image.delete" } }
+                        { "type": "Button", "id": 435, "properties": { "title": "Update...", "disabled": true, "actionID": "AgentVM.main.image.update", "help": "Choose what to update in the image: macOS, the tools its recipes installed, the guest daemon." } }
                       ]
                     },
                     {

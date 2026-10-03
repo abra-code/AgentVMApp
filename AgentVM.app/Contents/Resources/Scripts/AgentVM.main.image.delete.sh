@@ -1,6 +1,6 @@
 #!/bin/sh
 # AgentVM.main.image.delete.sh
-# Delete... in the image detail pane: asks first, saying what deleting frees and what it means for
+# Delete... in the bar under the image list: asks first, saying what deleting frees and what it means for
 # the boxes and images made from the image, read again now so the answer is about what exists.
 # The image asked about is kept as the window's pending delete: the confirmation's handler deletes
 # that one, whatever the selection is by then. Delete in the question runs

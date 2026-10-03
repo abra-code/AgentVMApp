@@ -1,7 +1,7 @@
 #!/bin/sh
-# Tests/31-box-detail.test.sh - the box detail pane's actions: the space (`box info`) and when it
-# is read, which buttons each state enables, View and View and Control, Open Shell and Run an
-# Agent in Terminal... (their .command files), and Recreate and Delete with their questions.
+# Tests/31-box-detail.test.sh - the box detail pane and the bar under the list: the space (`box info`)
+# and when it is read, which buttons each state enables, View, Open Shell and Run an Agent in
+# Terminal... (their .command files), and Recreate and Delete with their questions.
 #
 # agent-vm is the fake: status from fixtures/agentvm/status-variety.json (s3 running, try1
 # unresponsive, cadabra-spike stopped and disposable), and `box info` from
@@ -62,10 +62,10 @@ enabled() {
     [ "$(ui_enabled "$1")" = "1" ] && echo 1 || echo 0
 }
 
-# buttons  ->  the pane's buttons, enabled (1) or not: View, View and Control, Open Shell, Run an
-# Agent, Recreate, Delete.
+# buttons  ->  the box's buttons, enabled (1) or not: View, Open Shell, Run an Agent, Recreate,
+# Delete.
 buttons() {
-    printf '%s %s %s %s %s %s\n' "$(enabled "$MAIN_BOX_VIEW_ID")" "$(enabled "$MAIN_BOX_CONTROL_ID")" \
+    printf '%s %s %s %s %s\n' "$(enabled "$MAIN_BOX_VIEW_ID")" \
         "$(enabled "$MAIN_BOX_SHELL_ID")" "$(enabled "$MAIN_BOX_AGENT_ID")" \
         "$(enabled "$MAIN_BOX_RECREATE_ID")" "$(enabled "$MAIN_BOX_DELETE_ID")"
 }
@@ -133,40 +133,41 @@ check "a volume that does not report the box's own part: all of it only" "40.2 G
 # -----------------------------------------------------------------------------------------------
 section "which buttons each state enables"
 select_box s3
-check "running: the screen, a shell and avm; not Recreate or Delete" "1 1 1 1 0 0" "$(buttons)"
+check "running: the screen, a shell and avm; not Recreate or Delete" "1 1 1 0 0" "$(buttons)"
 select_box try1
-check "not responding: nothing (it may still hold its virtual machine)" "0 0 0 0 0 0" "$(buttons)"
+check "not responding: nothing (it may still hold its virtual machine)" "0 0 0 0 0" "$(buttons)"
 select_box cadabra-spike
-check "stopped and disposable: only Delete" "0 0 0 0 0 1" "$(buttons)"
+check "stopped and disposable: only Delete" "0 0 0 0 1" "$(buttons)"
 store "$KEPT"
 poll 1
-check "stopped and kept: avm, Recreate and Delete" "0 0 0 1 1 1" "$(buttons)"
+check "stopped and kept: avm, Recreate and Delete" "0 0 1 1 1" "$(buttons)"
 store "$KEPT"' | (.images[] | select(.name == "dev-agents")).state = "provisioning"'
 poll 1
-check "  its image not ready: no Recreate" "0 0 0 1 0 1" "$(buttons)"
+check "  its image not ready: no Recreate" "0 0 1 0 1" "$(buttons)"
 store "$KEPT"' | del(.images[] | select(.name == "dev-agents"))'
 poll 1
-check "  its image deleted: no Recreate" "0 0 0 1 0 1" "$(buttons)"
+check "  its image deleted: no Recreate" "0 0 1 0 1" "$(buttons)"
 store '(.boxes[] | select(.box.name == "s3")).box.disposable = true'
 poll 1
 select_box s3
-check "running and disposable: the screen and a shell, no avm" "1 1 1 0 0 0" "$(buttons)"
+check "running and disposable: the screen and a shell, no avm" "1 1 0 0 0" "$(buttons)"
 store '(.boxes[] | select(.box.name == "s3")).state = "starting"'
 poll 1
-check "starting: nothing yet" "0 0 0 0 0 0" "$(buttons)"
+check "starting: nothing yet" "0 0 0 0 0" "$(buttons)"
 store '.'
 poll 1
 
 # -----------------------------------------------------------------------------------------------
-section "View and View and Control"
+section "View"
 select_box s3
 alerts_reset
 : > "$FAKE_AGENTVM_DIR/log"
 omc_run AgentVM.main.box.view
 check_status "View exits cleanly" 0
-omc_run AgentVM.main.box.control
-check "the screen, then the screen with control" "box view s3 --json|box view s3 --interactive --json" \
+check "the screen, with keys and clicks reaching the box" "box view s3 --interactive --json" \
     "$(fake_log | /usr/bin/paste -sd '|' -)"
+check "there is no handler that shows the screen only" "no" \
+    "$([ -e "$APP_SCRIPTS/AgentVM.main.box.control.sh" ] && echo yes || echo no)"
 check "  no alert"              "" "$(ui_alert_title)"
 printf 'box s3 is not running\n' > "$FAKE_AGENTVM_DIR/fail-box-view"
 omc_run AgentVM.main.box.view
@@ -176,7 +177,7 @@ check "  in agent-vm's words"   "box s3 is not running" "$(ui_alert_message)"
 select_box ""
 alerts_reset
 : > "$FAKE_AGENTVM_DIR/log"
-omc_run AgentVM.main.box.control
+omc_run AgentVM.main.box.view
 check "no box selected: agent-vm is not asked" "" "$(fake_log)"
 
 # -----------------------------------------------------------------------------------------------

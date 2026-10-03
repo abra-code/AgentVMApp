@@ -214,7 +214,7 @@ open_window
 check "Status is shown: a box does not decide the face" "0|1" "$(visible "$MAIN_GETSTARTED_ID")|$(visible "$MAIN_STATUS_ID")"
 check "the Boxes tab shows the placeholder for no box at all, not the one for no selection" "1 0" "$(visible "$MAIN_NO_BOXES_ID") $(visible "$MAIN_BOX_NONE_ID")"
 check "  which says what a box is, and the ways to make one" "No Boxes Yet|1" \
-    "$(/usr/bin/jq -r --argjson id "$MAIN_NO_BOXES_ID" '.. | objects | select(.id? == $id) | .properties.title' "$APP_RESOURCES/Base.lproj/AgentVM.json")|$(/usr/bin/jq -r --argjson id "$MAIN_NO_BOXES_ID" '.. | objects | select(.id? == $id) | .properties.description' "$APP_RESOURCES/Base.lproj/AgentVM.json" | /usr/bin/grep -c '^An image is the template, and never runs itself\. A box is a working copy of an image.*the plus button above.*avm in Terminal, or Cadabra')"
+    "$(/usr/bin/jq -r --argjson id "$MAIN_NO_BOXES_ID" '.. | objects | select(.id? == $id) | .properties.title' "$APP_RESOURCES/Base.lproj/AgentVM.json")|$(/usr/bin/jq -r --argjson id "$MAIN_NO_BOXES_ID" '.. | objects | select(.id? == $id) | .properties.description' "$APP_RESOURCES/Base.lproj/AgentVM.json" | /usr/bin/tr '\n' ' ' | /usr/bin/grep -c 'A box is a working .* of an image.*An image is the template.*plus button.*avm.*Cadabra')"
 
 
 section "a doctor failure: Get started, with doctor's detail"

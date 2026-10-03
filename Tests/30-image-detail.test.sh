@@ -197,7 +197,9 @@ omc_run AgentVM.main.box.show
 check "the box's folder, selected in Finder" "-R $box_folder" "$(/bin/cat "$FAKE_OPEN_LOG")"
 select_box try1
 check "another box's folder is not on this Mac: disabled" "0" "$(enabled "$MAIN_BOX_SHOW_ID")"
+select_box s3
 select_box ""
+check "no box selected: Show in Finder, in the bar under the list, is off" "0" "$(enabled "$MAIN_BOX_SHOW_ID")"
 : > "$FAKE_OPEN_LOG"
 omc_run AgentVM.main.box.show
 check "no box selected: nothing opens" "" "$(/bin/cat "$FAKE_OPEN_LOG")"
@@ -291,6 +293,8 @@ check "  the note says why" "the store is locked" "$(ui_value "$MAIN_IMAGES_NOTE
 omc_run AgentVM.main.image.delete.confirmed
 check "a pending name agent-vm would refuse is not passed on" "0" "$(fake_log | /usr/bin/grep -c '^image delete')"
 select_image ""
+check "no image selected: the bar under the list has Show in Finder and Delete off" "0 0" \
+    "$(enabled "$MAIN_IMAGE_SHOW_ID") $(enabled "$MAIN_IMAGE_DELETE_ID")"
 alerts_reset
 ui_reset
 omc_run AgentVM.main.image.delete
