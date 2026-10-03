@@ -4,9 +4,11 @@
 # The main window (AgentVM.json): its view ids, what it reads from agent-vm, and how it paints.
 #
 # TWO FACES in one ZStack, one visible at a time: Get started while agent-vm cannot be used,
-# doctor reports a failure, or there is no ready image or no box; Status otherwise. Every refresh
-# picks again, so the window moves between them by itself as the store fills or agent-vm goes
-# missing. No face is ever remembered: it is computed from what agent-vm answers.
+# doctor reports a failure, or there is no ready image; Status otherwise. Every refresh picks
+# again, so the window moves between them by itself as the store fills or agent-vm goes missing.
+# No face is ever remembered: it is computed from what agent-vm answers. A box does not decide
+# the face: boxes come and go (disposable ones are deleted when they stop), and with an image
+# ready, the Boxes tab is where a box is made.
 #
 # THE STATUS FACE is a TabView: Boxes, Images and Settings. Boxes and Images are each a split
 # view with a list of cards in the sidebar and the selected card's details beside it. A card
@@ -47,7 +49,10 @@ __AGENTVM_APP_MAIN_LIB=1
 . "$OMC_APP_BUNDLE_PATH/Contents/Resources/Scripts/lib.agentvm.ui.sh"
 
 MAIN_GETSTARTED_ID=200
-MAIN_GETSTARTED_TEXT_ID=201
+# Step n of Get started: its symbol 210 + n, its fact 220 + n, its button 230 + n (step 1 has none).
+MAIN_STAGE_SYMBOL_BASE=210
+MAIN_STAGE_FACT_BASE=220
+MAIN_STAGE_BUTTON_BASE=230
 MAIN_GETSTARTED_NOTE_ID=202
 MAIN_STATUS_ID=300
 
@@ -56,6 +61,8 @@ MAIN_BOXES_FOOTER_ID=312
 MAIN_BOXES_NOTE_ID=313
 MAIN_NEW_BOX_ID=314
 MAIN_BOX_NONE_ID=319
+# With no box at all, in place of MAIN_BOX_NONE_ID: what a box is, and how one is made.
+MAIN_NO_BOXES_ID=318
 MAIN_BOX_DETAIL_ID=320
 MAIN_BOX_NAME_ID=321
 MAIN_BOX_STATE_ID=322
@@ -208,8 +215,7 @@ main_face() {
     fi
     local _failures="$(main_rows "$1" doctor | /usr/bin/awk -F'\t' '$2 == "failure"')"
     local _ready="$(main_rows "$1" images | /usr/bin/awk -F'\t' '$2 == "ready"')"
-    local _boxes="$(main_rows "$1" boxes)"
-    if [ -n "$_failures" ] || [ -z "$_ready" ] || [ -z "$_boxes" ]; then
+    if [ -n "$_failures" ] || [ -z "$_ready" ]; then
         echo "getstarted"
         return 0
     fi
@@ -579,29 +585,148 @@ main_paint_settings() {
     "$dialog" "$_uuid" "$MAIN_DISK_ID" "${_disk:--}"
 }
 
-# main_getstarted_text <uuid>  ->  what exists and what does not, one line each.
-main_getstarted_text() {
+# main_stage_rows <uuid>  ->  the six steps of Get started, a row each:
+#    1 the step's number   2 its state (done; todo; running, while a job does it; failed;
+#      attention, when it is done in part)   3 the fact line   4 1 when its button is on
+# The steps: 1 agent-vm can be used; 2 this Mac can run boxes (doctor); 3 a macOS restore file;
+# 4 a ready image; 5 Full Disk Access in a ready image; 6 a box. From the caches, so the caller
+# reads first. A button is on only when what comes before its step is there: nothing can be
+# asked of an agent-vm that cannot be used, an image needs a restore file or another image, a
+# box needs an image.
+main_stage_rows() {
     local _uuid="$1"
-    local _available="$(main_agentvm_line "$_uuid" 1)"
-    if [ "$_available" != "0" ]; then
-        printf 'agent-vm: %s\n' "$(main_agentvm_line "$_uuid" 2)"
+    if [ "$(main_agentvm_line "$_uuid" 1)" != "0" ]; then
+        local _why="$(main_agentvm_line "$_uuid" 2)"
         # Only for the installed one: a broken developer override is fixed in the setting.
-        local _origin="$(main_agentvm_line "$_uuid" 3)"
-        [ "$_origin" = "installed" ] && printf 'AgentVM runs the agent-vm installed in ~/.local/bin, the one Terminal and Cadabra run.\n'
+        [ "$(main_agentvm_line "$_uuid" 3)" = "installed" ] && _why="$_why AgentVM runs the agent-vm installed in ~/.local/bin, the one Terminal and Cadabra run."
+        printf '1\tfailed\t%s\t0\n' "${_why:--}"
+        # A fact of "-" is none: a field that is empty would be skipped by the reader.
+        printf '2\ttodo\t-\t0\n3\ttodo\t-\t0\n4\ttodo\t-\t0\n5\ttodo\t-\t0\n6\ttodo\t-\t0\n'
         return 0
     fi
-    printf 'agent-vm: %s (%s)\n' "$(main_agentvm_line "$_uuid" 2)" "$(main_agentvm_origin_text "$_uuid")"
-    local _failures="$(main_rows "$_uuid" doctor | /usr/bin/awk -F'\t' '$2 == "failure" { printf "This Mac cannot run boxes now: %s (%s)\n", $3, $1 }')"
+    printf '1\tdone\t%s, %s\t0\n' "$(main_agentvm_line "$_uuid" 2)" "$(main_agentvm_origin_text "$_uuid")"
+    local _failures="$(main_rows "$_uuid" doctor | /usr/bin/awk -F'\t' '$2 == "failure" { printf "%s%s (%s)", (n++ ? "; " : ""), $3, $1 }')"
+    local _can=1
     if [ -n "$_failures" ]; then
-        printf '%s\n' "$_failures"
+        _can=0
+        printf '2\tfailed\t%s\t1\n' "$_failures"
     else
-        printf 'This Mac can run boxes.\n'
+        printf '2\tdone\t%s\t1\n' "$(main_rows "$_uuid" doctor | /usr/bin/awk -F'\t' '
+            $1 == "virtualization" && $3 != "-" { fact = $3 }
+            $2 == "warning" { warnings = warnings "; " $3 }
+            END { if (fact == "") fact = "nothing stands in the way"; print fact warnings }')"
     fi
-    main_rows "$_uuid" images | /usr/bin/awk -F'\t' '$2 == "ready" { n++ } END {
-        if (n == 0) print "Images: none ready yet."; else if (n == 1) print "Images: 1 ready."; else printf "Images: %d ready.\n", n }'
-    main_rows "$_uuid" boxes | /usr/bin/awk -F'\t' 'END {
-        if (NR == 0) print "Boxes: none yet."; else if (NR == 1) print "Boxes: 1."; else printf "Boxes: %d.\n", NR }'
-    printf '\nIn Terminal, agent-vm image create makes an image and agent-vm box create makes a box from it; this window shows them within seconds.\n'
+    local _ready="$(main_rows "$_uuid" images | /usr/bin/awk -F'\t' '$2 == "ready" { print $1 }')"
+    local _files="$(main_rows "$_uuid" ipsw)"
+    local _download="$(main_rows "$_uuid" jobs | /usr/bin/awk -F'\t' '$3 == "ipsw" && ($2 == "running" || ($2 == "queued" && !running)) { row = $0; running = ($2 == "running") } END { if (row != "") print row }')"
+    # A step that is done stays done while a job adds to it (a newer restore file, another image).
+    if [ -n "$_files" ]; then
+        printf '3\tdone\t%s\t%s\n' "$(printf '%s\n' "$_files" | /usr/bin/awk -F'\t' 'NR == 1 {
+            size = ($4 ~ /^[0-9]+$/) ? sprintf(", %.1f GB", $4 / 1000000000) : ""
+            printf "macOS %s%s", $2, size } END { if (NR > 1) printf ", and %d more", NR - 1 }')" "$_can"
+    elif [ -n "$_download" ]; then
+        printf '3\trunning\t%s\t%s\n' "$(main_download_text "$_download")" "$_can"
+    elif [ -n "$_ready" ]; then
+        printf '3\ttodo\tnone downloaded; one is needed only for an image built from nothing\t%s\n' "$_can"
+    else
+        printf '3\ttodo\tnone downloaded yet: about 27 GB, the first thing an image is built from\t%s\n' "$_can"
+    fi
+    local _build="$(main_rows "$_uuid" jobs | /usr/bin/awk -F'\t' '$3 ~ /^image:/ && $4 == "image create" && ($2 == "running" || ($2 == "queued" && !running)) { row = $0; running = ($2 == "running") } END { if (row != "") print row }')"
+    local _button="$_can"
+    [ -z "$_files" ] && [ -z "$_ready" ] && _button=0
+    # An image being built by a command that is not a job (agent-vm image create in Terminal), and
+    # the images whose build failed, when none is ready.
+    local _building="$(main_rows "$_uuid" images | /usr/bin/awk -F'\t' '$2 == "installing" || $2 == "installed" || $2 == "provisioning" { print $1 }')"
+    local _broken="$(main_rows "$_uuid" images | /usr/bin/awk -F'\t' '$2 == "failed" { print $1 }')"
+    if [ -n "$_ready" ]; then
+        printf '4\tdone\t%s ready: %s\t%s\n' "$(printf '%s\n' "$_ready" | /usr/bin/awk 'END { print NR }')" "$(main_some_names "$_ready")" "$_button"
+    elif [ -n "$_build" ]; then
+        local _target="$(printf '%s\n' "$_build" | /usr/bin/cut -f3)"
+        printf '4\trunning\t%s: %s\t%s\n' "${_target#image:}" "$(main_job_text "$_build")" "$_button"
+    elif [ -n "$_building" ]; then
+        printf '4\trunning\t%s: being built by a command outside this app\t%s\n' "$(main_some_names "$_building")" "$_button"
+    elif [ -n "$_broken" ]; then
+        printf '4\tattention\tnone ready: the build of %s failed. agent-vm image delete in Terminal removes a failed image\t%s\n' "$(main_some_names "$_broken")" "$_button"
+    elif [ -n "$_files" ]; then
+        printf '4\ttodo\tnone ready yet: a first image takes about 10 minutes to build\t%s\n' "$_button"
+    else
+        printf '4\ttodo\tnone ready yet: a macOS restore file comes first\t%s\n' "$_button"
+    fi
+    local _granted="$(main_rows "$_uuid" images | /usr/bin/awk -F'\t' '$2 == "ready" && $8 !~ /full-disk-access/ { print $1 }')"
+    local _lacking="$(main_rows "$_uuid" images | /usr/bin/awk -F'\t' '$2 == "ready" && $8 ~ /full-disk-access/ { print $1 }')"
+    _button=0
+    [ -n "$_lacking" ] && _button="$_can"
+    if [ -z "$_ready" ]; then
+        printf '5\ttodo\tgranted once, by hand, on the screen of the first image\t0\n'
+    elif [ -z "$_granted" ]; then
+        printf '5\tattention\tno image has it yet (%s): a program in a box that opens Desktop, Documents or Downloads would wait on a question nobody sees\t%s\n' "$(main_some_names "$_lacking")" "$_button"
+    elif [ -n "$_lacking" ]; then
+        printf '5\tdone\t%s; not yet: %s\t%s\n' "$(main_some_names "$_granted")" "$(main_some_names "$_lacking")" "$_button"
+    else
+        printf '5\tdone\tevery ready image has it\t0\n'
+    fi
+    local _boxes="$(main_rows "$_uuid" boxes | /usr/bin/awk -F'\t' '{ printf "%s (%s)\n", $1, $2 }')"
+    _button="$_can"
+    [ -n "$_ready" ] || _button=0
+    if [ -n "$_boxes" ]; then
+        printf '6\tdone\t%s\t%s\n' "$(main_some_names "$_boxes")" "$_button"
+    else
+        printf '6\ttodo\tnone yet. A box is a working copy of an image, made in seconds, and it is what runs: keep one for your own work, or let avm or Cadabra make throw-away ones\t%s\n' "$_button"
+    fi
+}
+
+# main_some_names <lines>  ->  the first three as "a, b and c", and how many more there are.
+main_some_names() {
+    local _count="$(printf '%s\n' "$1" | /usr/bin/awk 'NF { n++ } END { print n + 0 }')"
+    local _text="$(ui_lines_text "$(printf '%s\n' "$1" | /usr/bin/awk 'NF && ++n <= 3')")"
+    if [ "$_count" -gt 3 ]; then
+        printf '%s, and %s more\n' "$(printf '%s\n' "$_text" | /usr/bin/sed 's/ and /, /')" "$((_count - 3))"
+    else
+        printf '%s\n' "$_text"
+    fi
+}
+
+# main_download_text <the download job's row>  ->  "Downloading: 48%", or that it waits.
+main_download_text() {
+    if [ "$(printf '%s\n' "$1" | /usr/bin/cut -f2)" = "queued" ]; then
+        printf 'A download waits to start\n'
+        return 0
+    fi
+    printf '%s\n' "$1" | /usr/bin/awk -F'\t' '{
+        if ($9 == "download" && $10 ~ /^[0-9.]+$/) printf "Downloading: %d%%\n", $10 * 100 + 0.5
+        else print "Downloading" }'
+}
+
+# main_stage_symbol <state>  ->  the symbol and its color, tab-separated.
+main_stage_symbol() {
+    case "$1" in
+        done)      printf 'checkmark.circle.fill\tgreen\n' ;;
+        running)   printf 'arrow.clockwise.circle.fill\tblue\n' ;;
+        failed)    printf 'xmark.circle.fill\tred\n' ;;
+        attention) printf 'exclamationmark.circle.fill\torange\n' ;;
+        *)         printf 'circle\tsecondary\n' ;;
+    esac
+}
+
+# main_paint_stages <uuid>  ->  the six steps of Get started from the caches: each one's symbol,
+# fact and button.
+main_paint_stages() {
+    local _rows="$(main_stage_rows "$1")"
+    local _n _state _fact _button _symbol
+    while IFS="$ui_tab" read -r _n _state _fact _button; do
+        case "$_n" in
+            1|2|3|4|5|6) ;;
+            *) continue ;;
+        esac
+        [ "$_fact" = "-" ] && _fact=""
+        _symbol="$(main_stage_symbol "$_state")"
+        "$dialog" "$1" "$((MAIN_STAGE_SYMBOL_BASE + _n))" omc_set_property systemName "${_symbol%%"$ui_tab"*}"
+        "$dialog" "$1" "$((MAIN_STAGE_SYMBOL_BASE + _n))" omc_set_property foregroundStyle "${_symbol#*"$ui_tab"}"
+        "$dialog" "$1" "$((MAIN_STAGE_FACT_BASE + _n))" "$_fact"
+        [ "$_n" -eq 1 ] || ui_enable "$1" "$((MAIN_STAGE_BUTTON_BASE + _n))" "$_button"
+    done <<EOF
+$_rows
+EOF
 }
 
 # main_maintenance <uuid> <boxes|images>  ->  "name<TAB>what to do" for each thing that needs
@@ -817,9 +942,18 @@ main_paint_box_detail() {
     [ -n "$_name" ] && _row="$(main_row "$_uuid" boxes "$_name")"
     if [ -z "$_row" ]; then
         ui_show "$_uuid" "$MAIN_BOX_DETAIL_ID" 0
-        ui_show "$_uuid" "$MAIN_BOX_NONE_ID" 1
+        # With no box at all, a placeholder of its own says what a box is and how one is made. Two
+        # fixed placeholders, not one changed: a title set while the window is open is not shown.
+        if [ -z "$(main_rows "$_uuid" boxes)" ]; then
+            ui_show "$_uuid" "$MAIN_BOX_NONE_ID" 0
+            ui_show "$_uuid" "$MAIN_NO_BOXES_ID" 1
+        else
+            ui_show "$_uuid" "$MAIN_NO_BOXES_ID" 0
+            ui_show "$_uuid" "$MAIN_BOX_NONE_ID" 1
+        fi
         return 0
     fi
+    ui_show "$_uuid" "$MAIN_NO_BOXES_ID" 0
     ui_show "$_uuid" "$MAIN_BOX_NONE_ID" 0
     ui_show "$_uuid" "$MAIN_BOX_DETAIL_ID" 1
     "$dialog" "$_uuid" "$MAIN_BOX_NAME_ID" "$_name"
@@ -1311,7 +1445,7 @@ main_paint() {
     else
         ui_show "$_uuid" "$MAIN_STATUS_ID" 0
         ui_show "$_uuid" "$MAIN_GETSTARTED_ID" 1
-        "$dialog" "$_uuid" "$MAIN_GETSTARTED_TEXT_ID" "$(main_getstarted_text "$_uuid")"
+        main_paint_stages "$_uuid"
         "$dialog" "$_uuid" "$MAIN_GETSTARTED_NOTE_ID" "$_error"
     fi
 }
@@ -1395,6 +1529,16 @@ main_refresh() {
         if [ "$_status" -eq 126 ] || [ "$_status" -eq 127 ]; then
             main_read_agentvm "$_uuid"
             _available=$?
+        fi
+    fi
+    # Get started names the restore files downloaded, which only reads agent-vm's cache folder;
+    # the lists do not need them. A list that cannot be read keeps the one before.
+    if [ "$_available" -eq 0 ] && [ "$(main_face "$_uuid")" = "getstarted" ]; then
+        local _files
+        _files="$(agentvm_ipsw_list)"
+        local _files_status=$?
+        if [ "$_files_status" -eq 0 ]; then
+            printf '%s\n' "$_files" | agentvm_ipsw_rows | ui_store "$(ui_cache "$_uuid" ipsw.tsv)"
         fi
     fi
     # An agent-vm that cannot be used says why in Get started; a status error from before it

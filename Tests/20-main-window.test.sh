@@ -17,6 +17,17 @@ import_view_ids "$APP_SCRIPTS/lib.agentvm.main.sh"
     printf '20-main-window: no view ids imported from lib.agentvm.main.sh\n' >&2
     exit 1
 }
+# The steps of Get started: a step's symbol and fact are bases plus its number.
+STAGE_SYMBOL="$(/usr/bin/sed -n 's/^MAIN_STAGE_SYMBOL_BASE=\([0-9][0-9]*\)$/\1/p' "$APP_SCRIPTS/lib.agentvm.main.sh")"
+STAGE_FACT="$(/usr/bin/sed -n 's/^MAIN_STAGE_FACT_BASE=\([0-9][0-9]*\)$/\1/p' "$APP_SCRIPTS/lib.agentvm.main.sh")"
+[ -n "$STAGE_SYMBOL" ] && [ -n "$STAGE_FACT" ] || {
+    printf '20-main-window: the bases of the Get started steps were not found\n' >&2
+    exit 1
+}
+# fact <n>  ->  the fact line of step n.
+fact() {
+    ui_value $((STAGE_FACT + $1))
+}
 
 AGENTVM_APP_PS="$TEST_HELPERS/fake_ps.sh"
 AGENTVM_APP_SLEEP="$TEST_HELPERS/fake_sleep.sh"
@@ -103,7 +114,7 @@ check "the poll loop is chained" "1" "$(chain_asked AgentVM.main.poll)"
 check "the box list's footer: the virtual machines" "1 of 2 virtual machines running" "$(ui_value "$MAIN_BOXES_FOOTER_ID")"
 check "the image list's footer: how many" "7 images" "$(ui_value "$MAIN_IMAGES_FOOTER_ID")"
 check "no error note"            "" "$(ui_value "$MAIN_BOXES_NOTE_ID")$(ui_value "$MAIN_IMAGES_NOTE_ID")"
-check "no box selected yet: the placeholder"    "1 0" "$(visible "$MAIN_BOX_NONE_ID") $(visible "$MAIN_BOX_DETAIL_ID")"
+check "no box selected yet: the placeholder, not the one for no box at all" "1 0 0" "$(visible "$MAIN_BOX_NONE_ID") $(visible "$MAIN_BOX_DETAIL_ID") $(visible "$MAIN_NO_BOXES_ID")"
 check "no image selected yet: the placeholder"  "1 0" "$(visible "$MAIN_IMAGE_NONE_ID") $(visible "$MAIN_IMAGE_DETAIL_ID")"
 
 section "Settings"
@@ -170,9 +181,9 @@ open_window
 check_status "the init handler exits cleanly" 0
 check "Get started is shown" "1" "$(visible "$MAIN_GETSTARTED_ID")"
 check "Status is not"        "0" "$(visible "$MAIN_STATUS_ID")"
-check "the first line says where it looked" \
-    "agent-vm: agent-vm is not installed: there is nothing at ~/.local/bin/agent-vm." \
-    "$(ui_value "$MAIN_GETSTARTED_TEXT_ID" | /usr/bin/head -1)"
+check "the first step is red, and says where it looked" \
+    "xmark.circle.fill|agent-vm is not installed: there is nothing at ~/.local/bin/agent-vm. AgentVM runs the agent-vm installed in ~/.local/bin, the one Terminal and Cadabra run." \
+    "$(ui_prop $((STAGE_SYMBOL + 1)) systemName)|$(fact 1)"
 check "agent-vm never ran"   "" "$(fake_log)"
 check "the poll loop is still chained, to notice an install" "1" "$(chain_asked AgentVM.main.poll)"
 
@@ -193,18 +204,18 @@ store status-empty.json
 open_window
 check "Get started is shown" "1" "$(visible "$MAIN_GETSTARTED_ID")"
 check "the version and where it is" \
-    "agent-vm: $VERSION (test agent-vm at $FAKE_AGENTVM)" \
-    "$(ui_value "$MAIN_GETSTARTED_TEXT_ID" | /usr/bin/head -1)"
+    "$VERSION, test agent-vm at $FAKE_AGENTVM" "$(fact 1)"
 check "what exists and what does not" \
-    "This Mac can run boxes.|Images: none ready yet.|Boxes: none yet." \
-    "$(ui_value "$MAIN_GETSTARTED_TEXT_ID" | /usr/bin/sed -n '2,4p' | /usr/bin/paste -sd '|' -)"
+    "none ready yet: a first image takes about 10 minutes to build|none yet. A box is a working copy of an image, made in seconds, and it is what runs: keep one for your own work, or let avm or Cadabra make throw-away ones" "$(fact 4)|$(fact 6)"
 
-section "images but no box: still Get started"
+section "images but no box: Status, and the Boxes tab says what a box is"
 /usr/bin/jq '.boxes = []' "$FIXTURES_AGENTVM/status.json" > "$FAKE_AGENTVM_DIR/status.json"
 open_window
-check "Get started is shown" "1" "$(visible "$MAIN_GETSTARTED_ID")"
-check "the ready images are counted" "Images: 6 ready." \
-    "$(ui_value "$MAIN_GETSTARTED_TEXT_ID" | /usr/bin/sed -n 3p)"
+check "Status is shown: a box does not decide the face" "0|1" "$(visible "$MAIN_GETSTARTED_ID")|$(visible "$MAIN_STATUS_ID")"
+check "the Boxes tab shows the placeholder for no box at all, not the one for no selection" "1 0" "$(visible "$MAIN_NO_BOXES_ID") $(visible "$MAIN_BOX_NONE_ID")"
+check "  which says what a box is, and the ways to make one" "No Boxes Yet|1" \
+    "$(/usr/bin/jq -r --argjson id "$MAIN_NO_BOXES_ID" '.. | objects | select(.id? == $id) | .properties.title' "$APP_RESOURCES/Base.lproj/AgentVM.json")|$(/usr/bin/jq -r --argjson id "$MAIN_NO_BOXES_ID" '.. | objects | select(.id? == $id) | .properties.description' "$APP_RESOURCES/Base.lproj/AgentVM.json" | /usr/bin/grep -c '^An image is the template, and never runs itself\. A box is a working copy of an image.*the plus button above.*avm in Terminal, or Cadabra')"
+
 
 section "a doctor failure: Get started, with doctor's detail"
 fake_reset
@@ -214,8 +225,8 @@ store status-variety.json
 open_window
 check "Get started is shown" "1" "$(visible "$MAIN_GETSTARTED_ID")"
 check "the failure, named" \
-    "This Mac cannot run boxes now: Virtualization reports that this process cannot run virtual machines (virtualization)" \
-    "$(ui_value "$MAIN_GETSTARTED_TEXT_ID" | /usr/bin/sed -n 2p)"
+    "xmark.circle.fill|Virtualization reports that this process cannot run virtual machines (virtualization)" \
+    "$(ui_prop $((STAGE_SYMBOL + 2)) systemName)|$(fact 2)"
 /bin/rm -f "$FAKE_AGENTVM_DIR/doctor.json"
 
 section "status fails at the first read: Get started says why"
@@ -242,15 +253,14 @@ check "a status error first, under both lists" \
 use_nothing
 poll 1
 check "the next pass notices: Get started" "1" "$(visible "$MAIN_GETSTARTED_ID")"
-check "  saying agent-vm is not installed" "agent-vm: agent-vm is not installed: there is nothing at ~/.local/bin/agent-vm." \
-    "$(ui_value "$MAIN_GETSTARTED_TEXT_ID" | /usr/bin/head -1)"
+check "  saying agent-vm is not installed" "1" "$(fact 1 | /usr/bin/grep -c '^agent-vm is not installed: there is nothing at ~/.local/bin/agent-vm\.')"
 check "  and the old error is gone" "" "$(ui_value "$MAIN_GETSTARTED_NOTE_ID")"
 
 section "a broken developer override: no advice about installing"
 settings_write "{\"developerAgentVM\": \"$HOME/no-such/agent-vm\"}"
 open_window
-check "one line, the reason" "1" "$(ui_value "$MAIN_GETSTARTED_TEXT_ID" | /usr/bin/awk 'END { print NR }')"
-check "  which names the setting" "1" "$(ui_value "$MAIN_GETSTARTED_TEXT_ID" | /usr/bin/grep -c 'developer agent-vm in Settings')"
+check "the reason, with no advice about the installed one" "0" "$(fact 1 | /usr/bin/grep -c 'the one Terminal and Cadabra run')"
+check "  which names the setting" "1" "$(fact 1 | /usr/bin/grep -c 'developer agent-vm in Settings')"
 settings_clear
 use_fake
 

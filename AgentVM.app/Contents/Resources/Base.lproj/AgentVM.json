@@ -25,11 +25,14 @@
           "type": "Text",
           "properties": { "text": "Get started", "font": "title2" }
         },
-        {
-          "type": "Text",
-          "id": 201,
-          "properties": { "text": "", "textSelection": "enabled" }
-        },
+        {"type":"HStack","properties":{"alignment":"top","spacing":10},"children":[{"type":"Image","id":211,"properties":{"systemName":"circle","foregroundStyle":"secondary","font":"title3","frame":{"width":24}}},{"type":"Text","properties":{"text":"agent-vm","font":"headline","frame":{"width":200,"alignment":"leading"}}},{"type":"Text","id":221,"properties":{"text":"","foregroundStyle":"secondary","textSelection":"enabled","frame":{"maxWidth":"infinity","alignment":"leading"}}}]},
+        {"type":"HStack","properties":{"alignment":"top","spacing":10},"children":[{"type":"Image","id":212,"properties":{"systemName":"circle","foregroundStyle":"secondary","font":"title3","frame":{"width":24}}},{"type":"Text","properties":{"text":"This Mac can run boxes","font":"headline","frame":{"width":200,"alignment":"leading"}}},{"type":"Text","id":222,"properties":{"text":"","foregroundStyle":"secondary","textSelection":"enabled","frame":{"maxWidth":"infinity","alignment":"leading"}}},{"type":"Button","id":232,"properties":{"disabled":true,"controlSize":"small","frame":{"width":120},"title":"Check Again","actionID":"AgentVM.main.getstarted.check","help":"Ask agent-vm again whether this Mac can run boxes."}}]},
+        {"type":"HStack","properties":{"alignment":"top","spacing":10},"children":[{"type":"Image","id":213,"properties":{"systemName":"circle","foregroundStyle":"secondary","font":"title3","frame":{"width":24}}},{"type":"Text","properties":{"text":"A macOS restore file","font":"headline","frame":{"width":200,"alignment":"leading"}}},{"type":"Text","id":223,"properties":{"text":"","foregroundStyle":"secondary","textSelection":"enabled","frame":{"maxWidth":"infinity","alignment":"leading"}}},{"type":"Button","id":233,"properties":{"disabled":true,"controlSize":"small","frame":{"width":120},"title":"Get macOS...","actionID":"AgentVM.getmacos.open","help":"See the newest macOS restore file Apple offers for this Mac, and download it."}}]},
+        {"type":"HStack","properties":{"alignment":"top","spacing":10},"children":[{"type":"Image","id":214,"properties":{"systemName":"circle","foregroundStyle":"secondary","font":"title3","frame":{"width":24}}},{"type":"Text","properties":{"text":"An image","font":"headline","frame":{"width":200,"alignment":"leading"}}},{"type":"Text","id":224,"properties":{"text":"","foregroundStyle":"secondary","textSelection":"enabled","frame":{"maxWidth":"infinity","alignment":"leading"}}},{"type":"Button","id":234,"properties":{"disabled":true,"controlSize":"small","frame":{"width":120},"title":"New Image...","actionID":"AgentVM.main.image.new","help":"Build an image: macOS from the restore file, or a copy of an image, with the tools you choose."}}]},
+        {"type":"HStack","properties":{"alignment":"top","spacing":10},"children":[{"type":"Image","id":215,"properties":{"systemName":"circle","foregroundStyle":"secondary","font":"title3","frame":{"width":24}}},{"type":"Text","properties":{"text":"Full Disk Access","font":"headline","frame":{"width":200,"alignment":"leading"}}},{"type":"Text","id":225,"properties":{"text":"","foregroundStyle":"secondary","textSelection":"enabled","frame":{"maxWidth":"infinity","alignment":"leading"}}},{"type":"Button","id":235,"properties":{"disabled":true,"controlSize":"small","frame":{"width":120},"title":"Set Up...","actionID":"AgentVM.main.getstarted.access","help":"Open the Full Disk Access guide of the first image that lacks it."}}]},
+        {"type":"HStack","properties":{"alignment":"top","spacing":10},"children":[{"type":"Image","id":216,"properties":{"systemName":"circle","foregroundStyle":"secondary","font":"title3","frame":{"width":24}}},{"type":"Text","properties":{"text":"A box","font":"headline","frame":{"width":200,"alignment":"leading"}}},{"type":"Text","id":226,"properties":{"text":"","foregroundStyle":"secondary","textSelection":"enabled","frame":{"maxWidth":"infinity","alignment":"leading"}}},{"type":"Button","id":236,"properties":{"disabled":true,"controlSize":"small","frame":{"width":120},"title":"New Box...","actionID":"AgentVM.main.box.new","help":"Make a box: a working copy of an image, with the network it may reach."}}]},
+        {"type":"Divider"},
+        {"type":"Text","properties":{"text":"An image is the template: a sealed macOS with tools in it, which never runs itself.\nA box is a working clone of an image, made in seconds, and it is what runs using only the project folder you share and the hosts you allow.\n\nYou can quit AgentVM at any time: downloads and builds go on.","foregroundStyle":"secondary","frame":{"maxWidth":"infinity","alignment":"leading"}}},
         {
           "type": "Text",
           "id": 202,
@@ -140,6 +143,11 @@
                   "type": "ContentUnavailableView",
                   "id": 319,
                   "properties": { "title": "No Box Selected", "systemImage": "shippingbox", "description": "Select a box to see its details." }
+                },
+                {
+                  "type": "ContentUnavailableView",
+                  "id": 318,
+                  "properties": { "hidden": true, "title": "No Boxes Yet", "systemImage": "shippingbox", "description": "A box is a working clone of an image, made in seconds, and it is what runs. An image is the template with sealed macOS and tools in it, and never runs itself.\nUse the plus button ⊕ in the toolbar to make a new box.\nSome tools like 'avm' in Terminal or Cadabra can make temporary boxes from an image when they need one and delete them afterwards." }
                 },
                 {
                   "type": "VStack",
