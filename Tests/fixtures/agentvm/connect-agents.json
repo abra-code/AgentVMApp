@@ -1,0 +1,77 @@
+[
+  {
+    "allow": [
+      "pack:anthropic"
+    ],
+    "command": [
+      "claude"
+    ],
+    "env": {
+      "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC": "1"
+    },
+    "id": "claude",
+    "install": "npm install --global @anthropic-ai/claude-code",
+    "login": "Or log in inside a kept box: /login in Claude Code, then open the address it prints in this Mac's browser.",
+    "name": "Claude Code",
+    "note": "Your Claude login on this Mac is not visible in the box.",
+    "path": "/Users/you/.local/share/agent-vm/versions/0.6.4/agents.json",
+    "secrets": [
+      {
+        "env": "CLAUDE_CODE_OAUTH_TOKEN",
+        "label": "Claude subscription token (run claude setup-token on this Mac)",
+        "state": "missing"
+      },
+      {
+        "env": "ANTHROPIC_API_KEY",
+        "label": "Anthropic API key",
+        "state": "missing"
+      }
+    ],
+    "secretsNeeded": "one",
+    "setup": "if [ -n \"${CLAUDE_CODE_OAUTH_TOKEN:-}\" ]; then (umask 077; f=\"$HOME/.claude.json\"; [ -e \"$f\" ] || printf '{}' > \"$f\"; /usr/bin/jq '.hasCompletedOnboarding = true' \"$f\" > \"$f.avm\" 2>/dev/null && /bin/mv \"$f.avm\" \"$f\" || /bin/rm -f \"$f.avm\"); fi",
+    "source": "built-in"
+  },
+  {
+    "allow": [
+      "pack:openai"
+    ],
+    "command": [
+      "codex"
+    ],
+    "env": {},
+    "id": "codex",
+    "install": "npm install --global @openai/codex",
+    "login": "Or log in inside a kept box: codex login --device-auth, and enter the code in this Mac's browser (works with a ChatGPT account).",
+    "name": "Codex",
+    "path": "/Users/you/.local/share/agent-vm/versions/0.6.4/agents.json",
+    "secrets": [
+      {
+        "env": "OPENAI_API_KEY",
+        "label": "OpenAI API key",
+        "state": "missing"
+      }
+    ],
+    "secretsNeeded": "optional",
+    "source": "built-in"
+  },
+  {
+    "allow": [
+      "opencode.ai",
+      "models.opencode.ai"
+    ],
+    "command": [
+      "opencode"
+    ],
+    "env": {
+      "OPENCODE_DISABLE_AUTOUPDATE": "1"
+    },
+    "id": "opencode",
+    "install": "npm install --global opencode-ai",
+    "name": "opencode",
+    "note": "OpenCode Zen's free models need no account. Other providers need their key (--secret) and their hosts (box network --allow).",
+    "path": "/Users/you/.local/share/agent-vm/versions/0.6.4/agents.json",
+    "secrets": [],
+    "secretsNeeded": "optional",
+    "source": "built-in"
+  }
+]

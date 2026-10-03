@@ -214,7 +214,8 @@ ui_size_text() {
 # Disk Access guide (lib.agentvm.access.sh), with the kind "access". The New Image window
 # (lib.agentvm.newimage.sh) is one for the whole app: its kind is "newimage", and the name is
 # the word "window". So are the New Box window (lib.agentvm.newbox.sh), with the kind "newbox",
-# and the Get macOS window (lib.agentvm.getmacos.sh), with the kind "getmacos".
+# the Get macOS window (lib.agentvm.getmacos.sh), with the kind "getmacos", and the Agent Keys
+# window (lib.agentvm.keys.sh), with the kind "keys".
 
 # The request key of a kind is this, an underscore and the kind.
 AGENTVM_OPEN_REQUEST_KEY="agentvm_open_request"

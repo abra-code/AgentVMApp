@@ -23,7 +23,7 @@
 #   version    what --version prints (default: AGENTVM_MIN_VERSION from the library, the oldest
 #              version the app accepts, so raising it needs no change here).
 #   <key>.json the answer to one query, overriding the fixture of that name: version, doctor,
-#              status, ipsw-list, ipsw-check, image-info-<name>, box-info-<name>. The fixtures image-info.json and
+#              status, ipsw-list, ipsw-check, connect-agents, image-info-<name>, box-info-<name>. The fixtures image-info.json and
 #              box-info.json answer `image info` and `box info` for the one image or box each
 #              describes; any other name is not found, as agent-vm says it.
 #   jobs.json  the jobs: what `job list` answers and what `status` carries as its `jobs`. `job start`
@@ -41,6 +41,8 @@
 # -- What it implements -------------------------------------------------------------------------
 #   --version, version --json, doctor --json, status --json, image fetch-ipsw --list --json,
 #   image fetch-ipsw --check --json,
+#   connect agents --json (a key stored in the fake reads as set), secret set <name> (stdin
+#   becomes the file secret-value-<name>), secret delete <name>,
 #   image info <name> --json,
 #   image delete <name> --json, box delete <name> --json and box recreate <name> --json (which
 #   change nothing: the test changes status.json to match), box info <name> --json, and
@@ -64,6 +66,9 @@ agentvm_library="${OMC_APP_BUNDLE_PATH:-$(/usr/bin/dirname "$0")/../../AgentVM.a
 [ -d "$state" ] || /bin/mkdir -p "$state"
 
 printf '%s\n' "$*" >> "$state/log"
+# The names of the window values this call inherited (never their text): a key typed into a
+# window must not be among them.
+/usr/bin/env | /usr/bin/sed -n 's/^\(OMC_ACTIONUI_VIEW_[0-9]*_VALUE\)=.*/\1/p' >> "$state/inherited"
 if [ -n "${AGENT_VM_HOME+set}" ]; then
     printf '%s\n' "$AGENT_VM_HOME" > "$state/home"
 else
@@ -155,6 +160,20 @@ case "$*" in
         fi ;;
     "image delete "*" --json")
         ;;
+    "connect agents --json")
+        # A key stored in the fake (secret set) reads as set.
+        stored="$(/bin/ls "$state" | /usr/bin/sed -n 's/^secret-value-//p' | /usr/bin/paste -sd ' ' -)"
+        answer connect-agents | /usr/bin/jq --arg stored "$stored" '($stored | split(" ")) as $names
+            | map(.secrets |= map(.env as $env | if ($names | index($env)) != null then .state = "set" else . end))' ;;
+    "secret set "*)
+        # The value is what comes on stdin, as agent-vm reads it; never an argument.
+        /bin/cat > "$state/secret-value-$3" ;;
+    "secret delete "*)
+        if [ ! -f "$state/secret-value-$3" ]; then
+            printf 'Error: no secret %s in the Keychain\n' "$3" >&2
+            exit 1
+        fi
+        /bin/rm -f "$state/secret-value-$3" ;;
     "image fetch-ipsw --list --json")
         answer ipsw-list ;;
     "image fetch-ipsw --check --json")

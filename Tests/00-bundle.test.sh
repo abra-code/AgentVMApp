@@ -32,11 +32,11 @@ check "the engine is told macOS 27 as well"    "27.0"    "$(command_value '.COMM
 # The main window shows images and boxes in its detail panes. A box's network, and what ran in
 # it, each have a window of their own, one per box, so the pane stays an overview; so do a job's
 # progress, one per job, the update of an image and its Full Disk Access guide, one per image,
-# and New Image, New Box and Get macOS, one each for the app. The remaining commands exist only for what a handler cannot
+# and New Image, New Box, Get macOS and Agent Keys, one each for the app. The remaining commands exist only for what a handler cannot
 # ask for itself (a folder or a file chooser).
-check "the commands with a window" "AgentVM.main AgentVM.network AgentVM.programs AgentVM.progress AgentVM.update AgentVM.access AgentVM.newimage AgentVM.newbox AgentVM.getmacos" "$(command_value '[.COMMAND_LIST[] | select(.ACTIONUI_WINDOW or .NIB_DIALOG) | .COMMAND_ID // (.NAME + ".main")] | join(" ")')"
-check "and their window documents" "AgentVM.access.json AgentVM.getmacos.json AgentVM.json AgentVM.network.json AgentVM.newbox.json AgentVM.newimage.json AgentVM.programs.json AgentVM.progress.json AgentVM.update.json" "$(/bin/ls "$APP_RESOURCES/Base.lproj" | /usr/bin/grep -v '^MainMenu\.json$' | /usr/bin/grep '\.json$' | /usr/bin/paste -sd ' ' -)"
-check "each window's document is the one its command names" "AgentVM AgentVM.network AgentVM.programs AgentVM.progress AgentVM.update AgentVM.access AgentVM.newimage AgentVM.newbox AgentVM.getmacos" "$(command_value '[.COMMAND_LIST[] | .ACTIONUI_WINDOW.JSON_NAME // empty] | join(" ")')"
+check "the commands with a window" "AgentVM.main AgentVM.network AgentVM.programs AgentVM.progress AgentVM.update AgentVM.access AgentVM.newimage AgentVM.newbox AgentVM.getmacos AgentVM.keys" "$(command_value '[.COMMAND_LIST[] | select(.ACTIONUI_WINDOW or .NIB_DIALOG) | .COMMAND_ID // (.NAME + ".main")] | join(" ")')"
+check "and their window documents" "AgentVM.access.json AgentVM.getmacos.json AgentVM.json AgentVM.keys.json AgentVM.network.json AgentVM.newbox.json AgentVM.newimage.json AgentVM.programs.json AgentVM.progress.json AgentVM.update.json" "$(/bin/ls "$APP_RESOURCES/Base.lproj" | /usr/bin/grep -v '^MainMenu\.json$' | /usr/bin/grep '\.json$' | /usr/bin/paste -sd ' ' -)"
+check "each window's document is the one its command names" "AgentVM AgentVM.network AgentVM.programs AgentVM.progress AgentVM.update AgentVM.access AgentVM.newimage AgentVM.newbox AgentVM.getmacos AgentVM.keys" "$(command_value '[.COMMAND_LIST[] | .ACTIONUI_WINDOW.JSON_NAME // empty] | join(" ")')"
 check "no window blocks the app" "false" "$(command_value '[.COMMAND_LIST[] | .ACTIONUI_WINDOW // empty | .IS_BLOCKING] | unique | join(" ")')"
 # The CHOOSE_FOLDER_DIALOG dictionary is what makes the engine ask before the handler runs.
 check "Run an Agent in Terminal... asks for a folder first" "Run avm Here" \

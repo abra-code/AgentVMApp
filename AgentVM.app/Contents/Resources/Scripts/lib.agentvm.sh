@@ -103,9 +103,11 @@ agentvm_bin() {
 }
 
 # agentvm_run <args...>  ->  agent-vm's output and status, run with the app's store setting.
+# agent-vm reads this function's stdin.
 agentvm_run() {
-    local _bin="$(agentvm_bin)"
-    local _home="$(agentvm_setting agentVMHome)"
+    # Neither lookup reads stdin: what is piped to this function reaches agent-vm whole.
+    local _bin="$(agentvm_bin </dev/null)"
+    local _home="$(agentvm_setting agentVMHome </dev/null)"
     if [ -n "$_home" ]; then
         AGENT_VM_HOME="$_home" "$_bin" "$@"
         return $?
@@ -1219,4 +1221,70 @@ agentvm_box_create() {
         _option=""
     done
     agentvm_json box create "$@" >/dev/null
+}
+
+# -- Agents' keys ----------------------------------------------------------------------------------
+# agent-vm keeps API keys and tokens ("secrets") in the login Keychain, and gives one to a
+# program in a box only when it is run with it. This library never reads a value: it lists the
+# names, stores a value that comes on stdin, and deletes by name.
+
+# agentvm_agents_list  ->  `agent-vm connect agents --json`: the agents avm can run, and for each
+# of their secrets whether it is stored. It reads the Keychain's item names, never a value, and
+# macOS does not ask.
+agentvm_agents_list() {
+    agentvm_json connect agents
+}
+
+# agentvm_agent_secret_rows  <  that JSON  ->  one row per secret of each agent: the secret's name
+# (also the environment variable), state (set; asks: stored by a differently signed agent-vm, so
+# macOS asks before this one reads it; missing), label, the agent's id, its name, how many of its
+# secrets it needs (one, optional), how to log in without a key, a note. An agent with no secret
+# gets one row with "-" for the name and "none" for the state.
+agentvm_agent_secret_rows() {
+    /usr/bin/jq -r "$agentvm_jq_defs"' .[] | . as $a
+        | if (.secrets // [] | length) == 0 then [null, "none", null, .id, .name, .secretsNeeded, .login, .note]
+          else (.secrets[] | [.env, .state, .label, $a.id, $a.name, $a.secretsNeeded, $a.login, $a.note]) end | row'
+}
+
+# agentvm_valid_secret_name <name>  ->  0 when it has the form of a secret's name: letters,
+# digits and "_", at most 100 characters here. Checked because the name is an argv element;
+# agent-vm has the last word (it also refuses a name that starts with a digit).
+agentvm_valid_secret_name() {
+    case "$1" in
+        ''|*[!abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_]*) return 1 ;;
+    esac
+    [ "${#1}" -le 100 ]
+}
+
+# _agentvm_need_secret_name <name>  ->  0, or 2 with the reason left for agentvm_last_error.
+_agentvm_need_secret_name() {
+    agentvm_valid_secret_name "$1" && return 0
+    _agentvm_refuse 2 "\"$1\" is not a valid key name: agent-vm accepts letters, digits and \"_\"."
+}
+
+# agentvm_secret_set <name>  <  the value  ->  0 once the value is in the login Keychain under
+# that name, replacing an older one. The value comes on stdin and goes to agent-vm's stdin: it is
+# never an argument, which every program on this Mac could read. Callers write it with the
+# shell's own printf.
+agentvm_secret_set() {
+    _agentvm_need_secret_name "$1" </dev/null || return $?
+    /bin/rm -f "$agentvm_err_file" </dev/null
+    agentvm_run secret set "$1" >/dev/null 2>"$agentvm_err_file"
+    local _status=$?
+    if [ "$_status" -eq 0 ]; then
+        /bin/rm -f "$agentvm_err_file"
+    fi
+    return "$_status"
+}
+
+# agentvm_secret_delete <name>  ->  0 once the Keychain has no secret of that name.
+agentvm_secret_delete() {
+    _agentvm_need_secret_name "$1" || return $?
+    /bin/rm -f "$agentvm_err_file"
+    agentvm_run secret delete "$1" >/dev/null 2>"$agentvm_err_file" </dev/null
+    local _status=$?
+    if [ "$_status" -eq 0 ]; then
+        /bin/rm -f "$agentvm_err_file"
+    fi
+    return "$_status"
 }

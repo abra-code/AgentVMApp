@@ -146,6 +146,20 @@
     },
     {
       "NAME": "AgentVM",
+      "COMMAND_ID": "AgentVM.keys",
+      "ACTIVATION_MODE": "act_always",
+      "EXECUTION_MODE": "exe_script_file",
+      "ACTIONUI_WINDOW": {
+        "JSON_NAME": "AgentVM.keys",
+        "IS_BLOCKING": false,
+        "WINDOW_TITLE": "Agent Keys",
+        "INIT_SUBCOMMAND_ID": "AgentVM.keys.init",
+        "WINDOW_DID_ACTIVATE_SUBCOMMAND_ID": "AgentVM.keys.activated",
+        "END_CANCEL_SUBCOMMAND_ID": "AgentVM.keys.close"
+      }
+    },
+    {
+      "NAME": "AgentVM",
       "COMMAND_ID": "AgentVM.newimage.choose",
       "EXECUTION_MODE": "exe_script_file",
       "ACTIVATION_MODE": "act_always",

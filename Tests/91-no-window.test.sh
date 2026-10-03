@@ -76,6 +76,8 @@ state() {
         "$(chain_asked AgentVM.access)" "$(chain_asked AgentVM.access.poll)"
     printf 'chained too: %s %s %s\n' "$(chain_asked AgentVM.newimage)" "$(chain_asked AgentVM.newbox)" "$(chain_asked AgentVM.getmacos)"
     printf 'get macos: %s|%s\n' "$("$PB" agentvm_open_request_getmacos get)" "$("$PB" agentvm_getmacos_ get)"
+    printf 'agent keys: %s|%s|%s|%s|%s\n' "$(chain_asked AgentVM.keys)" "$("$PB" agentvm_open_request_keys get)" "$("$PB" agentvm_keys_ get)" \
+        "$("$PB" agentvm_key_remove_ get)" "$(/bin/ls "$FAKE_AGENTVM_DIR" | /usr/bin/grep -c '^secret-value-')"
     printf 'new box: %s|%s|%s|%s|%s\n' "$("$PB" agentvm_open_request_newbox get)" "$("$PB" agentvm_newbox_from get)" \
         "$("$PB" agentvm_newbox_ get)" "$("$PB" agentvm_picked_ get)" "$("$PB" agentvm_mode_ get)"
     printf 'new image: %s|%s|%s|%s|%s\n' "$("$PB" agentvm_open_request_newimage get)" "$("$PB" agentvm_newimage_from get)" \
@@ -117,6 +119,9 @@ without_window() {
       export OMC_ACTIONUI_TABLE_2051_COLUMN_5_VALUE OMC_ACTIONUI_TABLE_2051_COLUMN_1_VALUE OMC_ACTIONUI_TABLE_2066_COLUMN_1_VALUE \
           OMC_ACTIONUI_VIEW_2067_VALUE OMC_ACTIONUI_VIEW_2061_VALUE OMC_ACTIONUI_VIEW_2071_VALUE OMC_ACTIONUI_VIEW_2072_VALUE \
           OMC_ACTIONUI_VIEW_2073_VALUE OMC_ACTIONUI_VIEW_2074_VALUE
+      OMC_ACTIONUI_TABLE_4001_COLUMN_2_VALUE="OPENAI_API_KEY"; OMC_ACTIONUI_TABLE_4001_COLUMN_5_VALUE="codex"
+      OMC_ACTIONUI_VIEW_4003_VALUE="sk-made-up-stray"
+      export OMC_ACTIONUI_TABLE_4001_COLUMN_2_VALUE OMC_ACTIONUI_TABLE_4001_COLUMN_5_VALUE OMC_ACTIONUI_VIEW_4003_VALUE
       export OMC_ACTIONUI_WINDOW_UUID ACTIONUI_WINDOW_UUID OMC_OBJ_TEXT OMC_ACTIONUI_TABLE_311_COLUMN_1_VALUE \
           OMC_ACTIONUI_TABLE_411_COLUMN_1_VALUE OMC_ACTIONUI_TABLE_604_COLUMN_1_VALUE OMC_ACTIONUI_VIEW_605_VALUE \
           OMC_ACTIONUI_VIEW_601_VALUE OMC_ACTIONUI_TRIGGER_VIEW_PART_ID OMC_ACTIONUI_TABLE_613_COLUMN_1_VALUE \
@@ -207,7 +212,18 @@ lib agentvm_packs_rows < "$FIXTURES_AGENTVM/packs.json" > "$TMPDIR/AgentVM/packs
 # download running.
 "$PB" agentvm_getmacos_ set 1
 lib agentvm_ipsw_check_row < "$FIXTURES_AGENTVM/ipsw-check.json" > "$TMPDIR/AgentVM/check.tsv"
+# An Agent Keys window with a key selected that is stored, and its removal asked about.
+"$PB" agentvm_keys_ set 1
+"$PB" agentvm_key_ set ANTHROPIC_API_KEY
+"$PB" agentvm_keyagent_ set claude
+"$PB" agentvm_key_remove_ set ANTHROPIC_API_KEY
+printf 'made-up' > "$FAKE_AGENTVM_DIR/secret-value-ANTHROPIC_API_KEY"
+/usr/bin/jq '(.[] | select(.id == "claude") | .secrets[1].state) = "set"' "$FIXTURES_AGENTVM/connect-agents.json" \
+    | lib agentvm_agent_secret_rows > "$TMPDIR/AgentVM/keys.tsv"
 # Guards: without these the checks below would pass with nothing at stake.
+check "a key could be stored or removed under the empty uuid: an Agent Keys window, a stored key selected, its removal asked" \
+    "1|ANTHROPIC_API_KEY${TAB}set${TAB}claude|ANTHROPIC_API_KEY|1" \
+    "$("$PB" agentvm_keys_ get)|$(/usr/bin/awk -F'\t' '$1 == "ANTHROPIC_API_KEY"' "$TMPDIR/AgentVM/keys.tsv" | /usr/bin/cut -f1,2,4)|$("$PB" agentvm_key_remove_ get)|$(/bin/ls "$FAKE_AGENTVM_DIR" | /usr/bin/grep -c '^secret-value-')"
 check "a download could start under the empty uuid: a Get macOS window, a file that is not here and fits, no download running" \
     "1|missing${TAB}true|0" \
     "$("$PB" agentvm_getmacos_ get)|$(/usr/bin/cut -f1,7 "$TMPDIR/AgentVM/check.tsv")|$(/usr/bin/awk -F'\t' '$3 == "ipsw"' "$TMPDIR/AgentVM/jobs.tsv" | /usr/bin/awk 'END { print NR }')"

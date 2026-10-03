@@ -437,6 +437,17 @@
               },
               {
                 "type": "Section",
+                "properties": { "header": "Agents" },
+                "children": [
+                  {
+                    "type": "LabeledContent",
+                    "properties": { "title": "Keys and tokens" },
+                    "children": [ { "type": "Button", "id": 521, "properties": { "title": "Agent Keys...", "actionID": "AgentVM.keys.open", "help": "See which keys the agents can use and which are stored in your login Keychain; store or remove one." } } ]
+                  }
+                ]
+              },
+              {
+                "type": "Section",
                 "properties": { "header": "This Mac" },
                 "children": [
                   { "type": "LabeledContent", "properties": { "title": "Virtual machines" }, "children": [ { "type": "Text", "id": 511, "properties": { "text": "", "textSelection": "enabled" } } ] },
