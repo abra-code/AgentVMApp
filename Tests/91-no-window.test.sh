@@ -33,6 +33,9 @@ AGENTVM_APP_AGENT_VM="$FAKE_AGENTVM"
 AGENTVM_APP_PS="$TEST_HELPERS/fake_ps.sh"
 AGENTVM_APP_SLEEP="$TEST_HELPERS/fake_sleep.sh"
 AGENTVM_APP_OPEN="$TEST_HELPERS/fake_open.sh"
+AGENTVM_APP_PBCOPY="$TEST_HELPERS/fake_pbcopy.sh"
+FAKE_PBCOPY_FILE="$OMCTEST_WORK/clipboard"
+export AGENTVM_APP_PBCOPY FAKE_PBCOPY_FILE
 FAKE_SLEEP_LOG="$OMCTEST_WORK/sleeps"
 FAKE_OPEN_LOG="$OMCTEST_WORK/opened"
 TZ=UTC
@@ -76,6 +79,8 @@ state() {
         "$(chain_asked AgentVM.access)" "$(chain_asked AgentVM.access.poll)"
     printf 'chained too: %s %s %s\n' "$(chain_asked AgentVM.newimage)" "$(chain_asked AgentVM.newbox)" "$(chain_asked AgentVM.getmacos)"
     printf 'get macos: %s|%s\n' "$("$PB" agentvm_open_request_getmacos get)" "$("$PB" agentvm_getmacos_ get)"
+    printf 'how to: %s|%s|%s|%s\n' "$(chain_asked AgentVM.howto)" "$("$PB" agentvm_open_request_howto get)" "$("$PB" agentvm_howto_ get)" \
+        "$(/bin/cat "$FAKE_PBCOPY_FILE" 2>/dev/null)"
     printf 'agent keys: %s|%s|%s|%s|%s\n' "$(chain_asked AgentVM.keys)" "$("$PB" agentvm_open_request_keys get)" "$("$PB" agentvm_keys_ get)" \
         "$("$PB" agentvm_key_remove_ get)" "$(/bin/ls "$FAKE_AGENTVM_DIR" | /usr/bin/grep -c '^secret-value-')"
     printf 'new box: %s|%s|%s|%s|%s\n' "$("$PB" agentvm_open_request_newbox get)" "$("$PB" agentvm_newbox_from get)" \
@@ -106,6 +111,7 @@ without_window() {
       OMC_ACTIONUI_TABLE_311_COLUMN_1_VALUE="$BOX"; OMC_ACTIONUI_TABLE_411_COLUMN_1_VALUE="dev-xcode"
       OMC_ACTIONUI_TABLE_604_COLUMN_1_VALUE="opencode.ai"; OMC_ACTIONUI_VIEW_605_VALUE="example.com"
       OMC_ACTIONUI_VIEW_601_VALUE="3"; OMC_ACTIONUI_TRIGGER_VIEW_PART_ID="0"
+      OMC_ACTIONUI_TRIGGER_VIEW_ID="4121"; export OMC_ACTIONUI_TRIGGER_VIEW_ID
       OMC_ACTIONUI_TABLE_613_COLUMN_1_VALUE="registry.yarnpkg.com"; OMC_ACTIONUI_TABLE_613_COLUMN_2_VALUE="443"
       OMC_ACTIONUI_TABLE_613_COLUMN_6_VALUE="registry.yarnpkg.com"; OMC_ACTIONUI_TABLE_613_COLUMN_7_VALUE="denied"
       OMC_DLG_CHOOSE_FOLDER_PATH="$OMCTEST_WORK"; AGENTVM_APP_POLL_PASSES=1
@@ -212,6 +218,9 @@ lib agentvm_packs_rows < "$FIXTURES_AGENTVM/packs.json" > "$TMPDIR/AgentVM/packs
 # download running.
 "$PB" agentvm_getmacos_ set 1
 lib agentvm_ipsw_check_row < "$FIXTURES_AGENTVM/ipsw-check.json" > "$TMPDIR/AgentVM/check.tsv"
+# A How to Use a Box window with its lines, whose Copy the stray trigger below would name.
+"$PB" agentvm_howto_ set 1
+printf '1\tavm\tthe first line\n' > "$TMPDIR/AgentVM/lines.tsv"
 # An Agent Keys window with a key selected that is stored, and its removal asked about.
 "$PB" agentvm_keys_ set 1
 "$PB" agentvm_key_ set ANTHROPIC_API_KEY

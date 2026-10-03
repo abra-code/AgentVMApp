@@ -1,0 +1,333 @@
+{
+  "type": "VStack",
+  "properties": {
+    "alignment": "leading",
+    "spacing": 12,
+    "padding": 20,
+    "frame": {
+      "minWidth": 860,
+      "minHeight": 580,
+      "idealWidth": 860,
+      "idealHeight": 580
+    }
+  },
+  "children": [
+    {
+      "type": "Text",
+      "properties": {
+        "text": "A box is where an agent works: a Mac of its own, with one folder of yours shared into it. An image is only the template a box is made from. avm, in Terminal, takes you into a box.",
+        "frame": {
+          "maxWidth": "infinity",
+          "alignment": "leading"
+        }
+      }
+    },
+    {
+      "type": "Text",
+      "properties": {
+        "text": "In Terminal",
+        "font": "headline"
+      }
+    },
+    {
+      "type": "Text",
+      "properties": {
+        "text": "Go to your project folder first (cd), then run one of these.",
+        "foregroundStyle": "secondary"
+      }
+    },
+    {
+      "type": "HStack",
+      "properties": {
+        "alignment": "firstTextBaseline",
+        "spacing": 10
+      },
+      "children": [
+        {
+          "type": "Text",
+          "id": 4111,
+          "properties": {
+            "text": "",
+            "font": {
+              "name": "Menlo",
+              "size": 12
+            },
+            "textSelection": "enabled",
+            "frame": {
+              "width": 270,
+              "alignment": "leading"
+            }
+          }
+        },
+        {
+          "type": "Button",
+          "id": 4121,
+          "properties": {
+            "title": "Copy",
+            "controlSize": "small",
+            "actionID": "AgentVM.howto.copy",
+            "help": "Copy this line, to paste it into Terminal."
+          }
+        },
+        {
+          "type": "Text",
+          "id": 4131,
+          "properties": {
+            "text": "",
+            "foregroundStyle": "secondary",
+            "textSelection": "enabled",
+            "frame": {
+              "maxWidth": "infinity",
+              "alignment": "leading"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "type": "HStack",
+      "properties": {
+        "alignment": "firstTextBaseline",
+        "spacing": 10
+      },
+      "children": [
+        {
+          "type": "Text",
+          "id": 4112,
+          "properties": {
+            "text": "",
+            "font": {
+              "name": "Menlo",
+              "size": 12
+            },
+            "textSelection": "enabled",
+            "frame": {
+              "width": 270,
+              "alignment": "leading"
+            }
+          }
+        },
+        {
+          "type": "Button",
+          "id": 4122,
+          "properties": {
+            "title": "Copy",
+            "controlSize": "small",
+            "actionID": "AgentVM.howto.copy",
+            "help": "Copy this line, to paste it into Terminal."
+          }
+        },
+        {
+          "type": "Text",
+          "id": 4132,
+          "properties": {
+            "text": "",
+            "foregroundStyle": "secondary",
+            "textSelection": "enabled",
+            "frame": {
+              "maxWidth": "infinity",
+              "alignment": "leading"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "type": "HStack",
+      "properties": {
+        "alignment": "firstTextBaseline",
+        "spacing": 10
+      },
+      "children": [
+        {
+          "type": "Text",
+          "id": 4113,
+          "properties": {
+            "text": "",
+            "font": {
+              "name": "Menlo",
+              "size": 12
+            },
+            "textSelection": "enabled",
+            "frame": {
+              "width": 270,
+              "alignment": "leading"
+            }
+          }
+        },
+        {
+          "type": "Button",
+          "id": 4123,
+          "properties": {
+            "title": "Copy",
+            "controlSize": "small",
+            "actionID": "AgentVM.howto.copy",
+            "help": "Copy this line, to paste it into Terminal."
+          }
+        },
+        {
+          "type": "Text",
+          "id": 4133,
+          "properties": {
+            "text": "",
+            "foregroundStyle": "secondary",
+            "textSelection": "enabled",
+            "frame": {
+              "maxWidth": "infinity",
+              "alignment": "leading"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "type": "HStack",
+      "properties": {
+        "alignment": "firstTextBaseline",
+        "spacing": 10
+      },
+      "children": [
+        {
+          "type": "Text",
+          "id": 4114,
+          "properties": {
+            "text": "",
+            "font": {
+              "name": "Menlo",
+              "size": 12
+            },
+            "textSelection": "enabled",
+            "frame": {
+              "width": 270,
+              "alignment": "leading"
+            }
+          }
+        },
+        {
+          "type": "Button",
+          "id": 4124,
+          "properties": {
+            "title": "Copy",
+            "controlSize": "small",
+            "actionID": "AgentVM.howto.copy",
+            "help": "Copy this line, to paste it into Terminal."
+          }
+        },
+        {
+          "type": "Text",
+          "id": 4134,
+          "properties": {
+            "text": "",
+            "foregroundStyle": "secondary",
+            "textSelection": "enabled",
+            "frame": {
+              "maxWidth": "infinity",
+              "alignment": "leading"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "type": "HStack",
+      "properties": {
+        "alignment": "firstTextBaseline",
+        "spacing": 10
+      },
+      "children": [
+        {
+          "type": "Text",
+          "id": 4115,
+          "properties": {
+            "text": "",
+            "font": {
+              "name": "Menlo",
+              "size": 12
+            },
+            "textSelection": "enabled",
+            "frame": {
+              "width": 270,
+              "alignment": "leading"
+            }
+          }
+        },
+        {
+          "type": "Button",
+          "id": 4125,
+          "properties": {
+            "title": "Copy",
+            "controlSize": "small",
+            "actionID": "AgentVM.howto.copy",
+            "help": "Copy this line, to paste it into Terminal."
+          }
+        },
+        {
+          "type": "Text",
+          "id": 4135,
+          "properties": {
+            "text": "",
+            "foregroundStyle": "secondary",
+            "textSelection": "enabled",
+            "frame": {
+              "maxWidth": "infinity",
+              "alignment": "leading"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "type": "Text",
+      "id": 4102,
+      "properties": {
+        "text": "",
+        "foregroundStyle": "secondary",
+        "textSelection": "enabled",
+        "frame": {
+          "maxWidth": "infinity",
+          "alignment": "leading"
+        }
+      }
+    },
+    {
+      "type": "Divider"
+    },
+    {
+      "type": "Text",
+      "properties": {
+        "text": "The agent needs a key",
+        "font": "headline"
+      }
+    },
+    {
+      "type": "HStack",
+      "properties": {
+        "spacing": 10
+      },
+      "children": [
+        {
+          "type": "Text",
+          "properties": {
+            "text": "Your logins on this Mac are not visible in a box. Store the agent's key or token once, and avm hands it to the agent it starts.",
+            "frame": {
+              "maxWidth": "infinity",
+              "alignment": "leading"
+            }
+          }
+        },
+        {
+          "type": "Button",
+          "id": 4103,
+          "properties": {
+            "title": "Agent Keys...",
+            "actionID": "AgentVM.keys.open",
+            "help": "See which keys the agents can use and which are stored; store or remove one."
+          }
+        }
+      ]
+    },
+    {
+      "type": "Spacer"
+    }
+  ]
+}

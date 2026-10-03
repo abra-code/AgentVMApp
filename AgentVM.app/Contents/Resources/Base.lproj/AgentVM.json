@@ -119,7 +119,8 @@
                   "children": [
                     { "type": "Button", "id": 342, "properties": { "systemImage": "folder", "imageScale": "large", "disabled": true, "actionID": "AgentVM.main.box.show", "help": "Show the selected box in Finder" } },
                     { "type": "Button", "id": 345, "properties": { "systemImage": "trash", "imageScale": "large", "disabled": true, "actionID": "AgentVM.main.box.delete", "help": "Delete the selected box..." } },
-                    { "type": "Spacer" }
+                    { "type": "Spacer" },
+                    { "type": "Button", "id": 346, "properties": { "systemImage": "questionmark.circle", "imageScale": "large", "actionID": "AgentVM.howto.open", "help": "How to use a box" } }
                   ]
                 },
                 {
