@@ -3,10 +3,10 @@
   "properties": {
     "alignment": "topLeading",
     "frame": {
-      "minWidth": 760.0,
-      "minHeight": 480.0,
-      "idealWidth": 980.0,
-      "idealHeight": 640.0
+      "minWidth": 840.0,
+      "minHeight": 600.0,
+      "idealWidth": 1000.0,
+      "idealHeight": 680.0
     }
   },
   "children": [
@@ -217,25 +217,25 @@
                     {
                       "type": "Form",
                       "children": [
-                        { "type": "LabeledContent", "properties": { "title": "Image" }, "children": [ { "type": "Text", "id": 351, "properties": { "text": "", "textSelection": "enabled" } } ] },
-                        { "type": "LabeledContent", "properties": { "title": "Network" }, "children": [ { "type": "HStack", "properties": { "spacing": 8.0 }, "children": [
+                        { "type": "LabeledContent", "properties": { "title": "Image" }, "children": [ { "type": "Text", "id": 351, "properties": { "text": "", "textSelection": "enabled", "frame": { "maxWidth": "infinity", "alignment": "leading" } } } ] },
+                        { "type": "LabeledContent", "properties": { "title": "Network" }, "children": [ { "type": "HStack", "properties": { "spacing": 8.0, "frame": { "maxWidth": "infinity", "alignment": "leading" } }, "children": [
                           { "type": "Text", "id": 352, "properties": { "text": "", "textSelection": "enabled" } },
                           { "type": "Button", "id": 361, "properties": { "title": "Details...", "controlSize": "small", "actionID": "AgentVM.main.box.network", "help": "Open the box's network window: what it may reach, and the connections it made lately." } }
                         ] } ] },
-                        { "type": "LabeledContent", "properties": { "title": "Project folder" }, "children": [ { "type": "Text", "id": 353, "properties": { "text": "", "textSelection": "enabled" } } ] },
-                        { "type": "LabeledContent", "properties": { "title": "Programs running" }, "children": [ { "type": "HStack", "properties": { "spacing": 8.0 }, "children": [
+                        { "type": "LabeledContent", "properties": { "title": "Project folder" }, "children": [ { "type": "Text", "id": 353, "properties": { "text": "", "textSelection": "enabled", "frame": { "maxWidth": "infinity", "alignment": "leading" } } } ] },
+                        { "type": "LabeledContent", "properties": { "title": "Programs running" }, "children": [ { "type": "HStack", "properties": { "spacing": 8.0, "frame": { "maxWidth": "infinity", "alignment": "leading" } }, "children": [
                           { "type": "Text", "id": 354, "properties": { "text": "", "textSelection": "enabled" } },
                           { "type": "Button", "id": 362, "properties": { "title": "Details...", "controlSize": "small", "actionID": "AgentVM.main.box.programs", "help": "Open the box's programs window: what ran in it, and the permission prompts programs waited on." } }
                         ] } ] },
-                        { "type": "LabeledContent", "properties": { "title": "Started by" }, "children": [ { "type": "Text", "id": 355, "properties": { "text": "", "textSelection": "enabled" } } ] },
-                        { "type": "LabeledContent", "properties": { "title": "Processors and memory" }, "children": [ { "type": "Text", "id": 356, "properties": { "text": "", "textSelection": "enabled" } } ] },
-                        { "type": "LabeledContent", "properties": { "title": "Space" }, "children": [ { "type": "Text", "id": 360, "properties": { "text": "", "textSelection": "enabled" } } ] },
-                        { "type": "LabeledContent", "properties": { "title": "Kept" }, "children": [ { "type": "Text", "id": 357, "properties": { "text": "", "textSelection": "enabled" } } ] },
-                        { "type": "LabeledContent", "properties": { "title": "Created" }, "children": [ { "type": "Text", "id": 358, "properties": { "text": "", "textSelection": "enabled" } } ] },
-                        { "type": "LabeledContent", "properties": { "title": "Folder" }, "children": [ { "type": "Text", "id": 359, "properties": { "text": "", "textSelection": "enabled" } } ] }
+                        { "type": "LabeledContent", "properties": { "title": "Started by" }, "children": [ { "type": "Text", "id": 355, "properties": { "text": "", "textSelection": "enabled", "frame": { "maxWidth": "infinity", "alignment": "leading" } } } ] },
+                        { "type": "LabeledContent", "properties": { "title": "CPUs and RAM" }, "children": [ { "type": "Text", "id": 356, "properties": { "text": "", "textSelection": "enabled", "frame": { "maxWidth": "infinity", "alignment": "leading" } } } ] },
+                        { "type": "LabeledContent", "properties": { "title": "Space" }, "children": [ { "type": "Text", "id": 360, "properties": { "text": "", "textSelection": "enabled", "frame": { "maxWidth": "infinity", "alignment": "leading" } } } ] },
+                        { "type": "LabeledContent", "properties": { "title": "Kept" }, "children": [ { "type": "Text", "id": 357, "properties": { "text": "", "textSelection": "enabled", "frame": { "maxWidth": "infinity", "alignment": "leading" } } } ] },
+                        { "type": "LabeledContent", "properties": { "title": "Created" }, "children": [ { "type": "Text", "id": 358, "properties": { "text": "", "textSelection": "enabled", "frame": { "maxWidth": "infinity", "alignment": "leading" } } } ] },
+                        { "type": "LabeledContent", "properties": { "title": "Folder" }, "children": [ { "type": "Text", "id": 359, "properties": { "text": "", "textSelection": "enabled", "frame": { "maxWidth": "infinity", "alignment": "leading" } } } ] }
                       ]
                     },
-                    { "type": "Text", "id": 323, "properties": { "text": "", "foregroundStyle": "orange", "textSelection": "enabled" } },
+                    { "type": "Text", "id": 323, "properties": { "text": "", "foregroundStyle": "orange", "textSelection": "enabled", "frame": { "maxWidth": "infinity", "alignment": "leading" } } },
                     { "type": "Spacer" }
                   ]
                 }
@@ -389,23 +389,23 @@
                     {
                       "type": "Form",
                       "children": [
-                        { "type": "LabeledContent", "properties": { "title": "macOS" }, "children": [ { "type": "Text", "id": 451, "properties": { "text": "", "textSelection": "enabled" } } ] },
-                        { "type": "LabeledContent", "properties": { "title": "Built from" }, "children": [ { "type": "Text", "id": 452, "properties": { "text": "", "textSelection": "enabled" } } ] },
-                        { "type": "LabeledContent", "properties": { "title": "Tools" }, "children": [ { "type": "Text", "id": 453, "properties": { "text": "", "textSelection": "enabled" } } ] },
-                        { "type": "LabeledContent", "properties": { "title": "Guest daemon" }, "children": [ { "type": "Text", "id": 454, "properties": { "text": "", "textSelection": "enabled" } } ] },
-                        { "type": "LabeledContent", "properties": { "title": "Full Disk Access" }, "children": [ { "type": "HStack", "properties": { "spacing": 8.0 }, "children": [
+                        { "type": "LabeledContent", "properties": { "title": "macOS" }, "children": [ { "type": "Text", "id": 451, "properties": { "text": "", "textSelection": "enabled", "frame": { "maxWidth": "infinity", "alignment": "leading" } } } ] },
+                        { "type": "LabeledContent", "properties": { "title": "Built from" }, "children": [ { "type": "Text", "id": 452, "properties": { "text": "", "textSelection": "enabled", "frame": { "maxWidth": "infinity", "alignment": "leading" } } } ] },
+                        { "type": "LabeledContent", "properties": { "title": "Tools" }, "children": [ { "type": "Text", "id": 453, "properties": { "text": "", "textSelection": "enabled", "frame": { "maxWidth": "infinity", "alignment": "leading" } } } ] },
+                        { "type": "LabeledContent", "properties": { "title": "Guest daemon" }, "children": [ { "type": "Text", "id": 454, "properties": { "text": "", "textSelection": "enabled", "frame": { "maxWidth": "infinity", "alignment": "leading" } } } ] },
+                        { "type": "LabeledContent", "properties": { "title": "Full Disk Access" }, "children": [ { "type": "HStack", "properties": { "spacing": 8.0, "frame": { "maxWidth": "infinity", "alignment": "leading" } }, "children": [
                           { "type": "Text", "id": 459, "properties": { "text": "", "textSelection": "enabled" } },
                           { "type": "Button", "id": 462, "properties": { "title": "Set Up...", "controlSize": "small", "disabled": true, "actionID": "AgentVM.main.image.access", "help": "Open the image's Full Disk Access guide: what to do on the image's own screen, and where it is in it." } }
                         ] } ] },
-                        { "type": "LabeledContent", "properties": { "title": "Processors and memory" }, "children": [ { "type": "Text", "id": 460, "properties": { "text": "", "textSelection": "enabled" } } ] },
-                        { "type": "LabeledContent", "properties": { "title": "Space" }, "children": [ { "type": "Text", "id": 461, "properties": { "text": "", "textSelection": "enabled" } } ] },
-                        { "type": "LabeledContent", "properties": { "title": "Created" }, "children": [ { "type": "Text", "id": 455, "properties": { "text": "", "textSelection": "enabled" } } ] },
-                        { "type": "LabeledContent", "properties": { "title": "Boxes made from it" }, "children": [ { "type": "Text", "id": 456, "properties": { "text": "", "textSelection": "enabled" } } ] },
-                        { "type": "LabeledContent", "properties": { "title": "Images built from it" }, "children": [ { "type": "Text", "id": 457, "properties": { "text": "", "textSelection": "enabled" } } ] },
-                        { "type": "LabeledContent", "properties": { "title": "Folder" }, "children": [ { "type": "Text", "id": 458, "properties": { "text": "", "textSelection": "enabled" } } ] }
+                        { "type": "LabeledContent", "properties": { "title": "CPUs and RAM" }, "children": [ { "type": "Text", "id": 460, "properties": { "text": "", "textSelection": "enabled", "frame": { "maxWidth": "infinity", "alignment": "leading" } } } ] },
+                        { "type": "LabeledContent", "properties": { "title": "Space" }, "children": [ { "type": "Text", "id": 461, "properties": { "text": "", "textSelection": "enabled", "frame": { "maxWidth": "infinity", "alignment": "leading" } } } ] },
+                        { "type": "LabeledContent", "properties": { "title": "Created" }, "children": [ { "type": "Text", "id": 455, "properties": { "text": "", "textSelection": "enabled", "frame": { "maxWidth": "infinity", "alignment": "leading" } } } ] },
+                        { "type": "LabeledContent", "properties": { "title": "Boxes made from it" }, "children": [ { "type": "Text", "id": 456, "properties": { "text": "", "textSelection": "enabled", "frame": { "maxWidth": "infinity", "alignment": "leading" } } } ] },
+                        { "type": "LabeledContent", "properties": { "title": "Images built from it" }, "children": [ { "type": "Text", "id": 457, "properties": { "text": "", "textSelection": "enabled", "frame": { "maxWidth": "infinity", "alignment": "leading" } } } ] },
+                        { "type": "LabeledContent", "properties": { "title": "Folder" }, "children": [ { "type": "Text", "id": 458, "properties": { "text": "", "textSelection": "enabled", "frame": { "maxWidth": "infinity", "alignment": "leading" } } } ] }
                       ]
                     },
-                    { "type": "Text", "id": 423, "properties": { "text": "", "foregroundStyle": "orange", "textSelection": "enabled" } },
+                    { "type": "Text", "id": 423, "properties": { "text": "", "foregroundStyle": "orange", "textSelection": "enabled", "frame": { "maxWidth": "infinity", "alignment": "leading" } } },
                     { "type": "Spacer" }
                   ]
                 }
@@ -417,16 +417,24 @@
           "type": "Tab",
           "properties": { "title": "Settings", "systemImage": "gearshape" },
           "content": {
-            "type": "Form",
+            "type": "VStack",
             "properties": {
-              "padding": { "top": 32, "leading": 20, "bottom": 20, "trailing": 20 },
-              "frame": { "maxWidth": "infinity", "maxHeight": "infinity", "alignment": "top" }
+              "alignment": "leading",
+              "spacing": 16.0,
+              "padding": 20.0,
+              "frame": { "maxWidth": "infinity", "maxHeight": "infinity", "alignment": "topLeading" }
             },
             "children": [
               {
-                "type": "Section",
-                "properties": { "header": "agent-vm" },
+                "type": "GroupBox",
+                "properties": { "title": "agent-vm" },
                 "children": [
+                  {
+                    "type": "VStack",
+                    "properties": { "alignment": "leading", "padding": 6.0, "frame": { "maxWidth": "infinity", "alignment": "leading" } },
+                    "children": [
+                      { "type": "Divider", "properties": { "opacity": 0, "frame": { "height": 0 } } },
+                      { "type": "Form", "children": [
                   { "type": "LabeledContent", "properties": { "title": "Version" }, "children": [ { "type": "Text", "id": 501, "properties": { "text": "", "textSelection": "enabled" } } ] },
                   { "type": "LabeledContent", "properties": { "title": "Location" }, "children": [ { "type": "Text", "id": 502, "properties": { "text": "", "textSelection": "enabled" } } ] },
                   {
@@ -434,25 +442,46 @@
                     "properties": { "title": "Updates" },
                     "children": [ { "type": "Button", "id": 503, "properties": { "title": "Check for Updates", "systemImage": "arrow.trianglehead.2.clockwise.rotate.90", "imageScale": "large", "disabled": true } } ]
                   }
+                      ] }
+                    ]
+                  }
                 ]
               },
               {
-                "type": "Section",
-                "properties": { "header": "Agents" },
+                "type": "GroupBox",
+                "properties": { "title": "Agents" },
                 "children": [
+                  {
+                    "type": "VStack",
+                    "properties": { "alignment": "leading", "padding": 6.0, "frame": { "maxWidth": "infinity", "alignment": "leading" } },
+                    "children": [
+                      { "type": "Divider", "properties": { "opacity": 0, "frame": { "height": 0 } } },
+                      { "type": "Form", "children": [
                   {
                     "type": "LabeledContent",
                     "properties": { "title": "Keys and tokens" },
                     "children": [ { "type": "Button", "id": 521, "properties": { "title": "Agent Keys", "systemImage": "key", "imageScale": "large", "actionID": "AgentVM.keys.open", "help": "See which keys the agents can use and which are stored in your login Keychain; store or remove one." } } ]
                   }
+                      ] }
+                    ]
+                  }
                 ]
               },
               {
-                "type": "Section",
-                "properties": { "header": "This Mac" },
+                "type": "GroupBox",
+                "properties": { "title": "This Mac" },
                 "children": [
+                  {
+                    "type": "VStack",
+                    "properties": { "alignment": "leading", "padding": 6.0, "frame": { "maxWidth": "infinity", "alignment": "leading" } },
+                    "children": [
+                      { "type": "Divider", "properties": { "opacity": 0, "frame": { "height": 0 } } },
+                      { "type": "Form", "children": [
                   { "type": "LabeledContent", "properties": { "title": "Virtual machines" }, "children": [ { "type": "Text", "id": 511, "properties": { "text": "", "textSelection": "enabled" } } ] },
                   { "type": "LabeledContent", "properties": { "title": "Free disk space" }, "children": [ { "type": "Text", "id": 512, "properties": { "text": "", "textSelection": "enabled" } } ] }
+                      ] }
+                    ]
+                  }
                 ]
               }
             ]
