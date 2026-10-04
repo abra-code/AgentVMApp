@@ -599,7 +599,12 @@ main_stage_rows() {
         local _why="$(main_agentvm_line "$_uuid" 2)"
         # Only for the installed one: a broken developer override is fixed in the setting.
         [ "$(main_agentvm_line "$_uuid" 3)" = "installed" ] && _why="$_why AgentVM runs the agent-vm installed in ~/.local/bin, the one Terminal and Cadabra run."
-        printf '1\tfailed\t%s\t0\n' "${_why:--}"
+        # Install... or Update...: only the installed one is put right by installing.
+        local _install=0
+        case "$(main_agentvm_line "$_uuid" 1)" in
+            "$agentvm_not_installed"|"$agentvm_too_old") _install=1 ;;
+        esac
+        printf '1\tfailed\t%s\t%s\n' "${_why:--}" "$_install"
         # A fact of "-" is none: a field that is empty would be skipped by the reader.
         printf '2\ttodo\t-\t0\n3\ttodo\t-\t0\n4\ttodo\t-\t0\n5\ttodo\t-\t0\n6\ttodo\t-\t0\n'
         return 0
@@ -712,6 +717,10 @@ main_stage_symbol() {
 # fact and button.
 main_paint_stages() {
     local _rows="$(main_stage_rows "$1")"
+    # The first step's button: an agent-vm too old for the app is updated, a missing one installed.
+    local _title="Install..."
+    [ "$(main_agentvm_line "$1" 1)" = "$agentvm_too_old" ] && _title="Update..."
+    "$dialog" "$1" "$((MAIN_STAGE_BUTTON_BASE + 1))" omc_set_property title "$_title"
     local _n _state _fact _button _symbol
     while IFS="$ui_tab" read -r _n _state _fact _button; do
         case "$_n" in
@@ -723,7 +732,7 @@ main_paint_stages() {
         "$dialog" "$1" "$((MAIN_STAGE_SYMBOL_BASE + _n))" omc_set_property systemName "${_symbol%%"$ui_tab"*}"
         "$dialog" "$1" "$((MAIN_STAGE_SYMBOL_BASE + _n))" omc_set_property foregroundStyle "${_symbol#*"$ui_tab"}"
         "$dialog" "$1" "$((MAIN_STAGE_FACT_BASE + _n))" "$_fact"
-        [ "$_n" -eq 1 ] || ui_enable "$1" "$((MAIN_STAGE_BUTTON_BASE + _n))" "$_button"
+        ui_enable "$1" "$((MAIN_STAGE_BUTTON_BASE + _n))" "$_button"
     done <<EOF
 $_rows
 EOF

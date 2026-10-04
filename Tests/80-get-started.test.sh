@@ -72,7 +72,7 @@ open_window() {
 }
 
 # steps  ->  for each of the six steps, a letter for its symbol (d done, t to do, r running, f
-# failed, a attention) and whether its button is on (step 1 has no button: "-").
+# failed, a attention) and whether its button is on (step 1 is "-": its button, Install... or Update..., is checked in 81-install.test.sh).
 steps() {
     local _n=0 _out="" _letter _on
     while [ "$_n" -lt 6 ]; do

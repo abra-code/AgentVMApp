@@ -1,0 +1,73 @@
+{
+  "type": "VStack",
+  "properties": {
+    "alignment": "leading",
+    "spacing": 12,
+    "padding": 20,
+    "frame": { "minWidth": 600, "idealWidth": 600, "minHeight": 380, "idealHeight": 380 }
+  },
+  "children": [
+    {
+      "type": "Text",
+      "id": 4201,
+      "properties": { "text": "", "font": "headline", "textSelection": "enabled", "frame": { "maxWidth": "infinity", "alignment": "leading" } }
+    },
+    {
+      "type": "Text",
+      "properties": {
+        "text": "agent-vm is the program that makes and runs boxes; AgentVM, Terminal and Cadabra all run the same one. It comes from github.com/abra-code/agent-vm as a package signed by its developer and notarized by Apple, which AgentVM checks before installing it.",
+        "frame": { "maxWidth": "infinity", "alignment": "leading" }
+      }
+    },
+    {
+      "type": "Text",
+      "properties": {
+        "text": "It is installed for you only, and no password is asked: the programs go into ~/.local/share/agent-vm, in a folder for each version, and ~/.local/bin gets the links agent-vm and avm.",
+        "foregroundStyle": "secondary",
+        "frame": { "maxWidth": "infinity", "alignment": "leading" }
+      }
+    },
+    {
+      "type": "Toggle",
+      "id": 4203,
+      "properties": {
+        "title": "Add ~/.local/bin to my shell's PATH, so that avm and agent-vm are found in Terminal",
+        "style": "checkbox",
+        "help": "Adds a marked block of lines to your shell's startup file (~/.zprofile for zsh). Nothing is added when the file already names ~/.local/bin."
+      }
+    },
+    {
+      "type": "Text",
+      "id": 4204,
+      "properties": { "text": "", "foregroundStyle": "secondary", "frame": { "maxWidth": "infinity", "alignment": "leading" } }
+    },
+    { "type": "Spacer" },
+    {
+      "type": "ProgressView",
+      "id": 4206,
+      "properties": { "value": 0, "total": 100, "progressViewStyle": "linear", "hidden": true, "frame": { "maxWidth": "infinity" } }
+    },
+    {
+      "type": "HStack",
+      "properties": { "alignment": "center", "spacing": 10 },
+      "children": [
+        {
+          "type": "Text",
+          "id": 4205,
+          "properties": { "text": "", "textSelection": "enabled", "frame": { "maxWidth": "infinity", "alignment": "leading" } }
+        },
+        {
+          "type": "Button",
+          "id": 4207,
+          "properties": {
+            "title": "Download and Install",
+            "disabled": true,
+            "buttonStyle": "borderedProminent",
+            "actionID": "AgentVM.install.start",
+            "help": "Download the newest agent-vm, check its signature, and install it."
+          }
+        }
+      ]
+    }
+  ]
+}
