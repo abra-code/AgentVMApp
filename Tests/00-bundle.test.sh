@@ -14,6 +14,11 @@ section "Info.plist"
 check "the bundle identifier"                  "com.abracode.AgentVM" "$(plist_value CFBundleIdentifier)"
 check "the name"                               "AgentVM"              "$(plist_value CFBundleName)"
 check "macOS 27 or later, as agent-vm needs"   "27.0"                 "$(plist_value LSMinimumSystemVersion)"
+# An image's first boot reaches the new virtual machine over this Mac's virtual network, which
+# macOS asks the user about (Local Network); the prompt shows this text. Nothing is browsed for.
+check "what the Local Network prompt says" "AgentVM connects once to a new virtual machine on this Mac, while building an image, to set it up. It does not look for other devices on your network." \
+    "$(plist_value NSLocalNetworkUsageDescription)"
+check "no Bonjour services are declared" "" "$(plist_value NSBonjourServices)"
 check "the agentvm URL scheme is declared"     "1" \
     "$(/usr/bin/plutil -extract CFBundleURLTypes json -o - "$APP_INFO_PLIST" 2>/dev/null \
         | /usr/bin/jq '[.[].CFBundleURLSchemes[]] | map(select(. == "agentvm")) | length')"
