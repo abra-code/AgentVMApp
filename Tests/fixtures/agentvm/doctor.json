@@ -21,8 +21,18 @@
       "status": "ok"
     },
     {
-      "detail": "104 GB free on the volume of /Users/you/Library/Application Support/agent-vm",
+      "detail": "134 GB free on the volume of /Users/you/Library/Application Support/agent-vm",
       "name": "disk space",
+      "status": "ok"
+    },
+    {
+      "detail": "/Users/you/Library/Application Support/agent-vm is private to you (mode 700)",
+      "name": "store folder",
+      "status": "ok"
+    },
+    {
+      "detail": "none is kept in a plain-text file",
+      "name": "account passwords",
       "status": "ok"
     },
     {

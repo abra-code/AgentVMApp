@@ -115,9 +115,9 @@ check "asks agent-vm which it is, and reads status" "--version|status --json" "$
 check "its title"                   "How to Use a Box" "$(ui_title)"
 check "the lines name the first ready image and the first kept box" \
     "avm|avm new dev|avm new dev --name work|avm s3|~/.local/bin/avm" "$(commands)"
-check "what the second does" "A new box from the image dev, used once: it is deleted when you leave it." "$(what 2)"
-check "what the fourth does" "The kept box s3, started if it is stopped. It runs on afterwards: Stop is in the Boxes tab." "$(what 4)"
-check "avm is where the installer puts it" "1" "$(ui_value "$HOWTO_NOTE_ID" | /usr/bin/grep -c '^avm is installed in ~/.local/bin\.')"
+check "what the second does" "Run in a new temporary box from the image \"dev\", used once and deleted when you leave it." "$(what 2)"
+check "what the fourth does" "Run avm in existing box \"s3\". It is started if needed and runs on afterwards." "$(what 4)"
+check "avm is where the installer puts it" "1" "$(ui_value "$HOWTO_NOTE_ID" | /usr/bin/grep -c '^avm is installed in ~/.local/bin/\.')"
 check "every line of the document has its three views" "5 5 5" \
     "$(for base in "$HOWTO_COMMAND_BASE" "$HOWTO_COPY_BASE" "$HOWTO_WHAT_BASE"; do /usr/bin/jq --argjson base "$base" '[.. | objects | select((.id? // 0) > $base and (.id? // 0) <= $base + 5)] | length' "$APP_RESOURCES/Base.lproj/AgentVM.howto.json"; done | /usr/bin/paste -sd ' ' -)"
 check "Agent Keys... in it opens the keys window" "AgentVM.keys.open" \
@@ -176,7 +176,7 @@ open_window
 check "the lines use example names" "avm|avm new dev|avm new dev --name work|avm work|~/.local/bin/avm" "$(commands)"
 check "  and say that they are examples" "1|1" \
     "$(what 2 | /usr/bin/grep -c 'No image is ready yet: dev stands for the one you build\.$')|$(what 4 | /usr/bin/grep -c 'No kept box exists yet: work stands for one you make\.$')"
-check "avm is not there: the window says where it comes from" "1" "$(ui_value "$HOWTO_NOTE_ID" | /usr/bin/grep -c '^avm is not in ~/.local/bin on this Mac\.')"
+check "avm is not there: the window says where it comes from" "1" "$(ui_value "$HOWTO_NOTE_ID" | /usr/bin/grep -c '^avm is not in ~/.local/bin/ on this Mac\.')"
 /usr/bin/jq '.boxes |= map(select(.box.name == "cadabra-spike"))' "$FIXTURES_AGENTVM/status-variety.json" > "$FAKE_AGENTVM_DIR/status.json"
 : > "$FAKE_AGENTVM_DIR/log"
 omc_run AgentVM.howto.activated

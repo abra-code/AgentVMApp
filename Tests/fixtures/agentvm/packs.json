@@ -9,7 +9,7 @@
       "statsig.anthropic.com"
     ],
     "name": "anthropic",
-    "path": "/Users/you/.local/share/agent-vm/versions/0.5.13/packs.json",
+    "path": "/Users/you/.local/share/agent-vm/versions/0.6.12/packs.json",
     "source": "built-in"
   },
   {
@@ -18,7 +18,7 @@
       "mcp-proxy.anthropic.com"
     ],
     "name": "anthropic-connectors",
-    "path": "/Users/you/.local/share/agent-vm/versions/0.5.13/packs.json",
+    "path": "/Users/you/.local/share/agent-vm/versions/0.6.12/packs.json",
     "source": "built-in"
   },
   {
@@ -32,7 +32,7 @@
       "updates.cdn-apple.com"
     ],
     "name": "apple-updates",
-    "path": "/Users/you/.local/share/agent-vm/versions/0.5.13/packs.json",
+    "path": "/Users/you/.local/share/agent-vm/versions/0.6.12/packs.json",
     "source": "built-in"
   },
   {
@@ -49,7 +49,7 @@
       "pkg-containers.githubusercontent.com"
     ],
     "name": "github",
-    "path": "/Users/you/.local/share/agent-vm/versions/0.5.13/packs.json",
+    "path": "/Users/you/.local/share/agent-vm/versions/0.6.12/packs.json",
     "source": "built-in"
   },
   {
@@ -62,7 +62,7 @@
       "objects.githubusercontent.com"
     ],
     "name": "homebrew",
-    "path": "/Users/you/.local/share/agent-vm/versions/0.5.13/packs.json",
+    "path": "/Users/you/.local/share/agent-vm/versions/0.6.12/packs.json",
     "source": "built-in"
   },
   {
@@ -72,7 +72,7 @@
       "registry.yarnpkg.com"
     ],
     "name": "npm",
-    "path": "/Users/you/.local/share/agent-vm/versions/0.5.13/packs.json",
+    "path": "/Users/you/.local/share/agent-vm/versions/0.6.12/packs.json",
     "source": "built-in"
   },
   {
@@ -83,7 +83,7 @@
       "auth.openai.com"
     ],
     "name": "openai",
-    "path": "/Users/you/.local/share/agent-vm/versions/0.5.13/packs.json",
+    "path": "/Users/you/.local/share/agent-vm/versions/0.6.12/packs.json",
     "source": "built-in"
   },
   {
@@ -93,7 +93,7 @@
       "files.pythonhosted.org"
     ],
     "name": "pypi",
-    "path": "/Users/you/.local/share/agent-vm/versions/0.5.13/packs.json",
+    "path": "/Users/you/.local/share/agent-vm/versions/0.6.12/packs.json",
     "source": "built-in"
   },
   {
@@ -106,7 +106,7 @@
       "download.swift.org"
     ],
     "name": "swiftpm",
-    "path": "/Users/you/.local/share/agent-vm/versions/0.5.13/packs.json",
+    "path": "/Users/you/.local/share/agent-vm/versions/0.6.12/packs.json",
     "source": "built-in"
   }
 ]

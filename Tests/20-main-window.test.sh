@@ -121,7 +121,7 @@ section "Settings"
 check "agent-vm's version"       "$VERSION" "$(ui_value "$MAIN_AGENTVM_VERSION_ID")"
 check "the test agent-vm is named as such" "$FAKE_AGENTVM (test agent-vm)" "$(ui_value "$MAIN_AGENTVM_LOCATION_ID")"
 check "the virtual machines, without repeating the label" "1 of 2 running" "$(ui_value "$MAIN_VMS_ID")"
-check "the free disk space"      "104 GB free" "$(ui_value "$MAIN_DISK_ID")"
+check "the free disk space"      "134 GB free" "$(ui_value "$MAIN_DISK_ID")"
 
 section "the box cards"
 check "one card per box" "3" "$(ui_row_count "$MAIN_BOXES_ID")"

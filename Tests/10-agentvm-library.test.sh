@@ -188,9 +188,9 @@ check "agentvm_status is status --json as it is" \
 check "one call"                     "status --json" "$(fake_log)"
 fake_reset
 rows="$(with_fake agentvm_doctor)"
-check "agentvm_doctor: one row per check" "6" "$(printf '%s\n' "$rows" | /usr/bin/awk 'END { print NR }')"
+check "agentvm_doctor: one row per check" "8" "$(printf '%s\n' "$rows" | /usr/bin/awk 'END { print NR }')"
 check "  name, status and detail"    "macOS${TAB}ok${TAB}macOS 27.0.1" "$(printf '%s\n' "$rows" | /usr/bin/head -1)"
-check "  the disk space detail"      "104 GB free on the volume of /Users/you/Library/Application Support/agent-vm" \
+check "  the disk space detail"      "134 GB free on the volume of /Users/you/Library/Application Support/agent-vm" \
     "$(printf '%s\n' "$rows" | row_named "disk space" | col 3)"
 check "  one call"                   "doctor --json" "$(fake_log)"
 printf 'no store\n' > "$FAKE_AGENTVM_DIR/fail-doctor"
