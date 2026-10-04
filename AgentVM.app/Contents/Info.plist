@@ -7,9 +7,9 @@
 	<key>CFBundleExecutable</key>
 	<string>AgentVM</string>
 	<key>CFBundleIconFile</key>
-	<string>Hub</string>
+	<string>AgentVM</string>
 	<key>CFBundleIconName</key>
-	<string>Hub</string>
+	<string>AgentVM</string>
 	<key>CFBundleIdentifier</key>
 	<string>com.abracode.AgentVM</string>
 	<key>CFBundleInfoDictionaryVersion</key>
