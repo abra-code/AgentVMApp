@@ -87,6 +87,18 @@ else
     printf '  box-info.json and box-network.json left as they were: no box in this store\n'
 fi
 capture packs box packs --json
+# What agent-vm says about recipes: the New Image window asks before a recipe of the user's own
+# joins the list, and before a build. Asked about two of the test recipes (one with an input file,
+# one with parameters), which agent-vm accepts with warnings; nothing is built and no store is
+# read. Their folder is written as "recipes", so the capture names no folder of this Mac.
+recipes="$(cd "$script_dir/../fixtures/recipes" && pwd -P)"
+[ -n "$recipes" ] || fail "no test recipes at $script_dir/../fixtures/recipes"
+capture recipe-check recipe check "$recipes/xcode/recipe.json" "$recipes/xcode-platforms/recipe.json" --json
+/usr/bin/jq -S --arg dir "$recipes" 'walk(if type == "string" and startswith($dir) then "recipes" + ltrimstr($dir) else . end)' \
+    "$fixtures/recipe-check.json" > "$work/recipe-check.clean.json"
+status=$?
+[ "$status" -eq 0 ] || fail "cannot rewrite the recipes folder in recipe-check.json"
+/bin/mv -f "$work/recipe-check.clean.json" "$fixtures/recipe-check.json"
 # The restore files agent-vm downloaded: the New Image window lists them. Only its cache folder
 # is read.
 capture ipsw-list image fetch-ipsw --list --json

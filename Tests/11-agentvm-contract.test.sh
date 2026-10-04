@@ -147,4 +147,40 @@ check "  every status one the library knows" "" \
 AGENT_VM_HOME="$STORE" "$real" doctor --json > "$OMCTEST_WORK/doctor.json" 2>/dev/null
 check "  every field the fixture has" "" "$(missing_paths "$FIXTURES_AGENTVM/doctor.json" "$OMCTEST_WORK/doctor.json")"
 
+section "recipe check --json"
+TEST_RECIPES="$OMCTEST_TESTS/fixtures/recipes"
+BAD="$OMCTEST_WORK/Bad Recipes"
+/bin/mkdir -p "$BAD/team tools"
+printf 'not json\n' > "$BAD/broken.json"
+printf '%s\n' '{ "version": 1, "steps": [ { "run": "true", "timeout": 3 } ] }' > "$BAD/team tools/recipe.json"
+answer="$(real_lib agentvm_recipe_check "$TEST_RECIPES/xcode/recipe.json" "$TEST_RECIPES/xcode-platforms/recipe.json")"
+check "recipes it accepts: status 0" "0" "$?"
+printf '%s\n' "$answer" > "$OMCTEST_WORK/recipe-check.json"
+check "  every field the fixture has" "" "$(missing_paths "$FIXTURES_AGENTVM/recipe-check.json" "$OMCTEST_WORK/recipe-check.json")"
+rows="$(printf '%s\n' "$answer" | lib agentvm_recipe_check_rows)"
+check "  eight fields in every row"  "8" "$(printf '%s\n' "$rows" | field_count)"
+check "  the name, what is asked for, the path as given, and no mistake" \
+    "xcode${TAB}1${TAB}0${TAB}$TEST_RECIPES/xcode/recipe.json${TAB}-|xcode-platforms${TAB}0${TAB}2${TAB}$TEST_RECIPES/xcode-platforms/recipe.json${TAB}-|" \
+    "$(printf '%s\n' "$rows" | /usr/bin/cut -f1,3-6 | /usr/bin/tr '\n' '|')"
+check "  nothing refused in them together" "" "$(printf '%s\n' "$answer" | lib agentvm_recipe_check_error)"
+answer="$(real_lib agentvm_recipe_check "$BAD/broken.json" "$BAD/team tools/recipe.json" "$BAD/none.json" "$TEST_RECIPES/node/recipe.json")"
+check "recipes it refuses: status 1, with the answer" "1" "$?"
+rows="$(printf '%s\n' "$answer" | lib agentvm_recipe_check_rows)"
+check "  a row for every file, in the order given" "$BAD/broken.json|$BAD/team tools/recipe.json|$BAD/none.json|$TEST_RECIPES/node/recipe.json|" \
+    "$(printf '%s\n' "$rows" | col 5 | /usr/bin/tr '\n' '|')"
+check "  the refused ones have a reason and no name, the other its name" "-:why|-:why|-:why|node:-|" \
+    "$(printf '%s\n' "$rows" | /usr/bin/awk -F'\t' '{ printf "%s:%s|", $1, ($6 == "-" ? "-" : "why") }')"
+check "  the reason names the mistake" "1" "$(printf '%s\n' "$rows" | /usr/bin/sed -n '2p' | col 6 | /usr/bin/grep -c 'unknown key "timeout"')"
+# The window lists a recipe under agent-vm's name for it, and the other tests get that name from
+# the fake: the two must name a file alike.
+/bin/mkdir -p "$BAD/---"
+for file in "$BAD/team tools/recipe.json" "$BAD/Extra Things.json" "$BAD/---/recipe.json" "$BAD/noext" "$BAD/a123456789b123456789c123456789d123456789e123456789.json"; do
+    printf '{ "version": 1 }\n' > "$file"
+done
+real_names="$(real_lib agentvm_recipe_check "$BAD/team tools/recipe.json" "$BAD/Extra Things.json" "$BAD/---/recipe.json" "$BAD/noext" "$BAD/a123456789b123456789c123456789d123456789e123456789.json" | lib agentvm_recipe_check_rows | col 1 | /usr/bin/tr '\n' '|')"
+check "  a recipe's name: its folder's or its file's, dashes for what cannot be in one, 40 characters" \
+    "team-tools|Extra-Things|recipe|noext|a123456789b123456789c123456789d123456789|" "$real_names"
+check "  the fake names them alike" "$real_names" \
+    "$(with_fake agentvm_recipe_check "$BAD/team tools/recipe.json" "$BAD/Extra Things.json" "$BAD/---/recipe.json" "$BAD/noext" "$BAD/a123456789b123456789c123456789d123456789e123456789.json" | lib agentvm_recipe_check_rows | col 1 | /usr/bin/tr '\n' '|')"
+
 omctest_end

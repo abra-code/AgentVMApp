@@ -565,6 +565,11 @@ check "the virtual machine count is there" "0" \
 check "doctor has the checks the window reads" "virtualization disk space running VMs " \
     "$(lib agentvm_doctor_rows < "$FIXTURES_AGENTVM/doctor.json" | col 1 \
         | /usr/bin/grep -x -e virtualization -e 'disk space' -e 'running VMs' | /usr/bin/tr '\n' ' ')"
+check "a recipe check has what the New Image window reads: the name, what is asked for, the path, no mistake, the warnings" \
+    "xcode${TAB}1${TAB}0${TAB}recipes/xcode/recipe.json${TAB}-${TAB}1|xcode-platforms${TAB}0${TAB}2${TAB}recipes/xcode-platforms/recipe.json${TAB}-${TAB}2|" \
+    "$(lib agentvm_recipe_check_rows < "$FIXTURES_AGENTVM/recipe-check.json" | /usr/bin/cut -f1,3-7 | /usr/bin/tr '\n' '|')"
+check "  a warning has its place and its message" "input xcode: no step uses AGENT_VM_INPUT_XCODE, yet every build must give the file" \
+    "$(lib agentvm_recipe_check_rows < "$FIXTURES_AGENTVM/recipe-check.json" | /usr/bin/sed -n '1p' | col 8)"
 
 section "the version rule"
 fixture_version="$(/usr/bin/jq -r '.version' "$FIXTURES_AGENTVM/version.json")"

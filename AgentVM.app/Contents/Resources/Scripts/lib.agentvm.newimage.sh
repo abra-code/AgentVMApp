@@ -22,7 +22,7 @@
 # so that a suggestion the user did not change follows a changed start or tool), and "busy" (the
 # click being worked on: newimage_enter). The values of
 # the options are the cache file values.tsv (kind, name, value), and the recipes the user added
-# the cache file own.tsv (a row each, as agentvm_recipe_row gives it). Everything kept is checked
+# the cache file own.tsv (a row each, as agentvm_recipe_rows gives one). Everything kept is checked
 # again when it is read back, and a start is looked up in what agent-vm last listed.
 #
 # THE FIELDS ARE READ WHEN A BUTTON IS CLICKED, never per keystroke: a handler's view of the
@@ -346,7 +346,7 @@ newimage_source_rows() {
 
 # -- The tools -----------------------------------------------------------------------------------
 
-# newimage_own_rows <uuid>  ->  the recipes the user added, a row each (agentvm_recipe_row), as
+# newimage_own_rows <uuid>  ->  the recipes the user added, a row each (as agentvm_recipe_rows), as
 # far as a row has its five fields and a full path (the rows come back from a file).
 newimage_own_rows() {
     main_rows "$1" own | /usr/bin/awk -F'\t' 'NF == 5 && $5 ~ /^\// && $1 ~ /^[ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789._-]+$/'
@@ -379,8 +379,10 @@ newimage_is_own() {
     [ -n "$(newimage_own_rows "$1" | /usr/bin/awk -F'\t' -v name="$2" '$1 "" == name { print "yes"; exit }')" ]
 }
 
-# newimage_add_own <uuid> <path>  ->  adds that recipe file to the list, or prints why it cannot
-# be added. Adding is not ticking: the checkboxes are the user's.
+# newimage_add_own <uuid> <path>  ->  adds that recipe file to the list when agent-vm accepts it
+# as a recipe (`recipe check`), and prints the line for the note: that it is in the list, with
+# what agent-vm warns about in it, or why it cannot be added. Adding is not ticking: the
+# checkboxes are the user's.
 newimage_add_own() {
     case "$2" in
         /*) ;;
@@ -391,11 +393,26 @@ newimage_add_own() {
         printf '%s is not a file on this Mac.\n' "$(agentvm_display_path "$2")"
         return 0
     fi
-    local _row="$(agentvm_recipe_row "$2")"
-    if [ -z "$_row" ]; then
-        printf '%s is not a recipe: a recipe is a JSON file with steps (Docs/image-recipes.md in agent-vm).\n' "$(agentvm_display_path "$2")"
+    local _answer
+    _answer="$(agentvm_recipe_check "$2")"
+    local _status=$?
+    local _checked="$(printf '%s\n' "$_answer" | agentvm_recipe_check_rows | /usr/bin/head -1)"
+    if [ "$_status" -gt 1 ] || [ -z "$_checked" ]; then
+        printf 'agent-vm could not check %s: %s\n' "$(agentvm_display_path "$2")" "$(ui_one_line "$(agentvm_last_error "$_status")")"
         return 0
     fi
+    local _error="$(printf '%s\n' "$_checked" | /usr/bin/cut -f6)"
+    # Status 1 is a refusal wherever agent-vm wrote its reason: never taken for an accepted file.
+    if [ "$_error" = "-" ] && [ "$_status" -ne 0 ]; then
+        _error="$(printf '%s\n' "$_answer" | agentvm_recipe_check_error)"
+        [ -n "$_error" ] || _error="it gave no reason"
+    fi
+    if [ "$_error" != "-" ]; then
+        # The system's reasons end in a full stop of their own.
+        printf 'agent-vm does not accept %s as a recipe: %s.\n' "$(agentvm_display_path "$2")" "${_error%.}"
+        return 0
+    fi
+    local _row="$(printf '%s\n' "$_checked" | /usr/bin/cut -f1-5)"
     # The row holds the path as text on one line. A path that does not come back as it went in
     # (a tab or a line break in it) would be looked up later as another path.
     if [ "${_row##*"$ui_tab"}" != "$2" ]; then
@@ -430,19 +447,55 @@ newimage_add_own() {
         newimage_own_rows "$1"
         printf '%s\n' "$_row"
     } | ui_store "$(ui_cache "$1" own.tsv)"
+    # Warnings are agent-vm's guesses from the commands' text: they are shown, and stop nothing.
+    local _warnings="$(printf '%s\n' "$_checked" | /usr/bin/cut -f7)"
+    local _warned=""
+    case "$_warnings" in
+        0|"") ;;
+        1)  _warned=" agent-vm warns about it: $(printf '%s\n' "$_checked" | /usr/bin/cut -f8)." ;;
+        *)  _warned=" agent-vm warns about it: $(printf '%s\n' "$_checked" | /usr/bin/cut -f8), and $((_warnings - 1)) more (agent-vm recipe check lists them)." ;;
+    esac
+    printf '%s is in the list now. Tick it to install it.%s\n' "$_name" "$_warned"
 }
 
-# newimage_recipes_blocker <uuid>  ->  why a recipe ticked cannot be used now, or nothing: its
-# file is gone, or is not a recipe any more (a file of the user's own can move at any time).
+# newimage_recipes_blocker <uuid>  ->  why the recipes ticked cannot be built with now, or
+# nothing: a file is gone (a file of the user's own can move at any time), or agent-vm, asked
+# about them together in the order a build would run them (`recipe check`), refuses one, or
+# refuses them together.
 newimage_recipes_blocker() {
+    local _uuid="$1"
     local _name _path
-    for _name in $(newimage_ticks "$1"); do
-        _path="$(newimage_recipe_field "$1" "$_name" 5)"
-        if [ -z "$(agentvm_recipe_row "$_path")" ]; then
-            printf 'The recipe file %s is not there any more, or is not a recipe now. Untick %s.\n' "$(agentvm_display_path "$_path")" "$_name"
+    set --
+    for _name in $(newimage_ticks "$_uuid"); do
+        _path="$(newimage_recipe_field "$_uuid" "$_name" 5)"
+        if [ ! -f "$_path" ]; then
+            printf 'The recipe file %s is not there any more. Untick %s.\n' "$(agentvm_display_path "$_path")" "$_name"
             return 0
         fi
+        set -- "$@" "$_path"
     done
+    [ "$#" -gt 0 ] || return 0
+    local _answer
+    _answer="$(agentvm_recipe_check "$@")"
+    local _status=$?
+    [ "$_status" -ne 0 ] || return 0
+    local _rows="$(printf '%s\n' "$_answer" | agentvm_recipe_check_rows)"
+    if [ "$_status" -gt 1 ] || [ -z "$_rows" ]; then
+        printf 'agent-vm could not check the recipes: %s\n' "$(ui_one_line "$(agentvm_last_error "$_status")")"
+        return 0
+    fi
+    # The one agent-vm refuses, under the name the window lists it by (its path finds it).
+    local _refused="$(printf '%s\n' "$_rows" | /usr/bin/awk -F'\t' '$6 != "-" { print $5 "\t" $6; exit }')"
+    if [ -n "$_refused" ]; then
+        _path="${_refused%%"$ui_tab"*}"
+        _name="$(newimage_recipe_list "$_uuid" | NEW_RECIPE_PATH="$_path" /usr/bin/awk -F'\t' '$5 == ENVIRON["NEW_RECIPE_PATH"] { print $1; exit }')"
+        _refused="${_refused#*"$ui_tab"}"
+        printf 'agent-vm does not accept the recipe file %s now: %s. Untick %s.\n' "$(agentvm_display_path "$_path")" "${_refused%.}" "${_name:-it}"
+        return 0
+    fi
+    local _together="$(printf '%s\n' "$_answer" | agentvm_recipe_check_error)"
+    _together="${_together:-it gave no reason}"
+    printf 'agent-vm does not accept these recipes together: %s.\n' "${_together%.}"
 }
 
 # newimage_recipe_text <description>  ->  agent-vm's description of a recipe without its closing

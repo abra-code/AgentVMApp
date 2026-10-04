@@ -58,6 +58,8 @@
 #   (box-execlog-<name>.json in the state directory, else the fixture box-execlog.json), and
 #   job start [--after <id>] --json -- <command...>, job list --json, job cancel <id> --json and
 #   job forget <id> --json (see jobs.json above), and job log <id> --json.
+#   recipe check <path>... --json (see recipe_check below; recipe-check.json and
+#   recipe-check-status in the state directory replace its answer and status).
 # Anything else fails with status 64, so a test that reaches an unimplemented command finds out.
 
 state="${FAKE_AGENTVM_DIR:?fake_agent_vm: FAKE_AGENTVM_DIR is not set}"
@@ -127,6 +129,73 @@ jobs() {
     /bin/rm -f "$state/job-logs.json"
 }
 
+# recipe_name <path>  ->  agent-vm's name for a recipe file: its folder's name when the file is
+# recipe.json, else the file's name without its extension; anything but letters, digits, ".",
+# "_" and "-" becomes "-", at most 40 characters, and "recipe" when only dots and dashes are left
+# (ImageRecipe.name(for:) in agent-vm).
+recipe_name() {
+    raw="${1##*/}"
+    if [ "$raw" = "recipe.json" ]; then
+        raw="${1%/*}"
+        raw="${raw##*/}"
+    else
+        case "$raw" in
+            ?*.*) raw="${raw%.*}" ;;
+        esac
+    fi
+    raw="$(printf '%s' "$raw" | LC_ALL=C /usr/bin/tr -c 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789._-' '-' | /usr/bin/cut -c1-40)"
+    case "$raw" in
+        *[!.-]*) printf '%s\n' "$raw" ;;
+        *)       printf 'recipe\n' ;;
+    esac
+}
+
+# recipe_check recipe check <path>... --json  ->  what `agent-vm recipe check` answers, and its
+# status: 1 when a recipe is refused. recipe-check.json in the state directory is the whole
+# answer when present (its status is then recipe-check-status, else 0). Otherwise every file is
+# read: one that is not there, is not JSON, is not an object or has no "version": 1 is refused in
+# agent-vm's words, and any other loads, with no warnings and no notes.
+recipe_check() {
+    if [ -f "$state/recipe-check.json" ]; then
+        /bin/cat "$state/recipe-check.json"
+        if [ -f "$state/recipe-check-status" ]; then
+            exit "$(/bin/cat "$state/recipe-check-status")"
+        fi
+        exit 0
+    fi
+    shift 2
+    refused=0
+    : > "$state/recipe-check.parts"
+    while [ "$#" -gt 1 ]; do
+        if [ ! -f "$1" ]; then
+            /usr/bin/jq -n -c --arg path "$1" '{path: $path, error: "cannot read it: there is no such file", notes: [], warnings: []}' >> "$state/recipe-check.parts"
+            refused=1
+            shift
+            continue
+        fi
+        /usr/bin/jq -c --arg path "$1" --arg name "$(recipe_name "$1")" '
+            if type != "object" then {path: $path, error: "the top level must be a JSON object", notes: [], warnings: []}
+            elif .version != 1 then {path: $path, error: "version must be 1", notes: [], warnings: []}
+            else {path: $path, name: $name, description: .description,
+                  inputs: [(.inputs // {}) | to_entries[] | {name: .key, description: .value.description} | with_entries(select(.value != null))],
+                  parameters: [(.parameters // {}) | to_entries[] | {name: .key, description: .value.description, default: .value.default} | with_entries(select(.value != null))],
+                  steps: (.steps // [] | length), updateSteps: (.update // [] | length), checks: (.checks // [] | length),
+                  notes: [], warnings: []} | with_entries(select(.value != null))
+            end' "$1" > "$state/recipe-check.part" 2>/dev/null
+        parsed=$?
+        if [ "$parsed" -ne 0 ]; then
+            /usr/bin/jq -n -c --arg path "$1" '{path: $path, error: "it is not valid JSON: the data is not in the correct format", notes: [], warnings: []}' > "$state/recipe-check.part"
+        fi
+        refused_here="$(/usr/bin/jq -r 'has("error")' "$state/recipe-check.part")"
+        [ "$refused_here" = "true" ] && refused=1
+        /bin/cat "$state/recipe-check.part" >> "$state/recipe-check.parts"
+        shift
+    done
+    /usr/bin/jq -s '{recipes: .}' "$state/recipe-check.parts"
+    /bin/rm -f "$state/recipe-check.part" "$state/recipe-check.parts"
+    exit "$refused"
+}
+
 case "$*" in
     "--version")
         if [ -f "$state/version" ]; then
@@ -193,6 +262,8 @@ case "$*" in
         fi ;;
     "box packs --json")
         answer packs ;;
+    "recipe check "*" --json")
+        recipe_check "$@" ;;
     "box create "*)
         box="$3"
         shift 3

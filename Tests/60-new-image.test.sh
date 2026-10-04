@@ -732,8 +732,9 @@ in_window "$UUID"
 chains_reset
 omc_run AgentVM.newimage.build
 check_status "the handler exits cleanly" 0
-check "status and the restore files are read first, then the build is started as a job" "status --json|image fetch-ipsw|job start" \
-    "$(fake_log | /usr/bin/sed -n '1,3p' | /usr/bin/cut -d' ' -f1-2 | /usr/bin/paste -sd '|' -)"
+# The recipes are checked twice: for the Check step as it is painted again, and for the decision.
+check "status and the restore files are read first, the recipes are checked, then the build is started as a job" "status --json|image fetch-ipsw|recipe check|recipe check|job start" \
+    "$(fake_log | /usr/bin/sed -n '1,5p' | /usr/bin/cut -d' ' -f1-2 | /usr/bin/paste -sd '|' -)"
 check "one job"                      "1" "$(started)"
 check "its command is image create with the arguments the window listed" "image|create|$EXPECTED" "$(job_args | /usr/bin/paste -sd '|' -)"
 check "the command line shown is the one run" "$(ui_value "$NEW_COMMAND_ID")" "agent-vm $(job_args | lib agentvm_args_text)"
@@ -821,17 +822,42 @@ done
 printf 'not json\n' > "$OWN/broken.json"
 printf '{ "version": 1, "description": "no steps" }\n' > "$OWN/nosteps.json"
 printf '[ 1, 2 ]\n' > "$OWN/list.json"
-check "a recipe.json is named by its folder" "team-tools" "$(lib agentvm_recipe_name "$OWN/team-tools/recipe.json")"
-check "another file by its name without the extension, with what cannot be in a name as a dash" "Extra-Things" "$(lib agentvm_recipe_name "$OWN/Extra Things.json")"
-check "a file with no extension by its name" "tools" "$(lib agentvm_recipe_name "/x/tools")"
-check "nothing but dots and dashes left: recipe" "recipe" "$(lib agentvm_recipe_name "$OWN/---/recipe.json")"
-check "at most 40 characters"        "40" "$(lib agentvm_recipe_name "/x/a123456789b123456789c123456789d123456789e123456789.json" | /usr/bin/awk '{ print length($0) }')"
-check "its row: name, description, one input file, one parameter, its path" \
-    "team-tools${TAB}The linters of the team (needs Node: put Recipes/node before it)${TAB}1${TAB}1${TAB}$OWN/team-tools/recipe.json" \
-    "$(lib agentvm_recipe_row "$OWN/team-tools/recipe.json")"
-check "a recipe without a description" "Extra-Things${TAB}-${TAB}0${TAB}0${TAB}$OWN/Extra Things.json" "$(lib agentvm_recipe_row "$OWN/Extra Things.json")"
-check "what is not a recipe has no row: not JSON, no steps, not an object, not there" "|||" \
-    "$(lib agentvm_recipe_row "$OWN/broken.json")|$(lib agentvm_recipe_row "$OWN/nosteps.json")|$(lib agentvm_recipe_row "$OWN/list.json")|$(lib agentvm_recipe_row "$OWN/none.json")"
+# checked <path>...  ->  the rows of agent-vm's check of those files.
+checked() {
+    with_fake agentvm_recipe_check "$@" | lib agentvm_recipe_check_rows
+}
+fake_reset
+rows="$(checked "$OWN/team-tools/recipe.json" "$OWN/Extra Things.json")"
+check "agent-vm is asked once about the files, in their order" "recipe check $OWN/team-tools/recipe.json $OWN/Extra Things.json --json" "$(fake_log)"
+check "a row: agent-vm's name, description, one input file, one parameter, its path, no mistake, no warnings" \
+    "team-tools${TAB}The linters of the team (needs Node: put Recipes/node before it)${TAB}1${TAB}1${TAB}$OWN/team-tools/recipe.json${TAB}-${TAB}0${TAB}-" \
+    "$(printf '%s\n' "$rows" | /usr/bin/sed -n '1p')"
+check "a recipe without a description" "Extra-Things${TAB}-${TAB}0${TAB}0${TAB}$OWN/Extra Things.json${TAB}-${TAB}0${TAB}-" "$(printf '%s\n' "$rows" | /usr/bin/sed -n '2p')"
+check "eight fields in every row"    "8" "$(printf '%s\n' "$rows" | field_count)"
+with_fake agentvm_recipe_check "$OWN/team-tools/recipe.json" > /dev/null
+check "recipes agent-vm accepts: status 0" "0" "$?"
+rows="$(checked "$OWN/broken.json" "$OWN/list.json" "$OWN/none.json" "$OWN/third.json")"
+check "what agent-vm refuses has its reason, and no name" \
+    "-|it is not valid JSON: the data is not in the correct format;-|the top level must be a JSON object;-|cannot read it: there is no such file;third|-;" \
+    "$(printf '%s\n' "$rows" | /usr/bin/awk -F'\t' '{ printf "%s|%s;", $1, $6 }')"
+with_fake agentvm_recipe_check "$OWN/broken.json" > /dev/null
+check "  status 1, with the answer"  "1" "$?"
+# A real answer's warnings, and what a build refuses in recipes it accepts one by one.
+/usr/bin/jq -n --arg path "$OWN/team-tools/recipe.json" '{error: "the input license is declared by team-tools and by other",
+    recipes: [{path: $path, name: "team-tools", inputs: [{name: "license"}], parameters: [], steps: 1, updateSteps: 0, checks: 0, notes: [],
+        warnings: [{code: "sudo", place: "step 1", message: "it runs sudo,\twhich asks for a password"},
+                   {code: "no-checks", place: "the recipe", message: "it has no checks"}]}]}' > "$FAKE_AGENTVM_DIR/recipe-check.json"
+check "warnings: how many, and the first with its place, on one line" "2${TAB}step 1: it runs sudo, which asks for a password" \
+    "$(checked "$OWN/team-tools/recipe.json" | /usr/bin/cut -f7-8)"
+check "what a build refuses in the recipes together" "the input license is declared by team-tools and by other" \
+    "$(with_fake agentvm_recipe_check "$OWN/team-tools/recipe.json" | lib agentvm_recipe_check_error)"
+/bin/rm -f "$FAKE_AGENTVM_DIR/recipe-check.json"
+check "  none: nothing"              "" "$(with_fake agentvm_recipe_check "$OWN/team-tools/recipe.json" | lib agentvm_recipe_check_error)"
+printf 'no such command\n' > "$FAKE_AGENTVM_DIR/fail-recipe"
+printf '64\n' > "$FAKE_AGENTVM_DIR/fail-recipe-status"
+out="$(with_fake agentvm_recipe_check "$OWN/team-tools/recipe.json")"
+check "an agent-vm that cannot check: its status, and no answer" "64|" "$?|$out"
+/bin/rm -f "$FAKE_AGENTVM_DIR/fail-recipe" "$FAKE_AGENTVM_DIR/fail-recipe-status"
 
 section "step 2: a recipe of one's own joins the list"
 # add_own <path>  ->  Add a Recipe File..., with that file chosen in the dialog ("" is Cancel).
@@ -872,7 +898,7 @@ add_own "$OWN/node/recipe.json"
 check "another recipe of a name in the list" \
     "A recipe named node is in the list already. A recipe is named by its folder, or by its file when that is not recipe.json: rename one to add this recipe.|$SHIPPED team-tools|1" "$(note)|$(listed)"
 add_own "$OWN/broken.json"
-check "a file that is not a recipe"  "$OWN/broken.json is not a recipe: a recipe is a JSON file with steps (Docs/image-recipes.md in agent-vm).|$SHIPPED team-tools|1" "$(note)|$(listed)"
+check "a file agent-vm does not accept as a recipe: its reason" "agent-vm does not accept $OWN/broken.json as a recipe: it is not valid JSON: the data is not in the correct format.|$SHIPPED team-tools|1" "$(note)|$(listed)"
 add_own "$OWN/none.json"
 check "a file that is not there"     "$OWN/none.json is not a file on this Mac." "$(note)"
 add_own "relative/recipe.json"
@@ -926,7 +952,7 @@ check "the command"                  "agent-vm image create $(printf '%s\n' "$OW
 check "nothing stands in the way"    "|1" "$(note)|$(enabled "$NEW_BUILD_ID")"
 /bin/mv "$OWN/Extra Things.json" "$OWN/moved.json"
 omc_run AgentVM.newimage.activated
-check "a recipe file that is gone: Build is off, and says why" "The recipe file $OWN/Extra Things.json is not there any more, or is not a recipe now. Untick Extra-Things.|0" "$(note)|$(enabled "$NEW_BUILD_ID")"
+check "a recipe file that is gone: Build is off, and says why" "The recipe file $OWN/Extra Things.json is not there any more. Untick Extra-Things.|0" "$(note)|$(enabled "$NEW_BUILD_ID")"
 : > "$FAKE_AGENTVM_DIR/log"
 omc_run AgentVM.newimage.build
 check "  Build, clicked anyway, starts nothing" "0" "$(started)"
@@ -950,10 +976,95 @@ omc_control "$((R_TICK + 8))" "true"
 /bin/mv "$OWN/Extra Things.json" "$OWN/moved.json"
 next
 check "Continue with a ticked recipe whose file is gone: the step stays, and says why" \
-    "Step 2 of 5 - Tools|The recipe file $OWN/Extra Things.json is not there any more, or is not a recipe now. Untick Extra-Things." "$(ui_value "$NEW_HEADER_ID")|$(note)"
+    "Step 2 of 5 - Tools|The recipe file $OWN/Extra Things.json is not there any more. Untick Extra-Things." "$(ui_value "$NEW_HEADER_ID")|$(note)"
 /bin/mv "$OWN/moved.json" "$OWN/Extra Things.json"
 next
 check "it asks for nothing: step 4, named by the recipe, in lower case" "Step 4 of 5 - Name and size|dev-extra-things" "$(ui_value "$NEW_HEADER_ID")|$(ui_value "$NEW_NAME_ID")"
+omc_run AgentVM.newimage.close
+
+section "what agent-vm says about a recipe of one's own"
+# agentvm_says <jq filter>  ->  agent-vm's answer about team-tools from now on: the fake's own
+# answer, changed by that filter.
+agentvm_says() {
+    /bin/rm -f "$FAKE_AGENTVM_DIR/recipe-check.json"
+    "$FAKE_AGENTVM" recipe check "$OWN/team-tools/recipe.json" --json | /usr/bin/jq "$1" > "$OMCTEST_WORK/recipe-check.json"
+    /bin/mv "$OMCTEST_WORK/recipe-check.json" "$FAKE_AGENTVM_DIR/recipe-check.json"
+}
+fake_reset
+store '.'
+open_new dev
+ticked
+printf 'the recipe command is not there\n' > "$FAKE_AGENTVM_DIR/fail-recipe"
+printf '64\n' > "$FAKE_AGENTVM_DIR/fail-recipe-status"
+add_own "$OWN/team-tools/recipe.json"
+check "agent-vm cannot check: the file is not added, and the note has agent-vm's words" \
+    "agent-vm could not check $OWN/team-tools/recipe.json: the recipe command is not there|$SHIPPED|1" "$(note)|$(listed)"
+/bin/rm -f "$FAKE_AGENTVM_DIR/fail-recipe-status"
+# Status 1 is also how agent-vm ends on any error of its own: then there is no answer, only words.
+add_own "$OWN/team-tools/recipe.json"
+check "agent-vm fails with status 1 and no answer: the note still has agent-vm's words" \
+    "agent-vm could not check $OWN/team-tools/recipe.json: the recipe command is not there|$SHIPPED|1" "$(note)|$(listed)"
+/bin/rm -f "$FAKE_AGENTVM_DIR/fail-recipe"
+agentvm_says '.recipes[0] |= ({path, error: "it is not valid JSON: The data is not in the correct format.", notes: [], warnings: []})'
+printf '1\n' > "$FAKE_AGENTVM_DIR/recipe-check-status"
+add_own "$OWN/team-tools/recipe.json"
+check "a reason that ends in a full stop, as the system's do: one full stop" \
+    "agent-vm does not accept $OWN/team-tools/recipe.json as a recipe: it is not valid JSON: The data is not in the correct format.|$SHIPPED|1" "$(note)|$(listed)"
+agentvm_says '.error = "none of the recipes has an input license"'
+add_own "$OWN/team-tools/recipe.json"
+check "status 1 with no mistake in the file itself: not added, with what agent-vm refuses" \
+    "agent-vm does not accept $OWN/team-tools/recipe.json as a recipe: none of the recipes has an input license.|$SHIPPED|1" "$(note)|$(listed)"
+agentvm_says '.'
+add_own "$OWN/team-tools/recipe.json"
+check "  and with no reason at all: not added either" \
+    "agent-vm does not accept $OWN/team-tools/recipe.json as a recipe: it gave no reason.|$SHIPPED|1" "$(note)|$(listed)"
+/bin/rm -f "$FAKE_AGENTVM_DIR/recipe-check.json" "$FAKE_AGENTVM_DIR/recipe-check-status"
+agentvm_says '.recipes[0].warnings = [{code: "sudo", place: "step 1", message: "it runs sudo, which asks for a password"}]'
+: > "$FAKE_AGENTVM_DIR/log"
+add_own "$OWN/team-tools/recipe.json"
+check "a recipe with a warning is added, and the note has the warning" \
+    "team-tools is in the list now. Tick it to install it. agent-vm warns about it: step 1: it runs sudo, which asks for a password.|$SHIPPED team-tools|1" "$(note)|$(listed)"
+check "  agent-vm was asked once, about that file" "recipe check $OWN/team-tools/recipe.json --json" "$(fake_log | /usr/bin/grep '^recipe ')"
+omc_run AgentVM.newimage.close
+open_new dev
+ticked
+agentvm_says '.recipes[0].warnings = [{code: "sudo", place: "step 1", message: "it runs sudo"}, {code: "no-checks", place: "the recipe", message: "it has no checks"}, {code: "unused-input", place: "input license", message: "no step uses it"}]'
+add_own "$OWN/team-tools/recipe.json"
+check "several warnings: the first, and how many more" \
+    "team-tools is in the list now. Tick it to install it. agent-vm warns about it: step 1: it runs sudo, and 2 more (agent-vm recipe check lists them)." "$(note)"
+omc_control "$((R_TICK + 8))" "true"
+next
+check "  warnings do not stop Continue" "Step 3 of 5 - Options" "$(ui_value "$NEW_HEADER_ID")"
+back
+agentvm_says '.recipes[0] |= ({path, error: "step 1 has unknown key \"timeout\"", notes: [], warnings: []})'
+printf '1\n' > "$FAKE_AGENTVM_DIR/recipe-check-status"
+next
+check "a ticked recipe agent-vm no longer accepts: the step stays, with its reason" \
+    "Step 2 of 5 - Tools|agent-vm does not accept the recipe file $OWN/team-tools/recipe.json now: step 1 has unknown key \"timeout\". Untick team-tools." "$(ui_value "$NEW_HEADER_ID")|$(note)"
+agentvm_says '.recipes[0] |= ({path, error: "cannot read it: The file could not be opened.", notes: [], warnings: []})'
+next
+check "  a reason that ends in a full stop: one full stop" \
+    "agent-vm does not accept the recipe file $OWN/team-tools/recipe.json now: cannot read it: The file could not be opened. Untick team-tools." "$(note)"
+printf 'the store is locked\n' > "$FAKE_AGENTVM_DIR/fail-recipe"
+next
+check "  agent-vm fails with status 1 and no answer: its words" "agent-vm could not check the recipes: the store is locked" "$(note)"
+/bin/rm -f "$FAKE_AGENTVM_DIR/fail-recipe"
+agentvm_says '.error = "the name license is an input in one recipe and a parameter in another"'
+next
+check "recipes agent-vm accepts one by one and not together" \
+    "Step 2 of 5 - Tools|agent-vm does not accept these recipes together: the name license is an input in one recipe and a parameter in another." "$(ui_value "$NEW_HEADER_ID")|$(note)"
+/bin/rm -f "$FAKE_AGENTVM_DIR/recipe-check.json" "$FAKE_AGENTVM_DIR/recipe-check-status"
+printf 'the recipe command is not there\n' > "$FAKE_AGENTVM_DIR/fail-recipe"
+printf '64\n' > "$FAKE_AGENTVM_DIR/fail-recipe-status"
+next
+check "an agent-vm that cannot check them" "Step 2 of 5 - Tools|agent-vm could not check the recipes: the recipe command is not there" "$(ui_value "$NEW_HEADER_ID")|$(note)"
+/bin/rm -f "$FAKE_AGENTVM_DIR/fail-recipe" "$FAKE_AGENTVM_DIR/fail-recipe-status"
+: > "$FAKE_AGENTVM_DIR/log"
+omc_control "$((R_TICK + 1))" "true"
+omc_run AgentVM.newimage.tick
+next
+check "Continue asks agent-vm once, about every ticked recipe in the order of the build" \
+    "recipe check $RECIPES/homebrew/recipe.json $OWN/team-tools/recipe.json --json" "$(fake_log | /usr/bin/grep '^recipe ')"
 omc_run AgentVM.newimage.close
 
 section "one's own recipes: paths and names that are easy to take for another"

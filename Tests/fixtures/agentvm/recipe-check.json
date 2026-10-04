@@ -1,0 +1,75 @@
+{
+  "recipes": [
+    {
+      "checks": 1,
+      "description": "Xcode from a .xip you downloaded (next: Recipes/xcode-platforms for simulator runtimes)",
+      "digest": "d30ac2a10d6a5c745af08ed9c818ab9509cc3f858ddc55faff8101d69947b2c6",
+      "inputs": [
+        {
+          "description": "an Xcode .xip from https://developer.apple.com/download/all/ (any Apple ID; Apple does not offer it without one)",
+          "name": "xcode"
+        }
+      ],
+      "name": "xcode",
+      "notes": [
+        {
+          "code": "no-update",
+          "message": "it has no update steps, so image update will not bring what it installs up to date",
+          "place": "the recipe"
+        }
+      ],
+      "parameters": [],
+      "path": "recipes/xcode/recipe.json",
+      "steps": 1,
+      "updateSteps": 0,
+      "warnings": [
+        {
+          "code": "unused-input",
+          "message": "no step uses AGENT_VM_INPUT_XCODE, yet every build must give the file",
+          "place": "input xcode"
+        }
+      ]
+    },
+    {
+      "checks": 1,
+      "description": "Simulator runtimes and Xcode components (needs Xcode: build from an image with Recipes/xcode)",
+      "digest": "4dc06fc1c80fe4ba737f7536e7696a61f3309dd0897c3ff5818661248b99786f",
+      "inputs": [],
+      "name": "xcode-platforms",
+      "notes": [
+        {
+          "code": "no-update",
+          "message": "it has no update steps, so image update will not bring what it installs up to date",
+          "place": "the recipe"
+        }
+      ],
+      "parameters": [
+        {
+          "default": "MetalToolchain",
+          "description": "Xcode components, separated by spaces; empty for none",
+          "name": "components"
+        },
+        {
+          "default": "iOS",
+          "description": "simulator runtimes, separated by spaces: iOS, watchOS, tvOS or visionOS; about 8 GB each; empty for none",
+          "name": "platforms"
+        }
+      ],
+      "path": "recipes/xcode-platforms/recipe.json",
+      "steps": 1,
+      "updateSteps": 0,
+      "warnings": [
+        {
+          "code": "unused-parameter",
+          "message": "no step or check uses AGENT_VM_PARAM_COMPONENTS",
+          "place": "parameter components"
+        },
+        {
+          "code": "unused-parameter",
+          "message": "no step or check uses AGENT_VM_PARAM_PLATFORMS",
+          "place": "parameter platforms"
+        }
+      ]
+    }
+  ]
+}

@@ -994,36 +994,41 @@ agentvm_recipe_rows() {
     return 0
 }
 
-# agentvm_recipe_name <path of a recipe file>  ->  what agent-vm calls the recipe: its folder's
-# name when the file is recipe.json, else the file's name without its extension; only letters,
-# digits, ".", "_" and "-" are kept (anything else becomes "-"), at most 40 characters, and
-# "recipe" when nothing but dots and dashes is left. agent-vm's own rule, for display.
-agentvm_recipe_name() {
-    local _raw="${1##*/}"
-    if [ "$_raw" = "recipe.json" ]; then
-        _raw="${1%/*}"
-        _raw="${_raw##*/}"
-    else
-        case "$_raw" in
-            ?*.*) _raw="${_raw%.*}" ;;
-        esac
+# agentvm_recipe_check <full path of a recipe file>...  ->  `agent-vm recipe check --json` of
+# those files, in the order a build would run them: agent-vm reads each as `image create` does,
+# so what it accepts here a build accepts, and nothing is built. Its status is 1 when it refuses
+# one, with the answer still on stdout; with any other status but 0 there is no answer, and
+# agentvm_last_error has why. Status 1 is also how agent-vm ends on an error of its own, with no
+# answer: what it wrote to stderr is kept then, and a caller that finds no rows reads it.
+# The paths are full ones, so none can be read as an option.
+agentvm_recipe_check() {
+    /bin/rm -f "$agentvm_err_file"
+    agentvm_run recipe check "$@" --json 2>"$agentvm_err_file"
+    local _status=$?
+    if [ "$_status" -eq 0 ] || { [ "$_status" -eq 1 ] && [ ! -s "$agentvm_err_file" ]; }; then
+        /bin/rm -f "$agentvm_err_file"
     fi
-    _raw="$(printf '%s' "$_raw" | LC_ALL=C /usr/bin/tr -c 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789._-' '-' | /usr/bin/cut -c1-40)"
-    case "$_raw" in
-        *[!.-]*) printf '%s\n' "$_raw" ;;
-        *)       printf 'recipe\n' ;;
-    esac
+    return "$_status"
 }
 
-# agentvm_recipe_row <path of a recipe file>  ->  its row, as agentvm_recipe_rows gives one (name,
-# description, input files, parameters, path), for a recipe file anywhere on this Mac, under
-# agent-vm's name for it. Nothing when the file is not there, is not JSON, or is not an object
-# with steps: agent-vm reads the recipe itself, and says what is wrong with one it refuses.
-agentvm_recipe_row() {
-    [ -f "$1" ] || return 0
-    /usr/bin/jq -r --arg name "$(agentvm_recipe_name "$1")" --arg path "$1" "$agentvm_jq_defs"'
-        select(type == "object" and (.steps | type) == "array")
-        | [$name, .description, (.inputs // {} | length), (.parameters // {} | length), $path] | row' "$1" 2>/dev/null
+# agentvm_recipe_check_rows  <  recipe check JSON  ->  one row per recipe, in the order given:
+#    1 name (agent-vm's name for it; "-" for one it refuses)   2 description   3 how many input
+#    files it asks for   4 how many parameters it has   5 the path, as it was given
+#    6 why a build would refuse it ("-" when it would not)   7 how many warnings
+#    8 the first warning, as "place: message"
+# The first five are a row as agentvm_recipe_rows gives one.
+agentvm_recipe_check_rows() {
+    /usr/bin/jq -r "$agentvm_jq_defs"'
+        .recipes[] | (.warnings // []) as $warnings
+        | [.name, .description, (.inputs // [] | length), (.parameters // [] | length), .path, .error,
+           ($warnings | length), ($warnings[0] | if . == null then null else "\(.place): \(.message)" end)]
+        | row' 2>/dev/null
+}
+
+# agentvm_recipe_check_error  <  recipe check JSON  ->  why a build would refuse these recipes
+# together, though it accepts each, or nothing.
+agentvm_recipe_check_error() {
+    /usr/bin/jq -r '.error | strings | gsub("[\t\n\r]"; " ")' 2>/dev/null
 }
 
 # agentvm_recipe_option_rows <path of a recipe.json>  ->  one row per thing the recipe asks for,
