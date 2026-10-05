@@ -76,17 +76,15 @@ section "the fixture: images that need a guest update or Full Disk Access"
 open_with '.'
 check "the Status face shows them" "1" "$([ "$(ui_visible "$MAIN_STATUS_ID")" = "1" ] && echo 1 || echo 0)"
 check "a guest update: marked" "$MARK" "$(image_mark dev)"
-check "Full Disk Access: marked" "$MARK" "$(image_mark dev-xcode)"
+check "no Full Disk Access is not maintenance: no mark" "$TAB" "$(image_mark dev-xcode)"
 check "nothing to do: no mark" "$TAB" "$(image_mark dev-acp)"
 check "a failed image is not maintenance" "$TAB" "$(image_mark latest-test)"
 check "no box needs anything" "$TAB$TAB$TAB" "$(box_mark s3)$(box_mark try1)$(box_mark cadabra-spike)"
 check "the guest update, for this agent-vm" \
     "Needs maintenance|Needs a guest update for agent-vm $VERSION." "$(image_lines dev)"
-check "Full Disk Access, and what is lost without it" \
-    "Needs maintenance|Needs Full Disk Access, or programs in its boxes cannot open Desktop, Documents or Downloads. Set Up... above is the guide." \
-    "$(image_lines dev-xcode)"
-check "both, the guest update first" \
-    "Needs maintenance|Needs a guest update for agent-vm $VERSION.|Needs Full Disk Access, or programs in its boxes cannot open Desktop, Documents or Downloads. Set Up... above is the guide." \
+check "  and no text" "" "$(image_lines dev-xcode)"
+check "a guest update and no Full Disk Access: only the guest update" \
+    "Needs maintenance|Needs a guest update for agent-vm $VERSION." \
     "$(image_lines dev-node)"
 check "nothing: no text at all" "" "$(image_lines dev-acp)"
 
@@ -99,8 +97,8 @@ section "an image behind the newest macOS"
 open_with "$QUIET"' | (.images[] | select(.name == "dev-node")) |= (.needs = [{kind: "full-disk-access", reason: "not-granted"}]
     | .macOSUpdate = {version: "27.0.1", build: "26A434", checkedAt: "2026-09-29T09:00:00Z"})'
 check "marked" "$MARK" "$(image_mark dev-node)"
-check "the newer macOS comes after what the image needs" \
-    "Needs maintenance|Needs Full Disk Access, or programs in its boxes cannot open Desktop, Documents or Downloads. Set Up... above is the guide.|macOS 27.0.1 is available. Update... installs it, in about 15 minutes." \
+check "the newer macOS, and nothing about Full Disk Access" \
+    "Needs maintenance|macOS 27.0.1 is available. Update... installs it, in about 15 minutes." \
     "$(image_lines dev-node)"
 
 section "nothing needs doing"

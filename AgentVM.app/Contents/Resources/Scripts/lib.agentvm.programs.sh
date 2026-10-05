@@ -125,7 +125,7 @@ prog_notices_text() {
     local _needs="$(main_row "$1" images "$_image" | /usr/bin/cut -f8)"
     case ",$_needs," in
         *,full-disk-access,*)
-            printf 'Image %s needs Full Disk Access: until it has it, programs in its boxes are asked before they open Desktop, Documents or Downloads.\n' "$_image" ;;
+            printf 'Image %s has no Full Disk Access: until it has, programs in its boxes are asked before they open Desktop, Documents or Downloads.\n' "$_image" ;;
     esac
     return 0
 }

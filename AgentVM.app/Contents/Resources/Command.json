@@ -21,7 +21,7 @@
       "EXECUTION_MODE": "exe_script_file",
       "ACTIVATION_MODE": "act_always",
       "CHOOSE_FOLDER_DIALOG": {
-        "MESSAGE": "Choose the project folder to share with the box. avm shares it at the same path, snapshots it, and afterwards reports what changed.",
+        "MESSAGE": "Choose the project folder to share with the box",
         "BUTTON_PROMPT": "Run avm Here",
         "DIALOG_IDENTIFIER": "com.abracode.AgentVM.projectFolder"
       }
@@ -191,7 +191,7 @@
       "EXECUTION_MODE": "exe_script_file",
       "ACTIVATION_MODE": "act_always",
       "CHOOSE_FILE_DIALOG": {
-        "MESSAGE": "Choose the file the recipe asks for. It is sent into the image while it is built, and stays where it is on this Mac.",
+        "MESSAGE": "Choose the file the recipe asks for",
         "BUTTON_PROMPT": "Choose",
         "DIALOG_IDENTIFIER": "com.abracode.AgentVM.recipeInput"
       }
@@ -202,7 +202,7 @@
       "EXECUTION_MODE": "exe_script_file",
       "ACTIVATION_MODE": "act_always",
       "CHOOSE_FILE_DIALOG": {
-        "MESSAGE": "Choose a recipe file of your own: a recipe.json in its folder, or any JSON recipe. Its steps run inside the image while it is built.",
+        "MESSAGE": "Choose a recipe file (JSON)",
         "BUTTON_PROMPT": "Add",
         "DIALOG_IDENTIFIER": "com.abracode.AgentVM.recipeFile"
       }

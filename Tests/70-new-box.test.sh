@@ -370,7 +370,7 @@ check "  Continue: the step stays, and says why" "Step 1 of 4 - Image|Another co
     "$(ui_value "$NBOX_HEADER_ID")|$(note)|$(kept image)"
 pick dev-node
 check "an image without Full Disk Access: what that means, and Set Up... is on" \
-    "Image dev-node has no Full Disk Access yet. In a box made from it now, a program that opens Desktop, Documents or Downloads waits on a question nobody sees. Set Up... grants it first, once, on the image.|1" \
+    "Image dev-node has no Full Disk Access. A box made from it works: only a program that opens the box account's Desktop, Documents or Downloads waits, on a question macOS asks on the box's screen. Set Up... grants it, once, on the image.|1" \
     "$(ui_value "$NBOX_IMAGE_NOTE_ID")|$(enabled "$NBOX_ACCESS_ID")"
 chains_reset
 : > "$FAKE_AGENTVM_DIR/log"
@@ -633,7 +633,7 @@ next
 check "what is made"                 "Box work, a copy of image dev-node (macOS 27.0).|4 CPUs, 8 GB of memory.|Network: off. Every connection is refused.|Its rules (pack:npm) are kept for when the mode is allowlist.|It is not started." \
     "$(ui_value "$NBOX_SUMMARY_ID" | /usr/bin/paste -sd '|' -)"
 check "an image without Full Disk Access: the advice says what that means for the box" \
-    "Image dev-node has no Full Disk Access, so the box has none either: a program in it that opens Desktop, Documents or Downloads waits on a question nobody sees. Set Up... on the first step grants it; a box made before that gets it when it is recreated." \
+    "Image dev-node has no Full Disk Access, so the box has none either. It works without it: only a program that opens the box account's Desktop, Documents or Downloads waits, on a question macOS asks on the box's screen. Set Up... on the first step grants it; a box made before that gets it when it is recreated." \
     "$(ui_value "$NBOX_ADVICE_ID" | /usr/bin/sed -n '1p')"
 check "the command: sizes that are the image's are left out, the mode is named, no start" "agent-vm box create work --image dev-node --net off --allow pack:npm" "$(ui_value "$NBOX_COMMAND_ID")"
 check "a box that is not started needs no virtual machine slot" "|1" "$(note)|$(enabled "$NBOX_CREATE_ID")"

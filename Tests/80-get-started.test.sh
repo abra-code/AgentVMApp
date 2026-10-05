@@ -150,7 +150,7 @@ check "agent-vm is asked for the restore files too, after the lists" "--version|
 check "agent-vm and the Mac are done; a restore file is the next thing, and the only button but Check Again" "d- d1 t1 t0 t0 t0" "$(steps)"
 check "what the Mac can share"       "supported; this Mac has 10 CPU cores and 24 GB of memory to share with boxes" "$(fact 2)"
 check "the restore file, the image and the box, each with what comes first" \
-    "none downloaded yet: about 27 GB, the first thing an image is built from|none ready yet: a macOS restore file comes first|granted once, by hand, on the screen of the first image|none yet. A box is a working copy of an image, made in seconds, and it is what runs: keep one for your own work, or let avm or Cadabra make throw-away ones" \
+    "none downloaded yet: about 27 GB, the first thing an image is built from|none ready yet: a macOS restore file comes first|optional: granted once, by hand, on the screen of an image. Boxes work without it|none yet. A box is a working copy of an image, made in seconds, and it is what runs: keep one for your own work, or let avm or Cadabra make throw-away ones" \
     "$(fact 3)|$(fact 4)|$(fact 5)|$(fact 6)"
 press 3 AgentVM.getmacos.open
 check "Get macOS... asks for the Get macOS window" "1|$APP_PID getmacos:window" "$(chain_asked AgentVM.getmacos)|$("$PB" agentvm_open_request_getmacos get)"
@@ -231,9 +231,9 @@ section "images, and no box"
 # With an image ready the window shows Status: the steps are checked from the library's rows.
 store status.json '.boxes = [] | .images |= map(.needs = [{kind: "full-disk-access", reason: "not-granted"}])'
 omc_run AgentVM.main.activated
-check "an image is done; no image has Full Disk Access, which wants attention; a box can be made" "d- d1 d1 d1 a1 t1" "$(lib_steps)"
+check "an image is done; no image has Full Disk Access, which is optional and stays a plain step; a box can be made" "d- d1 d1 d1 t1 t1" "$(lib_steps)"
 check "the images, the ones without the grant, and the box" \
-    "6 ready: dev, dev-acp, dev-agents, and 3 more|no image has it yet (dev, dev-acp, dev-agents, and 3 more): a program in a box that opens Desktop, Documents or Downloads would wait on a question nobody sees|none yet. A box is a working copy of an image, made in seconds, and it is what runs: keep one for your own work, or let avm or Cadabra make throw-away ones" \
+    "6 ready: dev, dev-acp, dev-agents, and 3 more|optional, and no image has it (dev, dev-acp, dev-agents, and 3 more). Boxes work without it: only a program that opens the box account's Desktop, Documents or Downloads waits, on a question macOS asks on the box's screen|none yet. A box is a working copy of an image, made in seconds, and it is what runs: keep one for your own work, or let avm or Cadabra make throw-away ones" \
     "$(lib_fact 4)|$(lib_fact 5)|$(lib_fact 6)"
 chains_reset
 press 5 AgentVM.main.getstarted.access

@@ -154,8 +154,8 @@ select_image latest-test
 check "a failed image cannot be set up" "0" "$(enabled "$MAIN_IMAGE_ACCESS_ID")"
 select_image dev-node
 check "a ready image can"            "1" "$(enabled "$MAIN_IMAGE_ACCESS_ID")"
-check "the pane's maintenance line names the button" \
-    "Needs Full Disk Access, or programs in its boxes cannot open Desktop, Documents or Downloads. Set Up... above is the guide." \
+check "having none is not maintenance: the pane's Full Disk Access row is what says it" \
+    "" \
     "$(ui_value "$MAIN_IMAGE_MAINTENANCE_ID" | /usr/bin/grep 'Full Disk Access')"
 omc_run AgentVM.main.image.access
 check "it asks for the image's guide" "1" "$(chain_asked AgentVM.access)"
@@ -587,7 +587,7 @@ chains_reset
 check "the update's end is said as any job's" "1" "$(ui_calls 'omc_present_toast Image dev-acp is up to date. 5')"
 check "and the window asks about the grant it took" "Image dev-acp lost Full Disk Access in its update" "$(ui_alert_title)"
 check "  saying what that means" \
-    "agent-vm-guest had the grant in this image before the update, and does not have it now: macOS ties the grant to the daemon it was made for. Until it is granted again, programs in boxes made from dev-acp from now on wait, when they open Desktop, Documents or Downloads, on a question nobody sees." \
+    "agent-vm-guest had the grant in this image before the update, and does not have it now: macOS ties the grant to the daemon it was made for. Until it is granted again, programs in boxes made from dev-acp from now on wait, when they open Desktop, Documents or Downloads, on a question macOS asks on the box's screen. The boxes work without it otherwise." \
     "$(ui_alert_message)"
 check "  Later does nothing, and Grant It Again... has its handler" "|AgentVM.main.image.access.offered" \
     "$(ui_alert_action Later)|$(ui_alert_action 'Grant It Again...')"

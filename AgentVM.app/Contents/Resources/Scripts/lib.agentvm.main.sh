@@ -454,7 +454,7 @@ main_offer_access() {
     agentvm_valid_name "$_name" || return 0
     ui_set access_offer "$1" "$_name"
     "$dialog" "$1" omc_window omc_present_alert "Image $_name lost Full Disk Access in its update" \
-        "agent-vm-guest had the grant in this image before the update, and does not have it now: macOS ties the grant to the daemon it was made for. Until it is granted again, programs in boxes made from $_name from now on wait, when they open Desktop, Documents or Downloads, on a question nobody sees." \
+        "agent-vm-guest had the grant in this image before the update, and does not have it now: macOS ties the grant to the daemon it was made for. Until it is granted again, programs in boxes made from $_name from now on wait, when they open Desktop, Documents or Downloads, on a question macOS asks on the box's screen. The boxes work without it otherwise." \
         "Later:cancel:" "Grant It Again...::AgentVM.main.image.access.offered"
 }
 
@@ -595,10 +595,10 @@ MAIN_LOCAL_NETWORK_TEXT="macOS asks whether AgentVM may find devices on local ne
 #    1 the step's number   2 its state (done; todo; running, while a job does it; failed;
 #      attention, when it is done in part)   3 the fact line   4 1 when its button is on
 # The steps: 1 agent-vm can be used; 2 this Mac can run boxes (doctor); 3 a macOS restore file;
-# 4 a ready image; 5 Full Disk Access in a ready image; 6 a box. From the caches, so the caller
-# reads first. A button is on only when what comes before its step is there: nothing can be
-# asked of an agent-vm that cannot be used, an image needs a restore file or another image, a
-# box needs an image.
+# 4 a ready image; 5 Full Disk Access in a ready image, which is optional and so never wants
+# attention; 6 a box. From the caches, so the caller reads first. A button is on only when what
+# comes before its step is there: nothing can be asked of an agent-vm that cannot be used, an
+# image needs a restore file or another image, a box needs an image.
 main_stage_rows() {
     local _uuid="$1"
     if [ "$(main_agentvm_line "$_uuid" 1)" != "0" ]; then
@@ -668,9 +668,9 @@ main_stage_rows() {
     _button=0
     [ -n "$_lacking" ] && _button="$_can"
     if [ -z "$_ready" ]; then
-        printf '5\ttodo\tgranted once, by hand, on the screen of the first image\t0\n'
+        printf '5\ttodo\toptional: granted once, by hand, on the screen of an image. Boxes work without it\t0\n'
     elif [ -z "$_granted" ]; then
-        printf '5\tattention\tno image has it yet (%s): a program in a box that opens Desktop, Documents or Downloads would wait on a question nobody sees\t%s\n' "$(main_some_names "$_lacking")" "$_button"
+        printf "5\ttodo\toptional, and no image has it (%s). Boxes work without it: only a program that opens the box account's Desktop, Documents or Downloads waits, on a question macOS asks on the box's screen\t%s\n" "$(main_some_names "$_lacking")" "$_button"
     elif [ -n "$_lacking" ]; then
         printf '5\tdone\t%s; not yet: %s\t%s\n' "$(main_some_names "$_granted")" "$(main_some_names "$_lacking")" "$_button"
     else
@@ -753,8 +753,9 @@ EOF
 #     it stops;
 #   - a running box whose supervisor is another agent-vm version: each version is installed in
 #     a folder of its own, so a box keeps the version it started with until it is stopped;
-#   - an image that needs a guest update (after an agent-vm update), or Full Disk Access, or
-#     for which a newer macOS is known (agent-vm learned it when it last asked Apple).
+#   - an image that needs a guest update (after an agent-vm update), or for which a newer macOS
+#     is known (agent-vm learned it when it last asked Apple). An image without Full Disk Access
+#     is not marked: its boxes work, and its pane and Get started say that it has none.
 # A failed image is not maintenance: its card is red and says Failed.
 main_maintenance() {
     local _version="$(main_agentvm_line "$1" 2)"
@@ -773,9 +774,7 @@ main_maintenance() {
             main_rows "$1" images | /usr/bin/awk -F'\t' -v current="$_version" '
                 $2 == "failed" { next }
                 (","$8",") ~ /,guest-update,/ {
-                    printf "%s\tNeeds a guest update for agent-vm %s.\n", $1, current }
-                (","$8",") ~ /,full-disk-access,/ {
-                    printf "%s\tNeeds Full Disk Access, or programs in its boxes cannot open Desktop, Documents or Downloads. Set Up... above is the guide.\n", $1 }'
+                    printf "%s\tNeeds a guest update for agent-vm %s.\n", $1, current }'
             main_rows "$1" updates | /usr/bin/awk -F'\t' '
                 $6 != "-" { printf "%s\tmacOS %s is available. Update... installs it, in about 15 minutes.\n", $1, $6 }' ;;
     esac

@@ -167,7 +167,7 @@ section "the Full Disk Access line"
 store '(.images[] | select(.name == "dev-acp")).needs = [{kind: "full-disk-access", reason: "not-granted"}]'
 omc_run AgentVM.programs.refresh
 check "the box's image needs it: said under the prompts" \
-    "Image dev-acp needs Full Disk Access: until it has it, programs in its boxes are asked before they open Desktop, Documents or Downloads." \
+    "Image dev-acp has no Full Disk Access: until it has, programs in its boxes are asked before they open Desktop, Documents or Downloads." \
     "$(ui_value "$PROG_NOTICES_ID" | /usr/bin/tail -1)"
 printf '[]\n' > "$FAKE_AGENTVM_DIR/box-execlog-s3.json"
 omc_run AgentVM.programs.refresh

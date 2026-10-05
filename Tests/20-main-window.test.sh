@@ -328,7 +328,7 @@ check "the detail pane replaces the placeholder" "0 1" "$(visible "$MAIN_IMAGE_N
 check "its name"               "dev-node" "$(ui_value "$MAIN_IMAGE_NAME_ID")"
 check "ready"                  "Ready" "$(ui_value "$MAIN_IMAGE_STATE_ID")"
 check "what it needs, in full" \
-    "Needs maintenance|Needs a guest update for agent-vm $VERSION.|Needs Full Disk Access, or programs in its boxes cannot open Desktop, Documents or Downloads. Set Up... above is the guide." \
+    "Needs maintenance|Needs a guest update for agent-vm $VERSION." \
     "$(ui_value "$MAIN_IMAGE_MAINTENANCE_ID" | /usr/bin/paste -sd '|' -)"
 check "macOS, with the build"  "27.0 (26A428)" "$(ui_value "$MAIN_IMAGE_MACOS_ID")"
 check "what it was built from" "dev" "$(ui_value "$MAIN_IMAGE_BASE_ID")"

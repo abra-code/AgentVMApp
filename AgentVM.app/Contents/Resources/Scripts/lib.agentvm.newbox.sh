@@ -274,7 +274,7 @@ newbox_selection_text() {
         return 0
     fi
     if newbox_needs_access "$1" "$2"; then
-        printf 'Image %s has no Full Disk Access yet. In a box made from it now, a program that opens Desktop, Documents or Downloads waits on a question nobody sees. Set Up... grants it first, once, on the image.\n' "$2"
+        printf "Image %s has no Full Disk Access. A box made from it works: only a program that opens the box account's Desktop, Documents or Downloads waits, on a question macOS asks on the box's screen. Set Up... grants it, once, on the image.\n" "$2"
         return 0
     fi
     local _row="$(newbox_image_row "$1" "$2")"
@@ -586,7 +586,7 @@ newbox_summary_text() {
 newbox_advice_text() {
     local _image="$(newbox_image "$1")"
     if newbox_needs_access "$1" "$_image"; then
-        printf 'Image %s has no Full Disk Access, so the box has none either: a program in it that opens Desktop, Documents or Downloads waits on a question nobody sees. Set Up... on the first step grants it; a box made before that gets it when it is recreated.\n' "$_image"
+        printf "Image %s has no Full Disk Access, so the box has none either. It works without it: only a program that opens the box account's Desktop, Documents or Downloads waits, on a question macOS asks on the box's screen. Set Up... on the first step grants it; a box made before that gets it when it is recreated.\n" "$_image"
     fi
     printf 'The box is kept until it is deleted. What is installed or written in it stays in the box, and its network can be changed later in its Network window.\n'
 }

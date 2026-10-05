@@ -148,7 +148,7 @@ info '.needs = [{kind: "guest-update", missing: ["terminal-pixels", "wallpaper"]
 poll 1
 select_image dev-acp
 check "what the update adds" \
-    "Needs maintenance|Needs a guest update for agent-vm $VERSION, which adds terminal-pixels, wallpaper.|Needs Full Disk Access, or programs in its boxes cannot open Desktop, Documents or Downloads. Set Up... above is the guide." \
+    "Needs maintenance|Needs a guest update for agent-vm $VERSION, which adds terminal-pixels, wallpaper." \
     "$(ui_value "$MAIN_IMAGE_MAINTENANCE_ID" | /usr/bin/paste -sd '|' -)"
 check "Full Disk Access not granted, and when it was checked" "not granted (checked Oct 2, 2026)" "$(ui_value "$MAIN_IMAGE_FDA_ID")"
 info '.fullDiskAccess.granted = true'
