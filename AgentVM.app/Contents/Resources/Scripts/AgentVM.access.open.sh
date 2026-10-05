@@ -6,11 +6,16 @@
 # reads the jobs again. agent-vm's refusal is shown in its words.
 
 . "$OMC_APP_BUNDLE_PATH/Contents/Resources/Scripts/lib.agentvm.access.sh"
+# For the one-click-at-a-time mark (wizard_enter).
+. "$OMC_APP_BUNDLE_PATH/Contents/Resources/Scripts/lib.agentvm.wizard.sh"
 
 window_uuid="$OMC_ACTIONUI_WINDOW_UUID"
 [ -n "$window_uuid" ] || exit 0
 image="$(access_image "$window_uuid")"
 [ -n "$image" ] || exit 0
+# One click at a time: a second Open the Image clicked while agent-vm is read would start a
+# second job, which agent-vm fails (the image is in use).
+wizard_enter "$window_uuid" || exit 0
 access_refresh "$window_uuid"
 # The window closed while agent-vm was read: nothing is started (access_refresh cleared the cache
 # folder the reading made again).

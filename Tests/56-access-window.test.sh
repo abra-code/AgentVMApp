@@ -217,6 +217,10 @@ open_access dev-node
 chains_reset
 alerts_reset
 shown_command="$(ui_value "$ACCESS_COMMAND_ID")"
+"$PB" "agentvm_busy_$UUID" set "click-$$"
+omc_run AgentVM.access.open
+check "Open the Image while another click is worked on: agent-vm is not run" "" "$(fake_log)"
+"$PB" "agentvm_busy_$UUID" set ""
 omc_run AgentVM.access.open
 check_status "exits cleanly" 0
 check "status is read first, then the setup is started as a job" \

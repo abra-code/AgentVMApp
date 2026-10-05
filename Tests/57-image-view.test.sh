@@ -43,6 +43,12 @@ job_end() {
         "$JOBS" > "$JOBS.new" && /bin/mv "$JOBS.new" "$JOBS"
 }
 
+# job_step <step> <message>  ->  the newest job at that step, as agent-vm would record it.
+job_step() {
+    /usr/bin/jq --arg step "$1" --arg message "$2" '(.[-1]).progress = {event: "progress", step: $step, message: $message}' \
+        "$JOBS" > "$JOBS.new" && /bin/mv "$JOBS.new" "$JOBS"
+}
+
 poll() {
     ( AGENTVM_APP_POLL_PASSES="$1"; export AGENTVM_APP_POLL_PASSES; omc_run AgentVM.main.poll )
 }
@@ -118,8 +124,21 @@ check_status "the handler exits cleanly" 0
 check "status is read, the job started, and status read again" \
     "status --json|job start --json -- image view dev-acp|status --json" "$(fake_log | /usr/bin/paste -sd '|' -)"
 check "the poll loop is begun anew" "1" "$(chain_asked AgentVM.main.poll)"
-check "the pane says where the image is, and for how long" "Open in its window, elapsed 12 s" "$(ui_value "$MAIN_IMAGE_STATE_ID")"
-check "the card says Open" "yes" "$(ui_rows "$MAIN_IMAGES_ID" | row_named dev-acp | /usr/bin/grep -q 'Open' && echo yes)"
+check "before agent-vm says a step, the image is starting" "Starting, elapsed 12 s|yes" \
+    "$(ui_value "$MAIN_IMAGE_STATE_ID")|$(ui_rows "$MAIN_IMAGES_ID" | row_named dev-acp | /usr/bin/grep -q "Starting" && echo yes)"
+job_step boot "Booting dev-acp"
+poll 1
+check "booting: still starting, with agent-vm's words" "Starting, elapsed 12 s: Booting dev-acp" "$(ui_value "$MAIN_IMAGE_STATE_ID")"
+job_step window "The window is open; close it when done"
+poll 1
+check "the window is there: the pane says so" "Open in its window, elapsed 12 s: The window is open; close it when done" "$(ui_value "$MAIN_IMAGE_STATE_ID")"
+check "  and the card says Open" "yes" "$(ui_rows "$MAIN_IMAGES_ID" | row_named dev-acp | /usr/bin/grep -q "Open" && echo yes)"
+job_step shutdown "Shutting down dev-acp"
+poll 1
+check "the window was closed: shutting down, on the pane and the card" "yes|yes" \
+    "$(ui_value "$MAIN_IMAGE_STATE_ID" | /usr/bin/grep -q "^Shutting down, elapsed" && echo yes)|$(ui_rows "$MAIN_IMAGES_ID" | row_named dev-acp | /usr/bin/grep -q "Shutting down" && echo yes)"
+job_step window "The window is open; close it when done"
+poll 1
 check "View, Update and Delete are off while the job holds the image" "0 0 0" "$(held)"
 select_image dev
 check "another image is as it was" "1 1 1" "$(held)"

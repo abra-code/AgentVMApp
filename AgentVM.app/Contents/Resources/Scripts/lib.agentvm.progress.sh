@@ -98,7 +98,7 @@ progress_title() {
         "image update"|"image update-guest")
                               printf 'Updating image %s\n' "$_name" ;;
         "image setup")        printf 'Setting up image %s\n' "$_name" ;;
-        "image view")         printf 'Image %s, open in its window\n' "$_name" ;;
+        "image view")         printf 'Viewing image %s\n' "$_name" ;;
         "image fetch-ipsw")   printf 'Downloading the macOS restore file\n' ;;
         *)                    printf 'agent-vm %s\n' "$_what" ;;
     esac

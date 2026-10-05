@@ -123,6 +123,12 @@ poll 1
 section "Start"
 chains_reset
 : > "$FAKE_AGENTVM_DIR/log"
+# A click while another click of the window is still worked on does nothing: agent-vm is not run.
+"$PB" "agentvm_busy_$UUID" set "click-$$"
+omc_run AgentVM.main.box.start
+check "Start while another click is worked on: agent-vm is not run" "" "$(fake_log)"
+check "  and the other click's mark stays" "click-$$" "$("$PB" "agentvm_busy_$UUID" get)"
+"$PB" "agentvm_busy_$UUID" set ""
 omc_run AgentVM.main.box.start
 check_status "the handler exits cleanly" 0
 check "status is read, the job started with no owner, and status read again" \
@@ -237,6 +243,10 @@ section "Stop: a box nobody uses"
 select_box try1
 clear_alerts
 : > "$FAKE_AGENTVM_DIR/log"
+"$PB" "agentvm_busy_$UUID" set "click-$$"
+omc_run AgentVM.main.box.stop
+check "Stop while another click is worked on: agent-vm is not run" "" "$(fake_log)"
+"$PB" "agentvm_busy_$UUID" set ""
 omc_run AgentVM.main.box.stop
 check "is stopped at once, as a job" "job start --json -- box stop try1" "$(started)"
 check "  with no question"       "" "$(ui_alert_title)"
@@ -257,6 +267,12 @@ clear_alerts
 : > "$FAKE_AGENTVM_DIR/log"
 omc_run AgentVM.main.box.stop
 check "asks first"               "Stop box s3?" "$(ui_alert_title)"
+"$PB" "agentvm_busy_$UUID" set "click-$$"
+: > "$FAKE_AGENTVM_DIR/log"
+omc_run AgentVM.main.box.stop.confirmed
+check "the confirmation while another click is worked on: agent-vm is not run" "" "$(fake_log)"
+"$PB" "agentvm_busy_$UUID" set ""
+"$PB" "agentvm_box_stop_$UUID" set "s3"
 check "  saying who started it and what runs in it" \
     "Cadabra (process 812) started this box and may be using it. 2 programs are running in it and will be ended." "$(ui_alert_message)"
 check "  Stop confirms"          "AgentVM.main.box.stop.confirmed" "$(ui_alert_action Stop)"

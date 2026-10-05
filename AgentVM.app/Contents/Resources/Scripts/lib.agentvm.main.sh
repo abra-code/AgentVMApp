@@ -252,10 +252,11 @@ main_job() {
         END { if (running != "") print running; else if (queued != "") print queued }'
 }
 
-# main_job_verb <what it does> <state>  ->  the job in a word or two, for a card and a pane:
-# "Starting", "Stopping", "Building", "Updating", "Building again", "Setting up", "Open in its
-# window", and for a job that waits for another, "Waiting to start" and the like. Other jobs are
-# named by their command.
+# main_job_verb <what it does> <state> [step]  ->  the job in a word or two, for a pane: "Starting",
+# "Stopping", "Building", "Updating", "Building again", "Setting up", and for a job that waits for
+# another, "Waiting to start" and the like. Other jobs are named by their command. An image being
+# viewed is named by the step of its job: "Open in its window" while the window is there,
+# "Starting" before it and "Shutting down" after it.
 main_job_verb() {
     if [ "$2" = "queued" ]; then
         case "$1" in
@@ -279,7 +280,12 @@ main_job_verb() {
                               echo "Updating" ;;
         "image rebuild")      echo "Building again" ;;
         "image setup")        echo "Setting up" ;;
-        "image view")         echo "Open in its window" ;;
+        "image view")
+            case "${3:-}" in
+                window)       echo "Open in its window" ;;
+                shutdown)     echo "Shutting down" ;;
+                *)            echo "Starting" ;;
+            esac ;;
         *)                    printf 'Busy: %s\n' "$1" ;;
     esac
 }
@@ -291,7 +297,7 @@ main_job_verb() {
 main_job_text() {
     local _state="$(printf '%s\n' "$1" | /usr/bin/cut -f2)"
     local _what="$(printf '%s\n' "$1" | /usr/bin/cut -f4)"
-    local _text="$(main_job_verb "$_what" "$_state")"
+    local _text="$(main_job_verb "$_what" "$_state" "$(printf '%s\n' "$1" | /usr/bin/cut -f9)")"
     if [ "$_state" = "queued" ]; then
         printf '%s\n' "$_text"
         return 0
@@ -855,7 +861,7 @@ main_image_card_rows() {
                 if (job[2] == "queued" && job[3] ~ /^image:/ && !(substr(job[3], 7) in held))
                     held[substr(job[3], 7)] = "Waiting"
                 if (job[2] == "running" && job[3] ~ /^image:/)
-                    held[substr(job[3], 7)] = (job[4] == "image create") ? "Building" : (job[4] ~ /^image update/) ? "Updating" : (job[4] == "image rebuild") ? "Building again" : (job[4] == "image setup") ? "Setting up" : (job[4] == "image view") ? "Open" : "Busy"
+                    held[substr(job[3], 7)] = (job[4] == "image create") ? "Building" : (job[4] ~ /^image update/) ? "Updating" : (job[4] == "image rebuild") ? "Building again" : (job[4] == "image setup") ? "Setting up" : (job[4] == "image view") ? ((job[9] == "window") ? "Open" : (job[9] == "shutdown") ? "Shutting down" : "Starting") : "Busy"
             }
             n = split(counts, pairs, " ")
             for (i = 1; i <= n; i++) {
