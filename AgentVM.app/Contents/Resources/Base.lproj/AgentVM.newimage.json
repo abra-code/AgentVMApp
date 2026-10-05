@@ -2052,17 +2052,37 @@
           ]
         },
         {
-          "type": "Text",
-          "id": 1091,
+          "type": "HStack",
           "properties": {
-            "text": "",
-            "foregroundStyle": "orange",
-            "textSelection": "enabled",
-            "frame": {
-              "maxWidth": "infinity",
-              "alignment": "leading"
+            "alignment": "center",
+            "spacing": 8
+          },
+          "children": [
+            {
+              "type": "Text",
+              "id": 1091,
+              "properties": {
+                "text": "",
+                "foregroundStyle": "orange",
+                "textSelection": "enabled",
+                "frame": {
+                  "maxWidth": "infinity",
+                  "alignment": "leading"
+                }
+              }
+            },
+            {
+              "type": "Button",
+              "id": 1096,
+              "properties": {
+                "title": "Delete...",
+                "hidden": true,
+                "controlSize": "small",
+                "actionID": "AgentVM.newimage.delete",
+                "help": "Delete duplicate image"
+              }
             }
-          }
+          ]
         },
         {
           "type": "HStack",

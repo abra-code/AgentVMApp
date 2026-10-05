@@ -26,7 +26,8 @@ base() {
 SYMBOL="$(base MAIN_STAGE_SYMBOL_BASE)"
 FACT="$(base MAIN_STAGE_FACT_BASE)"
 BUTTON="$(base MAIN_STAGE_BUTTON_BASE)"
-[ -n "$SYMBOL" ] && [ -n "$FACT" ] && [ -n "$BUTTON" ] || {
+DELETE="$(base MAIN_STAGE_DELETE_ID)"
+[ -n "$SYMBOL" ] && [ -n "$FACT" ] && [ -n "$BUTTON" ] && [ -n "$DELETE" ] || {
     printf '80-get-started: the bases of the steps were not found in the library\n' >&2
     exit 1
 }
@@ -195,9 +196,29 @@ omc_run AgentVM.main.activated
 check "an image that is being built with no job: the step runs, and says so" "r1|dev: being built by a command outside this app" \
     "$(steps | /usr/bin/cut -d' ' -f4)|$(fact 4)"
 store status-empty.json '.images = [{name: "dev", state: "failed", failure: "the build was canceled", path: "/x"}]'
+check "guard: Delete... is not shown for an image that is being built" "0" "$(shown "$DELETE")"
 omc_run AgentVM.main.activated
 check "only a failed image: the step wants attention, names it, and New Image... is on" \
-    "a1|none ready: the build of dev failed. agent-vm image delete in Terminal removes a failed image" "$(steps | /usr/bin/cut -d' ' -f4)|$(fact 4)"
+    "a1|none ready: dev appears not ready, and agent-vm reports a failed build. Delete... removes such an image and frees its space; New Image... builds another" "$(steps | /usr/bin/cut -d' ' -f4)|$(fact 4)"
+check "  and Delete... is shown" "1" "$(shown "$DELETE")"
+alerts_reset
+: > "$FAKE_AGENTVM_DIR/log"
+omc_trigger "$DELETE"
+omc_run AgentVM.main.getstarted.delete
+check_status "Delete... exits cleanly" 0
+check "  it reads status and measures the image first" "status --json|image info dev --json" "$(fake_log | /usr/bin/paste -sd '|' -)"
+check "  and asks, saying why the build failed, where the image is, and that it is final" \
+    "Delete image dev?|agent-vm reports that its build failed: the build was canceled. It is in /x. The image's folder and disk are deleted. This cannot be undone.|AgentVM.main.image.delete.confirmed" \
+    "$(ui_alert_title)|$(ui_alert_message)|$(ui_alert_action Delete)"
+check "  nothing is deleted yet" "0|dev" "$(fake_log | /usr/bin/grep -c '^image delete')|$("$PB" "agentvm_image_delete_$UUID" get)"
+store status-empty.json
+: > "$FAKE_AGENTVM_DIR/log"
+omc_run AgentVM.main.image.delete.confirmed
+check "  Delete deletes it, and the step is to do again, without the button" "1|t1|0" \
+    "$(fake_log | /usr/bin/grep -c -x 'image delete dev --json')|$(steps | /usr/bin/cut -d' ' -f4)|$(shown "$DELETE")"
+asked="$(ui_calls omc_present_alert)"
+omc_run AgentVM.main.getstarted.delete
+check "  with no failed image, Delete... asks nothing" "$asked|" "$(ui_calls omc_present_alert)|$("$PB" "agentvm_image_delete_$UUID" get)"
 /usr/bin/jq -n '[{id: "20260930-120000-0000c1", command: ["image", "create", "more", "--json"], targets: ["image:more"], state: "running", createdAt: "2026-09-30T12:00:00Z", startedAt: "2026-09-30T12:00:00Z"},
     {id: "20260930-120000-0000c2", command: ["image", "fetch-ipsw", "--json"], targets: ["ipsw"], state: "running", createdAt: "2026-09-30T12:00:00Z", startedAt: "2026-09-30T12:00:00Z"}]' > "$JOBS"
 store status.json '.boxes = []'

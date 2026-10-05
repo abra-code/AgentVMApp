@@ -3,8 +3,9 @@
 # Continue, in the New Image window: what the step shown asks for is kept, as this click saw it,
 # and checked; when something is wrong the step stays and says what, else the next step is shown.
 # Step 1 takes the row selected in the start table and reads agent-vm again; step 2 the
-# checkboxes; step 3 the option fields; step 4 the name and sizes. The options step is skipped
-# when the tools ticked ask for nothing.
+# checkboxes; step 3 the option fields; step 4 the name and sizes, where a name that an image
+# that appears not ready has is said with Delete... beside it. The options step
+# is skipped when the tools ticked ask for nothing.
 
 . "$OMC_APP_BUNDLE_PATH/Contents/Resources/Scripts/lib.agentvm.newimage.sh"
 
@@ -38,7 +39,12 @@ case "$step" in
         exit 0 ;;
 esac
 if [ -n "$blocker" ]; then
-    "$dialog" "$window_uuid" "$NEW_NOTE_ID" "$blocker"
+    # A name taken by an image that is not ready comes with the offer to delete that image.
+    if [ "$step" -eq 4 ]; then
+        newimage_paint_note "$window_uuid" "$blocker"
+    else
+        "$dialog" "$window_uuid" "$NEW_NOTE_ID" "$blocker"
+    fi
     exit 0
 fi
 next=$((step + 1))

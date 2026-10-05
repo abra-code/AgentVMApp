@@ -10,7 +10,7 @@
 
 window_uuid="$OMC_ACTIONUI_WINDOW_UUID"
 [ -n "$window_uuid" ] || exit 0
-for key in newimage step start ticks name cpus memory disk auto_name auto_disk busy; do
+for key in newimage step start ticks name cpus memory disk auto_name auto_disk busy taken delete; do
     ui_set "$key" "$window_uuid" ""
 done
 requested="$(ui_item_request newimage)"

@@ -8,7 +8,7 @@
 window_uuid="$OMC_ACTIONUI_WINDOW_UUID"
 [ -n "$window_uuid" ] || exit 0
 ui_item_release newimage window "$window_uuid"
-for key in newimage step start ticks name cpus memory disk auto_name auto_disk busy; do
+for key in newimage step start ticks name cpus memory disk auto_name auto_disk busy taken delete; do
     ui_set "$key" "$window_uuid" ""
 done
 ui_cache_clear "$window_uuid"

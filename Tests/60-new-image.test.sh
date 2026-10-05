@@ -19,7 +19,7 @@ import_view_ids "$APP_SCRIPTS/lib.agentvm.main.sh" "$APP_SCRIPTS/lib.agentvm.new
     && [ -n "$NEW_SOURCES_ID" ] && [ -n "$NEW_TOOLS_TEXT_ID" ] && [ -n "$NEW_OPTIONS_TEXT_ID" ] && [ -n "$NEW_NAME_ID" ] \
     && [ -n "$NEW_CPUS_ID" ] && [ -n "$NEW_MEMORY_ID" ] && [ -n "$NEW_DISK_ID" ] && [ -n "$NEW_SIZE_TEXT_ID" ] \
     && [ -n "$NEW_SUMMARY_ID" ] && [ -n "$NEW_COMMAND_ID" ] && [ -n "$NEW_ADVICE_ID" ] && [ -n "$NEW_NOTE_ID" ] \
-    && [ -n "$NEW_BACK_ID" ] && [ -n "$NEW_NEXT_ID" ] && [ -n "$NEW_BUILD_ID" ] && [ -n "$NEW_ADD_RECIPE_ID" ] || {
+    && [ -n "$NEW_BACK_ID" ] && [ -n "$NEW_NEXT_ID" ] && [ -n "$NEW_BUILD_ID" ] && [ -n "$NEW_ADD_RECIPE_ID" ] && [ -n "$NEW_DELETE_ID" ] || {
     printf '60-new-image: no view ids imported from the libraries\n' >&2
     exit 1
 }
@@ -494,7 +494,7 @@ check "a name agent-vm would refuse" \
     "Step 4 of 5 - Name and size|\"Dev Tools\" cannot be a name: lower-case letters, digits, \".\", \"_\" and \"-\", starting with a letter or a digit, at most 63 characters." \
     "$(size_try "Dev Tools" 4 8 64)"
 check "an option as a name"          "Step 4 of 5 - Name and size" "$(size_try "--force" 4 8 64 | /usr/bin/cut -d'|' -f1)"
-check "a name that is taken"         "Step 4 of 5 - Name and size|An image named dev-node is there already." "$(size_try dev-node 4 8 64)"
+check "a name that is taken"         "Step 4 of 5 - Name and size|An image named dev-node is there already. Give the new image another name." "$(size_try dev-node 4 8 64)"
 check "processors that are not a number" "Step 4 of 5 - Name and size|Processors: a whole number, 1 or more." "$(size_try mine four 8 64)"
 check "no processors"                "Step 4 of 5 - Name and size|Processors: a whole number, 1 or more." "$(size_try mine 0 8 64)"
 check "memory that is not a number"  "Step 4 of 5 - Name and size|Memory: a whole number of GB." "$(size_try mine 4 8.5 64)"
@@ -703,7 +703,7 @@ omc_run AgentVM.newimage.activated
 check "the start is being changed"   "Another command is changing image dev. A build can start from it when that has ended.|0" "$(note)|$(enabled "$NEW_BUILD_ID")"
 store '.images += [.images[0] | .name = "dev-tools"]'
 omc_run AgentVM.newimage.activated
-check "the name was taken meanwhile" "An image named dev-tools is there already.|0" "$(note)|$(enabled "$NEW_BUILD_ID")"
+check "the name was taken meanwhile" "An image named dev-tools is there already. Give the new image another name.|0" "$(note)|$(enabled "$NEW_BUILD_ID")"
 store '.'
 /bin/rm -f "$XIP"
 omc_run AgentVM.newimage.activated
@@ -1091,6 +1091,107 @@ check "a path with a backslash in it" "$SHIPPED 1 1.0 back-tslash|0|The back_tsl
 add_own "$OWN/back\\tslash.json"
 check "  the same file again is known by its path" "That is the recipe back-tslash, which is in the list already." "$(note)"
 omc_run AgentVM.newimage.close
+
+section "a name that an image which is not ready has"
+fake_reset
+UNREADY='.images += [{name: "macos-27", state: "failed", failure: "the virtual machine did not answer within 600 s.", path: ($home + "/store/images/macos-27")}, {name: "half", state: "provisioning", path: "/x/half"}]'
+unready() {
+    /usr/bin/jq --arg home "$HOME" "$1" "$FIXTURES_AGENTVM/status-variety.json" > "$FAKE_AGENTVM_DIR/status.json"
+}
+unready "$UNREADY"
+/usr/bin/jq '.name = "macos-27"' "$FIXTURES_AGENTVM/image-info.json" > "$FAKE_AGENTVM_DIR/image-info-macos-27.json"
+# offered  ->  1 while Delete... is shown; it starts hidden, which the recording does not say.
+offered() {
+    [ "$(ui_visible "$NEW_DELETE_ID")" = "1" ] && echo 1 || echo 0
+}
+open_new
+pick "ipsw $IPSW" "$IPSW"
+next
+ticked
+next
+check "guard: the offer is not shown before it is made" "Step 4 of 5 - Name and size|0|" "$(ui_value "$NEW_HEADER_ID")|$(offered)|$(kept taken)"
+FAILED_NOTE="An image named macos-27 is there already, and appears not ready. Delete it to use the name, or give the new image another name."
+check "the name of an image whose build failed: what it is and what to do" "Step 4 of 5 - Name and size|$FAILED_NOTE" "$(size_try macos-27 4 8 64)"
+check "  with Delete... beside the note, for that image" "1|macos-27" "$(offered)|$(kept taken)"
+check "the name of a ready image: another name, and no offer to delete it here" \
+    "Step 4 of 5 - Name and size|An image named dev is there already. Give the new image another name.|0|" \
+    "$(size_try dev 4 8 64)|$(offered)|$(kept taken)"
+check "the name of an image whose build did not finish" \
+    "Step 4 of 5 - Name and size|An image named half is there already, and appears not ready. Delete it to use the name, or give the new image another name.|1|half" \
+    "$(size_try half 4 8 64)|$(offered)|$(kept taken)"
+/usr/bin/jq -n '[{id: "20260930-120000-0000d1", command: ["image", "create", "half", "--json"], targets: ["image:half"], state: "running", createdAt: "2026-09-30T12:00:00Z", startedAt: "2026-09-30T12:00:00Z"}]' > "$JOBS"
+omc_run AgentVM.newimage.activated
+check "  one a job is building: no offer" \
+    "Step 4 of 5 - Name and size|An image named half is there already, and is being built or changed now. Give the new image another name.|0|" \
+    "$(size_try half 4 8 64)|$(offered)|$(kept taken)"
+alerts_reset
+: > "$FAKE_AGENTVM_DIR/log"
+"$PB" "agentvm_taken_$UUID" set "half"
+asked="$(ui_calls omc_present_alert)"
+omc_run AgentVM.newimage.delete
+check "  Delete..., clicked for it anyway, asks nothing" "$asked|" "$(ui_calls omc_present_alert)|$(kept delete)"
+/bin/rm -f "$JOBS"
+check "another error of the step takes the offer away" "Step 4 of 5 - Name and size|Give the new image a name.|0|" \
+    "$(size_try "" 4 8 64)|$(offered)|$(kept taken)"
+size_try macos-27 4 8 64 >/dev/null
+printf 'no status today\n' > "$FAKE_AGENTVM_DIR/fail-status"
+asked="$(ui_calls omc_present_alert)"
+omc_run AgentVM.newimage.delete
+check "status fails: Delete... asks nothing about rows that may be old, and the note says why" \
+    "$asked||agent-vm could not be read: no status today|0|" \
+    "$(ui_calls omc_present_alert)|$(kept delete)|$(note)|$(offered)|$(kept taken)"
+/bin/rm -f "$FAKE_AGENTVM_DIR/fail-status"
+size_try macos-27 4 8 64 >/dev/null
+
+section "Delete...: the question, and the image deleted"
+alerts_reset
+: > "$FAKE_AGENTVM_DIR/log"
+omc_trigger "$NEW_DELETE_ID"
+omc_run AgentVM.newimage.delete
+check_status "exits cleanly" 0
+check "reads status and the restore files, and measures the image, first" "status --json|image fetch-ipsw --list --json|image info macos-27 --json" \
+    "$(fake_log | /usr/bin/paste -sd '|' -)"
+check "asks" "Delete image macos-27?" "$(ui_alert_title)"
+check "  why it is not ready, where it is, what deleting frees, and that it is final" \
+    "agent-vm reports that its build failed: the virtual machine did not answer within 600 s. It is in ~/store/images/macos-27. The image's folder and disk are deleted, which frees about 1.7 GB. This cannot be undone." \
+    "$(ui_alert_message)"
+check "  Delete confirms, Cancel does nothing" "AgentVM.newimage.delete.confirmed|" "$(ui_alert_action Delete)|$(ui_alert_action Cancel)"
+check "  nothing is deleted yet, and the image asked about is kept" "0|macos-27" "$(fake_log | /usr/bin/grep -c '^image delete')|$(kept delete)"
+printf 'image macos-27 is in use by another agent-vm process\n' > "$FAKE_AGENTVM_DIR/fail-image-delete"
+omc_run AgentVM.newimage.delete.confirmed
+check "agent-vm refuses: its words, and the note and the offer stay" \
+    "Image macos-27 was not deleted|image macos-27 is in use by another agent-vm process|$FAILED_NOTE|1" \
+    "$(ui_alert_title)|$(ui_alert_message)|$(note)|$(offered)"
+/bin/rm -f "$FAKE_AGENTVM_DIR/fail-image-delete"
+: > "$FAKE_AGENTVM_DIR/log"
+omc_run AgentVM.newimage.delete.confirmed
+check "a second confirmation deletes nothing" "0" "$(fake_log | /usr/bin/grep -c '^image delete')"
+omc_run AgentVM.newimage.delete
+: > "$FAKE_AGENTVM_DIR/log"
+# agent-vm deletes it: status lists it no more.
+unready '.images += [{name: "half", state: "provisioning", path: "/x/half"}]'
+omc_run AgentVM.newimage.delete.confirmed
+check_status "the confirmation exits cleanly" 0
+check "the image asked about is deleted, and agent-vm is read again" "image delete macos-27 --json|status --json" \
+    "$(fake_log | /usr/bin/sed -n '1,2p' | /usr/bin/paste -sd '|' -)"
+check "  the note and the offer go, and the step stays with what it kept" "|0||macos-27|Step 4 of 5 - Name and size" \
+    "$(note)|$(offered)|$(kept taken)|$(kept name)|$(ui_value "$NEW_HEADER_ID")"
+check "Continue goes on now" "Step 5 of 5 - Check||1" "$(size_try macos-27 4 8 64)|$(enabled "$NEW_BUILD_ID")"
+unready "$UNREADY"
+omc_run AgentVM.newimage.activated
+check "on Check, a name taken meanwhile by a failed build: the same note and offer, and Build is off" "$FAILED_NOTE|1|macos-27|0" \
+    "$(note)|$(offered)|$(kept taken)|$(enabled "$NEW_BUILD_ID")"
+omc_run AgentVM.newimage.delete
+unready '.'
+omc_run AgentVM.newimage.delete.confirmed
+check "  deleted from there: Build is on" "|0|1" "$(note)|$(offered)|$(enabled "$NEW_BUILD_ID")"
+unready "$UNREADY"
+omc_run AgentVM.newimage.activated
+back
+check "Back takes the offer away with the note" "|0|" "$(note)|$(offered)|$(kept taken)"
+omc_run AgentVM.newimage.close
+check "closing forgets both" "|" "$(kept taken)|$(kept delete)"
+store '.'
 
 section "a window that closes while agent-vm is read"
 # An agent-vm that, asked for status, does what the window's close handler does meanwhile.

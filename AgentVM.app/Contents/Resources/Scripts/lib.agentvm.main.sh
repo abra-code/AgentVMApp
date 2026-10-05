@@ -53,6 +53,8 @@ MAIN_GETSTARTED_ID=200
 MAIN_STAGE_SYMBOL_BASE=210
 MAIN_STAGE_FACT_BASE=220
 MAIN_STAGE_BUTTON_BASE=230
+# Under the button of step 4, while the only images are ones whose build failed.
+MAIN_STAGE_DELETE_ID=244
 MAIN_GETSTARTED_NOTE_ID=202
 MAIN_STATUS_ID=300
 
@@ -669,7 +671,7 @@ main_stage_rows() {
     elif [ -n "$_building" ]; then
         printf '4\trunning\t%s: being built by a command outside this app\t%s\n' "$(main_some_names "$_building")" "$_button"
     elif [ -n "$_broken" ]; then
-        printf '4\tattention\tnone ready: the build of %s failed. agent-vm image delete in Terminal removes a failed image\t%s\n' "$(main_some_names "$_broken")" "$_button"
+        printf '4\tattention\tnone ready: %s appears not ready, and agent-vm reports a failed build. Delete... removes such an image and frees its space; New Image... builds another\t%s\n' "$(main_some_names "$_broken")" "$_button"
     elif [ -n "$_files" ]; then
         printf '4\ttodo\tnone ready yet: a first image takes about 10 minutes to build. %s\t%s\n' "$MAIN_LOCAL_NETWORK_TEXT" "$_button"
     else
@@ -732,7 +734,8 @@ main_stage_symbol() {
 }
 
 # main_paint_stages <uuid>  ->  the six steps of Get started from the caches: each one's symbol,
-# fact and button.
+# fact and button; and Delete..., shown while step 4 wants attention, which it does only
+# for a build that failed.
 main_paint_stages() {
     local _rows="$(main_stage_rows "$1")"
     # The first step's button: an agent-vm too old for the app is updated, a missing one installed.
@@ -751,6 +754,12 @@ main_paint_stages() {
         "$dialog" "$1" "$((MAIN_STAGE_SYMBOL_BASE + _n))" omc_set_property foregroundStyle "${_symbol#*"$ui_tab"}"
         "$dialog" "$1" "$((MAIN_STAGE_FACT_BASE + _n))" "$_fact"
         ui_enable "$1" "$((MAIN_STAGE_BUTTON_BASE + _n))" "$_button"
+        [ "$_n" = "4" ] || continue
+        if [ "$_state" = "attention" ]; then
+            ui_show "$1" "$MAIN_STAGE_DELETE_ID" 1
+        else
+            ui_show "$1" "$MAIN_STAGE_DELETE_ID" 0
+        fi
     done <<EOF
 $_rows
 EOF
@@ -1479,6 +1488,23 @@ main_image_delete_question() {
     local _derived="$(main_rows "$1" images | /usr/bin/awk -F'\t' -v name="$2" '$6 "" == name { print $1 }')"
     [ -n "$_derived" ] && _text="$_text Images built from it ($(ui_lines_text "$_derived")) keep working."
     printf '%s This cannot be undone.\n' "$_text"
+}
+
+# main_unready_image_question <uuid> <name>  ->  the confirmation's message for an image that is
+# not ready, asked about where no pane shows it (Get started, and the New Image window when its
+# name is in the way): what agent-vm reports about it (why it is there is not known here), where
+# it is, and main_image_delete_question's words.
+main_unready_image_question() {
+    local _row="$(main_row "$1" images "$2")"
+    local _failure="$(printf '%s\n' "$_row" | /usr/bin/cut -f3)"
+    local _text="It appears not ready: its build did not finish, or still runs outside this app."
+    if [ "$(printf '%s\n' "$_row" | /usr/bin/cut -f2)" = "failed" ]; then
+        _text="agent-vm reports that its build failed."
+        [ -n "$_failure" ] && [ "$_failure" != "-" ] && _text="agent-vm reports that its build failed: ${_failure%.}."
+    fi
+    local _folder="$(printf '%s\n' "$_row" | /usr/bin/cut -f11)"
+    [ -n "$_folder" ] && [ "$_folder" != "-" ] && _text="$_text It is in $(agentvm_display_path "$_folder")."
+    printf '%s %s\n' "$_text" "$(main_image_delete_question "$1" "$2")"
 }
 
 # main_count_text <n> <thing>  ->  "1 image", "7 images".

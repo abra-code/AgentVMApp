@@ -19,8 +19,9 @@
 # WHAT THE WINDOW KEEPS. Pasteboard values of the window: "newimage" (1 while it is open),
 # "step", "start" ("image <name>" or "ipsw <file name>"), "ticks" (recipe names), "name", "cpus",
 # "memory", "disk", "auto_name" and "auto_disk" (the last suggestions put into those fields,
-# so that a suggestion the user did not change follows a changed start or tool), and "busy" (the
-# click being worked on: newimage_enter). The values of
+# so that a suggestion the user did not change follows a changed start or tool), "busy" (the
+# click being worked on: newimage_enter), "taken" (the image Delete... offers to delete, while
+# the button is shown) and "delete" (the image the question now open asks about). The values of
 # the options are the cache file values.tsv (kind, name, value), and the recipes the user added
 # the cache file own.tsv (a row each, as agentvm_recipe_rows gives one). Everything kept is checked
 # again when it is read back, and a start is looked up in what agent-vm last listed.
@@ -64,6 +65,8 @@ NEW_CANCEL_ID=1092
 NEW_BACK_ID=1093
 NEW_NEXT_ID=1094
 NEW_BUILD_ID=1095
+# Beside the note line, while the note is about a name taken by an image that is not ready.
+NEW_DELETE_ID=1096
 # Recipe slot n: its row 1100 + n, checkbox 1110 + n, name 1120 + n, description 1130 + n, note
 # 1140 + n. Option slot n: its rows 1200 + n, label 1210 + n, field 1220 + n, Choose... 1230 + n,
 # description 1240 + n.
@@ -144,6 +147,7 @@ newimage_recipe_rows() {
 }
 
 # newimage_read <uuid> [full]  ->  0 with the cache files build.tsv (agentvm_status_build_rows),
+# images.tsv and jobs.tsv (as the main window keeps them: for an image whose name is in the way),
 # vm.tsv and ipsw.tsv (agentvm_ipsw_rows) read anew; "full" first checks which agent-vm runs and
 # reads its recipes into recipes.tsv (on opening). An agent-vm that cannot be used is not run. A
 # failed `status` keeps the previous rows and leaves its message in the cache file status-error;
@@ -165,6 +169,8 @@ newimage_read() {
         return "$_status"
     fi
     printf '%s\n' "$_json" | agentvm_status_build_rows | ui_store "$(ui_cache "$1" build.tsv)"
+    printf '%s\n' "$_json" | agentvm_status_image_rows | ui_store "$(ui_cache "$1" images.tsv)"
+    printf '%s\n' "$_json" | agentvm_job_rows | ui_store "$(ui_cache "$1" jobs.tsv)"
     printf '%s\n' "$_json" | agentvm_status_vm_row | ui_store "$(ui_cache "$1" vm.tsv)"
     : | ui_store "$_error"
     _json="$(agentvm_ipsw_list)"
@@ -724,6 +730,35 @@ newimage_name_taken() {
     [ -n "$(newimage_image_row "$1" "$2")" ]
 }
 
+# newimage_deletable <uuid> <name>  ->  0 when the image of that name is one this window offers to
+# delete: it is not ready (its build failed, or did not finish), no job holds it, and no other
+# command is changing it. A ready image is deleted in the main window, which says what was made
+# from it. agent-vm refuses to delete an image a command outside the app is still building.
+newimage_deletable() {
+    local _row="$(newimage_image_row "$1" "$2")"
+    [ -n "$_row" ] || return 1
+    [ "$(printf '%s\n' "$_row" | /usr/bin/cut -f2)" != "ready" ] || return 1
+    [ "$(printf '%s\n' "$_row" | /usr/bin/cut -f3)" != "true" ] || return 1
+    [ -z "$(main_job "$1" image "$2")" ]
+}
+
+# newimage_taken_text <uuid> <name>  ->  what stands in the way when an image has that name, and
+# what to do about it. Nothing when no image has the name. An image that is not ready "appears"
+# so: why it is there is not known here (a build that failed, one that was interrupted, or
+# something done outside the app), and the question Delete... asks says what agent-vm reports.
+newimage_taken_text() {
+    local _row="$(newimage_image_row "$1" "$2")"
+    [ -n "$_row" ] || return 0
+    local _state="$(printf '%s\n' "$_row" | /usr/bin/cut -f2)"
+    if [ "$_state" = "ready" ]; then
+        printf 'An image named %s is there already. Give the new image another name.\n' "$2"
+    elif ! newimage_deletable "$1" "$2"; then
+        printf 'An image named %s is there already, and is being built or changed now. Give the new image another name.\n' "$2"
+    else
+        printf 'An image named %s is there already, and appears not ready. Delete it to use the name, or give the new image another name.\n' "$2"
+    fi
+}
+
 # newimage_suggested_name <uuid>  ->  a free name for the new image: for a copy, the start's name
 # and the tool ticked ("dev-node"; in lower case, and "-tools" when that cannot be a name, as a
 # recipe of the user's own may be called anything), "-tools" for several, "-copy" for none; "dev"
@@ -817,7 +852,7 @@ newimage_sizes_blocker() {
         return 0
     fi
     if newimage_name_taken "$1" "$_name"; then
-        printf 'An image named %s is there already.\n' "$_name"
+        newimage_taken_text "$1" "$_name"
         return 0
     fi
     if ! newimage_number "$(ui_get cpus "$1")"; then
@@ -1051,6 +1086,47 @@ EOF
     done
 }
 
+# newimage_offer_delete <uuid> <name or nothing>  ->  Delete... shown beside the note for that
+# image, which is kept as the one the button deletes; with no name the button goes.
+newimage_offer_delete() {
+    ui_set taken "$1" "$2"
+    if [ -n "$2" ]; then
+        ui_show "$1" "$NEW_DELETE_ID" 1
+    else
+        ui_show "$1" "$NEW_DELETE_ID" 0
+    fi
+}
+
+# newimage_paint_note <uuid> <note>  ->  the note line of the last two steps, with Delete...
+# beside it when the note is that the name kept belongs to an image this window offers to delete.
+newimage_paint_note() {
+    "$dialog" "$1" "$NEW_NOTE_ID" "$2"
+    local _name="$(ui_get name "$1")"
+    local _offer=""
+    if [ -n "$2" ] && agentvm_valid_name "$_name" && newimage_deletable "$1" "$_name" \
+        && [ "$2" = "$(newimage_taken_text "$1" "$_name")" ]; then
+        _offer="$_name"
+    fi
+    [ -z "$_offer" ] && [ -z "$(ui_get taken "$1")" ] && return 0
+    newimage_offer_delete "$1" "$_offer"
+}
+
+# newimage_repaint_note <uuid> [status of the reading before it]  ->  the note of the last two
+# steps again, from what is kept and what agent-vm last said, after an image whose name was in
+# the way was asked about or deleted: on Name and size the note alone (no field is touched), on
+# Check the whole step. After a reading that failed the rows are old ones, so the note says why
+# agent-vm could not be read, and the offer goes with the note it stood beside.
+newimage_repaint_note() {
+    case "$(newimage_step "$1")" in
+        4)  if [ "${2:-0}" -ne 0 ]; then
+                newimage_paint_note "$1" "$(newimage_unreadable "$1")"
+            else
+                newimage_paint_note "$1" "$(newimage_sizes_blocker "$1")"
+            fi ;;
+        5)  newimage_paint_check "$1" ;;
+    esac
+}
+
 # newimage_paint_sizes <uuid>  ->  the name and size fields from what is kept, and the line under them.
 newimage_paint_sizes() {
     newimage_prepare_sizes "$1"
@@ -1068,7 +1144,7 @@ newimage_paint_check() {
     "$dialog" "$1" "$NEW_ADVICE_ID" "$(newimage_advice_text "$1")"
     "$dialog" "$1" "$NEW_COMMAND_ID" "$(newimage_command_text "$1")"
     local _blocker="$(newimage_blocker "$1")"
-    "$dialog" "$1" "$NEW_NOTE_ID" "$_blocker"
+    newimage_paint_note "$1" "$_blocker"
     if [ -z "$_blocker" ]; then
         ui_enable "$1" "$NEW_BUILD_ID" 1
     else
@@ -1077,10 +1153,12 @@ newimage_paint_check() {
 }
 
 # newimage_paint_frame <uuid> [note]  ->  what every step has: the header, the rail's marks, the
-# panel of the step shown, Back, Continue or Build, and the note line.
+# panel of the step shown, Back, Continue or Build, and the note line. Delete... goes with
+# the note it stood beside.
 newimage_paint_frame() {
     local _step="$(newimage_step "$1")"
     wizard_paint_frame "$1" "$NEW_BASE" "$NEW_STEPS" "$_step" "$(newimage_step_title "$_step")" "${2:-}"
+    [ -z "$(ui_get taken "$1")" ] || newimage_offer_delete "$1" ""
 }
 
 # newimage_show <uuid> <step>  ->  that step shown, its fields filled first: the step is kept,
