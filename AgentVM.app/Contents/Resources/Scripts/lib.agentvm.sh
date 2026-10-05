@@ -35,7 +35,7 @@
 [ -n "${__AGENTVM_APP_LIB:-}" ] && return 0
 __AGENTVM_APP_LIB=1
 
-AGENTVM_MIN_VERSION="0.6.13"
+AGENTVM_MIN_VERSION="0.6.14"
 
 # The app's own state, and where agent-vm's installer puts the link to the newest agent-vm.
 agentvm_support_dir="$HOME/Library/Application Support/AgentVM"
@@ -822,6 +822,16 @@ agentvm_job_image_update() {
 agentvm_job_image_setup() {
     _agentvm_need_name image "$1" || return $?
     _agentvm_job_start - image setup "$1"
+}
+
+# agentvm_job_image_view <name>  ->  the id of a job that boots the ready image and shows its screen
+# in a window of agent-vm's, with nothing opened in it, for whatever a person wants to set up there
+# by hand. Closing that window shuts the image down, keeps what was done, and ends the job;
+# agent-vm then records whether the guest daemon has Full Disk Access, as after a setup. The job
+# needs a login session on this Mac and one virtual machine slot.
+agentvm_job_image_view() {
+    _agentvm_need_name image "$1" || return $?
+    _agentvm_job_start - image view "$1"
 }
 
 # agentvm_job_list  ->  the jobs as JSON: those that run, and those that ended in the last week.

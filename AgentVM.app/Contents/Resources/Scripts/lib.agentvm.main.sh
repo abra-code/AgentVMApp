@@ -108,6 +108,7 @@ MAIN_IMAGE_DELETE_ID=434
 MAIN_IMAGE_DERIVE_ID=432
 MAIN_IMAGE_BOX_ID=431
 MAIN_IMAGE_UPDATE_ID=435
+MAIN_IMAGE_VIEW_ID=436
 MAIN_IMAGE_ACCESS_ID=462
 MAIN_IMAGE_MACOS_ID=451
 MAIN_IMAGE_BASE_ID=452
@@ -252,8 +253,9 @@ main_job() {
 }
 
 # main_job_verb <what it does> <state>  ->  the job in a word or two, for a card and a pane:
-# "Starting", "Stopping", "Building", "Updating", "Building again", "Setting up", and for a job that waits for
-# another, "Waiting to start" and the like. Other jobs are named by their command.
+# "Starting", "Stopping", "Building", "Updating", "Building again", "Setting up", "Open in its
+# window", and for a job that waits for another, "Waiting to start" and the like. Other jobs are
+# named by their command.
 main_job_verb() {
     if [ "$2" = "queued" ]; then
         case "$1" in
@@ -264,6 +266,7 @@ main_job_verb() {
                                   echo "Waiting to be updated" ;;
             "image rebuild")      echo "Waiting to be built again" ;;
             "image setup")        echo "Waiting to be set up" ;;
+            "image view")         echo "Waiting to be opened" ;;
             *)                    printf 'Waiting: %s\n' "$1" ;;
         esac
         return 0
@@ -276,6 +279,7 @@ main_job_verb() {
                               echo "Updating" ;;
         "image rebuild")      echo "Building again" ;;
         "image setup")        echo "Setting up" ;;
+        "image view")         echo "Open in its window" ;;
         *)                    printf 'Busy: %s\n' "$1" ;;
     esac
 }
@@ -336,6 +340,7 @@ main_job_outcome() {
                                   printf 'Image %s is up to date\n' "$_name" ;;
             "image rebuild")      printf 'Image %s was built again\n' "$_name" ;;
             "image setup")        printf 'The setup of image %s is done\n' "$_name" ;;
+            "image view")         printf 'Image %s is shut down; what was done in its window is kept\n' "$_name" ;;
             "image fetch-ipsw")   printf 'The macOS restore file is downloaded\n' ;;
             *)                    printf '%s is done (%s)\n' "$_what" "$_target" ;;
         esac
@@ -349,6 +354,7 @@ main_job_outcome() {
                               printf 'Image %s was not updated\n' "$_name" ;;
         "image rebuild")      printf 'Image %s was not built again, and is as it was\n' "$_name" ;;
         "image setup")        printf 'The setup of image %s did not finish\n' "$_name" ;;
+        "image view")         printf 'Image %s was not opened\n' "$_name" ;;
         "image fetch-ipsw")   printf 'The macOS restore file was not downloaded\n' ;;
         *)                    printf '%s failed (%s)\n' "$_what" "$_target" ;;
     esac
@@ -849,7 +855,7 @@ main_image_card_rows() {
                 if (job[2] == "queued" && job[3] ~ /^image:/ && !(substr(job[3], 7) in held))
                     held[substr(job[3], 7)] = "Waiting"
                 if (job[2] == "running" && job[3] ~ /^image:/)
-                    held[substr(job[3], 7)] = (job[4] == "image create") ? "Building" : (job[4] ~ /^image update/) ? "Updating" : (job[4] == "image rebuild") ? "Building again" : (job[4] == "image setup") ? "Setting up" : "Busy"
+                    held[substr(job[3], 7)] = (job[4] == "image create") ? "Building" : (job[4] ~ /^image update/) ? "Updating" : (job[4] == "image rebuild") ? "Building again" : (job[4] == "image setup") ? "Setting up" : (job[4] == "image view") ? "Open" : "Busy"
             }
             n = split(counts, pairs, " ")
             for (i = 1; i <= n; i++) {
@@ -1410,15 +1416,48 @@ main_paint_image_detail() {
     if [ -n "$(main_job "$_uuid" image "$_name")" ] || main_image_busy "$_uuid" "$_name"; then
         ui_enable "$_uuid" "$MAIN_IMAGE_DELETE_ID" 0
         ui_enable "$_uuid" "$MAIN_IMAGE_UPDATE_ID" 0
+        ui_enable "$_uuid" "$MAIN_IMAGE_VIEW_ID" 0
         return 0
     fi
     ui_enable "$_uuid" "$MAIN_IMAGE_DELETE_ID" 1
-    # Update... opens the image's update window (lib.agentvm.update.sh): for a ready image only.
+    # Update... opens the image's update window (lib.agentvm.update.sh), and View starts the job
+    # that shows the image's screen (main_image_view): for a ready image only.
     if [ "$(printf '%s\n' "$_row" | /usr/bin/cut -f2)" = "ready" ]; then
         ui_enable "$_uuid" "$MAIN_IMAGE_UPDATE_ID" 1
+        ui_enable "$_uuid" "$MAIN_IMAGE_VIEW_ID" 1
     else
         ui_enable "$_uuid" "$MAIN_IMAGE_UPDATE_ID" 0
+        ui_enable "$_uuid" "$MAIN_IMAGE_VIEW_ID" 0
     fi
+}
+
+# main_image_viewable <uuid> <name>  ->  0 when the image's screen can be opened now, from the rows
+# just read: it is ready, no job holds it and no other command changes it (the rule
+# main_paint_image_detail enables View by).
+main_image_viewable() {
+    [ "$(main_row "$1" images "$2" | /usr/bin/cut -f2)" = "ready" ] || return 1
+    [ -z "$(main_job "$1" image "$2")" ] || return 1
+    main_image_busy "$1" "$2" && return 1
+    return 0
+}
+
+# main_image_view <uuid> <name> <command guid>  ->  `image view` started as a job, the lists read
+# again, and the poll loop begun anew, as main_box_job does for a box. agent-vm boots the image
+# and shows its screen in a window of its own; closing that window ends the job. agent-vm's
+# refusal is shown in its words.
+main_image_view() {
+    local _id _status
+    _id="$(agentvm_job_image_view "$2")"
+    _status=$?
+    if [ "$_status" -ne 0 ]; then
+        main_alert "$1" "Image $2 was not opened" "$(agentvm_last_error "$_status")"
+        main_refresh "$1" status
+        return "$_status"
+    fi
+    printf '%s\n' "$_id" >> "$(ui_cache "$1" jobs-watched)"
+    main_refresh "$1" status
+    "$next_command" "$3" "AgentVM.main.poll"
+    return 0
 }
 
 # main_image_delete_question <uuid> <name>  ->  the confirmation's message: what deleting frees,

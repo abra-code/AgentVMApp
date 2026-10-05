@@ -64,7 +64,7 @@
         "user-session",
         "terminal-pixels"
       ],
-      "guestVersion": "0.6.13",
+      "guestVersion": "0.6.14",
       "needs": [],
       "ownerPid": 812,
       "path": "/Users/you/Library/Application Support/agent-vm/Boxes/s3",
@@ -74,8 +74,8 @@
       "running": true,
       "startedAt": "2026-09-29T14:02:10Z",
       "state": "running",
-      "supervisorPath": "/Users/you/.local/share/agent-vm/versions/0.6.13/agent-vm",
-      "supervisorVersion": "0.6.13"
+      "supervisorPath": "/Users/you/.local/share/agent-vm/versions/0.6.14/agent-vm",
+      "supervisorVersion": "0.6.14"
     },
     {
       "box": {

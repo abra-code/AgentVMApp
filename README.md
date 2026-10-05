@@ -1,4 +1,4 @@
-# AgentVM
+# AgentVM app
 ![AgentVM Icon](Icon/AgentVM-macOS-256x256@1x.png)
 
 AgentVM.app is a Mac app for creating and managing [AgentVM](https://github.com/abra-code/agent-vm) images and boxes: the macOS virtual machines that AI coding agents run in, isolated from your Mac. It is a companion to the `agent-vm` and `avm` command line tools: it guides you through setup and first use (a macOS restore file, the first images, an optional permission you grant by hand, a first box), then shows what exists and what runs, with the everyday actions one or two clicks away. Agents themselves run in Terminal (`avm`) or in [Cadabra](https://github.com/abra-code/AIChatApp).

@@ -352,8 +352,8 @@ case "$*" in
         [ "$1" = "--" ] || exit 64
         shift
         case "$1 $2" in
-            "image create"|"image update"|"image update-guest"|"image setup"|"image fetch-ipsw"|"box start"|"box stop") ;;
-            *)  printf 'Error: a job runs image create, image update, image update-guest, image setup, image fetch-ipsw, box start and box stop; not `%s`\n' "$*" >&2
+            "image create"|"image update"|"image update-guest"|"image setup"|"image view"|"image fetch-ipsw"|"box start"|"box stop") ;;
+            *)  printf 'Error: a job runs image create, image update, image update-guest, image setup, image view, image fetch-ipsw, box start and box stop; not `%s`\n' "$*" >&2
                 exit 64 ;;
         esac
         job_state="running"

@@ -188,7 +188,7 @@ check "the steps, oldest first"      "clone boot recipe recipe-step recipe-step 
     "$(printf '%s\n' "$events" | /usr/bin/awk -F'\t' '$1 == "progress" { print $2 }' | /usr/bin/paste -sd ' ' -)"
 check "a step with its fraction, index, count and message" "progress${TAB}recipe-step${TAB}0.3333333333333333${TAB}2${TAB}3${TAB}[2/3] Node${TAB}-${TAB}-" \
     "$(printf '%s\n' "$events" | /usr/bin/sed -n '9p')"
-check "a log line of agent-vm's own" "log${TAB}-${TAB}-${TAB}-${TAB}-${TAB}agent-vm-guest 0.6.13 answers over vsock${TAB}-${TAB}-" \
+check "a log line of agent-vm's own" "log${TAB}-${TAB}-${TAB}-${TAB}-${TAB}agent-vm-guest 0.6.14 answers over vsock${TAB}-${TAB}-" \
     "$(printf '%s\n' "$events" | /usr/bin/sed -n '3p')"
 check "a guest program's line is marked" "==> Installation successful!${TAB}true" "$(printf '%s\n' "$events" | /usr/bin/sed -n '7p' | col 6-7)"
 check "a tab inside a line is a space" "a line with a tab in it" "$(printf '%s\n' "$events" | /usr/bin/sed -n '11p' | col 6)"

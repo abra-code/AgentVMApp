@@ -98,6 +98,7 @@ progress_title() {
         "image update"|"image update-guest")
                               printf 'Updating image %s\n' "$_name" ;;
         "image setup")        printf 'Setting up image %s\n' "$_name" ;;
+        "image view")         printf 'Image %s, open in its window\n' "$_name" ;;
         "image fetch-ipsw")   printf 'Downloading the macOS restore file\n' ;;
         *)                    printf 'agent-vm %s\n' "$_what" ;;
     esac
@@ -335,6 +336,8 @@ progress_stop_question() {
             _text="$_text The image stays as it was before the update." ;;
         "image fetch-ipsw")
             _text="$_text What was downloaded is kept for the next time." ;;
+        "image view")
+            _text="Closing the image's window does the same: the image shuts down, and what was done in it is kept." ;;
         "box start")
             _text="$_text The box is left stopped." ;;
     esac
