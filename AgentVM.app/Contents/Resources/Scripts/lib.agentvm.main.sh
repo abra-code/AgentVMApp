@@ -585,6 +585,12 @@ main_paint_settings() {
     "$dialog" "$_uuid" "$MAIN_DISK_ID" "${_disk:--}"
 }
 
+# What Get started says about Local Network access, while no image is ready: a first image is
+# built from a restore file, and agent-vm reaches it once over the Mac's virtual network, which
+# macOS asks about on behalf of the app that started the build. The app cannot read whether it
+# has the permission, so the line is always the same.
+MAIN_LOCAL_NETWORK_TEXT="macOS asks whether AgentVM may find devices on local networks: allow it, since that is how the build reaches the new virtual machine on this Mac. If it was declined before, turn AgentVM on in System Settings > Privacy & Security > Local Network"
+
 # main_stage_rows <uuid>  ->  the six steps of Get started, a row each:
 #    1 the step's number   2 its state (done; todo; running, while a job does it; failed;
 #      attention, when it is done in part)   3 the fact line   4 1 when its button is on
@@ -647,13 +653,13 @@ main_stage_rows() {
         printf '4\tdone\t%s ready: %s\t%s\n' "$(printf '%s\n' "$_ready" | /usr/bin/awk 'END { print NR }')" "$(main_some_names "$_ready")" "$_button"
     elif [ -n "$_build" ]; then
         local _target="$(printf '%s\n' "$_build" | /usr/bin/cut -f3)"
-        printf '4\trunning\t%s: %s\t%s\n' "${_target#image:}" "$(main_job_text "$_build")" "$_button"
+        printf '4\trunning\t%s: %s. %s\t%s\n' "${_target#image:}" "$(main_job_text "$_build")" "$MAIN_LOCAL_NETWORK_TEXT" "$_button"
     elif [ -n "$_building" ]; then
         printf '4\trunning\t%s: being built by a command outside this app\t%s\n' "$(main_some_names "$_building")" "$_button"
     elif [ -n "$_broken" ]; then
         printf '4\tattention\tnone ready: the build of %s failed. agent-vm image delete in Terminal removes a failed image\t%s\n' "$(main_some_names "$_broken")" "$_button"
     elif [ -n "$_files" ]; then
-        printf '4\ttodo\tnone ready yet: a first image takes about 10 minutes to build\t%s\n' "$_button"
+        printf '4\ttodo\tnone ready yet: a first image takes about 10 minutes to build. %s\t%s\n' "$MAIN_LOCAL_NETWORK_TEXT" "$_button"
     else
         printf '4\ttodo\tnone ready yet: a macOS restore file comes first\t%s\n' "$_button"
     fi

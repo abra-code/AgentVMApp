@@ -10,7 +10,7 @@
 #
 # -- The state directory ($FAKE_INSTALL_DIR) -------------------------------------
 #   log              APPENDED to, one line per call: the tool's name and its arguments.
-#   newest           the version of the newest release (default 0.6.12): the question about it
+#   newest           the version of the newest release (default 0.6.13): the question about it
 #                    (curl with --write-out) is answered with the address GitHub redirects
 #                    to, .../releases/tag/<newest>.
 #   latest-url       when present, that answer as it is (a repository with no release
@@ -87,7 +87,7 @@ case "$tool" in
                 /bin/cat "$dir/latest-url"
                 exit 0
             fi
-            newest=0.6.12
+            newest=0.6.13
             [ -f "$dir/newest" ] && newest="$(/bin/cat "$dir/newest")"
             printf 'https://github.com/abra-code/agent-vm/releases/tag/%s' "$newest"
             exit 0

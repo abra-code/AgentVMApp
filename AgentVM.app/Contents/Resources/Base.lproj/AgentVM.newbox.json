@@ -597,6 +597,11 @@
                     "properties": {
                       "alignment": "leading",
                       "spacing": 10,
+                      "padding": {
+                        "top": 4,
+                        "bottom": 4,
+                        "trailing": 4
+                      },
                       "frame": {
                         "maxWidth": "infinity",
                         "alignment": "topLeading"
@@ -782,6 +787,11 @@
                     "properties": {
                       "alignment": "leading",
                       "spacing": 10,
+                      "padding": {
+                        "top": 4,
+                        "bottom": 4,
+                        "trailing": 4
+                      },
                       "frame": {
                         "maxWidth": "infinity",
                         "alignment": "topLeading"

@@ -12,6 +12,9 @@
 . "${OMCTEST_LIB:?set OMCTEST_LIB, or run via: appletbuilder test}"
 . "$OMCTEST_TESTS/lib.test.agentvm.sh"
 
+# What the image step of Get started says about Local Network access while no image is ready.
+LOCAL_NETWORK="macOS asks whether AgentVM may find devices on local networks: allow it, since that is how the build reaches the new virtual machine on this Mac. If it was declined before, turn AgentVM on in System Settings > Privacy & Security > Local Network"
+
 import_view_ids "$APP_SCRIPTS/lib.agentvm.main.sh"
 [ -n "$MAIN_GETSTARTED_ID" ] && [ -n "$MAIN_STATUS_ID" ] && [ -n "$MAIN_GETSTARTED_NOTE_ID" ] || {
     printf '80-get-started: no view ids imported from the library\n' >&2
@@ -171,7 +174,7 @@ section "a restore file is here"
 files one
 omc_run AgentVM.main.activated
 check "the step is done, and an image is the next thing" "d- d1 d1 t1 t0 t0" "$(steps)"
-check "the file's macOS and size, and what an image takes" "macOS 27.0, 26.6 GB|none ready yet: a first image takes about 10 minutes to build" "$(fact 3)|$(fact 4)"
+check "the file's macOS and size, and what an image takes" "macOS 27.0, 26.6 GB|none ready yet: a first image takes about 10 minutes to build. $LOCAL_NETWORK" "$(fact 3)|$(fact 4)"
 press 4 AgentVM.main.image.new
 check "New Image... asks for the New Image window, with no image handed over" "1|$APP_PID " "$(chain_asked AgentVM.newimage)|$("$PB" agentvm_newimage_from get)"
 "$PB" agentvm_open_request_newimage set ""
@@ -181,10 +184,10 @@ section "an image being built"
     createdAt: "2026-09-30T12:00:00Z", startedAt: "2026-09-30T12:00:00Z", progress: {event: "progress", step: "install", fraction: 0.4, message: "Installing macOS"}}]' > "$JOBS"
 store status-empty.json '.images = [{name: "dev", state: "installing", path: "/Users/you/Library/Application Support/agent-vm/Images/dev"}]'
 omc_run AgentVM.main.activated
-check "the step runs, and says which image and what it does" "r1|1" "$(steps | /usr/bin/cut -d' ' -f4)|$(fact 4 | /usr/bin/grep -c '^dev: Building.*Installing macOS$')"
+check "the step runs, and says which image and what it does" "r1|1" "$(steps | /usr/bin/cut -d' ' -f4)|$(fact 4 | /usr/bin/grep -c '^dev: Building.*Installing macOS\. macOS asks whether AgentVM may find devices on local networks: allow it.*Local Network$')"
 /usr/bin/jq '. + [.[0] | .id = "20260930-120100-0000b2" | .command[2] = "web" | .targets = ["image:web"] | .state = "queued" | del(.startedAt) | del(.progress)]' "$JOBS" > "$JOBS.new" && /bin/mv "$JOBS.new" "$JOBS"
 omc_run AgentVM.main.activated
-check "with another build waiting behind it, the one that runs is the one told" "1" "$(fact 4 | /usr/bin/grep -c '^dev: Building.*Installing macOS$')"
+check "with another build waiting behind it, the one that runs is the one told" "1" "$(fact 4 | /usr/bin/grep -c '^dev: Building.*Installing macOS\. macOS asks whether AgentVM may find devices on local networks: allow it.*Local Network$')"
 /bin/rm -f "$JOBS"
 
 section "an image built outside the app, and a build that failed"
