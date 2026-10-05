@@ -1,14 +1,22 @@
 # AgentVM
 ![AgentVM Icon](Icon/AgentVM-macOS-256x256@1x.png)
 
-AgentVM.app is a Mac app for making and looking after [AgentVM](https://github.com/abra-code/agent-vm) images and boxes: the macOS virtual machines that coding agents run in, isolated from your Mac. It is a companion to the `agent-vm` and `avm` command line tools, not a replacement: it leads you through first use (a macOS restore file, the first images, the one permission you grant by hand, a first box), then shows what exists and what runs, with the everyday actions one or two clicks away. Agents themselves run in Terminal (`avm`) or in [Cadabra](https://github.com/abra-code/AIChatApp).
-
-**Status: in development.** The app does not do anything useful yet.
+AgentVM.app is a Mac app for creating and managing [AgentVM](https://github.com/abra-code/agent-vm) images and boxes: the macOS virtual machines that AI coding agents run in, isolated from your Mac. It is a companion to the `agent-vm` and `avm` command line tools: it guides you through setup and first use (a macOS restore file, the first images, an optional permission you grant by hand, a first box), then shows what exists and what runs, with the everyday actions one or two clicks away. Agents themselves run in Terminal (`avm`) or in [Cadabra](https://github.com/abra-code/AIChatApp).
 
 ## Requirements
 
 - macOS 27 or later, on a Mac with Apple silicon. The app does not open anywhere else.
 - `agent-vm`, installed for your user account in `~/.local/bin`. The app offers to download and install it when it is missing or too old. Terminal, Cadabra and this app all run that one copy.
+
+## Full Disk Access
+
+[Apple has said](https://developer.apple.com/news/?id=p6zjojqw) that Full Disk Access largely sidesteps the privacy controls of macOS, that it was meant for apps such as backup tools, and that granting it will come to take a very explicit action by the user. It named AI agents as the reason.
+
+AgentVM is the other way to run an AI agent.
+
+- **On your Mac**, AgentVM neither needs nor asks for Full Disk Access. The agent runs in a box and sees only the project folder you share. That is the opposite of Apple's concern that an agent on the Mac has access to everything. Do not give an agent Full Disk Access on your Mac - put it in a VM box instead.
+
+- **Inside an image, Full Disk Access is optional.** The app's guide (Set Up... on an image) grants it to `agent-vm-guest`, the program that starts everything in a box. That grant covers the box's own disk, which holds nothing of yours. Without it boxes still work: only a program that opens the box account's Desktop, Documents or Downloads waits, on a question macOS asks on the box's screen.
 
 ## How it works
 
