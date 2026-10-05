@@ -171,7 +171,7 @@ progress_elapsed_text() {
 # progress_step_rows <uuid>  ->  the steps table's rows, oldest first: the step in agent-vm's
 # words, and how far it is. A step is a progress event's name with its index; events of the same
 # step move its row on. Every step but the last is done; the last is where the job is ("40%",
-# or "now"), or where it ended ("done", "failed", "stopped").
+# or "running"), or where it ended ("done", "failed", "stopped").
 progress_step_rows() {
     local _events="$(ui_cache "$1" events.tsv)"
     [ -f "$_events" ] || return 0
@@ -189,7 +189,7 @@ progress_step_rows() {
             for (i = 1; i <= n; i++) {
                 how = "done"
                 if (i == n) {
-                    if (state == "running") how = (fraction[i] != "-") ? sprintf("%d%%", fraction[i] * 100 + 0.5) : "now"
+                    if (state == "running") how = (fraction[i] != "-") ? sprintf("%d%%", fraction[i] * 100 + 0.5) : "running"
                     else if (state == "failed" || state == "lost") how = "failed"
                     else if (state == "canceled") how = "stopped"
                 }
@@ -206,15 +206,45 @@ progress_percent() {
         END { if (fraction != "" && fraction != "-") printf "%d\n", fraction * 100 + 0.5 }' "$(ui_cache "$1" events.tsv)" 2>/dev/null
 }
 
+# progress_notice_text <uuid>  ->  the job's last notice, while it is about what the job does
+# now: a notice says what the user may need to act on in the step it was written in ("this Mac
+# is not letting agent-vm reach the guest... The build keeps trying"), so once the job has gone
+# on to another step, or has ended well, the notice is of something that was overcome, and is
+# nothing here: it would read as something still wrong. It stays in the log
+# (progress_log_text). A step is a progress event's name with its index, as in
+# progress_step_rows. A job whose events hold no notice (agent-vm keeps the record's notice
+# apart from them) shows the record's.
+progress_notice_text() {
+    local _job="$(progress_job "$1")"
+    local _notice="$(printf '%s\n' "$_job" | /usr/bin/cut -f14)"
+    [ -n "$_notice" ] && [ "$_notice" != "-" ] || return 0
+    [ "$(printf '%s\n' "$_job" | /usr/bin/cut -f2)" != "done" ] || return 0
+    local _events="$(ui_cache "$1" events.tsv)"
+    local _past=""
+    if [ -f "$_events" ]; then
+        _past="$(/usr/bin/awk -F'\t' '
+            $1 == "progress" { step = $2 "\t" $4 }
+            $1 == "notice" { seen = 1; at = step }
+            END { if (seen && step != at) print "past" }' "$_events")"
+    fi
+    [ -z "$_past" ] || return 0
+    printf '%s\n' "$_notice"
+}
+
 # progress_log_text <uuid>  ->  the end of the job's log: its log events (agent-vm's own lines and
-# what programs in the guest printed), then the lines that were neither an event nor the error,
+# what programs in the guest printed) with the notices among them, where they were written,
+# except the last notice while the notice line shows it (progress_notice_text); then the lines
+# that were neither an event nor the error,
 # then the error of a job that failed, as `job log` prints them; the last PROGRESS_LOG_LINES, each
 # cut to PROGRESS_LOG_WIDTH characters. jq makes the cut, since it counts characters: awk counts
 # bytes, and a line cut inside a character is not valid text, which the window is never given.
 progress_log_text() {
     local _job="$(progress_job "$1")"
     {
-        /usr/bin/awk -F'\t' '$1 == "log" { print $6 }' "$(ui_cache "$1" events.tsv)" 2>/dev/null
+        /usr/bin/awk -F'\t' -v shown="$(progress_notice_text "$1")" '
+            $1 == "log" || $1 == "notice" { line[++n] = $6; if ($1 == "notice") last = n }
+            END { for (i = 1; i <= n; i++) if (!(i == last && shown != "")) print line[i] }' \
+            "$(ui_cache "$1" events.tsv)" 2>/dev/null
         /bin/cat "$(ui_cache "$1" lines.txt)" 2>/dev/null
         case "$(printf '%s\n' "$_job" | /usr/bin/cut -f2)" in
             failed|lost|canceled)
@@ -253,10 +283,9 @@ progress_paint() {
     fi
     progress_step_rows "$_uuid" | "$dialog" "$_uuid" "$PROGRESS_STEPS_ID" omc_table_set_rows_from_stdin
     "$dialog" "$_uuid" "$PROGRESS_LOG_ID" "$(progress_log_text "$_uuid")"
-    # The last notice, and under it why the job could not be read this time, if it could not: what
-    # is shown is then from the reading before.
-    local _notice="$(printf '%s\n' "$_job" | /usr/bin/cut -f14)"
-    [ "$_notice" = "-" ] && _notice=""
+    # The last notice, while it is about the step the job is at, and under it why the job could
+    # not be read this time, if it could not: what is shown is then from the reading before.
+    local _notice="$(progress_notice_text "$_uuid")"
     if [ -n "$_error" ]; then
         if [ -n "$_notice" ]; then
             _notice="$(printf '%s\n%s' "$_notice" "$_error")"

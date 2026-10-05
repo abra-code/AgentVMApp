@@ -146,7 +146,7 @@ check "one call to agent-vm: the job's log" "job log $START --json" "$(fake_log)
 check "the title says what the job is" "Starting box cadabra-spike" "$(ui_title)"
 check "the headline is its step, with a capital" "Starting" "$(ui_value "$PROGRESS_STATUS_ID")"
 check "how long so far"              "Elapsed 12 s" "$(ui_value "$PROGRESS_ELAPSED_ID")"
-check "the step, which is where it is" "Starting=now" "$(steps)"
+check "the step, which is where it is" "Starting=running" "$(steps)"
 check "no fraction: no bar"          "0" "$(shown "$PROGRESS_BAR_ID")"
 check "no log, no notice"            "|" "$(ui_value "$PROGRESS_LOG_ID")|$(ui_value "$PROGRESS_NOTICE_ID")"
 check "the footer names the job and says the window can go" "Job $START. You can close this window: the job goes on." "$(ui_value "$PROGRESS_FOOTER_ID")"
@@ -223,10 +223,32 @@ check "the headline is the last step, in agent-vm's words" "[3/3] Agents" "$(ui_
 check "the steps, oldest first; the last shows how far it is" \
     "Cloning dev-node (macOS 26A428)=done|Booting=done|Recipe: ACP agents (3 steps, 2 checks)=done|[1/3] Homebrew=done|[2/3] Node=done|[3/3] Agents=67%" "$(steps)"
 check "the bar is shown, at the step's fraction" "1|67" "$(shown "$PROGRESS_BAR_ID")|$(ui_value "$PROGRESS_BAR_ID")"
-check "the log: agent-vm's lines and the guest's, then the other lines" \
-    "agent-vm-guest 0.6.14 answers over vsock|==> Downloading and installing Homebrew...|==> Installation successful!|==> Pouring node--24.9.0.arm64_tahoe.bottle.tar.gz|a line with a tab in it|added 212 packages in 9s|warning: a line that is neither an event nor the error" \
+check "the log: agent-vm's lines and the guest's, the notice of a step that is over where it was written, then the other lines" \
+    "agent-vm-guest 0.6.14 answers over vsock|==> Downloading and installing Homebrew...|==> Installation successful!|Homebrew is already installed in the base image|==> Pouring node--24.9.0.arm64_tahoe.bottle.tar.gz|a line with a tab in it|added 212 packages in 9s|warning: a line that is neither an event nor the error" \
     "$(ui_value "$PROGRESS_LOG_ID" | /usr/bin/paste -sd '|' -)"
-check "the notice"                   "Homebrew is already installed in the base image" "$(ui_value "$PROGRESS_NOTICE_ID")"
+check "a notice of a step the job has left is not on the notice line" "" "$(ui_value "$PROGRESS_NOTICE_ID")"
+
+section "a notice is shown while the job is at the step it was written in"
+NOTE_TEXT="note: this Mac is not letting agent-vm reach the guest at 192.168.64.3. The build keeps trying."
+job_log "$BUILD" "{events: [{event: \"progress\", step: \"first-boot\", message: \"First boot\"},
+    {event: \"log\", message: \"address 192.168.64.3\"},
+    {event: \"notice\", message: \"$NOTE_TEXT\"}], lines: []}"
+poll 1
+check "the step it was written in: on the notice line, and not in the log too" "$NOTE_TEXT|address 192.168.64.3" \
+    "$(ui_value "$PROGRESS_NOTICE_ID")|$(ui_value "$PROGRESS_LOG_ID" | /usr/bin/paste -sd '|' -)"
+job_log "$BUILD" "{events: [{event: \"progress\", step: \"first-boot\", message: \"First boot\"},
+    {event: \"log\", message: \"address 192.168.64.3\"},
+    {event: \"notice\", message: \"$NOTE_TEXT\"},
+    {event: \"progress\", step: \"first-boot\", message: \"First boot\", fraction: 0.5}], lines: []}"
+poll 1
+check "the same step moving on keeps it" "$NOTE_TEXT" "$(ui_value "$PROGRESS_NOTICE_ID")"
+job_log "$BUILD" "{events: [{event: \"progress\", step: \"first-boot\", message: \"First boot\"},
+    {event: \"log\", message: \"address 192.168.64.3\"},
+    {event: \"notice\", message: \"$NOTE_TEXT\"},
+    {event: \"progress\", step: \"guest\", message: \"Installing the guest daemon\"}], lines: []}"
+poll 1
+check "the next step: the notice line is empty, and the notice is in the log" "|address 192.168.64.3|$NOTE_TEXT" \
+    "$(ui_value "$PROGRESS_NOTICE_ID")|$(ui_value "$PROGRESS_LOG_ID" | /usr/bin/paste -sd '|' -)"
 
 section "a step that moves on keeps its row"
 job_log "$BUILD" '{events: [{event: "progress", step: "install", message: "Installing macOS", fraction: 0.1},
@@ -256,7 +278,7 @@ for locale in C en_US.UTF-8; do
     ui_reset
     omc_control_defaults AgentVM.progress
     ( LC_ALL="$locale"; export LC_ALL; poll 1 )
-    check "$locale: a step that begins with such a letter is shown as it is" "${E}crire=now|${E}crire" "$(steps)|$(ui_value "$PROGRESS_STATUS_ID")"
+    check "$locale: a step that begins with such a letter is shown as it is" "${E}crire=running|${E}crire" "$(steps)|$(ui_value "$PROGRESS_STATUS_ID")"
     check "$locale: a long line is cut between characters, to 100 of them" "$(/usr/bin/jq -nr '("\u00e9" * 97) + "..."')" "$(ui_value "$PROGRESS_LOG_ID")"
 done
 
@@ -267,10 +289,10 @@ printf 'the store is locked\n' > "$FAKE_AGENTVM_DIR/fail-job-log"
 poll 1
 /bin/rm -f "$FAKE_AGENTVM_DIR/fail-job-log"
 check "what was read before stays"   "[3/3] Agents|6" "$(ui_value "$PROGRESS_STATUS_ID")|$(ui_row_count "$PROGRESS_STEPS_ID")"
-check "  and the reason is under the notice" "Homebrew is already installed in the base image|the store is locked" \
+check "  and the reason is on the notice line" "the store is locked" \
     "$(ui_value "$PROGRESS_NOTICE_ID" | /usr/bin/paste -sd '|' -)"
 poll 1
-check "the next reading clears it"   "Homebrew is already installed in the base image" "$(ui_value "$PROGRESS_NOTICE_ID")"
+check "the next reading clears it"   "" "$(ui_value "$PROGRESS_NOTICE_ID")"
 
 section "Stop..."
 alerts_reset
