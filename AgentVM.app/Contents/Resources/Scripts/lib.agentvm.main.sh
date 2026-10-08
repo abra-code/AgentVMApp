@@ -82,6 +82,7 @@ MAIN_BOX_AGENT_ID=343
 MAIN_BOX_RECREATE_ID=344
 MAIN_BOX_DELETE_ID=345
 MAIN_HOWTO_ID=346
+MAIN_KEPT_LOGS_ID=347
 MAIN_BOX_IMAGE_ID=351
 MAIN_BOX_NETWORK_ID=352
 MAIN_BOX_NETWORK_DETAILS_ID=361
@@ -186,7 +187,7 @@ main_read_doctor() {
 }
 
 # main_read_status <uuid> [check]  ->  0, with the cache files boxes.tsv, images.tsv, updates.tsv,
-# newest.tsv, vm.tsv and jobs.tsv holding the rows lib.agentvm.sh documents; or agent-vm's status,
+# newest.tsv, vm.tsv, kept.tsv and jobs.tsv holding the rows lib.agentvm.sh documents; or agent-vm's status,
 # with the previous rows kept and its message in the cache file "status-error" (empty after a
 # success). "check" has agent-vm ask Apple for the newest macOS first (agentvm_status_checked).
 main_read_status() {
@@ -208,12 +209,13 @@ main_read_status() {
     printf '%s\n' "$_json" | agentvm_status_update_rows | ui_store "$(ui_cache "$1" updates.tsv)"
     printf '%s\n' "$_json" | agentvm_status_newest_row | ui_store "$(ui_cache "$1" newest.tsv)"
     printf '%s\n' "$_json" | agentvm_status_vm_row | ui_store "$(ui_cache "$1" vm.tsv)"
+    printf '%s\n' "$_json" | agentvm_status_kept_logs_row | ui_store "$(ui_cache "$1" kept.tsv)"
     printf '%s\n' "$_json" | agentvm_job_rows | ui_store "$(ui_cache "$1" jobs.tsv)"
     : | ui_store "$_error"
     return 0
 }
 
-# main_rows <uuid> <boxes|images|updates|newest|doctor|vm|jobs>  ->  that cache file's rows, nothing when it is missing.
+# main_rows <uuid> <boxes|images|updates|newest|doctor|vm|kept|jobs>  ->  that cache file's rows, nothing when it is missing.
 main_rows() {
     local _file="$(ui_cache "$1" "$2.tsv")"
     [ -f "$_file" ] || return 0
@@ -676,6 +678,55 @@ main_image_logs_text() {
         *)        _text="Last $_what did not finish" ;;
     esac
     printf '%s\n' "$_text${_ended:+: $_ended}"
+}
+
+# main_kept_logs <uuid> <n>  ->  field n of what agent-vm says of the logs of deleted boxes
+# (agentvm_status_kept_logs_row: 1 how many boxes' logs it keeps, 2 what they take, 3 for how
+# many days it keeps a box's logs, 4 the folder they are in), or nothing before the first reading.
+main_kept_logs() {
+    main_rows "$1" kept | /usr/bin/sed -n '1p' | /usr/bin/cut -f"$2"
+}
+
+# main_kept_days_text <uuid>  ->  for how long agent-vm keeps the logs of a box that is deleted
+# or recreated ("30 days", "1 day"), or nothing when it keeps none or does not say. The number is
+# a setting of the store, which the app shows and keeps no copy of.
+main_kept_days_text() {
+    local _days="$(main_kept_logs "$1" 3)"
+    case "$_days" in
+        ''|0|*[!0123456789]*) return 0 ;;
+        1) printf '1 day\n' ;;
+        *) printf '%s days\n' "$_days" ;;
+    esac
+}
+
+# main_box_logs_kept_text <uuid> <name>  ->  the sentence a question about deleting or recreating
+# that box gains: its logs stay, and for how long. The user is about to remove the only place
+# they knew the logs to be. Nothing when the box has logged nothing on this Mac, or agent-vm keeps
+# no logs.
+main_box_logs_kept_text() {
+    local _days="$(main_kept_days_text "$1")"
+    [ -n "$_days" ] || return 0
+    [ -n "$(main_box_log_file "$(main_box_folder "$1" "$2")")" ] || return 0
+    printf 'Its logs are kept for %s.\n' "$_days"
+}
+
+# main_box_deleted_text <uuid> <name>  ->  what is said once a box is deleted and agent-vm kept
+# its logs.
+main_box_deleted_text() {
+    local _days="$(main_kept_days_text "$1")"
+    printf 'Box %s is deleted. Its logs are kept%s.\n' "$2" "${_days:+ for $_days}"
+}
+
+# main_kept_logs_folder <uuid>  ->  the folder of the logs of deleted boxes, a folder per box under
+# it, when agent-vm keeps any and the folder is on this Mac; nothing otherwise. The boxes that
+# avm and Cadabra make for one run and delete are there too, and nowhere else in the app.
+main_kept_logs_folder() {
+    case "$(main_kept_logs "$1" 1)" in
+        ''|0|*[!0123456789]*) return 0 ;;
+    esac
+    local _folder="$(main_kept_logs "$1" 4)"
+    [ -n "$_folder" ] && [ "$_folder" != "-" ] && [ -d "$_folder" ] && printf '%s\n' "$_folder"
+    return 0
 }
 
 # main_show_file <file>  ->  that file selected in a Finder window, when it is on this Mac.
@@ -1342,8 +1393,8 @@ main_paint_box_detail() {
     }
 }
 
-# main_box_delete_question <uuid> <name>  ->  the confirmation's message: what deleting frees, and
-# that the image it was made from stays.
+# main_box_delete_question <uuid> <name>  ->  the confirmation's message: what deleting frees, that
+# the image it was made from stays, and that agent-vm keeps the box's logs for some days.
 main_box_delete_question() {
     local _text="The box's folder and disk are deleted, with everything installed or saved in it"
     local _size="$(ui_size_text "$(main_info "$1" box "$2" | /usr/bin/cut -f27)")"
@@ -1351,13 +1402,17 @@ main_box_delete_question() {
     _text="$_text."
     local _image="$(main_row "$1" boxes "$2" | /usr/bin/cut -f3)"
     [ -n "$_image" ] && [ "$_image" != "-" ] && _text="$_text The image it was made from, $_image, is kept."
+    local _kept="$(main_box_logs_kept_text "$1" "$2")"
+    [ -n "$_kept" ] && _text="$_text $_kept"
     printf '%s This cannot be undone.\n' "$_text"
 }
 
-# main_box_recreate_question <uuid> <name>  ->  the confirmation's message: what stays and what goes.
+# main_box_recreate_question <uuid> <name>  ->  the confirmation's message: what stays and what
+# goes, and that agent-vm keeps the logs of the box as it was for some days.
 main_box_recreate_question() {
     local _image="$(main_row "$1" boxes "$2" | /usr/bin/cut -f3)"
-    printf 'It is made again from image %s as the image is now, with the same name, processors, memory and network rules. Everything installed or saved in the box, logins included, is deleted. This cannot be undone.\n' "$_image"
+    local _kept="$(main_box_logs_kept_text "$1" "$2")"
+    printf 'It is made again from image %s as the image is now, with the same name, processors, memory and network rules. Everything installed or saved in the box, logins included, is deleted.%s This cannot be undone.\n' "$_image" "${_kept:+ $_kept}"
 }
 
 # main_box_askable <uuid> <name> <recreate|delete|start|stop>  ->  0 when that can be done to the
@@ -1830,6 +1885,12 @@ main_paint() {
         "$dialog" "$_uuid" "$MAIN_BOXES_FOOTER_ID" "$(main_vms_text "$_uuid")"
         "$dialog" "$_uuid" "$MAIN_IMAGES_FOOTER_ID" "$(main_count_text "$(main_rows "$_uuid" images | /usr/bin/awk 'END { print NR }')" image)"
         "$dialog" "$_uuid" "$MAIN_BOXES_NOTE_ID" "$_error"
+        # Logs of Deleted Boxes, in the bar under the box list: on while agent-vm keeps any.
+        if [ -n "$(main_kept_logs_folder "$_uuid")" ]; then
+            ui_enable "$_uuid" "$MAIN_KEPT_LOGS_ID" 1
+        else
+            ui_enable "$_uuid" "$MAIN_KEPT_LOGS_ID" 0
+        fi
         "$dialog" "$_uuid" "$MAIN_IMAGES_NOTE_ID" "$_error"
         main_paint_settings "$_uuid"
         main_paint_lists "$_uuid"

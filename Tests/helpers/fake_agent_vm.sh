@@ -35,6 +35,10 @@
 #              with the job's record; a job without one has no events. The job's `progress` and
 #              `notice`, in `status`, `job list` and `job log`, are then the log's last ones.
 #   status.json  also what `box create` adds the new box to, as agent-vm's store would hold it.
+#   kept-logs  when present, the folder `box delete` says it moved the box's logs to (`keptLogs`
+#              in its answer); without it the box is taken to have logged nothing.
+#   kept-logs-problem  when present, why `box delete` says some or all of the logs were not kept
+#              (`logsProblem`).
 #   job-start-state  when present, the state a job is in as `job start` returns ("failed"), with
 #              the text of job-start-error as its error: a job that fails within the moment.
 #
@@ -45,7 +49,8 @@
 #   becomes the file secret-value-<name>), secret delete <name>,
 #   image info <name> --json,
 #   image delete <name> --json, box delete <name> --json and box recreate <name> --json (which
-#   change nothing: the test changes status.json to match), box info <name> --json, and
+#   change nothing: the test changes status.json to match; box delete answers as agent-vm does,
+#   see kept-logs above), box info <name> --json, and
 #   box view <name> [--interactive] --json (which shows nothing, and is refused for a Linux box,
 #   which has no screen), box packs --json,
 #   box create <name> --image <image> [--cpus <n>] [--memory-gb <n>] [--net <mode>] [--allow <rule> ...]
@@ -349,7 +354,15 @@ case "$*" in
         else
             /bin/cat "$fixtures/box-execlog.json"
         fi ;;
-    "box delete "*" --json"|"box recreate "*" --json")
+    "box delete "*" --json")
+        # agent-vm says where it moved the box's logs, when it kept any.
+        kept=""
+        problem=""
+        [ -f "$state/kept-logs" ] && kept="$(/bin/cat "$state/kept-logs")"
+        [ -f "$state/kept-logs-problem" ] && problem="$(/bin/cat "$state/kept-logs-problem")"
+        /usr/bin/jq -n --arg name "$3" --arg kept "$kept" --arg problem "$problem" '{deleted: $name}
+            + (if $kept == "" then {} else {keptLogs: $kept} end) + (if $problem == "" then {} else {logsProblem: $problem} end)' ;;
+    "box recreate "*" --json")
         ;;
     "box view "*" --json"|"box view "*" --interactive --json")
         # A Linux box has no screen, and agent-vm says so.

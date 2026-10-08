@@ -120,6 +120,7 @@
                     { "type": "Button", "id": 342, "properties": { "systemImage": "folder", "imageScale": "large", "disabled": true, "actionID": "AgentVM.main.box.show", "help": "Show the selected box in Finder" } },
                     { "type": "Button", "id": 345, "properties": { "systemImage": "trash", "imageScale": "large", "disabled": true, "actionID": "AgentVM.main.box.delete", "help": "Delete the selected box..." } },
                     { "type": "Spacer" },
+                    { "type": "Button", "id": 347, "properties": { "systemImage": "archivebox", "imageScale": "large", "disabled": true, "actionID": "AgentVM.main.box.logs.kept", "help": "Show the logs of deleted boxes in Finder. agent-vm keeps what a box ran and contacted for some days after the box is deleted or recreated, the boxes avm and Cadabra make for one run included." } },
                     { "type": "Button", "id": 346, "properties": { "systemImage": "questionmark.circle", "imageScale": "large", "actionID": "AgentVM.howto.open", "help": "How to use a box" } }
                   ]
                 },

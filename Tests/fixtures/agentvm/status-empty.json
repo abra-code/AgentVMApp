@@ -2,6 +2,12 @@
   "boxes": [],
   "images": [],
   "jobs": [],
+  "keptLogs": {
+    "bytes": 0,
+    "count": 0,
+    "directory": "/Users/you/Library/Application Support/agent-vm/Logs",
+    "holdDays": 30
+  },
   "runningVMs": {
     "count": 0,
     "limit": 2,

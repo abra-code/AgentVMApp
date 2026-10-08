@@ -441,6 +441,24 @@ with_fake agentvm_box_delete s3
 check "a refusal is agent-vm's status" "1" "$?"
 check "  and its words"              "box s3 is running; stop it first" "$(lib agentvm_last_error 1)"
 /bin/rm -f "$FAKE_AGENTVM_DIR/fail-box-delete"
+fake_reset
+said="$(with_fake agentvm_box_delete s3)"
+check "a box that logged nothing: the delete names no folder of logs, and no problem" "0|-${TAB}-" "$?|$said"
+KEPT_S3="/Users/you/Library/Application Support/agent-vm/Logs/s3-20261008T120000Z"
+printf '%s\n' "$KEPT_S3" > "$FAKE_AGENTVM_DIR/kept-logs"
+said="$(with_fake agentvm_box_delete s3)"
+check "a box whose logs agent-vm kept: the delete says where they are" "0|$KEPT_S3${TAB}-" "$?|$said"
+printf 'network.jsonl: No space left on device\n' > "$FAKE_AGENTVM_DIR/kept-logs-problem"
+said="$(with_fake agentvm_box_delete s3)"
+check "  some of them could not be kept: where the others are, and why" "0|$KEPT_S3${TAB}network.jsonl: No space left on device" "$?|$said"
+/bin/rm -f "$FAKE_AGENTVM_DIR/kept-logs"
+said="$(with_fake agentvm_box_delete s3)"
+check "  none could be kept: no folder, and why" "0|-${TAB}network.jsonl: No space left on device" "$?|$said"
+/bin/rm -f "$FAKE_AGENTVM_DIR/kept-logs-problem"
+printf 'box s3 is running; stop it first\n' > "$FAKE_AGENTVM_DIR/fail-box-delete"
+said="$(with_fake agentvm_box_delete s3)"
+check "  a delete that is refused says nothing of logs" "1|" "$?|$said"
+/bin/rm -f "$FAKE_AGENTVM_DIR/fail-box-delete"
 
 section "Terminal: the .command files"
 TERMINAL_DIR="$HOME/Library/Application Support/AgentVM/Terminal"
@@ -605,6 +623,16 @@ check "the Linux boxes among them"   "3${TAB}2${TAB}2${TAB}0" \
 check "  and the Linux images being built or updated, once agent-vm says them" "4${TAB}2${TAB}2${TAB}1" \
     "$(printf '{"runningVMs": {"count": 4, "limit": 2, "linuxBoxes": 2, "linuxImages": 1}}\n' | lib agentvm_status_vm_row)"
 
+section "the logs of deleted boxes"
+check "none kept, held for 30 days, and the folder they would be in" "0${TAB}0${TAB}30${TAB}/Users/you/Library/Application Support/agent-vm/Logs" \
+    "$(lib agentvm_status_kept_logs_row < "$FIXTURES_AGENTVM/status.json")"
+check "fourteen boxes' logs, what they take, and a store that holds them for a week" "14${TAB}3355443${TAB}7${TAB}/x/Logs" \
+    "$(printf '{"keptLogs": {"count": 14, "bytes": 3355443, "holdDays": 7, "directory": "/x/Logs"}}\n' | lib agentvm_status_kept_logs_row)"
+check "a store that keeps none"      "0${TAB}0${TAB}0${TAB}/x/Logs" \
+    "$(printf '{"keptLogs": {"count": 0, "bytes": 0, "holdDays": 0, "directory": "/x/Logs"}}\n' | lib agentvm_status_kept_logs_row)"
+check "an agent-vm that says nothing of them: none, and neither a number of days nor a folder" "0${TAB}0${TAB}-${TAB}-" \
+    "$(printf '{"boxes": [], "images": []}\n' | lib agentvm_status_kept_logs_row)"
+
 section "an empty store (status-empty.json)"
 check "no box rows"                  "" "$(lib agentvm_status_box_rows < "$FIXTURES_AGENTVM/status-empty.json")"
 check "no image rows"                "" "$(lib agentvm_status_image_rows < "$FIXTURES_AGENTVM/status-empty.json")"
@@ -686,6 +714,8 @@ check "the newest macOS is there"    "version build checkedAt " \
     "$(/usr/bin/jq -r '.newestMacOS | keys_unsorted | sort_by(if . == "version" then 0 elif . == "build" then 1 else 2 end)[]' "$FIXTURES_AGENTVM/status.json" | /usr/bin/tr '\n' ' ')"
 check "the virtual machine count is there" "0" \
     "$(lib agentvm_status_vm_row < "$FIXTURES_AGENTVM/status.json" | col 1)"
+check "what agent-vm keeps of deleted boxes is there" "bytes count directory holdDays " \
+    "$(/usr/bin/jq -r '.keptLogs | keys[]' "$FIXTURES_AGENTVM/status.json" | /usr/bin/tr '\n' ' ')"
 check "doctor has the checks the window reads" "virtualization disk space running VMs " \
     "$(lib agentvm_doctor_rows < "$FIXTURES_AGENTVM/doctor.json" | col 1 \
         | /usr/bin/grep -x -e virtualization -e 'disk space' -e 'running VMs' | /usr/bin/tr '\n' ' ')"

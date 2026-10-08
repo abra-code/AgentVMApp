@@ -253,4 +253,22 @@ check "image create knows --linux: what it refuses is the system, naming every o
     "$refused|$(/usr/bin/grep -o -e '--linux nosuch-system' "$OMCTEST_WORK/linux.err" | /usr/bin/head -1)|$unnamed"
 check "  and it left no image behind" "" "$(real_lib agentvm_status | lib agentvm_status_image_rows)"
 
+section "what agent-vm keeps of a deleted box, and a copy of an image"
+# The main window says how long a deleted box's logs are kept, and opens their folder.
+check "status says how many logs of deleted boxes it keeps, what they take, for how many days, and where" "number number number string" \
+    "$(/usr/bin/jq -r '.keptLogs | [(.count | type), (.bytes | type), (.holdDays | type), (.directory | type)] | join(" ")' "$OMCTEST_WORK/status.json")"
+# The folder is told by its end: agent-vm gives the store's real path, and the scratch folder is
+# reached through a link.
+check "  an empty store keeps none, in the folder Logs of the store" "0${TAB}0${TAB}yes" \
+    "$(lib agentvm_status_kept_logs_row < "$OMCTEST_WORK/status.json" | /usr/bin/awk -F'\t' '{ printf "%s\t%s\t%s\n", $1, $2, ($4 ~ /\/empty-store\/Logs$/ && $3 ~ /^[0123456789]+$/) ? "yes" : "no:" $3 ":" $4 }')"
+real_lib agentvm_box_delete nosuch > "$OMCTEST_WORK/delete.out"
+check "box delete of a box the store does not have fails, and names no folder of logs" "1|" "$?|$(/bin/cat "$OMCTEST_WORK/delete.out")"
+# The New Image window offers a copy of an image with no tool ticked, which is `image create
+# <name> --from <image>` and nothing else: agent-vm must refuse this one for its image, not for
+# a recipe it no longer asks for.
+AGENT_VM_HOME="$STORE" "$real" image create copy-of-nosuch --from nosuch --json > /dev/null 2> "$OMCTEST_WORK/copy.err"
+check "image create --from with no recipe is refused for the image it does not have, not for the missing recipe" "1|1|0" \
+    "$?|$(/usr/bin/grep -c 'no image nosuch' "$OMCTEST_WORK/copy.err")|$(/usr/bin/grep -c -i 'recipe' "$OMCTEST_WORK/copy.err")"
+check "  and it left no image behind" "" "$(real_lib agentvm_status | lib agentvm_status_image_rows)"
+
 omctest_end

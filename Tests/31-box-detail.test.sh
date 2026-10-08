@@ -476,6 +476,85 @@ omc_run AgentVM.main.box.logs.console
 check "no box selected: nothing opens" "" "$(opened)"
 check "nothing was asked of agent-vm about a log" "0" "$(fake_log | /usr/bin/grep -c 'log')"
 
+section "a box deleted or recreated: agent-vm keeps its logs, and the app says so"
+# kept_store <jq object: what status says of the logs of deleted boxes> [jq edit]  ->  the store
+# with both kinds, s3's folder on this Mac.
+kept_store() {
+    /usr/bin/jq --arg mac "$mac_folder" "(.boxes[] | select(.box.name == \"s3\")).path = \$mac | .keptLogs = $1 | ${2:-.}" \
+        "$FIXTURES_AGENTVM/status-mixed.json" > "$FAKE_AGENTVM_DIR/status.json"
+}
+# asked <handler>  ->  the message of the question that handler asks about the selected box.
+asked() {
+    alerts_reset
+    omc_run "$1"
+    ui_alert_message
+}
+KEPT_FOLDER="$OMCTEST_WORK/logs store/Logs"
+DELETE_TEXT="The box's folder and disk are deleted, with everything installed or saved in it. The image it was made from, dev-acp, is kept."
+RECREATE_TEXT="It is made again from image dev-acp as the image is now, with the same name, processors, memory and network rules. Everything installed or saved in the box, logins included, is deleted."
+fake_reset
+/bin/rm -rf "$mac_folder/exec.jsonl"
+: > "$mac_folder/supervisor.log"
+kept_store "{count: 0, bytes: 0, holdDays: 30, directory: \"$KEPT_FOLDER\"}"
+open_window
+select_box s3
+check "a box that has logs: the Delete question says they are kept, and for how long" "$DELETE_TEXT Its logs are kept for 30 days. This cannot be undone." \
+    "$(asked AgentVM.main.box.delete)"
+check "  and so does the Recreate question" "$RECREATE_TEXT Its logs are kept for 30 days. This cannot be undone." "$(asked AgentVM.main.box.recreate)"
+kept_store '{count: 0, bytes: 0, holdDays: 1, directory: "/x/Logs"}'
+check "a store that keeps them for one day" "$DELETE_TEXT Its logs are kept for 1 day. This cannot be undone." "$(asked AgentVM.main.box.delete)"
+kept_store '{count: 3, bytes: 4096, holdDays: 0, directory: "/x/Logs"}'
+check "a store that keeps none: neither question says they are kept" "$DELETE_TEXT This cannot be undone.|$RECREATE_TEXT This cannot be undone." \
+    "$(asked AgentVM.main.box.delete)|$(asked AgentVM.main.box.recreate)"
+kept_store 'null'
+check "an agent-vm that says nothing of kept logs: nothing is promised" "$DELETE_TEXT This cannot be undone." "$(asked AgentVM.main.box.delete)"
+kept_store "{count: 0, bytes: 0, holdDays: 30, directory: \"$KEPT_FOLDER\"}"
+/bin/rm -f "$mac_folder/supervisor.log"
+check "a box that has logged nothing leaves none: nothing is promised" "$DELETE_TEXT This cannot be undone.|$RECREATE_TEXT This cannot be undone." \
+    "$(asked AgentVM.main.box.delete)|$(asked AgentVM.main.box.recreate)"
+check "nothing is kept yet: Logs of Deleted Boxes, in the bar under the list, is off" "0" "$(enabled "$MAIN_KEPT_LOGS_ID")"
+# The delete: agent-vm moves the logs and says where; the store then holds one box's logs.
+: > "$mac_folder/supervisor.log"
+omc_run AgentVM.main.box.delete
+printf '%s\n' "$KEPT_FOLDER/s3-20261008T120000Z" > "$FAKE_AGENTVM_DIR/kept-logs"
+kept_store "{count: 1, bytes: 2048, holdDays: 30, directory: \"$KEPT_FOLDER\"}" 'del(.boxes[] | select(.box.name == "s3"))'
+omc_run AgentVM.main.box.delete.confirmed
+check "Delete: agent-vm kept the box's logs, and a toast says so, and for how long" "1" \
+    "$(ui_calls 'omc_present_toast.Box s3 is deleted\. Its logs are kept for 30 days\..5')"
+check "  their folder is not on this Mac: Logs of Deleted Boxes stays off, and opens nothing" "0|" \
+    "$(enabled "$MAIN_KEPT_LOGS_ID")|$(: > "$FAKE_OPEN_LOG"; omc_run AgentVM.main.box.logs.kept; opened)"
+/bin/mkdir -p "$KEPT_FOLDER/s3-20261008T120000Z"
+poll 1
+check "  with the folder on this Mac: on" "1" "$(enabled "$MAIN_KEPT_LOGS_ID")"
+: > "$FAKE_OPEN_LOG"
+omc_run AgentVM.main.box.logs.kept
+check "  and it opens the folder of all the kept logs in Finder" "$KEPT_FOLDER" "$(opened)"
+kept_store "{count: 0, bytes: 0, holdDays: 30, directory: \"$KEPT_FOLDER\"}" 'del(.boxes[] | select(.box.name == "s3"))'
+poll 1
+check "agent-vm removed them since: off again, and it opens nothing" "0|" \
+    "$(enabled "$MAIN_KEPT_LOGS_ID")|$(: > "$FAKE_OPEN_LOG"; omc_run AgentVM.main.box.logs.kept; opened)"
+/bin/rm -f "$FAKE_AGENTVM_DIR/kept-logs"
+select_box lb
+omc_run AgentVM.main.box.delete
+toasts="$(ui_calls omc_present_toast)"
+omc_run AgentVM.main.box.delete.confirmed
+check "a box whose delete names no kept logs: the box is deleted, and no toast is shown" "1|$toasts" \
+    "$(fake_log | /usr/bin/grep -c -x 'box delete lb --json')|$(ui_calls omc_present_toast)"
+# agent-vm deletes a box whose logs it cannot move all the same, and says why: the question had
+# said they would be kept, so this is said in an alert, not passed over.
+: > "$linux_folder/supervisor.log"
+printf '%s\n' "$KEPT_FOLDER/lb-20261008T120500Z" > "$FAKE_AGENTVM_DIR/kept-logs"
+printf 'network.jsonl: No space left on device\n' > "$FAKE_AGENTVM_DIR/kept-logs-problem"
+select_box lb
+omc_run AgentVM.main.box.delete
+toasts="$(ui_calls omc_present_toast)"
+alerts_reset
+omc_run AgentVM.main.box.delete.confirmed
+check "agent-vm could not keep all of the logs: an alert says why, in place of the toast" \
+    "Box lb is deleted, and not all of its logs were kept|network.jsonl: No space left on device|$toasts" \
+    "$(ui_alert_title)|$(ui_alert_message)|$(ui_calls omc_present_toast)"
+/bin/rm -f "$FAKE_AGENTVM_DIR/kept-logs" "$FAKE_AGENTVM_DIR/kept-logs-problem"
+
 section "no writes to views the window does not have"
 check "no undeclared ids" "" "$(ui_unknown_writes)"
 check "no harness errors" "" "$(ui_errors)"

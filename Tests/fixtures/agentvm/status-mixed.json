@@ -717,6 +717,12 @@
       ]
     }
   ],
+  "keptLogs": {
+    "bytes": 0,
+    "count": 0,
+    "directory": "/Users/you/Library/Application Support/agent-vm/Logs",
+    "holdDays": 30
+  },
   "newestMacOS": {
     "build": "26A434",
     "checkedAt": "2026-10-01T17:30:02Z",

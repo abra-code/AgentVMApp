@@ -35,7 +35,7 @@
 [ -n "${__AGENTVM_APP_LIB:-}" ] && return 0
 __AGENTVM_APP_LIB=1
 
-AGENTVM_MIN_VERSION="0.7.13"
+AGENTVM_MIN_VERSION="0.7.23"
 
 # The app's own state, and where agent-vm's installer puts the link to the newest agent-vm.
 agentvm_support_dir="$HOME/Library/Application Support/AgentVM"
@@ -406,18 +406,28 @@ agentvm_box_view() {
 
 # agentvm_box_recreate <name>  ->  0 once the stopped box is made again as a fresh clone of its
 # image as the image is now, with the same name, processors, memory, network rules and disposable
-# flag. Everything written in the old box goes. agent-vm refuses a box that runs, and one whose
-# image is gone. A clone, so it takes a moment, not a job.
+# flag. Everything written in the old box goes; its logs so far are kept as a deleted box's are.
+# agent-vm refuses a box that runs, and one whose image is gone. A clone, so it takes a moment,
+# not a job.
 agentvm_box_recreate() {
     _agentvm_need_name box "$1" || return $?
     agentvm_json box recreate "$1" >/dev/null
 }
 
-# agentvm_box_delete <name>  ->  0 once the box and its disk are gone. agent-vm refuses a box
-# that runs. The image it was made from is not touched.
+# agentvm_box_delete <name>  ->  0 once the box and its disk are gone, with one row on stdout that
+# says what became of its logs: the folder agent-vm moved them to, and why some or all of them
+# could not be kept ("-" for each that does not apply). agent-vm holds the logs of a deleted box
+# in the store for some days (agentvm_status_kept_logs_row); a box that logged nothing leaves
+# none, and one whose logs cannot be moved is deleted all the same. agent-vm refuses a box that
+# runs. The image it was made from is not touched.
 agentvm_box_delete() {
     _agentvm_need_name box "$1" || return $?
-    agentvm_json box delete "$1" >/dev/null
+    local _json
+    _json="$(agentvm_json box delete "$1")"
+    local _status=$?
+    [ "$_status" -eq 0 ] || return "$_status"
+    printf '%s\n' "$_json" | /usr/bin/jq -r "$agentvm_jq_defs"' [.keptLogs, .logsProblem] | map(if type == "string" then . else null end) | row' 2>/dev/null
+    return 0
 }
 
 # -- A box's network -----------------------------------------------------------------------------
@@ -757,6 +767,15 @@ agentvm_image_delete() {
 agentvm_status_vm_row() {
     /usr/bin/jq -r "$agentvm_jq_defs"' [.runningVMs.count, .runningVMs.limit,
         (.runningVMs.linuxBoxes // 0), (.runningVMs.linuxImages // 0)] | row'
+}
+
+# agentvm_status_kept_logs_row  <  status JSON  ->  count, bytes, holdDays, directory: the logs of
+# deleted boxes that agent-vm keeps in the store (how many boxes' logs, and what they take), for
+# how many days it keeps a box's logs once the box is deleted or recreated (0: it keeps none),
+# and the folder they are in, one folder per box under it. count and bytes are 0, and the other
+# two "-", when agent-vm does not say.
+agentvm_status_kept_logs_row() {
+    /usr/bin/jq -r "$agentvm_jq_defs"' [(.keptLogs.count // 0), (.keptLogs.bytes // 0), .keptLogs.holdDays, .keptLogs.directory] | row'
 }
 
 # -- Jobs ----------------------------------------------------------------------------------------

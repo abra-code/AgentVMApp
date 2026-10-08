@@ -64,6 +64,16 @@ agent-vm 0.7.13 says in `version --json` what it builds from nothing: `linuxRele
 - `doctor.json` was given the Linux guest daemon's digest as 0.7.13 prints it.
 - The version strings of `status-variety.json` and `job-log-variety.json` were moved from 0.7.12 to 0.7.13. `job-log-linux.json`, `status-linux.json` and `status-mixed.json` keep the versions they were captured with.
 
+## The move to agent-vm 0.7.23 (2026-10-08)
+
+agent-vm 0.7.14 to 0.7.23 keep a deleted box's logs and say so. What an application reads of it: `status --json` has `keptLogs` (`count`, `bytes`, `holdDays`, `directory`: how many deleted boxes' logs the store keeps, what they take, for how many days it keeps a box's logs, and their folder), and `box delete --json`, which printed nothing, prints `deleted`, with `keptLogs` (the folder the box's logs were moved to) when it kept any. Since 0.7.20 `image create --from` makes a copy with no recipe. Nothing else the app reads changed.
+
+- `version.json` and `packs.json` were captured again from the installed agent-vm 0.7.23 (`refresh_agentvm_fixtures.sh <agent-vm> version packs recipe-check`; `recipe-check.json` came out as it was).
+- The five status fixtures were given `keptLogs` as an empty store has it, `jq -S '.keptLogs = {bytes: 0, count: 0, directory: "/Users/you/Library/Application Support/agent-vm/Logs", holdDays: 30}'` on `status.json`, `status-variety.json`, `status-empty.json` and `status-linux.json`, and `status-mixed.json` made again of the first and the last. The values are the real answer of 0.7.21 for a store with no kept logs, the folder written as the default store's.
+- `doctor.json` was given the Linux guest daemon's digest as 0.7.23 prints it.
+- The version strings of `status-variety.json` and `job-log-variety.json` were moved from 0.7.13 to 0.7.23.
+- The fake answers `box delete` as 0.7.23 does: `{"deleted": <name>}`, with `keptLogs` when a test leaves the folder's path in the file `kept-logs` of its state folder.
+
 ## Made by hand
 
 `box-netlog.json` is made by hand, not captured: a real connection log lists what programs in a box reached, which does not belong in a public repository. Its ten connections hold one of each kind the network window treats differently: hosts reached through a pack, a host refused three times over a tunnel to port 443, one refused over plain HTTP to port 80 (allowed by its host name), one refused over a raw tunnel to port 80 and one refused by IP address (neither gets a rule), and a failure to resolve. Its fields are those of a real `box netlog --json` entry on agent-vm 0.4.4.
