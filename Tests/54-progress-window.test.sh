@@ -16,7 +16,8 @@
 import_view_ids "$APP_SCRIPTS/lib.agentvm.main.sh" "$APP_SCRIPTS/lib.agentvm.progress.sh"
 [ -n "$MAIN_BOXES_ID" ] && [ -n "$MAIN_BOX_PROGRESS_ID" ] && [ -n "$MAIN_IMAGE_PROGRESS_ID" ] && [ -n "$PROGRESS_STATUS_ID" ] \
     && [ -n "$PROGRESS_ELAPSED_ID" ] && [ -n "$PROGRESS_BAR_ID" ] && [ -n "$PROGRESS_STEPS_ID" ] && [ -n "$PROGRESS_LOG_ID" ] \
-    && [ -n "$PROGRESS_NOTICE_ID" ] && [ -n "$PROGRESS_FOOTER_ID" ] && [ -n "$PROGRESS_STOP_ID" ] || {
+    && [ -n "$PROGRESS_NOTICE_ID" ] && [ -n "$PROGRESS_FOOTER_ID" ] && [ -n "$PROGRESS_STOP_ID" ] \
+    && [ -n "$PROGRESS_LOG_SHOW_ID" ] && [ -n "$PROGRESS_LOG_CONSOLE_ID" ] || {
     printf '54-progress-window: no view ids imported from the libraries\n' >&2
     exit 1
 }
@@ -360,6 +361,59 @@ open_progress 20260923-120000-0000ff
 check "the window says so"           "yes" "$(ui_value "$PROGRESS_STATUS_ID" | /usr/bin/grep -q 'no job 20260923-120000-0000ff' && echo yes)"
 check "  with Stop... off and no loop" "0|0" "$(enabled "$PROGRESS_STOP_ID")|$(chain_asked AgentVM.progress.poll)"
 omc_run AgentVM.progress.close
+
+section "the whole log, in Finder and in Console"
+# The window shows the end of the log; all of it is the file "log" in the job's folder in the
+# store. The fake names a folder that is not on this Mac, so the job is given one made here.
+LOGGED="20260930-120000-0000e1"
+LOGGED_FOLDER="$OMCTEST_WORK/logs store/Jobs/$LOGGED"
+log_buttons() {
+    printf '%s %s\n' "$(enabled "$PROGRESS_LOG_SHOW_ID")" "$(enabled "$PROGRESS_LOG_CONSOLE_ID")"
+}
+opened() {
+    /bin/cat "$FAKE_OPEN_LOG"
+}
+# The jobs the sections around this one work with are put back at its end.
+/bin/cp "$JOBS" "$JOBS.kept"
+/usr/bin/jq -n --arg id "$LOGGED" '[{id: $id, command: ["image", "create", "dev", "--json"], targets: ["image:dev"], state: "running",
+    createdAt: "2026-09-30T12:00:00Z", startedAt: "2026-09-30T12:00:00Z", path: ("/Users/you/Library/Application Support/agent-vm/Jobs/" + $id)}]' > "$JOBS"
+"$PB" "agentvm_window_progress_$LOGGED" set ""
+ui_reset
+chains_reset
+open_progress "$LOGGED"
+check "a job whose folder is not on this Mac: both buttons are off" "0 0" "$(log_buttons)"
+: > "$FAKE_OPEN_LOG"
+omc_run AgentVM.progress.log.show
+omc_run AgentVM.progress.log.console
+check "  the handlers, run anyway, open nothing" "" "$(opened)"
+/bin/mkdir -p "$LOGGED_FOLDER"
+job_edit "map(.path = \"$LOGGED_FOLDER\")"
+omc_run AgentVM.progress.activated
+check "its folder is on this Mac and holds no log yet: still off" "0 0" "$(log_buttons)"
+: > "$LOGGED_FOLDER/log"
+omc_run AgentVM.progress.activated
+check "its log is there: both are on, while the job runs" "1 1|1" "$(log_buttons)|$(enabled "$PROGRESS_STOP_ID")"
+: > "$FAKE_AGENTVM_DIR/log"
+omc_run AgentVM.progress.log.show
+check "Show Log in Finder selects the job's log" "-R $LOGGED_FOLDER/log" "$(opened)"
+: > "$FAKE_OPEN_LOG"
+omc_run AgentVM.progress.log.console
+check "Open in Console opens it in Console" "-a Console $LOGGED_FOLDER/log" "$(opened)"
+check "  neither asks agent-vm anything" "" "$(fake_log)"
+job_edit 'map(. + {state: "failed", status: 1, endedAt: "2026-09-30T12:00:09Z", error: "the build was canceled"})'
+omc_run AgentVM.progress.activated
+check "the job ended: Stop... is off, and the log's buttons stay on" "0|1 1" "$(enabled "$PROGRESS_STOP_ID")|$(log_buttons)"
+: > "$FAKE_OPEN_LOG"
+omc_run AgentVM.progress.log.show
+check "  and still show it"          "-R $LOGGED_FOLDER/log" "$(opened)"
+job_edit 'map(del(.path))'
+omc_run AgentVM.progress.activated
+check "a job agent-vm names no folder for: off" "0 0" "$(log_buttons)"
+: > "$FAKE_OPEN_LOG"
+omc_run AgentVM.progress.log.show
+check "  and nothing opens"          "" "$(opened)"
+omc_run AgentVM.progress.close
+/bin/mv "$JOBS.kept" "$JOBS"
 
 section "Progress... in the image pane"
 job_state "$BUILD" '{state: "running"} | del(.endedAt, .status)'

@@ -1,8 +1,8 @@
 #!/bin/sh
 # lib.agentvm.progress.sh
 #
-# A job's progress window (AgentVM.progress.json, the views 701-708): what the job does, the steps
-# it went through, the end of its log, and Stop. One window per job (lib.agentvm.ui.sh, "Box
+# A job's progress window (AgentVM.progress.json, the views 701-710): what the job does, the steps
+# it went through, the end of its log with two buttons that show all of it, and Stop. One window per job (lib.agentvm.ui.sh, "Box
 # windows", with the kind "progress" and the job's id as the name); the id is the window's
 # pasteboard value "job", set by the init handler from the open request. It is opened by
 # Progress... in the main window's box and image panes while a job holds the box or image.
@@ -22,8 +22,10 @@
 #
 # THE LOG is short on purpose: the last PROGRESS_LOG_LINES lines, each cut to
 # PROGRESS_LOG_WIDTH characters, so that the newest line is always in view without scrolling (a
-# text view cannot be scrolled to its end from a script). The whole log is `agent-vm job log <id>`
-# in Terminal, and the window shows the id.
+# text view cannot be scrolled to its end from a script). The whole log is the file "log" in the
+# job's folder in the store, where agent-vm keeps it on this Mac: Show Log in Finder selects it
+# and Open in Console opens it, while the job runs and after it ended, for as long as agent-vm
+# keeps the job. It is also `agent-vm job log <id>` in Terminal, and the window shows the id.
 #
 # POSIX sh (bash 3.2 in POSIX mode) only. Validate with "sh -n".
 [ -n "${__AGENTVM_APP_PROGRESS_LIB:-}" ] && return 0
@@ -39,6 +41,8 @@ PROGRESS_LOG_ID=705
 PROGRESS_NOTICE_ID=706
 PROGRESS_FOOTER_ID=707
 PROGRESS_STOP_ID=708
+PROGRESS_LOG_SHOW_ID=709
+PROGRESS_LOG_CONSOLE_ID=710
 
 PROGRESS_POLL_SECONDS=2
 PROGRESS_LOG_LINES=12
@@ -75,6 +79,14 @@ progress_job() {
     local _file="$(ui_cache "$1" job.tsv)"
     [ -f "$_file" ] || return 0
     /usr/bin/sed -n '1p' "$_file"
+}
+
+# progress_log_file <uuid>  ->  the job's whole log, the file "log" in the job's folder, when it is
+# on this Mac; nothing before the first reading, or when agent-vm names no folder for the job.
+progress_log_file() {
+    local _folder="$(progress_job "$1" | /usr/bin/cut -f18)"
+    [ -n "$_folder" ] && [ "$_folder" != "-" ] && [ -f "$_folder/log" ] && printf '%s\n' "$_folder/log"
+    return 0
 }
 
 # progress_moving <uuid>  ->  0 while the job runs or waits, as of the last reading.
@@ -268,6 +280,8 @@ progress_paint() {
         "$dialog" "$_uuid" "$PROGRESS_ELAPSED_ID" ""
         ui_show "$_uuid" "$PROGRESS_BAR_ID" 0
         ui_enable "$_uuid" "$PROGRESS_STOP_ID" 0
+        ui_enable "$_uuid" "$PROGRESS_LOG_SHOW_ID" 0
+        ui_enable "$_uuid" "$PROGRESS_LOG_CONSOLE_ID" 0
         "$dialog" "$_uuid" "$PROGRESS_FOOTER_ID" "Job $_id"
         return 0
     fi
@@ -283,6 +297,14 @@ progress_paint() {
     fi
     progress_step_rows "$_uuid" | "$dialog" "$_uuid" "$PROGRESS_STEPS_ID" omc_table_set_rows_from_stdin
     "$dialog" "$_uuid" "$PROGRESS_LOG_ID" "$(progress_log_text "$_uuid")"
+    # The whole log, in Finder and in Console, once its file is on this Mac.
+    if [ -n "$(progress_log_file "$_uuid")" ]; then
+        ui_enable "$_uuid" "$PROGRESS_LOG_SHOW_ID" 1
+        ui_enable "$_uuid" "$PROGRESS_LOG_CONSOLE_ID" 1
+    else
+        ui_enable "$_uuid" "$PROGRESS_LOG_SHOW_ID" 0
+        ui_enable "$_uuid" "$PROGRESS_LOG_CONSOLE_ID" 0
+    fi
     # The last notice, while it is about the step the job is at, and under it why the job could
     # not be read this time, if it could not: what is shown is then from the reading before.
     local _notice="$(progress_notice_text "$_uuid")"

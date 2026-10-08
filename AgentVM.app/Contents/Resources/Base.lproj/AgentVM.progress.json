@@ -4,7 +4,7 @@
     "alignment": "leading",
     "spacing": 10.0,
     "padding": 20.0,
-    "frame": { "minWidth": 560.0, "minHeight": 470.0, "idealWidth": 700.0, "idealHeight": 520.0 }
+    "frame": { "minWidth": 560.0, "minHeight": 500.0, "idealWidth": 700.0, "idealHeight": 550.0 }
   },
   "children": [
     {
@@ -43,6 +43,16 @@
         "font": { "size": 11, "design": "monospaced" },
         "frame": { "maxWidth": "infinity", "minHeight": 190, "maxHeight": 190 }
       }
+    },
+    {
+      "type": "HStack",
+      "properties": { "spacing": 8.0 },
+      "children": [
+        { "type": "Text", "properties": { "text": "The end of the job's log. All of it:", "font": "caption", "foregroundStyle": "secondary" } },
+        { "type": "Button", "id": 709, "properties": { "title": "Show Log in Finder", "controlSize": "small", "disabled": true, "actionID": "AgentVM.progress.log.show", "help": "Show the job's whole log in Finder: the file agent-vm keeps in the job's folder on this Mac, with every step and line, also after the job ended." } },
+        { "type": "Button", "id": 710, "properties": { "title": "Open in Console", "controlSize": "small", "disabled": true, "actionID": "AgentVM.progress.log.console", "help": "Open the job's whole log in Console, which searches it and follows it while the job runs. The file holds one event per line, as JSON." } },
+        { "type": "Spacer" }
+      ]
     },
     {
       "type": "Text",

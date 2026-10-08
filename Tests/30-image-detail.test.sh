@@ -410,6 +410,152 @@ omc_run AgentVM.main.activated
 check "  a record with its version and build is shown by them, whatever its words" "macOS 27.0.1 (26A434), updated Oct 1, 2026" \
     "$(ui_value "$MAIN_IMAGE_SYSTEM_ID")"
 
+section "the Logs row: the log of an image's last build or update, and a Linux image's console"
+# The row points to a job's log in the store and to console.log in a Linux image's folder, and
+# nothing is read from either. The folders are made here: the fixtures' are not on this Mac.
+JOBS="$FAKE_AGENTVM_DIR/jobs.json"
+JOB_FOLDERS="$OMCTEST_WORK/logs store/Jobs"
+# job_id <n>  ->  the id of the test's nth job: an id begins with the time, so a greater n is a
+# newer job.
+job_id() {
+    printf '20260930-12000%s-0000f%s\n' "$1" "$1"
+}
+# job_record <n> <image> <create|update|...> <state>  ->  that job as agent-vm lists it, with its
+# folder under $JOB_FOLDERS.
+job_record() {
+    /usr/bin/jq -n --arg id "$(job_id "$1")" --arg image "$2" --arg what "$3" --arg state "$4" --arg folders "$JOB_FOLDERS" '
+        {id: $id, command: ["image", $what, $image, "--json"], targets: ["image:\($image)"], state: $state, path: "\($folders)/\($id)",
+         createdAt: "2026-09-30T12:00:00Z"}
+        + (if $state == "queued" then {} else {startedAt: "2026-09-30T12:00:00Z"} end)
+        + (if $state == "running" or $state == "queued" then {} else {endedAt: "2026-09-30T12:05:00Z"} end)'
+}
+# jobs <record...>  ->  the jobs agent-vm lists, and carries in status.
+jobs() {
+    printf '%s\n' "$@" | /usr/bin/jq -s '.' > "$JOBS"
+}
+# job_log <n>  ->  the log file of that job, on this Mac.
+job_log() {
+    /bin/mkdir -p "$JOB_FOLDERS/$(job_id "$1")"
+    : > "$JOB_FOLDERS/$(job_id "$1")/log"
+}
+# image_logs  ->  the row: its text, whether Show Build Log is on, and whether Show Console Log
+# is shown and on.
+image_logs() {
+    printf '%s|%s|%s|%s\n' "$(ui_value "$MAIN_IMAGE_LOGS_ID")" "$(enabled "$MAIN_IMAGE_LOGS_BUILD_ID")" \
+        "$(ui_visible "$MAIN_IMAGE_LOGS_CONSOLE_ID")" "$(enabled "$MAIN_IMAGE_LOGS_CONSOLE_ID")"
+}
+opened() {
+    /bin/cat "$FAKE_OPEN_LOG"
+}
+listed() {
+    fake_log | /usr/bin/grep -c '^job list --json$'
+}
+NONE="No build log: agent-vm keeps one for a week"
+fake_reset
+deb_folder="$OMCTEST_WORK/logs store/Images/deb"
+/bin/mkdir -p "$deb_folder" "$JOB_FOLDERS"
+/usr/bin/jq --arg deb "$deb_folder" '(.images[] | select(.name == "deb")).path = $deb' "$FIXTURES_AGENTVM/status-mixed.json" > "$FAKE_AGENTVM_DIR/status.json"
+open_window
+: > "$FAKE_AGENTVM_DIR/log"
+select_image dev
+check "no build or update of the image is listed: the row says how long a log is kept, Show Build Log is off, and a macOS image has no Show Console Log" \
+    "$NONE|0|0|0" "$(image_logs)"
+check "selecting an image asks agent-vm for the jobs it lists" "1" "$(listed)"
+poll 2
+check "  the poll loop does not ask again" "1" "$(listed)"
+omc_run AgentVM.main.activated
+check "  activation does"            "2" "$(listed)"
+: > "$FAKE_OPEN_LOG"
+omc_run AgentVM.main.image.logs.build
+omc_run AgentVM.main.image.logs.console
+check "  the handlers, run anyway, open nothing" "" "$(opened)"
+jobs "$(job_record 1 dev create done)"
+select_image dev
+check "a build is listed, and its log is not on this Mac: as if there were none" "$NONE|0" "$(image_logs | /usr/bin/cut -d'|' -f1-2)"
+job_log 1
+select_image dev
+check "its log is on this Mac: the row says when the build ended, and Show Build Log is on" "Last build: Sep 30, 2026|1|0|0" "$(image_logs)"
+omc_run AgentVM.main.image.logs.build
+check "  Show Build Log selects the job's log in Finder" "-R $JOB_FOLDERS/$(job_id 1)/log" "$(opened)"
+jobs "$(job_record 1 dev create done)" "$(job_record 2 dev update failed)"
+job_log 2
+select_image dev
+check "the newest job of the image is the one told: an update that failed" "Last update failed: Sep 30, 2026|1" "$(image_logs | /usr/bin/cut -d'|' -f1-2)"
+: > "$FAKE_OPEN_LOG"
+omc_run AgentVM.main.image.logs.build
+check "  and the one whose log is shown" "-R $JOB_FOLDERS/$(job_id 2)/log" "$(opened)"
+jobs "$(job_record 2 dev update failed)" "$(job_record 3 dev update-guest canceled)"
+job_log 3
+select_image dev
+check "an update that was stopped"   "Last update stopped: Sep 30, 2026" "$(ui_value "$MAIN_IMAGE_LOGS_ID")"
+jobs "$(job_record 3 dev update-guest canceled)" "$(job_record 4 dev rebuild lost)"
+job_log 4
+select_image dev
+check "a build whose runner was lost" "Last build did not finish: Sep 30, 2026" "$(ui_value "$MAIN_IMAGE_LOGS_ID")"
+jobs "$(job_record 4 dev rebuild lost)" "$(job_record 5 dev update running)" "$(job_record 6 dev update queued)"
+job_log 5
+job_log 6
+select_image dev
+check "an update that runs, with another waiting behind it: the one that runs is told, since one that waits has written nothing" \
+    "Update running now|1" "$(image_logs | /usr/bin/cut -d'|' -f1-2)"
+: > "$FAKE_OPEN_LOG"
+omc_run AgentVM.main.image.logs.build
+check "  and its log is the one shown" "-R $JOB_FOLDERS/$(job_id 5)/log" "$(opened)"
+# The image stays selected while the update ends: status carries the job as ended, and the
+# reading made when the image was selected still has it running.
+jobs "$(job_record 4 dev rebuild lost)" "$(job_record 5 dev update done)"
+poll 1
+check "it ends while the image stays selected: the row follows status, with no new selection" "Last update: Sep 30, 2026" "$(ui_value "$MAIN_IMAGE_LOGS_ID")"
+jobs "$(job_record 1 dev create done)" "$(job_record 7 dev setup done)" "$(job_record 8 dev view done)" "$(job_record 9 dev-acp create failed)"
+job_log 7
+job_log 8
+job_log 9
+# Status is read, so that both readings carry the setup and the view: neither is a build.
+poll 1
+select_image dev
+check "a setup, a view and another image's build, all newer: the image's own build is told" "Last build: Sep 30, 2026|1" "$(image_logs | /usr/bin/cut -d'|' -f1-2)"
+: > "$FAKE_OPEN_LOG"
+omc_run AgentVM.main.image.logs.build
+check "  and its log is the one shown, not the setup's or the view's" "-R $JOB_FOLDERS/$(job_id 1)/log" "$(opened)"
+select_image dev-acp
+check "  and the other image has its own" "Last build failed: Sep 30, 2026" "$(ui_value "$MAIN_IMAGE_LOGS_ID")"
+# What status carries is the last hour's jobs, and the pane's reading the week's. The fake gives
+# both the same jobs, so the two are told apart by when each was read.
+jobs "$(job_record 1 dev create done)"
+select_image dev
+/bin/rm -f "$JOBS"
+poll 1
+check "a job status no longer carries is told from the jobs read when the image was selected" "Last build: Sep 30, 2026|1" "$(image_logs | /usr/bin/cut -d'|' -f1-2)"
+jobs "$(job_record 2 dev update failed)"
+poll 1
+check "a job made after that reading is told from status, with no new selection" "Last update failed: Sep 30, 2026|1" "$(image_logs | /usr/bin/cut -d'|' -f1-2)"
+/bin/rm -f "$JOBS"
+printf 'no jobs today\n' > "$FAKE_AGENTVM_DIR/fail-job"
+# Status is read again, and carries no job now; the list of jobs cannot be read.
+poll 1
+select_image dev
+check "agent-vm cannot list the jobs: what was read before stays" "Last build: Sep 30, 2026|1" "$(image_logs | /usr/bin/cut -d'|' -f1-2)"
+/bin/rm -f "$FAKE_AGENTVM_DIR/fail-job"
+select_image dev
+check "  and the next reading puts it right" "$NONE|0" "$(image_logs | /usr/bin/cut -d'|' -f1-2)"
+select_image deb
+check "a Linux image: Show Console Log is shown, and off while there is no console log" "$NONE|0|1|0" "$(image_logs)"
+: > "$deb_folder/console.log"
+poll 1
+check "  with a console log in its folder: on" "$NONE|0|1|1" "$(image_logs)"
+: > "$FAKE_OPEN_LOG"
+omc_run AgentVM.main.image.logs.console
+check "  Show Console Log selects it in Finder" "-R $deb_folder/console.log" "$(opened)"
+select_image ub
+check "a Linux image whose folder is not on this Mac: shown, and off" "1|0" "$(visible "$MAIN_IMAGE_LOGS_CONSOLE_ID")|$(enabled "$MAIN_IMAGE_LOGS_CONSOLE_ID")"
+select_image dev
+check "a macOS image selected after it: Show Console Log is not shown" "0" "$(visible "$MAIN_IMAGE_LOGS_CONSOLE_ID")"
+select_image ""
+: > "$FAKE_OPEN_LOG"
+omc_run AgentVM.main.image.logs.build
+omc_run AgentVM.main.image.logs.console
+check "no image selected: nothing opens" "" "$(opened)"
+
 section "no writes to views the window does not have"
 check "no undeclared ids" "" "$(ui_unknown_writes)"
 check "no harness errors" "" "$(ui_errors)"

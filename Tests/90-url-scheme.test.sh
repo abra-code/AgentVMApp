@@ -61,7 +61,7 @@ waiting() {
 
 # changes  ->  what the fake was asked that is not a plain read.
 changes() {
-    fake_log | /usr/bin/grep -v -e '^status ' -e '^doctor' -e '^--version' -e '^version' -e '^box info ' -e '^image info '
+    fake_log | /usr/bin/grep -v -e '^status ' -e '^doctor' -e '^--version' -e '^version' -e '^box info ' -e '^image info ' -e '^job list '
 }
 
 fake_reset
@@ -120,6 +120,7 @@ check "the image is the selection, and its pane is painted" "dev-acp|dev-acp" \
     "$("$PB" "agentvm_image_$UUID" get)|$(ui_value "$MAIN_IMAGE_NAME_ID")"
 check "  the box selected before stays selected in its own list" "s3" "$("$PB" "agentvm_box_$UUID" get)"
 check "the image is measured"    "1" "$(fake_log | /usr/bin/grep -c '^image info dev-acp ')"
+check "  and the jobs agent-vm lists are read, for its Logs row" "1" "$(fake_log | /usr/bin/grep -c '^job list --json$')"
 check "nothing is changed"       "" "$(changes)"
 
 section "status"

@@ -39,18 +39,21 @@ done
 section "job rows: a real record (job-list.json)"
 rows="$(lib agentvm_job_rows < "$REAL")"
 check "one row"                      "1" "$(printf '%s\n' "$rows" | /usr/bin/awk 'END { print NR }')"
-check "seventeen fields"             "17" "$(printf '%s\n' "$rows" | field_count)"
+check "eighteen fields"              "18" "$(printf '%s\n' "$rows" | field_count)"
 check "its id is a job id"           "0" "$(lib agentvm_valid_job_id "$(printf '%s\n' "$rows" | col 1)"; echo $?)"
 check "state, target, what it does, status" "failed${TAB}box:nosuch${TAB}box start${TAB}1" "$(printf '%s\n' "$rows" | col 2-5)"
 check "its error, in agent-vm's words" 'no box nosuch; `agent-vm box list` shows the existing ones' "$(printf '%s\n' "$rows" | col 15)"
 check "no progress, no notice, nothing it waits for" "-${TAB}-${TAB}-${TAB}-${TAB}-${TAB}-${TAB}-" "$(printf '%s\n' "$rows" | /usr/bin/cut -f9-14,16)"
 check "a job that does not build a Linux image from nothing says so" "-" "$(printf '%s\n' "$rows" | col 17)"
+check "its folder in the store, where its log is" "/Users/you/Library/Application Support/agent-vm/Jobs/$(printf '%s\n' "$rows" | col 1)" "$(printf '%s\n' "$rows" | col 18)"
+check "  a record that names no folder says so" "-" \
+    "$(/usr/bin/jq -n '[{id: "20260930-120000-0000e1", command: ["box", "start", "x"], targets: ["box:x"], state: "running"}]' | lib agentvm_job_rows | col 18)"
 
 section "job rows: every state (jobs-variety.json)"
 rows="$(lib agentvm_job_rows < "$VARIETY")"
 check "seven rows, oldest first"     "7|000101|000107" \
     "$(printf '%s\n' "$rows" | /usr/bin/awk 'END { print NR }')|$(printf '%s\n' "$rows" | /usr/bin/sed -n '1p' | col 1 | /usr/bin/sed 's/.*-//')|$(printf '%s\n' "$rows" | /usr/bin/sed -n '$p' | col 1 | /usr/bin/sed 's/.*-//')"
-check "seventeen fields in every row" "17" "$(printf '%s\n' "$rows" | field_count)"
+check "eighteen fields in every row" "18" "$(printf '%s\n' "$rows" | field_count)"
 check "done: the status and when it ended" "done${TAB}box:s3${TAB}box stop${TAB}0${TAB}2026-09-30T11:40:00Z${TAB}2026-09-30T11:40:00Z${TAB}2026-09-30T11:40:09Z" \
     "$(job 000101 | col 2-8)"
 check "failed for want of a slot: status 75 and the reason" "failed${TAB}75${TAB}yes" \
@@ -187,7 +190,7 @@ LOG="$FIXTURES_AGENTVM/job-log.json"
 LOG_VARIETY="$FIXTURES_AGENTVM/job-log-variety.json"
 check "the keys the library reads"   "events,job,lines" "$(/usr/bin/jq -r 'keys | join(",")' "$LOG")"
 rows="$(lib agentvm_job_rows < "$LOG")"
-check "its record is one job row"    "1|17" "$(printf '%s\n' "$rows" | /usr/bin/awk 'END { print NR }')|$(printf '%s\n' "$rows" | field_count)"
+check "its record is one job row"    "1|18" "$(printf '%s\n' "$rows" | /usr/bin/awk 'END { print NR }')|$(printf '%s\n' "$rows" | field_count)"
 check "  the same row job list gives" "$(lib agentvm_job_rows < "$REAL")" "$rows"
 check "it failed before any step: no events, no lines" "|" "$(lib agentvm_job_event_rows < "$LOG")|$(lib agentvm_job_lines < "$LOG")"
 

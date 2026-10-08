@@ -88,6 +88,9 @@ MAIN_BOX_NETWORK_DETAILS_ID=361
 MAIN_BOX_PROJECT_ID=353
 MAIN_BOX_PROGRAMS_ID=354
 MAIN_BOX_PROGRAMS_DETAILS_ID=362
+MAIN_BOX_LOGS_ID=363
+MAIN_BOX_LOGS_SHOW_ID=364
+MAIN_BOX_LOGS_CONSOLE_ID=365
 MAIN_BOX_OWNER_ID=355
 MAIN_BOX_HARDWARE_ID=356
 MAIN_BOX_KEPT_ID=357
@@ -124,6 +127,9 @@ MAIN_IMAGE_FOLDER_ID=458
 MAIN_IMAGE_FDA_ID=459
 MAIN_IMAGE_HARDWARE_ID=460
 MAIN_IMAGE_SPACE_ID=461
+MAIN_IMAGE_LOGS_ID=463
+MAIN_IMAGE_LOGS_BUILD_ID=464
+MAIN_IMAGE_LOGS_CONSOLE_ID=465
 
 MAIN_AGENTVM_VERSION_ID=501
 MAIN_AGENTVM_LOCATION_ID=502
@@ -549,6 +555,139 @@ main_launch_report() {
     # Said, so it is not said again: `status` may be failing while `job list` answers, and then no
     # reading would move the time.
     main_mark_jobs_seen
+}
+
+# -- Where the logs are ----------------------------------------------------------------------------
+# agent-vm keeps its records on this Mac, where nothing in a box can change them: of a box in the
+# box's folder, of an image's console in the image's folder, of a job in the job's folder. The
+# panes point to those files, in Finder or in Console; nothing here reads one. The names are
+# agent-vm's, fixed and documented:
+#   exec.jsonl              the programs agent-vm started in the box
+#   network-allowed.jsonl   the connections it let through
+#   network.jsonl           the connections it refused, and the ones that failed
+#   supervisor.log          the box's own log: its start and stop, the folders shared with it
+#   console.log             the console of a Linux box, or of a Linux image's builds and updates
+#   log, in a job's folder  every event the job's command wrote
+# In the order Show in Finder, on the box pane's Logs row, looks for one to select.
+MAIN_BOX_LOG_FILES="exec.jsonl network-allowed.jsonl network.jsonl supervisor.log console.log"
+
+# main_box_folder <uuid> <name>  ->  the box's folder as agent-vm lists it, or nothing.
+main_box_folder() {
+    local _folder="$(main_row "$1" boxes "$2" | /usr/bin/cut -f17)"
+    [ "$_folder" = "-" ] || printf '%s\n' "$_folder"
+}
+
+# main_box_log_file <the box's folder>  ->  the first of the box's log files that is on this Mac,
+# which is the one Show in Finder selects; nothing when the box has logged nothing yet.
+main_box_log_file() {
+    [ -n "$1" ] || return 0
+    local _file
+    for _file in $MAIN_BOX_LOG_FILES; do
+        if [ -f "$1/$_file" ]; then
+            printf '%s\n' "$1/$_file"
+            return 0
+        fi
+    done
+}
+
+# main_box_own_log <the box's folder>  ->  the box's own log, supervisor.log, when it is on this
+# Mac: plain text, which Console opens, searches and follows.
+main_box_own_log() {
+    [ -n "$1" ] && [ -f "$1/supervisor.log" ] && printf '%s\n' "$1/supervisor.log"
+    return 0
+}
+
+# main_box_logs_text <the box's folder> <its guest>  ->  the text of the box pane's Logs row: what
+# the files are. Short, so that the row's two buttons fit beside it; the buttons' help says where
+# the files are and which is which.
+main_box_logs_text() {
+    if [ -z "$(main_box_log_file "$1")" ]; then
+        printf 'Nothing logged yet\n'
+    elif [ "$2" = "linux" ]; then
+        printf "Programs, connections, the box's own log and console\n"
+    else
+        printf "Programs, connections and the box's own log\n"
+    fi
+}
+
+# main_read_image_jobs <uuid>  ->  0 with the jobs of images that agent-vm still lists (`job
+# list`: the jobs of the last week, and the ones that run) in the cache file image-jobs.tsv, as
+# agentvm_job_rows gives them. `status` has only the jobs of the last hour, and a build that
+# failed is looked at the next morning. Read when an image is selected and on activation, as
+# `image info` is; a failed reading leaves what was read before. Which of them is a build or an
+# update is main_image_log_job's to say, in one place.
+main_read_image_jobs() {
+    local _json
+    _json="$(agentvm_job_list)"
+    local _status=$?
+    [ "$_status" -eq 0 ] || return "$_status"
+    printf '%s\n' "$_json" | agentvm_job_rows | /usr/bin/awk -F'\t' '$3 ~ /^image:/' | ui_store "$(ui_cache "$1" image-jobs.tsv)"
+}
+
+# main_image_log_job <uuid> <name>  ->  the row of the newest job that built or updated that image,
+# when its log is on this Mac, or nothing: among the jobs read for the pane (main_read_image_jobs)
+# and the ones `status` carries, which are newer than that reading. Only a build or an update
+# counts (a setup or a view of the image is neither), and a job that waits to start has written
+# nothing yet and is passed over. A job's id begins with the time it was made, so the
+# greatest id is the newest job. The same job may be in both readings: the one that says it
+# ended is taken, since the other is the older reading.
+main_image_log_job() {
+    local _row="$( { main_rows "$1" image-jobs; main_rows "$1" jobs; } | /usr/bin/awk -F'\t' -v target="image:$2" '
+        $3 == target && $2 != "queued" && ($1 "" > newest "" || ($1 "" == newest "" && state == "running")) \
+            && ($4 == "image create" || $4 == "image update" || $4 == "image rebuild" || $4 == "image update-guest") { newest = $1; state = $2; row = $0 }
+        END { if (row != "") print row }')"
+    [ -n "$_row" ] || return 0
+    [ -f "$(printf '%s\n' "$_row" | /usr/bin/cut -f18)/log" ] && printf '%s\n' "$_row"
+    return 0
+}
+
+# main_image_console_log <the image's folder>  ->  the console log in it, when it is on this Mac.
+# agent-vm writes one for a Linux image's builds and updates; a macOS image has none.
+main_image_console_log() {
+    [ -n "$1" ] && [ -f "$1/console.log" ] && printf '%s\n' "$1/console.log"
+    return 0
+}
+
+# main_image_logs_text <the row of main_image_log_job, or nothing>  ->  the text of the image
+# pane's Logs row: the job whose log Show Build Log shows, with how and when it ended. Short, so
+# that the row's buttons fit beside it.
+main_image_logs_text() {
+    if [ -z "$1" ]; then
+        printf 'No build log: agent-vm keeps one for a week\n'
+        return 0
+    fi
+    local _what="build"
+    case "$(printf '%s\n' "$1" | /usr/bin/cut -f4)" in
+        "image update"|"image update-guest") _what="update" ;;
+    esac
+    local _ended="$(ui_date_text "$(printf '%s\n' "$1" | /usr/bin/cut -f8)")"
+    local _text
+    case "$(printf '%s\n' "$1" | /usr/bin/cut -f2)" in
+        running)
+            if [ "$_what" = "update" ]; then
+                printf 'Update running now\n'
+            else
+                printf 'Build running now\n'
+            fi
+            return 0 ;;
+        done)     _text="Last $_what" ;;
+        canceled) _text="Last $_what stopped" ;;
+        failed)   _text="Last $_what failed" ;;
+        *)        _text="Last $_what did not finish" ;;
+    esac
+    printf '%s\n' "$_text${_ended:+: $_ended}"
+}
+
+# main_show_file <file>  ->  that file selected in a Finder window, when it is on this Mac.
+main_show_file() {
+    [ -n "$1" ] && [ -f "$1" ] || return 0
+    "$open_tool" -R "$1"
+}
+
+# main_open_in_console <file>  ->  that file opened in Console, when it is on this Mac.
+main_open_in_console() {
+    [ -n "$1" ] && [ -f "$1" ] || return 0
+    "$open_tool" -a Console "$1"
 }
 
 # -- Painting -----------------------------------------------------------------------------------
@@ -1118,6 +1257,20 @@ main_paint_box_detail() {
         esac
         "$dialog" "$_uuid" "$MAIN_BOX_PROGRAMS_ID" "$_text"
 
+        # Logs: where agent-vm keeps what the box ran and contacted ("Where the logs are"). Show
+        # in Finder selects one of the files, and Open in Console opens the box's own log.
+        "$dialog" "$_uuid" "$MAIN_BOX_LOGS_ID" "$(main_box_logs_text "$_path" "$_kind")"
+        if [ -n "$(main_box_log_file "$_path")" ]; then
+            ui_enable "$_uuid" "$MAIN_BOX_LOGS_SHOW_ID" 1
+        else
+            ui_enable "$_uuid" "$MAIN_BOX_LOGS_SHOW_ID" 0
+        fi
+        if [ -n "$(main_box_own_log "$_path")" ]; then
+            ui_enable "$_uuid" "$MAIN_BOX_LOGS_CONSOLE_ID" 1
+        else
+            ui_enable "$_uuid" "$MAIN_BOX_LOGS_CONSOLE_ID" 0
+        fi
+
         if [ "$_owner" != "-" ]; then
             local _owner_name="$(ui_process_name "$_owner")"
             _text="${_owner_name:-process} ($_owner)"
@@ -1340,6 +1493,8 @@ main_read_selected() {
     local _row="$(main_row "$1" "$_list" "$_name")"
     [ -n "$_row" ] || return 0
     [ "$2" = "box" ] && [ "$(printf '%s\n' "$_row" | /usr/bin/cut -f2)" = "unresponsive" ] && return 0
+    # For the image pane's Logs row: the builds and updates agent-vm still lists.
+    [ "$2" = "image" ] && main_read_image_jobs "$1"
     main_read_info "$1" "$2" "$_name"
 }
 
@@ -1503,6 +1658,28 @@ main_paint_image_detail() {
                 fi ;;
         esac
         "$dialog" "$_uuid" "$MAIN_IMAGE_FDA_ID" "$_text"
+
+        # Logs: the log of the job that last built or updated the image, while agent-vm lists
+        # the job, and a Linux image's console ("Where the logs are"). Show Console Log, the
+        # last thing in the row, is not shown for a macOS image, which has none.
+        local _log_job="$(main_image_log_job "$_uuid" "$_name")"
+        local _console="$(main_image_console_log "$_path")"
+        "$dialog" "$_uuid" "$MAIN_IMAGE_LOGS_ID" "$(main_image_logs_text "$_log_job")"
+        if [ -n "$_log_job" ]; then
+            ui_enable "$_uuid" "$MAIN_IMAGE_LOGS_BUILD_ID" 1
+        else
+            ui_enable "$_uuid" "$MAIN_IMAGE_LOGS_BUILD_ID" 0
+        fi
+        if [ "$_kind" = "linux" ]; then
+            ui_show "$_uuid" "$MAIN_IMAGE_LOGS_CONSOLE_ID" 1
+        else
+            ui_show "$_uuid" "$MAIN_IMAGE_LOGS_CONSOLE_ID" 0
+        fi
+        if [ -n "$_console" ]; then
+            ui_enable "$_uuid" "$MAIN_IMAGE_LOGS_CONSOLE_ID" 1
+        else
+            ui_enable "$_uuid" "$MAIN_IMAGE_LOGS_CONSOLE_ID" 0
+        fi
 
         _text=""
         [ "$_cpus" != "-" ] && _text="$_cpus CPUs"
@@ -1701,6 +1878,7 @@ main_goto() {
         main_paint_box_detail "$_uuid"
     else
         main_read_info "$_uuid" image "$_name"
+        main_read_image_jobs "$_uuid"
         main_paint_image_detail "$_uuid"
     fi
 }

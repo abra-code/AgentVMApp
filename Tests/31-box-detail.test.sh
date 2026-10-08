@@ -407,6 +407,75 @@ select_box lb
 check "stopped: Start, Run an Agent, Recreate and Delete, as for a macOS box" "1 1 1 1" \
     "$(enabled "$MAIN_BOX_START_ID") $(enabled "$MAIN_BOX_AGENT_ID") $(enabled "$MAIN_BOX_RECREATE_ID") $(enabled "$MAIN_BOX_DELETE_ID")"
 
+section "the Logs row: where agent-vm keeps what a box ran and contacted"
+# The row points to the files in the box's folder, and nothing is read from them. The folders are
+# made here: the fixtures' are not on this Mac.
+logs_row() {
+    printf '%s|%s|%s\n' "$(ui_value "$MAIN_BOX_LOGS_ID")" "$(enabled "$MAIN_BOX_LOGS_SHOW_ID")" "$(enabled "$MAIN_BOX_LOGS_CONSOLE_ID")"
+}
+opened() {
+    /bin/cat "$FAKE_OPEN_LOG"
+}
+fake_reset
+mac_folder="$OMCTEST_WORK/logs store/Boxes/s3"
+linux_folder="$OMCTEST_WORK/logs store/Boxes/lb"
+/bin/mkdir -p "$mac_folder" "$linux_folder"
+/usr/bin/jq --arg mac "$mac_folder" --arg linux "$linux_folder" \
+    '(.boxes[] | select(.box.name == "s3")).path = $mac | (.boxes[] | select(.box.name == "lb")).path = $linux' \
+    "$FIXTURES_AGENTVM/status-mixed.json" > "$FAKE_AGENTVM_DIR/status.json"
+open_window
+select_box s3
+check "a box that has logged nothing: the row says so, and both buttons are off" "Nothing logged yet|0|0" "$(logs_row)"
+: > "$FAKE_OPEN_LOG"
+omc_run AgentVM.main.box.logs.show
+omc_run AgentVM.main.box.logs.console
+check "  the handlers, run anyway, open nothing" "" "$(opened)"
+: > "$mac_folder/supervisor.log"
+poll 1
+check "the box's own log is there: the row says what the files are, and both buttons are on" "Programs, connections and the box's own log|1|1" "$(logs_row)"
+omc_run AgentVM.main.box.logs.show
+check "  Show in Finder selects it"  "-R $mac_folder/supervisor.log" "$(opened)"
+: > "$FAKE_OPEN_LOG"
+omc_run AgentVM.main.box.logs.console
+check "  Open in Console opens it in Console" "-a Console $mac_folder/supervisor.log" "$(opened)"
+: > "$mac_folder/network.jsonl"
+: > "$mac_folder/network-allowed.jsonl"
+: > "$mac_folder/exec.jsonl"
+: > "$FAKE_OPEN_LOG"
+omc_run AgentVM.main.box.logs.show
+check "with every log there, the programs' is the one selected" "-R $mac_folder/exec.jsonl" "$(opened)"
+/bin/rm -f "$mac_folder/exec.jsonl"
+: > "$FAKE_OPEN_LOG"
+omc_run AgentVM.main.box.logs.show
+check "  without it, the connections let through" "-R $mac_folder/network-allowed.jsonl" "$(opened)"
+/bin/rm -f "$mac_folder/supervisor.log" "$mac_folder/network-allowed.jsonl"
+poll 1
+check "connections refused, and no log of the box's own: Show in Finder is on, Open in Console is off" \
+    "Programs, connections and the box's own log|1|0" "$(logs_row)"
+: > "$FAKE_OPEN_LOG"
+omc_run AgentVM.main.box.logs.console
+omc_run AgentVM.main.box.logs.show
+check "  Console is given nothing to open; Finder selects the connections refused" "-R $mac_folder/network.jsonl" "$(opened)"
+/bin/rm -f "$mac_folder/network.jsonl"
+/bin/mkdir "$mac_folder/exec.jsonl"
+poll 1
+check "a folder of a log's name is not a log" "Nothing logged yet|0|0" "$(logs_row)"
+: > "$linux_folder/console.log"
+select_box lb
+check "a Linux box: the row names its console too, and the console alone gives Console nothing to open" \
+    "Programs, connections, the box's own log and console|1|0" "$(logs_row)"
+: > "$FAKE_OPEN_LOG"
+omc_run AgentVM.main.box.logs.show
+check "  Show in Finder selects the console" "-R $linux_folder/console.log" "$(opened)"
+select_box cadabra-spike
+check "a box whose folder is not on this Mac: nothing to show" "Nothing logged yet|0|0" "$(logs_row)"
+select_box ""
+: > "$FAKE_OPEN_LOG"
+omc_run AgentVM.main.box.logs.show
+omc_run AgentVM.main.box.logs.console
+check "no box selected: nothing opens" "" "$(opened)"
+check "nothing was asked of agent-vm about a log" "0" "$(fake_log | /usr/bin/grep -c 'log')"
+
 section "no writes to views the window does not have"
 check "no undeclared ids" "" "$(ui_unknown_writes)"
 check "no harness errors" "" "$(ui_errors)"

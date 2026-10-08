@@ -227,6 +227,11 @@
                           { "type": "Text", "id": 354, "properties": { "text": "", "textSelection": "enabled" } },
                           { "type": "Button", "id": 362, "properties": { "title": "Details...", "controlSize": "small", "actionID": "AgentVM.main.box.programs", "help": "Open the box's programs window: what ran in it, and the permission prompts programs waited on." } }
                         ] } ] },
+                        { "type": "LabeledContent", "properties": { "title": "Logs" }, "children": [ { "type": "HStack", "properties": { "spacing": 8.0, "frame": { "maxWidth": "infinity", "alignment": "leading" } }, "children": [
+                          { "type": "Text", "id": 363, "properties": { "text": "", "textSelection": "enabled" } },
+                          { "type": "Button", "id": 364, "properties": { "title": "Show in Finder", "controlSize": "small", "disabled": true, "actionID": "AgentVM.main.box.logs.show", "help": "Show the box's log files in Finder. agent-vm keeps them in the box's folder on this Mac, out of the box's reach: exec.jsonl (the programs it ran), network-allowed.jsonl and network.jsonl (the connections let through, and those refused or failed), supervisor.log (the box itself), and a Linux box's console.log." } },
+                          { "type": "Button", "id": 365, "properties": { "title": "Open in Console", "controlSize": "small", "disabled": true, "actionID": "AgentVM.main.box.logs.console", "help": "Open the box's own log, supervisor.log, in Console: why it started or stopped, and the folders shared with it." } }
+                        ] } ] },
                         { "type": "LabeledContent", "properties": { "title": "Started by" }, "children": [ { "type": "Text", "id": 355, "properties": { "text": "", "textSelection": "enabled", "frame": { "maxWidth": "infinity", "alignment": "leading" } } } ] },
                         { "type": "LabeledContent", "properties": { "title": "CPUs and RAM" }, "children": [ { "type": "Text", "id": 356, "properties": { "text": "", "textSelection": "enabled", "frame": { "maxWidth": "infinity", "alignment": "leading" } } } ] },
                         { "type": "LabeledContent", "properties": { "title": "Space" }, "children": [ { "type": "Text", "id": 360, "properties": { "text": "", "textSelection": "enabled", "frame": { "maxWidth": "infinity", "alignment": "leading" } } } ] },
@@ -397,6 +402,11 @@
                         { "type": "LabeledContent", "properties": { "title": "Full Disk Access" }, "children": [ { "type": "HStack", "properties": { "spacing": 8.0, "frame": { "maxWidth": "infinity", "alignment": "leading" } }, "children": [
                           { "type": "Text", "id": 459, "properties": { "text": "", "textSelection": "enabled" } },
                           { "type": "Button", "id": 462, "properties": { "title": "Set Up...", "controlSize": "small", "disabled": true, "actionID": "AgentVM.main.image.access", "help": "Open the image's Full Disk Access guide: what to do on the image's own screen, and where it is in it." } }
+                        ] } ] },
+                        { "type": "LabeledContent", "properties": { "title": "Logs" }, "children": [ { "type": "HStack", "properties": { "spacing": 8.0, "frame": { "maxWidth": "infinity", "alignment": "leading" } }, "children": [
+                          { "type": "Text", "id": 463, "properties": { "text": "", "textSelection": "enabled" } },
+                          { "type": "Button", "id": 464, "properties": { "title": "Show Build Log", "controlSize": "small", "disabled": true, "actionID": "AgentVM.main.image.logs.build", "help": "Show the log of the job that last built or updated the image, in Finder: every step and line of it. agent-vm keeps a job for a week." } },
+                          { "type": "Button", "id": 465, "properties": { "title": "Show Console Log", "controlSize": "small", "disabled": true, "actionID": "AgentVM.main.image.logs.console", "help": "Show console.log of the image's folder, in Finder: what the Linux system printed while the image was built and updated." } }
                         ] } ] },
                         { "type": "LabeledContent", "properties": { "title": "CPUs and RAM" }, "children": [ { "type": "Text", "id": 460, "properties": { "text": "", "textSelection": "enabled", "frame": { "maxWidth": "infinity", "alignment": "leading" } } } ] },
                         { "type": "LabeledContent", "properties": { "title": "Space" }, "children": [ { "type": "Text", "id": 461, "properties": { "text": "", "textSelection": "enabled", "frame": { "maxWidth": "infinity", "alignment": "leading" } } } ] },

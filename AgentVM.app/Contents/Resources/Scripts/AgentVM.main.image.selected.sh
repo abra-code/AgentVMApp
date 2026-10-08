@@ -2,7 +2,8 @@
 # AgentVM.main.image.selected.sh
 # A card of the image list was selected or deselected: the image list's selection becomes that
 # image, or nothing, and the detail pane follows. A selected image is measured (`image info`, 0.1-0.3
-# s) for the pane's space, tools and Full Disk Access; a failure is shown in the pane.
+# s) for the pane's space, tools and Full Disk Access; a failure is shown in the pane. The builds
+# and updates agent-vm still lists are read too (`job list`), for the pane's Logs row.
 
 . "$OMC_APP_BUNDLE_PATH/Contents/Resources/Scripts/lib.agentvm.main.sh"
 
@@ -12,6 +13,7 @@ name="$OMC_ACTIONUI_TABLE_411_COLUMN_1_VALUE"
 if [ -n "$name" ] && agentvm_valid_name "$name"; then
     ui_set image "$window_uuid" "$name"
     main_read_info "$window_uuid" image "$name"
+    main_read_image_jobs "$window_uuid"
 else
     ui_set image "$window_uuid" ""
 fi

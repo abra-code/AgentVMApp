@@ -896,12 +896,15 @@ agentvm_job_list() {
 #   17 linux when it builds a Linux image from nothing (`image create` with --linux), "-" for
 #      any other job. The job's own command says so from the start: agent-vm lists the image,
 #      with its guest, only once its cloud image is downloaded.
+#   18 the job's folder in the store, where agent-vm keeps the file "log" (every event the job's
+#      command wrote, a JSON object per line) beside the job's record
 agentvm_job_rows() {
     /usr/bin/jq -r "$agentvm_jq_defs"' (if type == "array" then . elif has("job") then [.job] else (.jobs // []) end)[]
         | (.command // []) as $command
         | [.id, .state, (.targets // [])[0], ($command[0:2] | join(" ")), .status, .createdAt, .startedAt, .endedAt,
            .progress.step, .progress.fraction, .progress.index, .progress.count, .progress.message, .notice, .error, .after,
-           (if $command[0:2] == ["image", "create"] and any($command[]; type == "string" and test("^--linux(=|$)")) then "linux" else null end)]
+           (if $command[0:2] == ["image", "create"] and any($command[]; type == "string" and test("^--linux(=|$)")) then "linux" else null end),
+           .path]
         | row'
 }
 
