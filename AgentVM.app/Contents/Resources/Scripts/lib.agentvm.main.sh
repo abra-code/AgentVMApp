@@ -594,6 +594,25 @@ main_vms_text() {
         }'
 }
 
+# main_macos_vms <uuid>  ->  "1<TAB>2": how many macOS virtual machines run on this Mac now, and
+# how many can run at once; nothing when agent-vm could not count them. What starts a macOS
+# guest (a box, a build, an update, an image's screen) needs one of those places, and agent-vm
+# waits for none; a Linux guest needs none. The count is the one main_vms_text shows.
+main_macos_vms() {
+    main_rows "$1" vm | /usr/bin/awk -F'\t' 'NR == 1 && $1 ~ /^[0-9]+$/ && $2 ~ /^[0-9]+$/ {
+        running = $1 - $3 - $4
+        if (running < 0) running = 0
+        printf "%d\t%d\n", running, $2 }'
+}
+
+# main_guest <uuid> <boxes|images> <name>  ->  macos or linux: what that box or image runs, from
+# the cached rows; nothing when it is not listed.
+main_guest() {
+    local _cell=12
+    [ "$2" = "boxes" ] && _cell=23
+    main_row "$1" "$2" "$3" | /usr/bin/cut -f"$_cell"
+}
+
 # main_disk_text <uuid>  ->  doctor's free space ("67 GB free"), or nothing.
 main_disk_text() {
     main_rows "$1" doctor | /usr/bin/awk -F'\t' '
@@ -1546,7 +1565,7 @@ main_paint_image_detail() {
 # enables View by).
 main_image_viewable() {
     [ "$(main_row "$1" images "$2" | /usr/bin/cut -f2)" = "ready" ] || return 1
-    [ "$(main_row "$1" images "$2" | /usr/bin/cut -f12)" != "linux" ] || return 1
+    [ "$(main_guest "$1" images "$2")" != "linux" ] || return 1
     [ -z "$(main_job "$1" image "$2")" ] || return 1
     main_image_busy "$1" "$2" && return 1
     return 0

@@ -18,6 +18,7 @@ Real `--json` answers of agent-vm, which `Tests/helpers/fake_agent_vm.sh` serves
 - `status-linux.json` - `agent-vm status --json` (0.7.11) on a store of Linux images and boxes only: `deb` (Debian 13, built from Debian's cloud image), `deb-agents` (built from `deb` with the recipes `linux-node` and `agent-clis`), `ub` (Ubuntu 26.04) and `ub-agents` (built from `ub` with `linux-node`, `linux-python` and `agent-clis`), and one stopped box, `lb`, made from `deb`. What a Linux entry has where a macOS one has its macOS version, its build and Full Disk Access: `guest`, `system`, `linux`, `base` (the cloud image it was first built from) and `systemCheckedAt`. The store's folder is written as the default one.
 - `image-info-linux.json` - `agent-vm image info deb-agents --json` in that store: the first ready Linux image built from another.
 - `box-info-linux.json` - `agent-vm box info lb --json` in that store: its first Linux box.
+- `job-log-linux.json` - `agent-vm job log <id> --json` (0.7.12) of a Debian 13 image built from its cloud image as a job, in a store made for it: the job's record, done after a minute and a half, and all 659 events as agent-vm wrote them. 119 are `progress` events: the checksum, 101 of the download with its fraction, the unpacking, the first boot, twelve numbered `linux-setup` steps with `seal` between the seventh and the eighth, and the shutdown. The rest are `log` lines, most of them what `apt` printed in the guest. No `lines`, no notice. The store's folder is written as the default one; nothing else was edited.
 - `status-mixed.json` - a store with both kinds, for what the window shows side by side: `status.json` with the images and the box of `status-linux.json` added, and nothing else changed. Made by `refresh_agentvm_fixtures.sh`, which runs `jq -S -s '.[1] as $linux | .[0] | .images += $linux.images | .boxes += $linux.boxes' status.json status-linux.json`.
 
 Captured on 2026-10-01 from agent-vm 0.5.13 with `Tests/helpers/refresh_agentvm_fixtures.sh`; `doctor.json` (134 GB free; eight checks then, nine since the move to 0.7.11 below) again on 2026-10-04 from agent-vm 0.6.12. The script replaces the home folder with `/Users/you` and sorts keys. When agent-vm's JSON changes, run it again with the new agent-vm (naming the parts that changed, when the stores did not) and rerun the suite: the drift checks fail when a field the library reads is gone.
@@ -44,6 +45,16 @@ done
 - The version strings of `status-variety.json` and `job-log-variety.json` were moved from 0.6.14 to 0.7.11.
 - The three Linux fixtures are real answers of 0.7.11 from agent-vm's own test store, taken while a test run of agent-vm's used that store: the one image that run had made (`shtest-lbusy-8134`, being updated at that moment) was removed from `status-linux.json`, and its count of running virtual machines, which was 1 for that image's update, set to 0. Nothing else in them was edited. `refresh_agentvm_fixtures.sh <agent-vm> linux`, with `AGENTVM_FIXTURE_LINUX_HOME` naming such a store at rest, captures all three with no edit, and refuses a store where something runs or is being changed.
 - Not in any capture, since 0.7.11 does not say it: `runningVMs.linuxImages`, the Linux images being built or updated, which the agent-vm after 0.7.11 counts apart. The library reads it as 0 when it is absent, and the tests give it in JSON of their own.
+
+## The move to agent-vm 0.7.12 (2026-10-08)
+
+agent-vm 0.7.12 counts the Linux images being built or updated apart from the macOS virtual machines, as it did the running Linux boxes: `runningVMs.linuxImages` in `status`, and `linuxImages` in doctor's `running VMs` check. Nothing else the app reads changed.
+
+- `version.json` and `packs.json` were captured again from the installed agent-vm 0.7.12 (`refresh_agentvm_fixtures.sh <agent-vm> version packs recipe-check`; `recipe-check.json` came out as it was).
+- The five status fixtures were given the new count, `jq -S '.runningVMs.linuxImages = 0'` on `status.json`, `status-variety.json`, `status-empty.json` and `status-linux.json`, and `status-mixed.json` made again of the first and the last.
+- `doctor.json` was given `linuxImages: 0` in its `running VMs` check, and the Linux guest daemon's digest as 0.7.12 prints it.
+- The version strings of `status-variety.json` and `job-log-variety.json` were moved from 0.7.11 to 0.7.12. `status-linux.json` and `status-mixed.json` keep the versions their images were built with (0.7.4 to 0.7.11): they are those images' records.
+- `job-log-linux.json` is new, and is a capture of 0.7.12.
 
 ## Made by hand
 

@@ -9,13 +9,15 @@
 # request. It is opened by Update... in the main window's image pane. Sources lib.agentvm.main.sh
 # for the status rows and the words that name a job.
 #
-# THE THREE PARTS are agent-vm's: macOS (the update Apple offers within the image's major
-# version, and newer Command Line Tools), the tools (the update steps of the recipes the image
-# keeps), and the guest daemon (this agent-vm's agent-vm-guest, when the image has another). A
-# part is ticked at opening when something is known to need doing: a newer macOS is known, or
-# Apple was never asked; the image keeps recipes; its guest daemon is another version or lacks a
-# feature. The ticks are the window's pasteboard value "choices" ("1 0 1": macOS, tools, guest),
-# kept by the handlers, since a handler's view of the checkboxes is a snapshot.
+# THE THREE PARTS are agent-vm's: the system (for a macOS image the update Apple offers within its
+# major version, and newer Command Line Tools; for a Linux image the package updates of its
+# distribution), the tools (the update steps of the recipes the image keeps), and the guest daemon
+# (this agent-vm's agent-vm-guest, when the image has another). A part is ticked at opening when
+# something is known to need doing: a newer macOS is known, or Apple was never asked; the image
+# keeps recipes; its guest daemon is another version or lacks a feature. The system of a Linux
+# image is always ticked: nobody can be asked beforehand whether its packages have updates, and
+# looking takes seconds. The ticks are the window's pasteboard value "choices" ("1 0 1": system,
+# tools, guest), kept by the handlers, since a handler's view of the checkboxes is a snapshot.
 #
 # THE WINDOW STARTS ONE JOB AND CLOSES. Update starts `image update <name>` with the parts ticked
 # as an agent-vm job, opens that job's progress window (lib.agentvm.progress.sh), has the main
@@ -23,7 +25,8 @@
 #
 # WHAT IT READS: `status`, into its own cache, on opening, on activation and before Update; and
 # `status --check-updates` for Check Now, which asks Apple for the newest macOS and installs
-# nothing. It has no poll loop.
+# nothing; Check Now is not shown for a Linux image, since Apple has nothing to say of one. It has
+# no poll loop.
 #
 # POSIX sh (bash 3.2 in POSIX mode) only. Validate with "sh -n".
 [ -n "${__AGENTVM_APP_UPDATE_LIB:-}" ] && return 0
@@ -34,8 +37,8 @@ __AGENTVM_APP_UPDATE_LIB=1
 
 UPDATE_TITLE_ID=801
 UPDATE_STATE_ID=802
-UPDATE_MACOS_ID=811
-UPDATE_MACOS_TEXT_ID=812
+UPDATE_SYSTEM_ID=811
+UPDATE_SYSTEM_TEXT_ID=812
 UPDATE_CHECK_ID=813
 UPDATE_TOOLS_ID=821
 UPDATE_TOOLS_TEXT_ID=822
@@ -76,6 +79,11 @@ update_field() {
     printf '%s\n' "${_value:--}"
 }
 
+# update_linux <uuid> <name>  ->  0 when the image runs Linux, from its cached row.
+update_linux() {
+    [ "$(main_guest "$1" images "$2")" = "linux" ]
+}
+
 # update_newest <uuid> <n>  ->  field n of the newest macOS row (version, build, checkedAt,
 # error), or "-".
 update_newest() {
@@ -93,12 +101,16 @@ update_guest_differs() {
 
 # update_defaults <uuid> <name>  ->  "1 0 1": the parts ticked at opening (see the header).
 update_defaults() {
-    local _macos=0 _tools=0 _guest=0
-    [ "$(update_field "$1" updates "$2" 6)" != "-" ] && _macos=1
-    [ "$(update_newest "$1" 1)" = "-" ] && _macos=1
+    local _system=0 _tools=0 _guest=0
+    if update_linux "$1" "$2"; then
+        _system=1
+    else
+        [ "$(update_field "$1" updates "$2" 6)" != "-" ] && _system=1
+        [ "$(update_newest "$1" 1)" = "-" ] && _system=1
+    fi
     [ "$(update_field "$1" updates "$2" 9)" != "-" ] && _tools=1
     update_guest_differs "$1" "$2" && _guest=1
-    printf '%s %s %s\n' "$_macos" "$_tools" "$_guest"
+    printf '%s %s %s\n' "$_system" "$_tools" "$_guest"
 }
 
 # update_first_choices <uuid>  ->  0 after keeping the parts ticked at opening (update_defaults), when
@@ -128,7 +140,7 @@ update_choices() {
     printf '%s\n' "$_choices"
 }
 
-# update_flags <uuid> <name>  ->  the options of the parts ticked ("--macos --guest"), or nothing.
+# update_flags <uuid> <name>  ->  the options of the parts ticked ("--system --guest"), or nothing.
 update_flags() {
     # Unquoted on purpose: three words, each 0 or 1.
     agentvm_image_update_flags $(update_choices "$1" "$2")
@@ -160,7 +172,7 @@ update_blocker() {
     fi
     if [ "$_state" != "ready" ]; then
         printf 'Only a ready image can be updated, and this one is not: %s\n' \
-            "$(main_image_state_text "$_state" "$(printf '%s\n' "$_row" | /usr/bin/cut -f3)")"
+            "$(main_image_state_text "$_state" "$(printf '%s\n' "$_row" | /usr/bin/cut -f3)" "" "$(printf '%s\n' "$_row" | /usr/bin/cut -f12)")"
         return 0
     fi
     if main_image_busy "$1" "$2"; then
@@ -169,15 +181,18 @@ update_blocker() {
     return 0
 }
 
-# update_warning <uuid>  ->  what may make an update fail at once, or nothing: no virtual machine
-# slot is free (an update boots the image, and agent-vm waits for no slot).
+# update_warning <uuid> <name>  ->  what may make an update fail at once, or nothing: the image is
+# a macOS one and no place for a macOS virtual machine is free (an update boots the image, and
+# agent-vm waits for no place). A Linux image needs none.
 update_warning() {
-    main_rows "$1" vm | /usr/bin/awk -F'\t' 'NR == 1 && $1 != "-" && $2 != "-" && $1 + 0 >= $2 + 0 {
-        printf "No virtual machine slot is free now (%s of %s running), and an update needs one: it fails at once until a box or a build stops.\n", $1, $2 }'
+    update_linux "$1" "$2" && return 0
+    main_macos_vms "$1" | /usr/bin/awk -F'\t' '$1 >= $2 {
+        printf "No virtual machine slot is free now (%s of %s macOS virtual machines running), and an update needs one: it fails at once until a macOS box or build stops.\n", $1, $2 }'
 }
 
-# update_state_text <uuid> <name>  ->  the line under the title: the image's macOS, and when it
-# was last updated.
+# update_state_text <uuid> <name>  ->  the line under the title: what the image runs (a macOS
+# image its version and build, a Linux image its system in agent-vm's words), and when it was last
+# updated.
 update_state_text() {
     local _macos="$(update_field "$1" images "$2" 4)"
     local _build="$(update_field "$1" images "$2" 5)"
@@ -185,6 +200,10 @@ update_state_text() {
     [ "$_build" != "-" ] && _text="$_text ($_build)"
     # An image whose record lacks its version.
     [ "$_macos" = "-" ] && _text="Its macOS version is not known"
+    if update_linux "$1" "$2"; then
+        _text="$(update_field "$1" images "$2" 13)"
+        [ "$_text" = "-" ] && _text="Its system is not known"
+    fi
     local _updated="$(ui_date_text "$(update_field "$1" updates "$2" 3)")"
     if [ -n "$_updated" ]; then
         printf '%s. Last updated on %s.\n' "$_text" "$_updated"
@@ -193,8 +212,20 @@ update_state_text() {
     fi
 }
 
-# update_macos_text <uuid> <name>  ->  what is known about a newer macOS for the image.
-update_macos_text() {
+# update_system_text <uuid> <name>  ->  what the system's part of an update does: for a macOS image
+# what is known about a newer macOS for it; for a Linux image that its distribution's package
+# updates are installed, which nobody can be asked about beforehand, and when they were last
+# looked for.
+update_system_text() {
+    if update_linux "$1" "$2"; then
+        local _short="$(update_field "$1" images "$2" 14)"
+        local _of=""
+        [ "$_short" != "-" ] && _of=" of $_short"
+        local _looked="$(ui_date_text "$(update_field "$1" updates "$2" 4)")"
+        printf 'Installs the package updates%s, which takes seconds to minutes. When they bring a new kernel, the image is started once more to check it before the update is kept.%s\n' \
+            "$_of" "${_looked:+ Its packages were last looked at on $_looked.}"
+        return 0
+    fi
     local _version="$(update_field "$1" updates "$2" 6)"
     if [ "$_version" != "-" ]; then
         local _learned="$(ui_date_text "$(update_field "$1" updates "$2" 8)")"
@@ -249,8 +280,10 @@ update_guest_text() {
     [ "$_missing" != "-" ] && _adds=", which adds $(printf '%s' "$_missing" | /usr/bin/sed 's/,/, /g')"
     local _theirs="The image's agent-vm-guest $_guest"
     [ "$_guest" = "-" ] && _theirs="The image's agent-vm-guest, whose version is not on record,"
-    printf "%s is replaced by this agent-vm's, %s%s. Its Full Disk Access may have to be granted again afterwards; the image's pane says so then.\n" \
-        "$_theirs" "$_mine" "$_adds"
+    # macOS ties a Full Disk Access grant to the daemon it was made for; a Linux image has none.
+    local _access=" Its Full Disk Access may have to be granted again afterwards; the image's pane says so then."
+    update_linux "$1" "$2" && _access=""
+    printf "%s is replaced by this agent-vm's, %s%s.%s\n" "$_theirs" "$_mine" "$_adds" "$_access"
 }
 
 # update_after_text <uuid> <name>  ->  what an update means for what was made from the image, and
@@ -290,7 +323,7 @@ update_paint() {
         return 0
     fi
     "$dialog" "$_uuid" "$UPDATE_STATE_ID" "$(update_state_text "$_uuid" "$_name")"
-    "$dialog" "$_uuid" "$UPDATE_MACOS_TEXT_ID" "$(update_macos_text "$_uuid" "$_name")"
+    "$dialog" "$_uuid" "$UPDATE_SYSTEM_TEXT_ID" "$(update_system_text "$_uuid" "$_name")"
     "$dialog" "$_uuid" "$UPDATE_TOOLS_TEXT_ID" "$(update_tools_text "$_uuid" "$_name")"
     "$dialog" "$_uuid" "$UPDATE_GUEST_TEXT_ID" "$(update_guest_text "$_uuid" "$_name")"
     "$dialog" "$_uuid" "$UPDATE_AFTER_ID" "$(update_after_text "$_uuid" "$_name")"
@@ -303,18 +336,23 @@ update_paint() {
     if [ "${2:-}" = "toggles" ]; then
         local _choices="$(update_choices "$_uuid" "$_name")"
         local _id _on
-        for _id in "$UPDATE_MACOS_ID" "$UPDATE_TOOLS_ID" "$UPDATE_GUEST_ID"; do
+        for _id in "$UPDATE_SYSTEM_ID" "$UPDATE_TOOLS_ID" "$UPDATE_GUEST_ID"; do
             _on="false"
             [ "${_choices%% *}" = "1" ] && _on="true"
             "$dialog" "$_uuid" "$_id" "$_on"
             _choices="${_choices#* }"
         done
     fi
+    # Check Now asks Apple, which has nothing to say of a Linux image: the button, last in its
+    # row, is not shown for one.
+    local _apple=1
+    update_linux "$_uuid" "$_name" && _apple=0
+    ui_show "$_uuid" "$UPDATE_CHECK_ID" "$_apple"
     # Why Apple could not be asked, when Check Now failed; else what stands in the way, or may.
     local _note="$_blocker"
     local _lookup="$(update_newest "$_uuid" 4)"
-    [ -z "$_note" ] && [ "$_lookup" != "-" ] && _note="Apple could not be asked for the newest macOS: $_lookup"
-    [ -z "$_note" ] && _note="$(update_warning "$_uuid")"
+    [ -z "$_note" ] && [ "$_apple" -eq 1 ] && [ "$_lookup" != "-" ] && _note="Apple could not be asked for the newest macOS: $_lookup"
+    [ -z "$_note" ] && _note="$(update_warning "$_uuid" "$_name")"
     "$dialog" "$_uuid" "$UPDATE_NOTE_ID" "$_note"
     if [ -z "$_blocker" ] && [ -n "$(update_flags "$_uuid" "$_name")" ]; then
         ui_enable "$_uuid" "$UPDATE_START_ID" 1

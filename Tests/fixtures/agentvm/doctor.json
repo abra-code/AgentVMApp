@@ -40,11 +40,12 @@
       "detail": "0 virtual machines running on this Mac (any application)",
       "limit": 2,
       "linuxBoxes": 0,
+      "linuxImages": 0,
       "name": "running VMs",
       "status": "ok"
     },
     {
-      "detail": "next to agent-vm (SHA-256 51775ba3f5fe...)",
+      "detail": "next to agent-vm (SHA-256 b87fda5b3884...)",
       "name": "linux guest daemon",
       "status": "info"
     }

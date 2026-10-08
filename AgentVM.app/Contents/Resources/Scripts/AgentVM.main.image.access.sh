@@ -11,8 +11,7 @@ window_uuid="$OMC_ACTIONUI_WINDOW_UUID"
 [ -n "$window_uuid" ] || exit 0
 name="$(ui_get image "$window_uuid")"
 [ -n "$name" ] || exit 0
-row="$(main_row "$window_uuid" images "$name")"
-[ -n "$row" ] || exit 0
-[ "$(printf '%s\n' "$row" | /usr/bin/cut -f12)" != "linux" ] || exit 0
+[ -n "$(main_row "$window_uuid" images "$name")" ] || exit 0
+[ "$(main_guest "$window_uuid" images "$name")" != "linux" ] || exit 0
 ui_item_open access "$name" "$OMC_CURRENT_COMMAND_GUID"
 exit 0

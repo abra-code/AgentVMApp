@@ -399,8 +399,8 @@ check "a newer loop takes over: the old one waits once, reads nothing more, and 
 section "what stands in the way"
 store '.runningVMs.count = 2'
 omc_run AgentVM.access.activated
-check "no virtual machine slot is free" \
-    "2 of 2 virtual machines are running, and the image needs one to start: stop a box, or wait for a build to end.|0" \
+check "no place for a macOS virtual machine is free" \
+    "2 of 2 macOS virtual machines are running, and the image needs one to start: stop a macOS box, or wait for a macOS build to end.|0" \
     "$(ui_value "$ACCESS_NOTE_ID")|$(enabled "$ACCESS_OPEN_ID")"
 : > "$FAKE_AGENTVM_DIR/log"
 omc_run AgentVM.access.open
@@ -668,6 +668,39 @@ check "a setup that ended is said, with no question" "1|$asked|" \
 "$PB" "agentvm_access_offer_$MAIN_UUID" set dev-acp
 omc_run AgentVM.main.close
 check "closing the main window forgets a question not answered" "" "$("$PB" "agentvm_access_offer_$MAIN_UUID" get)"
+
+# -----------------------------------------------------------------------------------------------
+section "a Linux image has nothing to set up"
+# No button opens the guide for a Linux image; a request left for one, or a URL that names the
+# handler, still can. The store with both kinds.
+fake_reset
+/bin/cp "$FIXTURES_AGENTVM/status-mixed.json" "$FAKE_AGENTVM_DIR/status.json"
+"$PB" agentvm_window_access_deb-agents set ""
+"$PB" agentvm_window_access_dev-node set ""
+open_access deb-agents
+check "the guide says what the image runs, and why there is nothing to do" \
+    "This image runs Linux.|Image deb-agents runs Linux: there is no Full Disk Access to grant in it, and nothing in its boxes waits for one." \
+    "$(ui_value "$ACCESS_STATE_ID")|$(ui_value "$ACCESS_NOTE_ID")"
+check "  no step is marked done or under way, nothing is said of a grant, and Open the Image is off" "todo todo todo todo||0" \
+    "$(marks)|$(ui_value "$ACCESS_AFTER_ID")|$(enabled "$ACCESS_OPEN_ID")"
+: > "$FAKE_AGENTVM_DIR/log"
+omc_run AgentVM.access.open
+check "  Open the Image, however it came to run, starts nothing" "" "$(started)"
+"$PB" agentvm_window_access_deb-agents set ""
+open_access dev-node
+check "a macOS image in the same store has its guide as before" \
+    "agent-vm-guest does not have Full Disk Access in this image yet.||1" \
+    "$(ui_value "$ACCESS_STATE_ID")|$(ui_value "$ACCESS_NOTE_ID")|$(enabled "$ACCESS_OPEN_ID")"
+/usr/bin/jq '.runningVMs = {count: 3, limit: 2, linuxBoxes: 1, linuxImages: 1}' "$FIXTURES_AGENTVM/status-mixed.json" > "$FAKE_AGENTVM_DIR/status.json"
+omc_run AgentVM.access.activated
+check "  three machines run, two of them Linux: a place is free, and Open the Image stays on" "|1" \
+    "$(ui_value "$ACCESS_NOTE_ID")|$(enabled "$ACCESS_OPEN_ID")"
+/usr/bin/jq '.runningVMs = {count: 3, limit: 2, linuxBoxes: 1, linuxImages: 0}' "$FIXTURES_AGENTVM/status-mixed.json" > "$FAKE_AGENTVM_DIR/status.json"
+omc_run AgentVM.access.activated
+check "  three machines run, one of them Linux: both places are taken" \
+    "2 of 2 macOS virtual machines are running, and the image needs one to start: stop a macOS box, or wait for a macOS build to end.|0" \
+    "$(ui_value "$ACCESS_NOTE_ID")|$(enabled "$ACCESS_OPEN_ID")"
+"$PB" agentvm_window_access_dev-node set ""
 
 section "the library: the setup job"
 fake_reset

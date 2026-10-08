@@ -224,7 +224,7 @@ check "the steps, oldest first; the last shows how far it is" \
     "Cloning dev-node (macOS 26A428)=done|Booting=done|Recipe: ACP agents (3 steps, 2 checks)=done|[1/3] Homebrew=done|[2/3] Node=done|[3/3] Agents=67%" "$(steps)"
 check "the bar is shown, at the step's fraction" "1|67" "$(shown "$PROGRESS_BAR_ID")|$(ui_value "$PROGRESS_BAR_ID")"
 check "the log: agent-vm's lines and the guest's, the notice of a step that is over where it was written, then the other lines" \
-    "agent-vm-guest 0.7.11 answers over vsock|==> Downloading and installing Homebrew...|==> Installation successful!|Homebrew is already installed in the base image|==> Pouring node--24.9.0.arm64_tahoe.bottle.tar.gz|a line with a tab in it|added 212 packages in 9s|warning: a line that is neither an event nor the error" \
+    "agent-vm-guest 0.7.12 answers over vsock|==> Downloading and installing Homebrew...|==> Installation successful!|Homebrew is already installed in the base image|==> Pouring node--24.9.0.arm64_tahoe.bottle.tar.gz|a line with a tab in it|added 212 packages in 9s|warning: a line that is neither an event nor the error" \
     "$(ui_value "$PROGRESS_LOG_ID" | /usr/bin/paste -sd '|' -)"
 check "a notice of a step the job has left is not on the notice line" "" "$(ui_value "$PROGRESS_NOTICE_ID")"
 
@@ -388,6 +388,38 @@ omc_run AgentVM.main.image.progress
 check "the build over, the setup still waiting: the pane, the card and the window are the setup's" \
     "Waiting to be set up|Waiting - macOS 27.0 - from dev-node|$APP_PID progress:$SETUP" \
     "$(ui_value "$MAIN_IMAGE_STATE_ID")|$(ui_rows "$MAIN_IMAGES_ID" | row_named dev-new | /usr/bin/cut -f3)|$(request)"
+
+# -----------------------------------------------------------------------------------------------
+section "a Linux image built from its cloud image (job-log-linux.json, a real build's log)"
+# The window has no words of its own for a step: it shows agent-vm's. What a Linux build reports
+# that a macOS one does not: a download with its fraction, and setup steps that are numbered.
+LINUX_LOG="$FIXTURES_AGENTVM/job-log-linux.json"
+LINUX_BUILD="$(/usr/bin/jq -r '.job.id' "$LINUX_LOG")"
+"$PB" "agentvm_window_progress_$LINUX_BUILD" set ""
+# The job as agent-vm recorded it, set back to when its download was 42% through.
+/usr/bin/jq '[.job | del(.endedAt) | del(.status) | .state = "running"]' "$LINUX_LOG" > "$JOBS"
+/usr/bin/jq '.events as $all
+    | ([$all | to_entries[] | select(.value.step == "download" and (.value.fraction // 0) >= 0.42)][0].key) as $at
+    | {events: $all[0:$at + 1], lines: []}' "$LINUX_LOG" > "$FAKE_AGENTVM_DIR/job-log-$LINUX_BUILD.json"
+ui_reset
+open_progress "$LINUX_BUILD"
+check "the title"                    "Building image t" "$(ui_title)"
+check "the download is one step, however many times agent-vm reported it, with how far it is" \
+    "Asking cloud.debian.org for the checksum of Debian 13's cloud image=done|Downloading debian-13-genericcloud-arm64.tar.xz (217 MB)=42%" "$(steps)"
+check "  and the bar follows it"     "1|42" "$(shown "$PROGRESS_BAR_ID")|$(ui_value "$PROGRESS_BAR_ID")"
+# The whole log, and the job ended as it did.
+/usr/bin/jq '[.job]' "$LINUX_LOG" > "$JOBS"
+/usr/bin/jq '{events, lines}' "$LINUX_LOG" > "$FAKE_AGENTVM_DIR/job-log-$LINUX_BUILD.json"
+omc_run AgentVM.progress.activated
+check "the build over: nineteen steps, each done" "19|19" \
+    "$(ui_rows "$PROGRESS_STEPS_ID" | /usr/bin/awk 'END { print NR }')|$(ui_rows "$PROGRESS_STEPS_ID" | /usr/bin/awk -F'\t' '$2 == "done"' | /usr/bin/awk 'END { print NR }')"
+check "  the numbered setup steps are a row each, in order, with sealing among them where agent-vm began it" \
+    "[1/12] wait for the first boot to finish|[2/12] account agent|[3/12] package lists|[4/12] system updates|[5/12] git, jq, unzip, zip|[6/12] the compiler and make (build-essential)|[7/12] git settings|Sealing the image: no ssh server, no background updates, no first-boot setup|[8/12] remove the ssh server, background updates and polkitd|[9/12] no update timers|[10/12] network settings for any card|[11/12] console and boot menu|[12/12] vsock at boot|Shutting down" \
+    "$(ui_rows "$PROGRESS_STEPS_ID" | /usr/bin/cut -f1 | /usr/bin/sed -n '6,19p' | /usr/bin/paste -sd '|' -)"
+check "  the end of the log is the end of agent-vm's" "Set up in 68 s" "$(ui_value "$PROGRESS_LOG_ID" | /usr/bin/tail -1)"
+check "  no bar for a job that ended" "0" "$(shown "$PROGRESS_BAR_ID")"
+"$PB" "agentvm_window_progress_$LINUX_BUILD" set ""
+/bin/rm -f "$JOBS" "$FAKE_AGENTVM_DIR/job-log-$LINUX_BUILD.json"
 
 section "the words"
 words() { ( . "$APP_SCRIPTS/lib.agentvm.progress.sh" >/dev/null 2>&1; "$@" ); }

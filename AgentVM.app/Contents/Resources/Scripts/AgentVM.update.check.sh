@@ -12,6 +12,9 @@ window_uuid="$OMC_ACTIONUI_WINDOW_UUID"
 [ -n "$window_uuid" ] || exit 0
 image="$(update_image "$window_uuid")"
 [ -n "$image" ] || exit 0
+# Apple has nothing to say of a Linux image: Check Now is not shown for one, and asks nothing
+# for one however this handler came to run.
+update_linux "$window_uuid" "$image" && exit 0
 "$dialog" "$window_uuid" "$UPDATE_NOTE_ID" "Asking Apple for the newest macOS..."
 ui_enable "$window_uuid" "$UPDATE_CHECK_ID" 0
 update_read "$window_uuid" check

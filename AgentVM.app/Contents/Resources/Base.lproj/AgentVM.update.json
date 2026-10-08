@@ -24,7 +24,7 @@
           "type": "HStack",
           "properties": { "spacing": 8.0 },
           "children": [
-            { "type": "Toggle", "id": 811, "properties": { "title": "macOS", "style": "checkbox", "actionID": "AgentVM.update.choice" } },
+            { "type": "Toggle", "id": 811, "properties": { "title": "System", "style": "checkbox", "actionID": "AgentVM.update.choice" } },
             { "type": "Spacer" },
             { "type": "Button", "id": 813, "properties": { "title": "Check Now", "controlSize": "small", "actionID": "AgentVM.update.check", "help": "Ask Apple which macOS is the newest. Needs the internet; nothing is installed." } }
           ]

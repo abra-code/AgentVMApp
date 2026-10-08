@@ -95,6 +95,7 @@ access_followed() {
 
 # access_phase <uuid> <name>  ->  where the image is, in a word:
 #   gone      no image of that name      unready   it is not a ready image
+#   linux     it runs Linux, which has no Full Disk Access to grant and no screen to open
 #   queued    its setup job waits for another job
 #   boot      the setup job is starting the image
 #   window    the image's window is open, and agent-vm waits for the person
@@ -105,6 +106,10 @@ access_phase() {
     local _row="$(main_row "$1" images "$2")"
     if [ -z "$_row" ]; then
         echo "gone"
+        return 0
+    fi
+    if [ "$(printf '%s\n' "$_row" | /usr/bin/cut -f12)" = "linux" ]; then
+        echo "linux"
         return 0
     fi
     local _job="$(access_job "$1" "$2")"
@@ -145,8 +150,9 @@ access_marks() {
 }
 
 # access_blocker <uuid> <name>  ->  why the image cannot be opened now, or nothing: agent-vm cannot
-# be used or read, the image is gone or not ready, a job of another kind holds it, another
-# agent-vm command is changing it, or no virtual machine slot is free (agent-vm waits for none).
+# be used or read, the image is gone, runs Linux or is not ready, a job of another kind holds it,
+# another agent-vm command is changing it, or no place for a macOS virtual machine is free
+# (agent-vm waits for none).
 # A setup job that holds it is not said here: the steps show it.
 access_blocker() {
     if [ "$(main_agentvm_line "$1" 1)" != "0" ]; then
@@ -163,6 +169,10 @@ access_blocker() {
         printf 'There is no image named %s any more.\n' "$2"
         return 0
     fi
+    if [ "$(printf '%s\n' "$_row" | /usr/bin/cut -f12)" = "linux" ]; then
+        printf 'Image %s runs Linux: there is no Full Disk Access to grant in it, and nothing in its boxes waits for one.\n' "$2"
+        return 0
+    fi
     [ -z "$(access_job "$1" "$2")" ] || return 0
     local _job="$(main_job "$1" image "$2")"
     if [ -n "$_job" ]; then
@@ -172,15 +182,15 @@ access_blocker() {
     local _state="$(printf '%s\n' "$_row" | /usr/bin/cut -f2)"
     if [ "$_state" != "ready" ]; then
         printf 'Only a ready image can be opened, and this one is not: %s\n' \
-            "$(main_image_state_text "$_state" "$(printf '%s\n' "$_row" | /usr/bin/cut -f3)")"
+            "$(main_image_state_text "$_state" "$(printf '%s\n' "$_row" | /usr/bin/cut -f3)" "" "$(printf '%s\n' "$_row" | /usr/bin/cut -f12)")"
         return 0
     fi
     if main_image_busy "$1" "$2"; then
         printf 'Another agent-vm command is changing this image now. It can be opened when that ends.\n'
         return 0
     fi
-    main_rows "$1" vm | /usr/bin/awk -F'\t' 'NR == 1 && $1 != "-" && $2 != "-" && $1 + 0 >= $2 + 0 {
-        printf "%s of %s virtual machines are running, and the image needs one to start: stop a box, or wait for a build to end.\n", $1, $2 }'
+    main_macos_vms "$1" | /usr/bin/awk -F'\t' '$1 >= $2 {
+        printf "%s of %s macOS virtual machines are running, and the image needs one to start: stop a macOS box, or wait for a macOS build to end.\n", $1, $2 }'
 }
 
 # access_state_text <uuid> <name> <phase>  ->  the line under the title: whether the guest daemon
@@ -188,9 +198,12 @@ access_blocker() {
 access_state_text() {
     case "$3" in
         gone) return 0 ;;
+        linux)
+            echo "This image runs Linux."
+            return 0 ;;
         unready)
             local _row="$(main_row "$1" images "$2")"
-            main_image_state_text "$(printf '%s\n' "$_row" | /usr/bin/cut -f2)" "$(printf '%s\n' "$_row" | /usr/bin/cut -f3)"
+            main_image_state_text "$(printf '%s\n' "$_row" | /usr/bin/cut -f2)" "$(printf '%s\n' "$_row" | /usr/bin/cut -f3)" "" "$(printf '%s\n' "$_row" | /usr/bin/cut -f12)"
             return 0 ;;
     esac
     if access_needed "$1" "$2"; then
@@ -278,7 +291,7 @@ access_paint() {
         esac
     done
     "$dialog" "$_uuid" "$ACCESS_STATUS_ID" "$(access_status_text "$_uuid" "$_name" "$_phase")"
-    if [ "$_phase" = "gone" ]; then
+    if [ "$_phase" = "gone" ] || [ "$_phase" = "linux" ]; then
         "$dialog" "$_uuid" "$ACCESS_AFTER_ID" ""
     else
         "$dialog" "$_uuid" "$ACCESS_AFTER_ID" "$(access_after_text "$_uuid" "$_name" "$_phase")"

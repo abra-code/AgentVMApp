@@ -209,10 +209,16 @@ section "what agent-vm says of Linux, as far as an empty store shows it"
 # below are the ones that an empty store and no network still show.
 check "version --json names the Linux guest daemon it installs" "string string" \
     "$(/usr/bin/jq -r '[(.linuxGuestDaemon.digest | type), (.linuxGuestDaemon.path | type)] | join(" ")' "$OMCTEST_WORK/version.json")"
-check "status counts the Linux boxes among the running virtual machines" "number" \
-    "$(/usr/bin/jq -r '.runningVMs.linuxBoxes | type' "$OMCTEST_WORK/status.json")"
-check "  and the library reads none on an empty store" "0" "$(printf '%s\n' "$vm_row" | col 3)"
-check "doctor counts them too, in its running VMs check" "number" \
-    "$(/usr/bin/jq -r '.checks[] | select(.name == "running VMs") | .linuxBoxes | type' "$OMCTEST_WORK/doctor.json")"
+check "status counts the Linux boxes among the running virtual machines, and the Linux images being built" "number number" \
+    "$(/usr/bin/jq -r '[(.runningVMs.linuxBoxes | type), (.runningVMs.linuxImages | type)] | join(" ")' "$OMCTEST_WORK/status.json")"
+check "  and the library reads none of either on an empty store" "0${TAB}0" "$(printf '%s\n' "$vm_row" | col 3-4)"
+check "doctor counts them too, in its running VMs check" "number number" \
+    "$(/usr/bin/jq -r '.checks[] | select(.name == "running VMs") | [(.linuxBoxes | type), (.linuxImages | type)] | join(" ")' "$OMCTEST_WORK/doctor.json")"
+# The update window runs `image update <image> --system ...` for either guest, and the fake takes
+# any option: here the real agent-vm is asked, about an image the store does not have, so that it
+# gets as far as reading its options and no further.
+AGENT_VM_HOME="$STORE" "$real" image update nosuch --system --tools --guest --json > /dev/null 2> "$OMCTEST_WORK/update.err"
+check "image update knows --system, --tools and --guest: what it refuses is the image" "1|Error: no image nosuch" \
+    "$?|$(/usr/bin/tail -1 "$OMCTEST_WORK/update.err" | /usr/bin/cut -d';' -f1)"
 
 omctest_end

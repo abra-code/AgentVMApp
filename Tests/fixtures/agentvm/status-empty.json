@@ -5,6 +5,7 @@
   "runningVMs": {
     "count": 0,
     "limit": 2,
-    "linuxBoxes": 0
+    "linuxBoxes": 0,
+    "linuxImages": 0
   }
 }

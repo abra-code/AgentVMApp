@@ -15,7 +15,7 @@
     {
       "event": "log",
       "image": "dev-new",
-      "message": "agent-vm-guest 0.7.11 answers over vsock"
+      "message": "agent-vm-guest 0.7.12 answers over vsock"
     },
     {
       "event": "progress",

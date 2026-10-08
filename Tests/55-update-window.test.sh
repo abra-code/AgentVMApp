@@ -15,7 +15,7 @@
 
 import_view_ids "$APP_SCRIPTS/lib.agentvm.main.sh" "$APP_SCRIPTS/lib.agentvm.update.sh"
 [ -n "$MAIN_IMAGES_ID" ] && [ -n "$MAIN_IMAGE_UPDATE_ID" ] && [ -n "$MAIN_IMAGE_STATE_ID" ] && [ -n "$UPDATE_TITLE_ID" ] \
-    && [ -n "$UPDATE_STATE_ID" ] && [ -n "$UPDATE_MACOS_ID" ] && [ -n "$UPDATE_MACOS_TEXT_ID" ] && [ -n "$UPDATE_CHECK_ID" ] \
+    && [ -n "$UPDATE_STATE_ID" ] && [ -n "$UPDATE_SYSTEM_ID" ] && [ -n "$UPDATE_SYSTEM_TEXT_ID" ] && [ -n "$UPDATE_CHECK_ID" ] \
     && [ -n "$UPDATE_TOOLS_ID" ] && [ -n "$UPDATE_TOOLS_TEXT_ID" ] && [ -n "$UPDATE_GUEST_ID" ] && [ -n "$UPDATE_GUEST_TEXT_ID" ] \
     && [ -n "$UPDATE_AFTER_ID" ] && [ -n "$UPDATE_COMMAND_ID" ] && [ -n "$UPDATE_NOTE_ID" ] && [ -n "$UPDATE_START_ID" ] || {
     printf '55-update-window: no view ids imported from the libraries\n' >&2
@@ -79,7 +79,7 @@ open_update() {
 # tick <macos> <tools> <guest>  ->  the checkboxes as the user left them (true or false each), and
 # the click's handler.
 tick() {
-    omc_control "$UPDATE_MACOS_ID" "$1"
+    omc_control "$UPDATE_SYSTEM_ID" "$1"
     omc_control "$UPDATE_TOOLS_ID" "$2"
     omc_control "$UPDATE_GUEST_ID" "$3"
     omc_run AgentVM.update.choice
@@ -97,7 +97,7 @@ enabled() {
 
 # ticks  ->  the three checkboxes as the window set them, and the choices it keeps.
 ticks() {
-    printf '%s %s %s|%s\n' "$(ui_value "$UPDATE_MACOS_ID")" "$(ui_value "$UPDATE_TOOLS_ID")" "$(ui_value "$UPDATE_GUEST_ID")" \
+    printf '%s %s %s|%s\n' "$(ui_value "$UPDATE_SYSTEM_ID")" "$(ui_value "$UPDATE_TOOLS_ID")" "$(ui_value "$UPDATE_GUEST_ID")" \
         "$("$PB" "agentvm_choices_$UUID" get)"
 }
 
@@ -159,7 +159,7 @@ check "the title names the image"    "Update image dev-acp|Update image dev-acp"
 check "its macOS, and that it was never updated" "macOS 27.0 (26A428). Not updated since it was built." "$(ui_value "$UPDATE_STATE_ID")"
 check "macOS: what is available, when that was learned, and what it costs" \
     "macOS 27.0.1 (26A434) is available, as Apple said on Sep 29, 2026. Installing it takes about 15 minutes, and about 15 GB of disk that the image then no longer shares with its older boxes. Newer Command Line Tools are installed with it." \
-    "$(ui_value "$UPDATE_MACOS_TEXT_ID")"
+    "$(ui_value "$UPDATE_SYSTEM_TEXT_ID")"
 check "the tools: the recipes it keeps" \
     "Runs the update steps of the recipes this image keeps (dev-acp), then every recipe's checks. Not run since the image was built." \
     "$(ui_value "$UPDATE_TOOLS_TEXT_ID")"
@@ -170,7 +170,7 @@ check "afterwards: its box, and what a failure leaves" \
     "Boxes made from it (s3) keep what they have until they are recreated.|The image can be used meanwhile: a box made during the update gets the image as it was.|An update that fails or is stopped leaves the image as it is now." \
     "$(ui_value "$UPDATE_AFTER_ID" | /usr/bin/paste -sd '|' -)"
 check "all three have something to do: all three ticked" "true true true|1 1 1" "$(ticks)"
-check "the command it would run"     "agent-vm image update dev-acp --macos --tools --guest" "$(ui_value "$UPDATE_COMMAND_ID")"
+check "the command it would run"     "agent-vm image update dev-acp --system --tools --guest" "$(ui_value "$UPDATE_COMMAND_ID")"
 check "nothing stands in the way: no note, and Update is on" "|1" "$(ui_value "$UPDATE_NOTE_ID")|$(enabled "$UPDATE_START_ID")"
 check "the tools can be ticked"      "1" "$(enabled "$UPDATE_TOOLS_ID")"
 
@@ -202,7 +202,7 @@ section "the checkboxes"
 open_update dev-acp
 : > "$FAKE_AGENTVM_DIR/log"
 tick true false false
-check "macOS alone"                  "1 0 0|agent-vm image update dev-acp --macos|1" \
+check "macOS alone"                  "1 0 0|agent-vm image update dev-acp --system|1" \
     "$("$PB" "agentvm_choices_$UUID" get)|$(ui_value "$UPDATE_COMMAND_ID")|$(enabled "$UPDATE_START_ID")"
 tick false true true
 check "the tools and the guest daemon" "0 1 1|agent-vm image update dev-acp --tools --guest" \
@@ -215,7 +215,7 @@ check "a value that is not a checkbox's is not a tick" "0 0 0|Tick what to updat
     "$("$PB" "agentvm_choices_$UUID" get)|$(ui_value "$UPDATE_COMMAND_ID")"
 check "a click asks agent-vm nothing" "" "$(fake_log)"
 # A repaint must not undo a click made while it ran: only the opening sets the checkboxes.
-check "a click's handler does not set the checkboxes" "0" "$(ui_calls "${UUID}${TAB}${UPDATE_MACOS_ID}${TAB}false")"
+check "a click's handler does not set the checkboxes" "0" "$(ui_calls "${UUID}${TAB}${UPDATE_SYSTEM_ID}${TAB}false")"
 
 section "an image that keeps no recipes, with a guest daemon that lacks a feature"
 store "$BEHIND"
@@ -224,7 +224,7 @@ check "the tools: nothing to refresh" "This image keeps no recipes, so it has no
 check "  the checkbox is off and cannot be ticked" "false|0" "$(ui_value "$UPDATE_TOOLS_ID")|$(enabled "$UPDATE_TOOLS_ID")"
 check "macOS: not behind what Apple last said" \
     "No newer macOS is known for this image: the newest is 27.0.1 (26A434), as of Sep 29, 2026. The update asks Apple again, and installs what is offered." \
-    "$(ui_value "$UPDATE_MACOS_TEXT_ID")"
+    "$(ui_value "$UPDATE_SYSTEM_TEXT_ID")"
 check "the guest daemon: what the new one adds" \
     "The image's agent-vm-guest 0.2.18 is replaced by this agent-vm's, $VERSION, which adds terminal-pixels. Its Full Disk Access may have to be granted again afterwards; the image's pane says so then." \
     "$(ui_value "$UPDATE_GUEST_TEXT_ID")"
@@ -234,7 +234,7 @@ check "afterwards: the images built from it" \
 check "only the guest daemon is ticked" "false false true|0 0 1" "$(ticks)"
 check "the command"                  "agent-vm image update dev-node --guest" "$(ui_value "$UPDATE_COMMAND_ID")"
 tick true true true
-check "a tick on the tools that reached the handler anyway is dropped" "agent-vm image update dev-node --macos --guest" "$(ui_value "$UPDATE_COMMAND_ID")"
+check "a tick on the tools that reached the handler anyway is dropped" "agent-vm image update dev-node --system --guest" "$(ui_value "$UPDATE_COMMAND_ID")"
 omc_run AgentVM.update.close
 
 section "an image that needs nothing known"
@@ -252,13 +252,13 @@ store '.'
 open_update dev-agents
 check "macOS says so, and is ticked: the update asks" \
     "Apple has not been asked which macOS is the newest: Check Now asks. The update asks too, and installs what Apple offers within macOS 27.|true" \
-    "$(ui_value "$UPDATE_MACOS_TEXT_ID")|$(ui_value "$UPDATE_MACOS_ID")"
+    "$(ui_value "$UPDATE_SYSTEM_TEXT_ID")|$(ui_value "$UPDATE_SYSTEM_ID")"
 omc_run AgentVM.update.close
 store '.newestMacOS = {version: "28.0", build: "27A100", checkedAt: "2026-09-29T09:00:00Z"}'
 open_update dev-agents
 check "a new major version is not what an update installs" \
     "The newest macOS is 28.0 (as of Sep 29, 2026), a new major version, which an update does not install: the image is built again for that. The update still asks Apple for what it offers within macOS 27.|false" \
-    "$(ui_value "$UPDATE_MACOS_TEXT_ID")|$(ui_value "$UPDATE_MACOS_ID")"
+    "$(ui_value "$UPDATE_SYSTEM_TEXT_ID")|$(ui_value "$UPDATE_SYSTEM_ID")"
 omc_run AgentVM.update.close
 
 section "an image updated before"
@@ -280,9 +280,9 @@ store "$BEHIND"
 omc_run AgentVM.update.check
 check_status "exits cleanly" 0
 check "agent-vm asks Apple, in one call" "status --check-updates --json" "$(fake_log)"
-check "the window says what is available" "macOS 27.0.1 (26A434) is available" "$(ui_value "$UPDATE_MACOS_TEXT_ID" | /usr/bin/cut -c1-34)"
+check "the window says what is available" "macOS 27.0.1 (26A434) is available" "$(ui_value "$UPDATE_SYSTEM_TEXT_ID" | /usr/bin/cut -c1-34)"
 check "  ticks macOS, and keeps the other ticks" "true true true|1 1 1" "$(ticks)"
-check "  the command follows"        "agent-vm image update dev-acp --macos --tools --guest" "$(ui_value "$UPDATE_COMMAND_ID")"
+check "  the command follows"        "agent-vm image update dev-acp --system --tools --guest" "$(ui_value "$UPDATE_COMMAND_ID")"
 check "  the waiting note is gone, and the button is back" "|1" "$(ui_value "$UPDATE_NOTE_ID")|$(enabled "$UPDATE_CHECK_ID")"
 tick false true false
 store '.newestMacOS = {version: "27.0", build: "26A428", checkedAt: "2026-09-20T09:00:00Z"} | .newestMacOSError = "The Internet connection appears to be offline."'
@@ -308,7 +308,7 @@ section "no virtual machine slot is free"
 store "$BEHIND"' | .runningVMs.count = 2'
 omc_run AgentVM.update.activated
 check "the window warns, and Update stays on: a slot may be free by the click" \
-    "No virtual machine slot is free now (2 of 2 running), and an update needs one: it fails at once until a box or a build stops.|1" \
+    "No virtual machine slot is free now (2 of 2 macOS virtual machines running), and an update needs one: it fails at once until a macOS box or build stops.|1" \
     "$(ui_value "$UPDATE_NOTE_ID")|$(enabled "$UPDATE_START_ID")"
 
 section "what stands in the way"
@@ -357,7 +357,7 @@ shown_command="$(ui_value "$UPDATE_COMMAND_ID")"
 omc_run AgentVM.update.start
 check_status "exits cleanly" 0
 check "status is read first, then the job is started with the parts ticked" \
-    "status --json|job start --json -- image update dev-acp --macos --tools" "$(fake_log | /usr/bin/sed -n '1,2p' | /usr/bin/paste -sd '|' -)"
+    "status --json|job start --json -- image update dev-acp --system --tools" "$(fake_log | /usr/bin/sed -n '1,2p' | /usr/bin/paste -sd '|' -)"
 check "the command line shown is the one run" "$shown_command" "agent-vm $(started | /usr/bin/sed 's/^job start --json -- //')"
 check "the job's progress window is asked for" "1|$APP_PID progress:$FIRST" "$(chain_asked AgentVM.progress)|$("$PB" agentvm_open_request_progress get)"
 check "the update window closes, its Update off since the job started" "1|0" "$(ui_calls "${UUID}${TAB}omc_window${TAB}omc_terminate_cancel")|$(enabled "$UPDATE_START_ID")"
@@ -387,7 +387,7 @@ open_update dev-acp
 : > "$FAKE_AGENTVM_DIR/log"
 omc_run AgentVM.update.start
 /bin/rm -f "$FAKE_AGENTVM_DIR/job-start-state" "$FAKE_AGENTVM_DIR/job-start-error"
-check "the job was started"          "job start --json -- image update dev-acp --macos --tools --guest" "$(started)"
+check "the job was started"          "job start --json -- image update dev-acp --system --tools --guest" "$(started)"
 check "the main window says that it failed, and why" "Image dev-acp was not updated|no virtual machine slot is free" \
     "$(ui_alert_title "$MAIN_UUID")|$(ui_alert_message "$MAIN_UUID")"
 omc_run AgentVM.update.close
@@ -401,9 +401,9 @@ open_update dev-acp
 chains_reset
 omc_run AgentVM.update.start
 check_status "exits cleanly" 0
-check "the job starts, and its progress window is asked for" "job start --json -- image update dev-acp --macos --tools --guest|1" \
+check "the job starts, and its progress window is asked for" "job start --json -- image update dev-acp --system --tools --guest|1" \
     "$(started)|$(chain_asked AgentVM.progress)"
-check "nothing is read for a main window that is not there" "status --json|job start --json -- image update dev-acp --macos --tools --guest" \
+check "nothing is read for a main window that is not there" "status --json|job start --json -- image update dev-acp --system --tools --guest" \
     "$(fake_log | /usr/bin/paste -sd '|' -)"
 check "  and no cache folder is made for one" "" "$(/bin/ls "$TMPDIR/AgentVM/$MAIN_UUID" 2>/dev/null)"
 omc_run AgentVM.update.close
@@ -447,12 +447,12 @@ check "the window says why, keeps no ticks yet, and Update is off" "agent-vm cou
 /bin/rm -f "$FAKE_AGENTVM_DIR/fail-status"
 omc_run AgentVM.update.activated
 check "the first reading that succeeds ticks what needs updating, as an opening does" "true true true|1 1 1" "$(ticks)"
-check "  and the command and Update follow the ticks" "agent-vm image update dev-acp --macos --tools --guest|1" \
+check "  and the command and Update follow the ticks" "agent-vm image update dev-acp --system --tools --guest|1" \
     "$(ui_value "$UPDATE_COMMAND_ID")|$(enabled "$UPDATE_START_ID")"
 tick false true false
 omc_run AgentVM.update.activated
 check "a later reading leaves the ticks and the checkboxes alone" "0 1 0|0" \
-    "$("$PB" "agentvm_choices_$UUID" get)|$(ui_calls "${UUID}${TAB}${UPDATE_MACOS_ID}${TAB}false")"
+    "$("$PB" "agentvm_choices_$UUID" get)|$(ui_calls "${UUID}${TAB}${UPDATE_SYSTEM_ID}${TAB}false")"
 omc_run AgentVM.update.close
 printf 'the store is locked by another agent-vm\n' > "$FAKE_AGENTVM_DIR/fail-status"
 open_update dev-acp
@@ -467,7 +467,7 @@ open_update dev-agents
 check "the state line does not show a placeholder" "Its macOS version is not known. Not updated since it was built." "$(ui_value "$UPDATE_STATE_ID")"
 check "macOS: the newest is not called a new major version" \
     "No newer macOS is known for this image: the newest is 27.0.1 (26A434), as of Sep 29, 2026. The update asks Apple again, and installs what is offered." \
-    "$(ui_value "$UPDATE_MACOS_TEXT_ID")"
+    "$(ui_value "$UPDATE_SYSTEM_TEXT_ID")"
 check "the guest daemon: replaced, without a version to name" \
     "The image's agent-vm-guest, whose version is not on record, is replaced by this agent-vm's, $VERSION. Its Full Disk Access may have to be granted again afterwards; the image's pane says so then." \
     "$(ui_value "$UPDATE_GUEST_TEXT_ID")"
@@ -476,7 +476,7 @@ store '(.images[] | select(.name == "dev-agents")) |= del(.macOSVersion, .macOSB
 open_update dev-agents
 check "Apple never asked: no major version to name either" \
     "Apple has not been asked which macOS is the newest: Check Now asks. The update asks too, and installs what Apple offers within the image's major version." \
-    "$(ui_value "$UPDATE_MACOS_TEXT_ID")"
+    "$(ui_value "$UPDATE_SYSTEM_TEXT_ID")"
 omc_run AgentVM.update.close
 
 section "the window closes while agent-vm is read"
@@ -543,13 +543,73 @@ done
 check "closed while Update painted: nothing is started, and no cache folder is left" "closed||no" \
     "$([ -e "$CLOSE_MARK" ] && echo closed)|$(started)|$([ -d "$TMPDIR/AgentVM/$UUID" ] && echo yes || echo no)"
 
+# -----------------------------------------------------------------------------------------------
+section "a Linux image"
+# The store with both kinds. deb-agents keeps two recipes and has an older guest daemon; deb keeps
+# none. agent-vm looked at each one's packages when it was built.
+# mixed <jq edit of status-mixed.json>  ->  the fake answers status with that.
+mixed() {
+    /usr/bin/jq "$1" "$FIXTURES_AGENTVM/status-mixed.json" > "$FAKE_AGENTVM_DIR/status.json"
+}
+fake_reset
+mixed '.'
+for image in deb deb-agents dev-acp; do
+    "$PB" "agentvm_window_update_$image" set ""
+done
+open_update deb-agents
+check "its system in agent-vm's words, and that it was not updated" \
+    "Debian GNU/Linux 13 (trixie). Not updated since it was built." "$(ui_value "$UPDATE_STATE_ID")"
+check "the system's part: the package updates of its distribution, and when they were last looked for" \
+    "Installs the package updates of Debian 13, which takes seconds to minutes. When they bring a new kernel, the image is started once more to check it before the update is kept. Its packages were last looked at on Oct 7, 2026." \
+    "$(ui_value "$UPDATE_SYSTEM_TEXT_ID")"
+check "the system is ticked, though nobody can say beforehand that it needs doing; the tools for its recipes; the guest daemon, which is another version" \
+    "true true true|1 1 1" "$(ticks)"
+check "Check Now is not shown: Apple has nothing to say of a Linux image" "0" "$(ui_visible "$UPDATE_CHECK_ID")"
+check "the guest daemon's part says nothing of Full Disk Access" \
+    "The image's agent-vm-guest 0.7.9 is replaced by this agent-vm's, $VERSION." "$(ui_value "$UPDATE_GUEST_TEXT_ID")"
+check "the command it would run: the system's part is --system" \
+    "agent-vm image update deb-agents --system --tools --guest|1" "$(ui_value "$UPDATE_COMMAND_ID")|$(enabled "$UPDATE_START_ID")"
+mixed '.runningVMs = {count: 2, limit: 2, linuxBoxes: 0, linuxImages: 0}'
+omc_run AgentVM.update.activated
+check "both macOS places taken: no warning, since a Linux image needs none" "|1" "$(ui_value "$UPDATE_NOTE_ID")|$(enabled "$UPDATE_START_ID")"
+: > "$FAKE_AGENTVM_DIR/log"
+omc_run AgentVM.update.check
+check "Check Now, however it came to run, asks Apple nothing for a Linux image" "" "$(fake_log)"
+mixed '.'
+: > "$FAKE_AGENTVM_DIR/log"
+shown_command="$(ui_value "$UPDATE_COMMAND_ID")"
+omc_run AgentVM.update.start
+check "Update starts the job with the parts ticked" "job start --json -- image update deb-agents --system --tools --guest" "$(started)"
+check "  and the command line shown is the one run" "$shown_command" "agent-vm $(started | /usr/bin/sed 's/^job start --json -- //')"
+/bin/rm -f "$JOBS"
+"$PB" agentvm_window_update_deb-agents set ""
+"$PB" agentvm_open_request_progress set ""
+open_update deb
+check "a Linux image that keeps no recipes: the system and the guest daemon, and the tools off" \
+    "true false true|1 0 1|0|agent-vm image update deb --system --guest" \
+    "$(ticks)|$(enabled "$UPDATE_TOOLS_ID")|$(ui_value "$UPDATE_COMMAND_ID")"
+"$PB" agentvm_window_update_deb set ""
+open_update dev-acp
+check "a macOS image in the same store: Check Now is shown, and its macOS is what is said" "1|macOS 27.0 (26A428). Not updated since it was built." \
+    "$(ui_visible "$UPDATE_CHECK_ID")|$(ui_value "$UPDATE_STATE_ID")"
+mixed '.runningVMs = {count: 3, limit: 2, linuxBoxes: 1, linuxImages: 1}'
+omc_run AgentVM.update.activated
+check "  three machines run, two of them Linux: a place is free for a macOS update, and the note is empty" "" \
+    "$(ui_value "$UPDATE_NOTE_ID")"
+mixed '.runningVMs = {count: 3, limit: 2, linuxBoxes: 1, linuxImages: 0}'
+omc_run AgentVM.update.activated
+check "  three machines run, one of them Linux: both places are taken" \
+    "No virtual machine slot is free now (2 of 2 macOS virtual machines running), and an update needs one: it fails at once until a macOS box or build stops." \
+    "$(ui_value "$UPDATE_NOTE_ID")"
+"$PB" agentvm_window_update_dev-acp set ""
+
 section "the library: the parts as options, and the job"
-check "all three, in agent-vm's order" "--macos --tools --guest" "$(lib agentvm_image_update_flags 1 1 1)"
+check "all three, in agent-vm's order" "--system --tools --guest" "$(lib agentvm_image_update_flags 1 1 1)"
 check "one"                          "--tools" "$(lib agentvm_image_update_flags 0 1 0)"
 check "none, and values that are not 1" "|" "$(lib agentvm_image_update_flags 0 0 0)|$(lib agentvm_image_update_flags true yes "")"
 fake_reset
 id="$(with_fake agentvm_job_image_update dev-acp 1 0 1)"
-check "the job is started, and its id returned" "0|$FIRST|job start --json -- image update dev-acp --macos --guest" "$?|$id|$(fake_log)"
+check "the job is started, and its id returned" "0|$FIRST|job start --json -- image update dev-acp --system --guest" "$?|$id|$(fake_log)"
 fake_reset
 with_fake agentvm_job_image_update dev-acp 0 0 0 >/dev/null
 check "no part asked for: refused, since agent-vm would take that for all three" "2|" "$?|$(fake_log)"

@@ -11,7 +11,7 @@ window_uuid="$OMC_ACTIONUI_WINDOW_UUID"
 [ -n "$window_uuid" ] || exit 0
 name="$(ui_get box "$window_uuid")"
 [ -n "$name" ] || exit 0
-[ "$(main_row "$window_uuid" boxes "$name" | /usr/bin/cut -f23)" != "linux" ] || exit 0
+[ "$(main_guest "$window_uuid" boxes "$name")" != "linux" ] || exit 0
 agentvm_box_view "$name" interactive
 status=$?
 if [ "$status" -ne 0 ]; then

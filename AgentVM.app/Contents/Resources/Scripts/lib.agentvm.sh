@@ -35,7 +35,7 @@
 [ -n "${__AGENTVM_APP_LIB:-}" ] && return 0
 __AGENTVM_APP_LIB=1
 
-AGENTVM_MIN_VERSION="0.7.11"
+AGENTVM_MIN_VERSION="0.7.12"
 
 # The app's own state, and where agent-vm's installer puts the link to the newest agent-vm.
 agentvm_support_dir="$HOME/Library/Application Support/AgentVM"
@@ -752,8 +752,7 @@ agentvm_image_delete() {
 # machines running on this Mac (any application's, image builds included), how many macOS guests
 # can run at once, and how many of the count are this store's running Linux boxes and its Linux
 # images being built or updated: the limit concerns neither, so the macOS guests are the count
-# less both. Each is 0 when agent-vm does not say (agent-vm 0.7.11 says only the boxes, and so
-# counts a Linux image being built as a macOS guest). count is "-" when agent-vm could not list
+# less both. Each is 0 when agent-vm does not say. count is "-" when agent-vm could not list
 # processes.
 agentvm_status_vm_row() {
     /usr/bin/jq -r "$agentvm_jq_defs"' [.runningVMs.count, .runningVMs.limit,
@@ -827,20 +826,23 @@ agentvm_job_box_stop() {
     _agentvm_job_start - box stop "$1"
 }
 
-# agentvm_image_update_flags <macos: 1 or 0> <tools> <guest>  ->  the options of `image update` for
-# those parts ("--macos --guest"), or nothing when none is asked for. One function for the job and
-# for the command line a window shows, so the two cannot differ.
+# agentvm_image_update_flags <system: 1 or 0> <tools> <guest>  ->  the options of `image update` for
+# those parts ("--system --guest"), or nothing when none is asked for. One function for the job and
+# for the command line a window shows, so the two cannot differ. --system is the system's part for
+# either guest: macOS for a macOS image, the distribution's packages for a Linux one (agent-vm
+# refuses --macos, which means the same for a macOS image, for a Linux one).
 agentvm_image_update_flags() {
     local _flags=""
-    [ "${1:-}" = "1" ] && _flags="--macos"
+    [ "${1:-}" = "1" ] && _flags="--system"
     [ "${2:-}" = "1" ] && _flags="${_flags:+$_flags }--tools"
     [ "${3:-}" = "1" ] && _flags="${_flags:+$_flags }--guest"
     printf '%s\n' "$_flags"
 }
 
-# agentvm_job_image_update <name> <macos: 1 or 0> <tools> <guest>  ->  the id of a job that updates
-# the ready image in place: the macOS update Apple offers within its major version, the update
-# steps of the recipes it keeps, and this agent-vm's guest daemon, each when asked for. The update
+# agentvm_job_image_update <name> <system: 1 or 0> <tools> <guest>  ->  the id of a job that updates
+# the ready image in place: its system (the macOS update Apple offers within its major version,
+# or the package updates of a Linux image's distribution), the update steps of the recipes it
+# keeps, and this agent-vm's guest daemon, each when asked for. The update
 # works on a copy and takes the image's place only when everything succeeded. With no part asked
 # for, nothing is started: agent-vm would take that for all three.
 agentvm_job_image_update() {

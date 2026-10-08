@@ -67,7 +67,7 @@
         "user-session",
         "terminal-pixels"
       ],
-      "guestVersion": "0.7.11",
+      "guestVersion": "0.7.12",
       "needs": [],
       "ownerPid": 812,
       "path": "/Users/you/Library/Application Support/agent-vm/Boxes/s3",
@@ -77,8 +77,8 @@
       "running": true,
       "startedAt": "2026-09-29T14:02:10Z",
       "state": "running",
-      "supervisorPath": "/Users/you/.local/share/agent-vm/versions/0.7.11/agent-vm",
-      "supervisorVersion": "0.7.11",
+      "supervisorPath": "/Users/you/.local/share/agent-vm/versions/0.7.12/agent-vm",
+      "supervisorVersion": "0.7.12",
       "system": "macOS 27.0 (26A428)"
     },
     {
@@ -481,6 +481,7 @@
   "runningVMs": {
     "count": 1,
     "limit": 2,
-    "linuxBoxes": 0
+    "linuxBoxes": 0,
+    "linuxImages": 0
   }
 }
