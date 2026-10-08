@@ -122,6 +122,11 @@ check "every line of the document has its three views" "5 5 5" \
     "$(for base in "$HOWTO_COMMAND_BASE" "$HOWTO_COPY_BASE" "$HOWTO_WHAT_BASE"; do /usr/bin/jq --argjson base "$base" '[.. | objects | select((.id? // 0) > $base and (.id? // 0) <= $base + 5)] | length' "$APP_RESOURCES/Base.lproj/AgentVM.howto.json"; done | /usr/bin/paste -sd ' ' -)"
 check "Agent Keys... in it opens the keys window" "AgentVM.keys.open" \
     "$(/usr/bin/jq -r '.. | objects | select(.properties?.title? == "Agent Keys...") | .properties.actionID' "$APP_RESOURCES/Base.lproj/AgentVM.howto.json")"
+chains_reset
+omc_run AgentVM.logs.open
+check "Where the Logs Are... in it asks for that window, with a request of this run" "AgentVM.logs.open|1|$APP_PID logs:window" \
+    "$(/usr/bin/jq -r '.. | objects | select(.properties?.title? == "Where the Logs Are...") | .properties.actionID' "$APP_RESOURCES/Base.lproj/AgentVM.howto.json")|$(chain_asked AgentVM.logs)|$("$PB" agentvm_open_request_logs get)"
+"$PB" agentvm_open_request_logs set ""
 
 section "Copy"
 /bin/rm -f "$FAKE_PBCOPY_FILE" "$FAKE_PBCOPY_FILE.args"

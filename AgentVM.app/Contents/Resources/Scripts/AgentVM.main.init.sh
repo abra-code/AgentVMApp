@@ -19,8 +19,15 @@ ui_item_claim main window "$window_uuid"
 seen="$(main_jobs_seen)"
 main_refresh "$window_uuid" full
 target="$(ui_goto_take)"
+# One command can follow a handler, and the last one asked for is the one that runs. A URL that
+# asked for the Where the Logs Are window has that window follow, when none is open yet; the
+# poll loop then starts when this window is next active (AgentVM.main.activated).
+follows="poll"
+[ "$target" = "logs" ] && [ -z "$(ui_item_window logs window)" ] && follows="logs"
 [ -n "$target" ] && main_goto "$window_uuid" "$target"
 # Last, so that it is the alert that shows: a window shows one alert, the newest, and a link to a
 # box that is gone can be followed again, while this is said once.
 main_launch_report "$window_uuid" "$seen"
-"$next_command" "$OMC_CURRENT_COMMAND_GUID" "AgentVM.main.poll"
+if [ "$follows" = "poll" ]; then
+    "$next_command" "$OMC_CURRENT_COMMAND_GUID" "AgentVM.main.poll"
+fi

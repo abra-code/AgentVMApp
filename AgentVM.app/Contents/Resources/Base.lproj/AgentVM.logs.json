@@ -1,0 +1,514 @@
+{
+  "type": "VStack",
+  "properties": {
+    "alignment": "leading",
+    "spacing": 12,
+    "padding": 20,
+    "frame": {
+      "minWidth": 820,
+      "minHeight": 560,
+      "idealWidth": 820,
+      "idealHeight": 560
+    }
+  },
+  "children": [
+    {
+      "type": "Text",
+      "properties": {
+        "text": "agent-vm keeps these records as files on this Mac, where nothing in a box can change them. The app shows the last of each.",
+        "frame": {
+          "maxWidth": "infinity",
+          "alignment": "leading"
+        }
+      }
+    },
+    {
+      "type": "VStack",
+      "properties": {
+        "alignment": "leading",
+        "spacing": 4
+      },
+      "children": [
+        {
+          "type": "HStack",
+          "properties": {
+            "spacing": 8
+          },
+          "children": [
+            {
+              "type": "Text",
+              "properties": {
+                "text": "In a box's folder",
+                "font": "headline",
+                "frame": {
+                  "maxWidth": "infinity",
+                  "alignment": "leading"
+                }
+              }
+            },
+            {
+              "type": "Button",
+              "id": 4321,
+              "properties": {
+                "title": "Show in Finder",
+                "controlSize": "small",
+                "disabled": true,
+                "actionID": "AgentVM.logs.show",
+                "help": "Open this folder in Finder."
+              }
+            },
+            {
+              "type": "Button",
+              "id": 4331,
+              "properties": {
+                "title": "Copy Path",
+                "controlSize": "small",
+                "actionID": "AgentVM.logs.path",
+                "help": "Copy the full path of this folder."
+              }
+            }
+          ]
+        },
+        {
+          "type": "Text",
+          "properties": {
+            "text": "What ran in the box: exec.jsonl, each program agent-vm started in it and how it ended.",
+            "frame": {
+              "maxWidth": "infinity",
+              "alignment": "leading"
+            }
+          }
+        },
+        {
+          "type": "Text",
+          "properties": {
+            "text": "What it contacted, and what was refused: network-allowed.jsonl and network.jsonl.",
+            "frame": {
+              "maxWidth": "infinity",
+              "alignment": "leading"
+            }
+          }
+        },
+        {
+          "type": "Text",
+          "properties": {
+            "text": "Why it did not start, or stopped: supervisor.log, and console.log for a Linux box.",
+            "frame": {
+              "maxWidth": "infinity",
+              "alignment": "leading"
+            }
+          }
+        },
+        {
+          "type": "Text",
+          "id": 4311,
+          "properties": {
+            "text": "",
+            "font": {
+              "name": "Menlo",
+              "size": 11
+            },
+            "foregroundStyle": "secondary",
+            "textSelection": "enabled",
+            "frame": {
+              "maxWidth": "infinity",
+              "alignment": "leading"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "type": "VStack",
+      "properties": {
+        "alignment": "leading",
+        "spacing": 4
+      },
+      "children": [
+        {
+          "type": "HStack",
+          "properties": {
+            "spacing": 8
+          },
+          "children": [
+            {
+              "type": "Text",
+              "properties": {
+                "text": "In a job's folder",
+                "font": "headline",
+                "frame": {
+                  "maxWidth": "infinity",
+                  "alignment": "leading"
+                }
+              }
+            },
+            {
+              "type": "Button",
+              "id": 4322,
+              "properties": {
+                "title": "Show in Finder",
+                "controlSize": "small",
+                "disabled": true,
+                "actionID": "AgentVM.logs.show",
+                "help": "Open this folder in Finder."
+              }
+            },
+            {
+              "type": "Button",
+              "id": 4332,
+              "properties": {
+                "title": "Copy Path",
+                "controlSize": "small",
+                "actionID": "AgentVM.logs.path",
+                "help": "Copy the full path of this folder."
+              }
+            }
+          ]
+        },
+        {
+          "type": "Text",
+          "properties": {
+            "text": "Why a build or an update failed: log, every step and line of the job, kept for a week.",
+            "frame": {
+              "maxWidth": "infinity",
+              "alignment": "leading"
+            }
+          }
+        },
+        {
+          "type": "Text",
+          "properties": {
+            "text": "A Linux image also has its console, console.log, in the image's folder under Images.",
+            "frame": {
+              "maxWidth": "infinity",
+              "alignment": "leading"
+            }
+          }
+        },
+        {
+          "type": "Text",
+          "id": 4312,
+          "properties": {
+            "text": "",
+            "font": {
+              "name": "Menlo",
+              "size": 11
+            },
+            "foregroundStyle": "secondary",
+            "textSelection": "enabled",
+            "frame": {
+              "maxWidth": "infinity",
+              "alignment": "leading"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "type": "VStack",
+      "properties": {
+        "alignment": "leading",
+        "spacing": 4
+      },
+      "children": [
+        {
+          "type": "HStack",
+          "properties": {
+            "spacing": 8
+          },
+          "children": [
+            {
+              "type": "Text",
+              "properties": {
+                "text": "Of a box that was deleted",
+                "font": "headline",
+                "frame": {
+                  "maxWidth": "infinity",
+                  "alignment": "leading"
+                }
+              }
+            },
+            {
+              "type": "Button",
+              "id": 4323,
+              "properties": {
+                "title": "Show in Finder",
+                "controlSize": "small",
+                "disabled": true,
+                "actionID": "AgentVM.logs.show",
+                "help": "Open this folder in Finder."
+              }
+            },
+            {
+              "type": "Button",
+              "id": 4333,
+              "properties": {
+                "title": "Copy Path",
+                "controlSize": "small",
+                "actionID": "AgentVM.logs.path",
+                "help": "Copy the full path of this folder."
+              }
+            }
+          ]
+        },
+        {
+          "type": "Text",
+          "id": 4305,
+          "properties": {
+            "text": "",
+            "textSelection": "enabled",
+            "frame": {
+              "maxWidth": "infinity",
+              "alignment": "leading"
+            }
+          }
+        },
+        {
+          "type": "Text",
+          "id": 4313,
+          "properties": {
+            "text": "",
+            "font": {
+              "name": "Menlo",
+              "size": 11
+            },
+            "foregroundStyle": "secondary",
+            "textSelection": "enabled",
+            "frame": {
+              "maxWidth": "infinity",
+              "alignment": "leading"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "type": "Divider"
+    },
+    {
+      "type": "Text",
+      "properties": {
+        "text": "In Terminal",
+        "font": "headline"
+      }
+    },
+    {
+      "type": "HStack",
+      "properties": {
+        "alignment": "firstTextBaseline",
+        "spacing": 10
+      },
+      "children": [
+        {
+          "type": "Text",
+          "id": 4341,
+          "properties": {
+            "text": "",
+            "font": {
+              "name": "Menlo",
+              "size": 12
+            },
+            "textSelection": "enabled",
+            "frame": {
+              "width": 300,
+              "alignment": "leading"
+            }
+          }
+        },
+        {
+          "type": "Button",
+          "id": 4351,
+          "properties": {
+            "title": "Copy",
+            "controlSize": "small",
+            "actionID": "AgentVM.logs.copy",
+            "help": "Copy this line, to paste it into Terminal."
+          }
+        },
+        {
+          "type": "Text",
+          "id": 4361,
+          "properties": {
+            "text": "",
+            "foregroundStyle": "secondary",
+            "frame": {
+              "maxWidth": "infinity",
+              "alignment": "leading"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "type": "HStack",
+      "properties": {
+        "alignment": "firstTextBaseline",
+        "spacing": 10
+      },
+      "children": [
+        {
+          "type": "Text",
+          "id": 4342,
+          "properties": {
+            "text": "",
+            "font": {
+              "name": "Menlo",
+              "size": 12
+            },
+            "textSelection": "enabled",
+            "frame": {
+              "width": 300,
+              "alignment": "leading"
+            }
+          }
+        },
+        {
+          "type": "Button",
+          "id": 4352,
+          "properties": {
+            "title": "Copy",
+            "controlSize": "small",
+            "actionID": "AgentVM.logs.copy",
+            "help": "Copy this line, to paste it into Terminal."
+          }
+        },
+        {
+          "type": "Text",
+          "id": 4362,
+          "properties": {
+            "text": "",
+            "foregroundStyle": "secondary",
+            "frame": {
+              "maxWidth": "infinity",
+              "alignment": "leading"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "type": "HStack",
+      "properties": {
+        "alignment": "firstTextBaseline",
+        "spacing": 10
+      },
+      "children": [
+        {
+          "type": "Text",
+          "id": 4343,
+          "properties": {
+            "text": "",
+            "font": {
+              "name": "Menlo",
+              "size": 12
+            },
+            "textSelection": "enabled",
+            "frame": {
+              "width": 300,
+              "alignment": "leading"
+            }
+          }
+        },
+        {
+          "type": "Button",
+          "id": 4353,
+          "properties": {
+            "title": "Copy",
+            "controlSize": "small",
+            "actionID": "AgentVM.logs.copy",
+            "help": "Copy this line, to paste it into Terminal."
+          }
+        },
+        {
+          "type": "Text",
+          "id": 4363,
+          "properties": {
+            "text": "",
+            "foregroundStyle": "secondary",
+            "frame": {
+              "maxWidth": "infinity",
+              "alignment": "leading"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "type": "HStack",
+      "properties": {
+        "alignment": "firstTextBaseline",
+        "spacing": 10
+      },
+      "children": [
+        {
+          "type": "Text",
+          "id": 4344,
+          "properties": {
+            "text": "",
+            "font": {
+              "name": "Menlo",
+              "size": 12
+            },
+            "textSelection": "enabled",
+            "frame": {
+              "width": 300,
+              "alignment": "leading"
+            }
+          }
+        },
+        {
+          "type": "Button",
+          "id": 4354,
+          "properties": {
+            "title": "Copy",
+            "controlSize": "small",
+            "actionID": "AgentVM.logs.copy",
+            "help": "Copy this line, to paste it into Terminal."
+          }
+        },
+        {
+          "type": "Text",
+          "id": 4364,
+          "properties": {
+            "text": "",
+            "foregroundStyle": "secondary",
+            "frame": {
+              "maxWidth": "infinity",
+              "alignment": "leading"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "type": "Text",
+      "id": 4302,
+      "properties": {
+        "text": "",
+        "foregroundStyle": "secondary",
+        "textSelection": "enabled",
+        "frame": {
+          "maxWidth": "infinity",
+          "alignment": "leading"
+        }
+      }
+    },
+    {
+      "type": "Divider"
+    },
+    {
+      "type": "Text",
+      "properties": {
+        "text": "Not logged: the connections of a box whose network is open, and what a program does in a box once agent-vm started it.",
+        "foregroundStyle": "secondary",
+        "frame": {
+          "maxWidth": "infinity",
+          "alignment": "leading"
+        }
+      }
+    },
+    {
+      "type": "Spacer"
+    }
+  ]
+}

@@ -1906,7 +1906,9 @@ main_paint() {
 
 # main_goto <uuid> <target>  ->  the window showing what a URL named (lib.agentvm.ui.sh, "The
 # agentvm URL scheme"): "box <name>" or "image <name>" shows that tab with the card selected and
-# its details read, as selecting it by hand does; "status" changes nothing. From the caches, so
+# its details read, as selecting it by hand does; "logs" opens the Where the Logs Are window
+# (lib.agentvm.logs.sh), or brings it to the front, whichever face is shown; "status" changes
+# nothing. From the caches, so
 # the caller reads `status` first. A name the lists do not hold is said in an alert, since the
 # link came from somewhere that believed it existed. Nothing happens on the Get started face,
 # which has no lists.
@@ -1918,6 +1920,9 @@ main_goto() {
     case "$_kind" in
         box)   _tab=0; _list=boxes ;;
         image) _tab=1; _list=images ;;
+        logs)
+            ui_item_open logs window "$OMC_CURRENT_COMMAND_GUID"
+            return 0 ;;
         *)     return 0 ;;
     esac
     agentvm_valid_name "$_name" || return 0

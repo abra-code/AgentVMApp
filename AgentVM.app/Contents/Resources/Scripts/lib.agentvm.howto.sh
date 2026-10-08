@@ -1,8 +1,9 @@
 #!/bin/sh
 # lib.agentvm.howto.sh
 #
-# The How to Use a Box window (AgentVM.howto.json, the views 4102 and 4111-4135): the ways into
-# a box, as lines to copy for Terminal (avm), and where an agent's key is stored. One window at
+# The How to Use a Box window (AgentVM.howto.json, the views 4102-4104 and 4111-4135): the ways
+# into a box, as lines to copy for Terminal (avm), where an agent's key is stored, and the way to
+# the Where the Logs Are window (lib.agentvm.logs.sh). One window at
 # a time (lib.agentvm.ui.sh, "Box windows", with the kind "howto" and the name "window"), opened
 # by the question mark under the main window's box list.
 #
@@ -18,8 +19,6 @@
 __AGENTVM_APP_HOWTO_LIB=1
 
 . "$OMC_APP_BUNDLE_PATH/Contents/Resources/Scripts/lib.agentvm.main.sh"
-
-pbcopy_tool="${AGENTVM_APP_PBCOPY:-/usr/bin/pbcopy}"
 
 HOWTO_NOTE_ID=4102
 # Line n has its command in HOWTO_COMMAND_BASE + n, its Copy button in HOWTO_COPY_BASE + n and

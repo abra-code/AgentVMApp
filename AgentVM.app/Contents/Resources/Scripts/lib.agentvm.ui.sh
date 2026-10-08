@@ -11,7 +11,8 @@
 # run agent-vm again. The window's close handler removes both.
 #
 # Seams for the tests: AGENTVM_APP_PS (the process list, which a sandboxed test cannot read),
-# AGENTVM_APP_SLEEP (the poll loop's wait) and AGENTVM_APP_OPEN (Finder, for Show).
+# AGENTVM_APP_SLEEP (the poll loop's wait), AGENTVM_APP_OPEN (Finder and Console, for Show and
+# Open) and AGENTVM_APP_PBCOPY (the clipboard, for Copy).
 #
 # POSIX sh (bash 3.2 in POSIX mode) only. Validate with "sh -n".
 [ -n "${__AGENTVM_APP_UI_LIB:-}" ] && return 0
@@ -25,6 +26,7 @@ pasteboard="$OMC_OMC_SUPPORT_PATH/pasteboard"
 ps_tool="${AGENTVM_APP_PS:-/bin/ps}"
 sleep_tool="${AGENTVM_APP_SLEEP:-/bin/sleep}"
 open_tool="${AGENTVM_APP_OPEN:-/usr/bin/open}"
+pbcopy_tool="${AGENTVM_APP_PBCOPY:-/usr/bin/pbcopy}"
 ui_tab="$(printf '\t')"
 
 # ui_key <name> <window uuid>  ->  the pasteboard key of one value of one window.
@@ -293,19 +295,20 @@ ui_item_request() {
 
 # -- The agentvm URL scheme ----------------------------------------------------------------------
 # agentvm://status, agentvm://box/<name> and agentvm://image/<name> bring the main window to the
-# front, with that box or image selected (omc.app.handle-url.sh). The handler runs with no window
+# front, with that box or image selected, and agentvm://logs brings it to the front and opens the
+# Where the Logs Are window (omc.app.handle-url.sh). The handler runs with no window
 # of its own, so the main window names itself in a pasteboard entry, as the box windows do
 # (ui_item_* with the kind "main" and the name "window"); and when no main window is open, what to
 # show waits in a request the next main window's init handler takes, once. Both carry the app's
 # pid, so what another run of the app left is ignored.
 #
-# A URL is text from outside the app: only these three forms are routed, a name must be one
+# A URL is text from outside the app: only these four forms are routed, a name must be one
 # agent-vm accepts, and nothing a URL names is ever changed, only shown.
 
 AGENTVM_GOTO_KEY="agentvm_goto"
 
-# ui_url_target <url>  ->  "status", "box <name>" or "image <name>" for a URL the app routes, or
-# nothing. The scheme and the first part are matched in any case, as URLs are; a query or a
+# ui_url_target <url>  ->  "status", "logs", "box <name>" or "image <name>" for a URL the app
+# routes, or nothing. The scheme and the first part are matched in any case, as URLs are; a query or a
 # fragment is dropped; a name is taken as written, with no percent-decoding (a valid name needs
 # none).
 ui_url_target() {
@@ -325,8 +328,8 @@ ui_url_target() {
         */*) _name="${_rest#*/}" ;;
     esac
     case "$_kind" in
-        status)
-            [ -z "$_name" ] && printf 'status\n' ;;
+        status|logs)
+            [ -z "$_name" ] && printf '%s\n' "$_kind" ;;
         box|image)
             agentvm_valid_name "$_name" && printf '%s %s\n' "$_kind" "$_name" ;;
     esac
@@ -347,7 +350,7 @@ ui_goto_take() {
     [ "${_request%% *}" = "$OMC_APP_PROCESS_ID" ] || return 0
     local _target="${_request#* }"
     case "$_target" in
-        status) printf 'status\n' ;;
+        status|logs) printf '%s\n' "$_target" ;;
         "box "*|"image "*)
             agentvm_valid_name "${_target#* }" && printf '%s\n' "$_target" ;;
     esac

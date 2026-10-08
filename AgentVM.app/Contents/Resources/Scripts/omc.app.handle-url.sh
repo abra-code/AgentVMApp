@@ -2,8 +2,9 @@
 # omc.app.handle-url.sh
 # The app was opened with an agentvm:// URL (the engine runs this command with the whole URL as
 # $OMC_OBJ_TEXT, whether the app was running or not): agentvm://status, agentvm://box/<name> and
-# agentvm://image/<name> bring the main window to the front with that box or image selected. Any
-# other URL does nothing. A URL only shows; it changes nothing.
+# agentvm://image/<name> bring the main window to the front with that box or image selected, and
+# agentvm://logs brings it to the front and opens the Where the Logs Are window. Any other URL
+# does nothing. A URL only shows; it changes nothing.
 #
 # This handler has no window of its own. An open main window is found by the entry it left
 # (lib.agentvm.ui.sh); with none, what to show waits for the main window this handler opens. When

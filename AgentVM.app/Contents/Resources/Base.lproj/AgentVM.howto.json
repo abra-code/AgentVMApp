@@ -6,9 +6,9 @@
     "padding": 20,
     "frame": {
       "minWidth": 860,
-      "minHeight": 580,
+      "minHeight": 660,
       "idealWidth": 860,
-      "idealHeight": 580
+      "idealHeight": 660
     }
   },
   "children": [
@@ -322,6 +322,43 @@
             "title": "Agent Keys...",
             "actionID": "AgentVM.keys.open",
             "help": "See which keys the agents can use and which are stored; store or remove one."
+          }
+        }
+      ]
+    },
+    {
+      "type": "Divider"
+    },
+    {
+      "type": "Text",
+      "properties": {
+        "text": "What a box did",
+        "font": "headline"
+      }
+    },
+    {
+      "type": "HStack",
+      "properties": {
+        "spacing": 10
+      },
+      "children": [
+        {
+          "type": "Text",
+          "properties": {
+            "text": "agent-vm keeps a record of what ran in a box and what it contacted, as files on this Mac, where nothing in the box can change them.",
+            "frame": {
+              "maxWidth": "infinity",
+              "alignment": "leading"
+            }
+          }
+        },
+        {
+          "type": "Button",
+          "id": 4104,
+          "properties": {
+            "title": "Where the Logs Are...",
+            "actionID": "AgentVM.logs.open",
+            "help": "See which files hold what a box ran and contacted, why a build failed, and what a deleted box did, with their folders."
           }
         }
       ]

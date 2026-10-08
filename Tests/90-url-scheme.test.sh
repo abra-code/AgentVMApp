@@ -73,6 +73,7 @@ store '.'
 # -----------------------------------------------------------------------------------------------
 section "which URLs are routed"
 check "status"                   "status" "$(ui ui_url_target agentvm://status)"
+check "the logs"                 "logs|logs|" "$(ui ui_url_target agentvm://logs)|$(ui ui_url_target AgentVM://Logs/)|$(ui ui_url_target agentvm://logs/s3)"
 check "  with a trailing slash, a query or a fragment" "status|status|status" \
     "$(ui ui_url_target agentvm://status/)|$(ui ui_url_target 'agentvm://status?from=cadabra')|$(ui ui_url_target 'agentvm://status#top')"
 check "a box"                    "box s3" "$(ui ui_url_target agentvm://box/s3)"
@@ -129,6 +130,26 @@ url agentvm://status
 check "the window comes to the front" "1" "$(ui_calls "${UUID}${TAB}omc_window${TAB}omc_select")"
 check "  the tab is left as it is" "" "$(ui_value "$MAIN_STATUS_ID")"
 check "  and so are the selections" "s3|dev-acp" "$("$PB" "agentvm_box_$UUID" get)|$("$PB" "agentvm_image_$UUID" get)"
+
+section "the Where the Logs Are window, by a URL"
+ui_reset
+chains_reset
+"$PB" agentvm_open_request_logs set ""
+"$PB" agentvm_window_logs_window set ""
+: > "$FAKE_AGENTVM_DIR/log"
+url agentvm://logs
+check "the main window comes to the front, and the Where the Logs Are window is asked for, with a request of this run" \
+    "1|1|$APP_PID logs:window" "$(ui_calls "${UUID}${TAB}omc_window${TAB}omc_select")|$(chain_asked AgentVM.logs)|$("$PB" agentvm_open_request_logs get)"
+check "  the tab and the selections are left as they are" "|s3|dev-acp" "$(ui_value "$MAIN_STATUS_ID")|$("$PB" "agentvm_box_$UUID" get)|$("$PB" "agentvm_image_$UUID" get)"
+check "  and nothing is changed"  "" "$(changes)"
+"$PB" agentvm_open_request_logs set ""
+# The window is open already: it is brought to the front, and no second one is asked for.
+"$PB" agentvm_window_logs_window set "$APP_PID OMCTEST-open-logs-window"
+chains_reset
+url agentvm://logs
+check "with one open: that one comes to the front, and no other is asked for" "1|0|" \
+    "$(ui_calls "OMCTEST-open-logs-window${TAB}omc_window${TAB}omc_select")|$(chain_asked AgentVM.logs)|$("$PB" agentvm_open_request_logs get)"
+"$PB" agentvm_window_logs_window set ""
 
 section "a box made a moment ago"
 store '.boxes += [.boxes[] | select(.box.name == "try1") | .box.name = "fresh"]'
@@ -249,6 +270,31 @@ check "closing the first leaves the second the main window" "$APP_PID $OTHER_UUI
 ( OMC_ACTIONUI_WINDOW_UUID="$OTHER_UUID"; ACTIONUI_WINDOW_UUID="$OTHER_UUID"; export OMC_ACTIONUI_WINDOW_UUID ACTIONUI_WINDOW_UUID
   omc_run AgentVM.main.close )
 check "closing the second leaves none" "" "$(main_entry)"
+
+section "the logs URL with no main window: it waits for the one that opens"
+omc_run AgentVM.main.close
+chains_reset
+ui_reset
+"$PB" agentvm_open_request_logs set ""
+url agentvm://logs
+check "the main window is asked for, with the logs waiting" "1|$APP_PID logs|0" "$(chain_asked AgentVM.main)|$(waiting)|$(chain_asked AgentVM.logs)"
+chains_reset
+omc_control_defaults AgentVM
+omc_run AgentVM.main.init
+# One command can follow a handler: the last one asked for. What is pending is asked here, not what
+# was ever asked for, since a poll loop chained after it would take the window's place.
+check "the new main window takes it, once, and the Where the Logs Are window is what follows it" "|1|0|$APP_PID logs:window" \
+    "$(waiting)|$(chain_requested AgentVM.logs)|$(chain_requested AgentVM.main.poll)|$("$PB" agentvm_open_request_logs get)"
+chains_reset
+omc_run AgentVM.main.activated
+check "  the poll loop starts when the main window is next active" "1" "$(chain_requested AgentVM.main.poll)"
+"$PB" agentvm_open_request_logs set ""
+"$PB" agentvm_goto set "$APP_PID logs/x"
+omc_run AgentVM.main.close
+chains_reset
+omc_control_defaults AgentVM
+omc_run AgentVM.main.init
+check "a waiting target that is not one of the forms opens nothing" "0|" "$(chain_asked AgentVM.logs)|$("$PB" agentvm_open_request_logs get)"
 
 section "no writes to views the window does not have"
 check "no undeclared ids" "" "$(ui_unknown_writes)"
