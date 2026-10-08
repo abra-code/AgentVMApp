@@ -136,6 +136,11 @@ MAIN_AGENTVM_VERSION_ID=501
 MAIN_AGENTVM_LOCATION_ID=502
 MAIN_VMS_ID=511
 MAIN_DISK_ID=512
+MAIN_KEPT_NOW_ID=531
+MAIN_KEPT_SHOW_ID=532
+MAIN_KEPT_REMOVE_ID=533
+MAIN_KEPT_HOLD_ID=534
+MAIN_KEPT_HOLD_TEXT_ID=535
 
 MAIN_POLL_IDLE_SECONDS=15
 MAIN_POLL_BUSY_SECONDS=2
@@ -741,6 +746,152 @@ main_open_in_console() {
     "$open_tool" -a Console "$1"
 }
 
+# -- The logs of deleted boxes, in Settings -------------------------------------------------------
+# What agent-vm keeps of deleted boxes is the store's to say (kept.tsv): how many boxes' logs,
+# what they take, and for how many days a box's logs are kept. Settings shows that, removes them
+# all on request, and changes the number of days. The app keeps no copy of any of it. Both
+# changes ask first when they remove something: Remove All always, and a shorter time when logs
+# are kept, since agent-vm removes the ones older than the new time the next time it tidies the
+# store.
+
+# The times the picker offers, in days, which are its tags; 0 is Never.
+MAIN_KEPT_HOLD_CHOICES="7 30 90 0"
+
+# main_kept_count <uuid>  ->  how many deleted boxes' logs agent-vm keeps, 0 when it does not say.
+main_kept_count() {
+    case "$(main_kept_logs "$1" 1)" in
+        ''|*[!0123456789]*) echo 0 ;;
+        *) main_kept_logs "$1" 1 ;;
+    esac
+}
+
+# main_kept_size_text <bytes>  ->  "3.2 MB", "35 KB" or "512 bytes", in decimal units; nothing
+# when it is not a number. Compressed logs are small: megabytes alone would say "0 MB" of most.
+main_kept_size_text() {
+    case "$1" in
+        ''|*[!0123456789]*) return 0 ;;
+    esac
+    /usr/bin/awk -v b="$1" 'BEGIN {
+        if (b >= 999500000) printf "%.1f GB\n", b / 1000000000
+        else if (b >= 999500) printf "%.1f MB\n", b / 1000000
+        else if (b >= 1000) printf "%d KB\n", (b + 500) / 1000
+        else if (b == 1) printf "1 byte\n"
+        else printf "%d bytes\n", b }'
+}
+
+# main_kept_boxes_text <count>  ->  "1 deleted box" or "14 deleted boxes".
+main_kept_boxes_text() {
+    if [ "$1" = "1" ]; then
+        printf '1 deleted box\n'
+    else
+        printf '%s deleted boxes\n' "$1"
+    fi
+}
+
+# main_kept_now_text <uuid>  ->  the Kept now row: "none", or of how many deleted boxes logs are
+# kept and what they take ("14 deleted boxes, 3.2 MB"); "-" before agent-vm said.
+main_kept_now_text() {
+    if [ -z "$(main_kept_logs "$1" 1)" ]; then
+        printf '%s\n' "-"
+        return 0
+    fi
+    local _count="$(main_kept_count "$1")"
+    if [ "$_count" -eq 0 ]; then
+        printf 'none\n'
+        return 0
+    fi
+    local _size="$(main_kept_size_text "$(main_kept_logs "$1" 2)")"
+    printf '%s%s\n' "$(main_kept_boxes_text "$_count")" "${_size:+, $_size}"
+}
+
+# main_kept_hold_days <uuid>  ->  for how many days the store keeps a deleted box's logs, as a
+# number (0: it keeps none), or nothing when agent-vm does not say.
+main_kept_hold_days() {
+    case "$(main_kept_logs "$1" 3)" in
+        ''|*[!0123456789]*) return 0 ;;
+        *) main_kept_logs "$1" 3 ;;
+    esac
+}
+
+# main_kept_hold_text <uuid>  ->  the line beside the picker: what the time means, and the time
+# itself when it is none of the picker's (it was set in Terminal).
+main_kept_hold_text() {
+    local _days="$(main_kept_hold_days "$1")"
+    case " $MAIN_KEPT_HOLD_CHOICES " in
+        *" $_days "*)
+            if [ "$_days" = "0" ]; then
+                printf 'A box deleted from now on leaves no logs.\n'
+            else
+                printf 'after a box is deleted or recreated\n'
+            fi
+            return 0 ;;
+    esac
+    if [ -z "$_days" ]; then
+        printf '%s\n' "-"
+    else
+        printf 'Now %s, set with agent-vm store logs --hold-days.\n' "$(main_kept_days_text "$1")"
+    fi
+}
+
+# main_paint_kept <uuid>  ->  the Logs of deleted boxes part of Settings, from the cache: what is
+# kept now, with Show in Finder and Remove All... on while something is; and the picker at the
+# store's time. A time that is none of the picker's selects none of its segments.
+main_paint_kept() {
+    "$dialog" "$1" "$MAIN_KEPT_NOW_ID" "$(main_kept_now_text "$1")"
+    if [ -n "$(main_kept_logs_folder "$1")" ]; then
+        ui_enable "$1" "$MAIN_KEPT_SHOW_ID" 1
+    else
+        ui_enable "$1" "$MAIN_KEPT_SHOW_ID" 0
+    fi
+    if [ "$(main_kept_count "$1")" -gt 0 ]; then
+        ui_enable "$1" "$MAIN_KEPT_REMOVE_ID" 1
+    else
+        ui_enable "$1" "$MAIN_KEPT_REMOVE_ID" 0
+    fi
+    local _days="$(main_kept_hold_days "$1")"
+    "$dialog" "$1" "$MAIN_KEPT_HOLD_ID" "$_days"
+    if [ -n "$_days" ]; then
+        ui_enable "$1" "$MAIN_KEPT_HOLD_ID" 1
+    else
+        ui_enable "$1" "$MAIN_KEPT_HOLD_ID" 0
+    fi
+    "$dialog" "$1" "$MAIN_KEPT_HOLD_TEXT_ID" "$(main_kept_hold_text "$1")"
+}
+
+# main_kept_remove_question <uuid>  ->  the message of the Remove All... question: what goes.
+main_kept_remove_question() {
+    local _size="$(main_kept_size_text "$(main_kept_logs "$1" 2)")"
+    printf 'What they ran and what they contacted is deleted from this Mac%s. The logs of boxes that exist are not touched. This cannot be undone.\n' "${_size:+ ($_size)}"
+}
+
+# main_kept_hold_question <uuid> <days>  ->  the message of the question a new time is asked with,
+# or nothing when it needs none: the time grows, or no logs are kept. A shorter time removes the
+# logs older than it, and Never all of them, the next time agent-vm tidies the store.
+main_kept_hold_question() {
+    local _count="$(main_kept_count "$1")"
+    [ "$_count" -gt 0 ] || return 0
+    local _now="$(main_kept_hold_days "$1")"
+    [ -n "$_now" ] || return 0
+    local _kept="$(main_kept_boxes_text "$_count")"
+    if [ "$2" = "0" ]; then
+        printf 'The logs of %s are kept now: agent-vm removes them the next time it tidies the store, and a box deleted from now on leaves none.\n' "$_kept"
+    elif [ "$_now" -gt 0 ] && [ "$2" -lt "$_now" ]; then
+        printf 'The logs of %s are kept now: agent-vm removes the ones of boxes deleted more than %s days ago the next time it tidies the store.\n' "$_kept" "$2"
+    fi
+}
+
+# main_kept_hold_apply <uuid> <days>  ->  the store keeps a deleted box's logs for that many days,
+# and the window follows what agent-vm then says; a failure is said in agent-vm's words, and the
+# picker goes back to the store's time.
+main_kept_hold_apply() {
+    agentvm_store_hold_days "$2"
+    local _status=$?
+    if [ "$_status" -ne 0 ]; then
+        main_alert "$1" "The time was not changed" "$(agentvm_last_error "$_status")"
+    fi
+    main_refresh "$1" status
+}
+
 # -- Painting -----------------------------------------------------------------------------------
 
 # main_agentvm_origin_text <uuid>  ->  where the agent-vm in use comes from, for Get started.
@@ -816,7 +967,8 @@ main_status_error() {
     /bin/cat "$_file"
 }
 
-# main_paint_settings <uuid>  ->  the Settings tab: which agent-vm, the virtual machines, the disk.
+# main_paint_settings <uuid>  ->  the Settings tab: which agent-vm, the virtual machines, the disk,
+# and the logs of deleted boxes.
 main_paint_settings() {
     local _uuid="$1"
     local _version="-"
@@ -827,6 +979,7 @@ main_paint_settings() {
     "$dialog" "$_uuid" "$MAIN_VMS_ID" "${_vms:--}"
     local _disk="$(main_disk_text "$_uuid")"
     "$dialog" "$_uuid" "$MAIN_DISK_ID" "${_disk:--}"
+    main_paint_kept "$_uuid"
 }
 
 # What Get started says about Local Network access, while no image is ready: a first macOS image

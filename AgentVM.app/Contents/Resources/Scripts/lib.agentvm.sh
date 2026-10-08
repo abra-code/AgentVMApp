@@ -778,6 +778,32 @@ agentvm_status_kept_logs_row() {
     /usr/bin/jq -r "$agentvm_jq_defs"' [(.keptLogs.count // 0), (.keptLogs.bytes // 0), .keptLogs.holdDays, .keptLogs.directory] | row'
 }
 
+# agentvm_store_logs_remove_all  ->  0 once agent-vm removed the logs of every deleted box it
+# kept, with how many boxes' logs that was on stdout. What those boxes ran and contacted is then
+# gone from this Mac. The logs of boxes that exist are not touched.
+agentvm_store_logs_remove_all() {
+    local _json
+    _json="$(agentvm_json store logs --remove-older-than 0)"
+    local _status=$?
+    [ "$_status" -eq 0 ] || return "$_status"
+    printf '%s\n' "$_json" | /usr/bin/jq -r '(.removed // []) | length' 2>/dev/null
+    return 0
+}
+
+# agentvm_store_hold_days <days>  ->  0 once the store keeps the logs of a deleted box for that
+# many days from now on; 0 days: it keeps none, and a deleted box leaves no logs. A shorter time
+# is not harmless: agent-vm removes the logs older than it the next time it tidies the store
+# (`box gc`, which `box list`, `box start` and `doctor` run). The number is an argument: digits
+# only, four at most.
+agentvm_store_hold_days() {
+    case "$1" in
+        ''|*[!0123456789]*|?????*)
+            _agentvm_refuse 2 "\"$1\" is not a number of days."
+            return 2 ;;
+    esac
+    agentvm_json store logs --hold-days "$1" >/dev/null
+}
+
 # -- Jobs ----------------------------------------------------------------------------------------
 # What takes longer than a handler may wait (starting or stopping a box, building or updating an
 # image, a download) runs as an agent-vm job: a detached process that outlives the handler, the

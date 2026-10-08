@@ -39,6 +39,9 @@
 #              in its answer); without it the box is taken to have logged nothing.
 #   kept-logs-problem  when present, why `box delete` says some or all of the logs were not kept
 #              (`logsProblem`).
+#   kept-logs-count  how many deleted boxes' logs `store logs --remove-older-than 0` says it
+#              removed (default none).
+#   hold-days  WRITTEN by `store logs --hold-days <n>`: the number it was given.
 #   job-start-state  when present, the state a job is in as `job start` returns ("failed"), with
 #              the text of job-start-error as its error: a job that fails within the moment.
 #
@@ -64,6 +67,8 @@
 #   (box-execlog-<name>.json in the state directory, else the fixture box-execlog.json), and
 #   job start [--after <id>] --json -- <command...>, job list --json, job cancel <id> --json and
 #   job forget <id> --json (see jobs.json above), and job log <id> --json.
+#   store logs --remove-older-than 0 --json and store logs --hold-days <n> --json (which change
+#   nothing in what status answers: the test changes status.json to match),
 #   recipe check <path>... --json (see recipe_check below; recipe-check.json and
 #   recipe-check-status in the state directory replace its answer and status).
 # Anything else fails with status 64, so a test that reaches an unimplemented command finds out.
@@ -364,6 +369,16 @@ case "$*" in
             + (if $kept == "" then {} else {keptLogs: $kept} end) + (if $problem == "" then {} else {logsProblem: $problem} end)' ;;
     "box recreate "*" --json")
         ;;
+    "store logs --remove-older-than 0 --json")
+        # Every kept log goes: as many deleted boxes' as the state file kept-logs-count says.
+        count=0
+        [ -f "$state/kept-logs-count" ] && count="$(/bin/cat "$state/kept-logs-count")"
+        /usr/bin/jq -n --argjson count "$count" '{bytes: 0, directory: "/Users/you/Library/Application Support/agent-vm/Logs", holdDays: 30, logs: [],
+            removed: [range($count) | "box\(. + 1)-20261008T120000Z"]}' ;;
+    "store logs --hold-days "*" --json")
+        # The new time is kept for the test to read; status is the test's to change.
+        printf '%s\n' "$4" > "$state/hold-days"
+        /usr/bin/jq -n --arg days "$4" '{bytes: 0, directory: "/Users/you/Library/Application Support/agent-vm/Logs", holdDays: ($days | tonumber), logs: []}' ;;
     "box view "*" --json"|"box view "*" --interactive --json")
         # A Linux box has no screen, and agent-vm says so.
         guest="$(answer status | /usr/bin/jq -r --arg name "$3" '.boxes[] | select(.box.name == $name) | .guest // "macos"')"

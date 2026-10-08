@@ -263,6 +263,16 @@ check "  an empty store keeps none, in the folder Logs of the store" "0${TAB}0${
     "$(lib agentvm_status_kept_logs_row < "$OMCTEST_WORK/status.json" | /usr/bin/awk -F'\t' '{ printf "%s\t%s\t%s\n", $1, $2, ($4 ~ /\/empty-store\/Logs$/ && $3 ~ /^[0123456789]+$/) ? "yes" : "no:" $3 ":" $4 }')"
 real_lib agentvm_box_delete nosuch > "$OMCTEST_WORK/delete.out"
 check "box delete of a box the store does not have fails, and names no folder of logs" "1|" "$?|$(/bin/cat "$OMCTEST_WORK/delete.out")"
+# Settings changes for how long the store keeps a deleted box's logs, and removes them all. Both
+# are run here on the empty store, where there is nothing to remove.
+real_lib agentvm_store_hold_days 7
+check "store logs --hold-days is taken, and status then says the new time" "0|7" \
+    "$?|$(real_lib agentvm_status | lib agentvm_status_kept_logs_row | col 3)"
+real_lib agentvm_store_hold_days 0
+check "  0 days too: the store keeps none" "0|0" "$?|$(real_lib agentvm_status | lib agentvm_status_kept_logs_row | col 3)"
+real_lib agentvm_store_hold_days 30
+removed="$(real_lib agentvm_store_logs_remove_all)"
+check "store logs --remove-older-than 0 says how many deleted boxes' logs it removed: none here" "0|0" "$?|$removed"
 # The New Image window offers a copy of an image with no tool ticked, which is `image create
 # <name> --from <image>` and nothing else: agent-vm must refuse this one for its image, not for
 # a recipe it no longer asks for.

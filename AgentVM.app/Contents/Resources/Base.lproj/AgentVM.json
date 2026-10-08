@@ -495,6 +495,30 @@
                     ]
                   }
                 ]
+              },
+              {
+                "type": "GroupBox",
+                "properties": { "title": "Logs of deleted boxes" },
+                "children": [
+                  {
+                    "type": "VStack",
+                    "properties": { "alignment": "leading", "padding": 6.0, "frame": { "maxWidth": "infinity", "alignment": "leading" } },
+                    "children": [
+                      { "type": "Divider", "properties": { "opacity": 0, "frame": { "height": 0 } } },
+                      { "type": "Form", "children": [
+                  { "type": "LabeledContent", "properties": { "title": "Kept now" }, "children": [ { "type": "HStack", "properties": { "spacing": 8.0 }, "children": [
+                    { "type": "Text", "id": 531, "properties": { "text": "", "textSelection": "enabled" } },
+                    { "type": "Button", "id": 532, "properties": { "title": "Show in Finder", "controlSize": "small", "disabled": true, "actionID": "AgentVM.main.box.logs.kept", "help": "Open the folder of the logs of deleted boxes in Finder: a folder per box, named after the box and the time it was deleted." } },
+                    { "type": "Button", "id": 533, "properties": { "title": "Remove All...", "controlSize": "small", "disabled": true, "actionID": "AgentVM.main.logs.remove", "help": "Remove the logs of every deleted box. The logs of boxes that exist are not touched." } }
+                  ] } ] },
+                  { "type": "LabeledContent", "properties": { "title": "Kept for" }, "children": [ { "type": "HStack", "properties": { "spacing": 8.0 }, "children": [
+                    { "type": "Picker", "id": 534, "properties": { "title": "Kept for", "labelsHidden": true, "pickerStyle": "segmented", "options": [ { "title": "7 days", "tag": "7" }, { "title": "30 days", "tag": "30" }, { "title": "90 days", "tag": "90" }, { "title": "Never", "tag": "0" } ], "actionID": "AgentVM.main.logs.hold", "disabled": true, "frame": { "width": 300 }, "help": "For how long agent-vm keeps what a box ran and contacted once the box is deleted or recreated. It is a setting of the store, for Terminal and Cadabra too." } },
+                    { "type": "Text", "id": 535, "properties": { "text": "", "foregroundStyle": "secondary", "textSelection": "enabled" } }
+                  ] } ] }
+                      ] }
+                    ]
+                  }
+                ]
               }
             ]
           }
