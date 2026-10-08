@@ -893,10 +893,15 @@ agentvm_job_list() {
 #    9 the last progress event's step   10 its fraction (0-1)   11 its index   12 its count
 #   13 its message   14 the last notice   15 error (after it failed or was canceled)
 #   16 after (the job it waits for)
+#   17 linux when it builds a Linux image from nothing (`image create` with --linux), "-" for
+#      any other job. The job's own command says so from the start: agent-vm lists the image,
+#      with its guest, only once its cloud image is downloaded.
 agentvm_job_rows() {
     /usr/bin/jq -r "$agentvm_jq_defs"' (if type == "array" then . elif has("job") then [.job] else (.jobs // []) end)[]
-        | [.id, .state, (.targets // [])[0], ((.command // [])[0:2] | join(" ")), .status, .createdAt, .startedAt, .endedAt,
-           .progress.step, .progress.fraction, .progress.index, .progress.count, .progress.message, .notice, .error, .after]
+        | (.command // []) as $command
+        | [.id, .state, (.targets // [])[0], ($command[0:2] | join(" ")), .status, .createdAt, .startedAt, .endedAt,
+           .progress.step, .progress.fraction, .progress.index, .progress.count, .progress.message, .notice, .error, .after,
+           (if $command[0:2] == ["image", "create"] and any($command[]; type == "string" and test("^--linux(=|$)")) then "linux" else null end)]
         | row'
 }
 

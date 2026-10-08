@@ -32,7 +32,7 @@
         {"type":"HStack","properties":{"alignment":"top","spacing":10},"children":[{"type":"Image","id":215,"properties":{"systemName":"circle","foregroundStyle":"secondary","font":"title3","frame":{"width":24}}},{"type":"Text","properties":{"text":"Full Disk Access","font":"headline","frame":{"width":200,"alignment":"leading"}}},{"type":"Text","id":225,"properties":{"text":"","foregroundStyle":"secondary","textSelection":"enabled","frame":{"maxWidth":"infinity","alignment":"leading"}}},{"type":"Button","id":235,"properties":{"disabled":true,"controlSize":"small","frame":{"width":120},"title":"Set Up...","actionID":"AgentVM.main.getstarted.access","help":"Open the Full Disk Access guide of the first image that lacks it."}}]},
         {"type":"HStack","properties":{"alignment":"top","spacing":10},"children":[{"type":"Image","id":216,"properties":{"systemName":"circle","foregroundStyle":"secondary","font":"title3","frame":{"width":24}}},{"type":"Text","properties":{"text":"A box","font":"headline","frame":{"width":200,"alignment":"leading"}}},{"type":"Text","id":226,"properties":{"text":"","foregroundStyle":"secondary","textSelection":"enabled","frame":{"maxWidth":"infinity","alignment":"leading"}}},{"type":"Button","id":236,"properties":{"disabled":true,"controlSize":"small","frame":{"width":120},"title":"New Box...","actionID":"AgentVM.main.box.new","help":"Make a box: a working copy of an image, with the network it may reach."}}]},
         {"type":"Divider"},
-        {"type":"Text","properties":{"text":"An image is the template: a sealed macOS with tools in it, which never runs itself.\nA box is a working clone of an image, made in seconds, and it is what runs using only the project folder you share and the hosts you allow.\n\nYou can quit AgentVM at any time: downloads and builds go on.","foregroundStyle":"secondary","frame":{"maxWidth":"infinity","alignment":"leading"}}},
+        {"type":"Text","properties":{"text":"An image is the template: a sealed macOS or Linux system with tools in it, which never runs itself.\nA box is a working clone of an image, made in seconds, and it is what runs using only the project folder you share and the hosts you allow.\n\nYou can quit AgentVM at any time: downloads and builds go on.","foregroundStyle":"secondary","frame":{"maxWidth":"infinity","alignment":"leading"}}},
         {
           "type": "Text",
           "id": 202,
@@ -158,7 +158,7 @@
                 {
                   "type": "ContentUnavailableView",
                   "id": 318,
-                  "properties": { "hidden": true, "title": "No Boxes Yet", "systemImage": "shippingbox", "description": "A box is a working clone of an image, made in seconds, and it is what runs. An image is the template with sealed macOS and tools in it, and never runs itself.\nUse the plus button ⊕ in the toolbar to make a new box.\nSome tools like 'avm' in Terminal or Cadabra can make temporary boxes from an image when they need one and delete them afterwards." }
+                  "properties": { "hidden": true, "title": "No Boxes Yet", "systemImage": "shippingbox", "description": "A box is a working clone of an image, made in seconds, and it is what runs. An image is the template with a sealed macOS or Linux system and tools in it, and never runs itself.\nUse the plus button ⊕ in the toolbar to make a new box.\nSome tools like 'avm' in Terminal or Cadabra can make temporary boxes from an image when they need one and delete them afterwards." }
                 },
                 {
                   "type": "VStack",
@@ -383,7 +383,7 @@
                       "children": [
                         { "type": "Button", "id": 431, "properties": { "title": "New Box", "systemImage": "shippingbox", "imageScale": "large", "disabled": true, "actionID": "AgentVM.main.box.new", "help": "Make a box that is a copy of this image." } },
                         { "type": "Button", "id": 432, "properties": { "title": "New Image","systemImage": "square.3.layers.3d.top.filled", "imageScale": "large",  "disabled": true, "actionID": "AgentVM.main.image.new", "help": "Build a new image that starts as a copy of this one, with more tools." } },
-                        { "type": "Button", "id": 435, "properties": { "title": "Update", "systemImage": "arrow.trianglehead.2.clockwise.rotate.90", "imageScale": "large", "disabled": true, "actionID": "AgentVM.main.image.update", "help": "Choose what to update in the image: macOS, the tools its recipes installed, the guest daemon." } },
+                        { "type": "Button", "id": 435, "properties": { "title": "Update", "systemImage": "arrow.trianglehead.2.clockwise.rotate.90", "imageScale": "large", "disabled": true, "actionID": "AgentVM.main.image.update", "help": "Choose what to update in the image: its system, the tools its recipes installed, the guest daemon." } },
                         { "type": "Button", "id": 436, "properties": { "title": "View", "systemImage": "macwindow", "imageScale": "large", "disabled": true, "actionID": "AgentVM.main.image.view", "help": "Start the image and show its screen in a window, with keyboard and mouse, for setup done by hand. Closing that window shuts the image down and keeps what was done." } }
                       ]
                     },

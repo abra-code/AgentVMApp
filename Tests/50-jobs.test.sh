@@ -39,17 +39,18 @@ done
 section "job rows: a real record (job-list.json)"
 rows="$(lib agentvm_job_rows < "$REAL")"
 check "one row"                      "1" "$(printf '%s\n' "$rows" | /usr/bin/awk 'END { print NR }')"
-check "sixteen fields"               "16" "$(printf '%s\n' "$rows" | field_count)"
+check "seventeen fields"             "17" "$(printf '%s\n' "$rows" | field_count)"
 check "its id is a job id"           "0" "$(lib agentvm_valid_job_id "$(printf '%s\n' "$rows" | col 1)"; echo $?)"
 check "state, target, what it does, status" "failed${TAB}box:nosuch${TAB}box start${TAB}1" "$(printf '%s\n' "$rows" | col 2-5)"
 check "its error, in agent-vm's words" 'no box nosuch; `agent-vm box list` shows the existing ones' "$(printf '%s\n' "$rows" | col 15)"
 check "no progress, no notice, nothing it waits for" "-${TAB}-${TAB}-${TAB}-${TAB}-${TAB}-${TAB}-" "$(printf '%s\n' "$rows" | /usr/bin/cut -f9-14,16)"
+check "a job that does not build a Linux image from nothing says so" "-" "$(printf '%s\n' "$rows" | col 17)"
 
 section "job rows: every state (jobs-variety.json)"
 rows="$(lib agentvm_job_rows < "$VARIETY")"
 check "seven rows, oldest first"     "7|000101|000107" \
     "$(printf '%s\n' "$rows" | /usr/bin/awk 'END { print NR }')|$(printf '%s\n' "$rows" | /usr/bin/sed -n '1p' | col 1 | /usr/bin/sed 's/.*-//')|$(printf '%s\n' "$rows" | /usr/bin/sed -n '$p' | col 1 | /usr/bin/sed 's/.*-//')"
-check "sixteen fields in every row"  "16" "$(printf '%s\n' "$rows" | field_count)"
+check "seventeen fields in every row" "17" "$(printf '%s\n' "$rows" | field_count)"
 check "done: the status and when it ended" "done${TAB}box:s3${TAB}box stop${TAB}0${TAB}2026-09-30T11:40:00Z${TAB}2026-09-30T11:40:00Z${TAB}2026-09-30T11:40:09Z" \
     "$(job 000101 | col 2-8)"
 check "failed for want of a slot: status 75 and the reason" "failed${TAB}75${TAB}yes" \
@@ -64,6 +65,18 @@ check "  its notice"                 "Homebrew is already installed in the base 
 check "  not ended: no status, no end" "-${TAB}-" "$(job 000105 | /usr/bin/cut -f5,8)"
 check "queued: what it waits for, and not started" "queued${TAB}-${TAB}20260930-115800-000105" "$(job 000106 | /usr/bin/cut -f2,7,16)"
 check "running, a box starting"      "running${TAB}box:cadabra-spike${TAB}box start${TAB}starting" "$(job 000107 | /usr/bin/cut -f2-4,9)"
+# What a build makes is read in the job's own command: agent-vm lists a Linux image, with its
+# guest, only once its cloud image is downloaded.
+builds() {
+    /usr/bin/jq -n --argjson command "$1" '[{id: "20260930-120000-0000d1", command: $command, targets: ["image:x"], state: "running", createdAt: "2026-09-30T12:00:00Z"}]' | lib agentvm_job_rows | col 17
+}
+check "a build from a restore file or from an image is not a Linux build from nothing" "-|-|-" \
+    "$(job 000105 | col 17)|$(builds '["image", "create", "dev", "--ipsw", "/x/a.ipsw", "--json"]')|$(builds '["image", "create", "deb-node", "--from", "deb", "--json"]')"
+check "image create with --linux is one, in either spelling of the option" "linux|linux" \
+    "$(builds '["image", "create", "deb", "--linux", "debian-13", "--json"]')|$(builds '["image", "create", "ub", "--linux=ubuntu-26.04", "--json"]')"
+check "  the word in another command, or as part of another word, is not" "-|-|-" \
+    "$(builds '["box", "create", "b", "--linux"]')|$(builds '["image", "create", "x", "--linux-kernel", "y"]')|$(builds '["image", "update", "deb", "--linux"]')"
+check "  a real Linux build's job" "linux" "$(lib agentvm_job_rows < "$FIXTURES_AGENTVM/job-log-linux.json" | col 17)"
 
 section "job rows: from status"
 check "status carries the same jobs: the same rows" "$rows" \
@@ -174,7 +187,7 @@ LOG="$FIXTURES_AGENTVM/job-log.json"
 LOG_VARIETY="$FIXTURES_AGENTVM/job-log-variety.json"
 check "the keys the library reads"   "events,job,lines" "$(/usr/bin/jq -r 'keys | join(",")' "$LOG")"
 rows="$(lib agentvm_job_rows < "$LOG")"
-check "its record is one job row"    "1|16" "$(printf '%s\n' "$rows" | /usr/bin/awk 'END { print NR }')|$(printf '%s\n' "$rows" | field_count)"
+check "its record is one job row"    "1|17" "$(printf '%s\n' "$rows" | /usr/bin/awk 'END { print NR }')|$(printf '%s\n' "$rows" | field_count)"
 check "  the same row job list gives" "$(lib agentvm_job_rows < "$REAL")" "$rows"
 check "it failed before any step: no events, no lines" "|" "$(lib agentvm_job_event_rows < "$LOG")|$(lib agentvm_job_lines < "$LOG")"
 

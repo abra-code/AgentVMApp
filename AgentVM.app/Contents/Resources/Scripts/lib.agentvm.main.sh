@@ -639,20 +639,22 @@ main_paint_settings() {
     "$dialog" "$_uuid" "$MAIN_DISK_ID" "${_disk:--}"
 }
 
-# What Get started says about Local Network access, while no image is ready: a first image is
-# built from a restore file, and agent-vm reaches it once over the Mac's virtual network, which
+# What Get started says about Local Network access, while no image is ready: a first macOS image
+# is built from a restore file, and agent-vm reaches it once over the Mac's virtual network, which
 # macOS asks about on behalf of the app that started the build. The app cannot read whether it
-# has the permission, so the line is always the same.
+# has the permission, so the line is always the same. It is not said of a Linux build, which
+# makes no connection from the Mac to its virtual machine.
 MAIN_LOCAL_NETWORK_TEXT="macOS asks whether AgentVM may find devices on local networks: allow it, since that is how the build reaches the new virtual machine on this Mac. If it was declined before, turn AgentVM on in System Settings > Privacy & Security > Local Network"
 
 # main_stage_rows <uuid>  ->  the six steps of Get started, a row each:
 #    1 the step's number   2 its state (done; todo; running, while a job does it; failed;
 #      attention, when it is done in part)   3 the fact line   4 1 when its button is on
 # The steps: 1 agent-vm can be used; 2 this Mac can run boxes (doctor); 3 a macOS restore file;
-# 4 a ready image; 5 Full Disk Access in a ready image, which is optional and so never wants
-# attention; 6 a box. From the caches, so the caller reads first. A button is on only when what
-# comes before its step is there: nothing can be asked of an agent-vm that cannot be used, an
-# image needs a restore file or another image, a box needs an image.
+# 4 a ready image; 5 Full Disk Access in a ready macOS image, which is optional and so never
+# wants attention, and which a Linux image has not; 6 a box. From the caches, so the caller reads
+# first. A button is on only when what comes before its step is there: nothing can be asked of an
+# agent-vm that cannot be used, an image needs a restore file or another image, a box needs an
+# image.
 main_stage_rows() {
     local _uuid="$1"
     if [ "$(main_agentvm_line "$_uuid" 1)" != "0" ]; then
@@ -692,7 +694,7 @@ main_stage_rows() {
     elif [ -n "$_download" ]; then
         printf '3\trunning\t%s\t%s\n' "$(main_download_text "$_download")" "$_can"
     elif [ -n "$_ready" ]; then
-        printf '3\ttodo\tnone downloaded; one is needed only for an image built from nothing\t%s\n' "$_can"
+        printf '3\ttodo\tnone downloaded; one is needed only for a macOS image built from nothing\t%s\n' "$_can"
     else
         printf '3\ttodo\tnone downloaded yet: about 27 GB, the first thing an image is built from\t%s\n' "$_can"
     fi
@@ -707,7 +709,11 @@ main_stage_rows() {
         printf '4\tdone\t%s ready: %s\t%s\n' "$(printf '%s\n' "$_ready" | /usr/bin/awk 'END { print NR }')" "$(main_some_names "$_ready")" "$_button"
     elif [ -n "$_build" ]; then
         local _target="$(printf '%s\n' "$_build" | /usr/bin/cut -f3)"
-        printf '4\trunning\t%s: %s. %s\t%s\n' "${_target#image:}" "$(main_job_text "$_build")" "$MAIN_LOCAL_NETWORK_TEXT" "$_button"
+        if [ "$(printf '%s\n' "$_build" | /usr/bin/cut -f17)" = "linux" ]; then
+            printf '4\trunning\t%s: %s\t%s\n' "${_target#image:}" "$(main_job_text "$_build")" "$_button"
+        else
+            printf '4\trunning\t%s: %s. %s\t%s\n' "${_target#image:}" "$(main_job_text "$_build")" "$MAIN_LOCAL_NETWORK_TEXT" "$_button"
+        fi
     elif [ -n "$_building" ]; then
         printf '4\trunning\t%s: being built by a command outside this app\t%s\n' "$(main_some_names "$_building")" "$_button"
     elif [ -n "$_broken" ]; then
@@ -717,18 +723,22 @@ main_stage_rows() {
     else
         printf '4\ttodo\tnone ready yet: a macOS restore file comes first\t%s\n' "$_button"
     fi
-    local _granted="$(main_rows "$_uuid" images | /usr/bin/awk -F'\t' '$2 == "ready" && $8 !~ /full-disk-access/ { print $1 }')"
-    local _lacking="$(main_rows "$_uuid" images | /usr/bin/awk -F'\t' '$2 == "ready" && $8 ~ /full-disk-access/ { print $1 }')"
+    # Full Disk Access is a permission of macOS: only the macOS images are asked about it.
+    local _macos="$(main_rows "$_uuid" images | /usr/bin/awk -F'\t' '$2 == "ready" && $12 != "linux" { print $1 }')"
+    local _granted="$(main_rows "$_uuid" images | /usr/bin/awk -F'\t' '$2 == "ready" && $12 != "linux" && $8 !~ /full-disk-access/ { print $1 }')"
+    local _lacking="$(main_rows "$_uuid" images | /usr/bin/awk -F'\t' '$2 == "ready" && $12 != "linux" && $8 ~ /full-disk-access/ { print $1 }')"
     _button=0
     [ -n "$_lacking" ] && _button="$_can"
     if [ -z "$_ready" ]; then
-        printf '5\ttodo\toptional: granted once, by hand, on the screen of an image. Boxes work without it\t0\n'
+        printf '5\ttodo\toptional: granted once, by hand, on the screen of a macOS image. Boxes work without it\t0\n'
+    elif [ -z "$_macos" ]; then
+        printf '5\tdone\tnot needed: no image here runs macOS, and a Linux image has no such permission\t0\n'
     elif [ -z "$_granted" ]; then
-        printf "5\ttodo\toptional, and no image has it (%s). Boxes work without it: only a program that opens the box account's Desktop, Documents or Downloads waits, on a question macOS asks on the box's screen\t%s\n" "$(main_some_names "$_lacking")" "$_button"
+        printf "5\ttodo\toptional, and no macOS image has it (%s). Boxes work without it: only a program that opens the box account's Desktop, Documents or Downloads waits, on a question macOS asks on the box's screen\t%s\n" "$(main_some_names "$_lacking")" "$_button"
     elif [ -n "$_lacking" ]; then
         printf '5\tdone\t%s; not yet: %s\t%s\n' "$(main_some_names "$_granted")" "$(main_some_names "$_lacking")" "$_button"
     else
-        printf '5\tdone\tevery ready image has it\t0\n'
+        printf '5\tdone\tevery ready macOS image has it\t0\n'
     fi
     local _boxes="$(main_rows "$_uuid" boxes | /usr/bin/awk -F'\t' '{ printf "%s (%s)\n", $1, $2 }')"
     _button="$_can"

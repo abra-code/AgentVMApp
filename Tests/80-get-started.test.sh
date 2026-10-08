@@ -151,7 +151,7 @@ check "agent-vm is asked for the restore files too, after the lists" "--version|
 check "agent-vm and the Mac are done; a restore file is the next thing, and the only button but Check Again" "d- d1 t1 t0 t0 t0" "$(steps)"
 check "what the Mac can share"       "supported; this Mac has 10 CPU cores and 24 GB of memory to share with boxes" "$(fact 2)"
 check "the restore file, the image and the box, each with what comes first" \
-    "none downloaded yet: about 27 GB, the first thing an image is built from|none ready yet: a macOS restore file comes first|optional: granted once, by hand, on the screen of an image. Boxes work without it|none yet. A box is a working copy of an image, made in seconds, and it is what runs: keep one for your own work, or let avm or Cadabra make throw-away ones" \
+    "none downloaded yet: about 27 GB, the first thing an image is built from|none ready yet: a macOS restore file comes first|optional: granted once, by hand, on the screen of a macOS image. Boxes work without it|none yet. A box is a working copy of an image, made in seconds, and it is what runs: keep one for your own work, or let avm or Cadabra make throw-away ones" \
     "$(fact 3)|$(fact 4)|$(fact 5)|$(fact 6)"
 press 3 AgentVM.getmacos.open
 check "Get macOS... asks for the Get macOS window" "1|$APP_PID getmacos:window" "$(chain_asked AgentVM.getmacos)|$("$PB" agentvm_open_request_getmacos get)"
@@ -189,7 +189,23 @@ check "the step runs, and says which image and what it does" "r1|1" "$(steps | /
 /usr/bin/jq '. + [.[0] | .id = "20260930-120100-0000b2" | .command[2] = "web" | .targets = ["image:web"] | .state = "queued" | del(.startedAt) | del(.progress)]' "$JOBS" > "$JOBS.new" && /bin/mv "$JOBS.new" "$JOBS"
 omc_run AgentVM.main.activated
 check "with another build waiting behind it, the one that runs is the one told" "1" "$(fact 4 | /usr/bin/grep -c '^dev: Building.*Installing macOS\. macOS asks whether AgentVM may find devices on local networks: allow it.*Local Network$')"
+# A Linux image is built from its cloud image, with no connection from the Mac to the virtual
+# machine: the line about Local Network access is not said. The job's command says what it builds,
+# since agent-vm lists the image only once the download is done.
+/usr/bin/jq -n '[{id: "20260930-120000-0000b3", command: ["image", "create", "deb", "--linux", "debian-13", "--json"], targets: ["image:deb"], state: "running",
+    createdAt: "2026-09-30T12:00:00Z", startedAt: "2026-09-30T12:00:00Z", progress: {event: "progress", step: "download", fraction: 0.31, message: "Downloading debian-13-genericcloud-arm64.tar.xz (217 MB)"}}]' > "$JOBS"
+store status-empty.json
+omc_run AgentVM.main.activated
+check "a Linux image being built, before agent-vm lists it: the step runs, and says nothing of Local Network access" "r1|1|0" \
+    "$(steps | /usr/bin/cut -d' ' -f4)|$(fact 4 | /usr/bin/grep -c '^deb: Building.*Downloading debian-13-genericcloud-arm64.tar.xz (217 MB)$')|$(fact 4 | /usr/bin/grep -c 'Local Network')"
+/usr/bin/jq '.[0].state = "queued" | del(.[0].startedAt) | del(.[0].progress)' "$JOBS" > "$JOBS.new" && /bin/mv "$JOBS.new" "$JOBS"
+omc_run AgentVM.main.activated
+check "  nor while it waits to start" "r1|1|0" "$(steps | /usr/bin/cut -d' ' -f4)|$(fact 4 | /usr/bin/grep -c '^deb: ')|$(fact 4 | /usr/bin/grep -c 'Local Network')"
+/usr/bin/jq '.[0].command = ["image", "create", "deb", "--ipsw", "/x/a.ipsw", "--json"]' "$JOBS" > "$JOBS.new" && /bin/mv "$JOBS.new" "$JOBS"
+omc_run AgentVM.main.activated
+check "  a macOS build that waits to start says it" "1" "$(fact 4 | /usr/bin/grep -c '^deb: .*Local Network$')"
 /bin/rm -f "$JOBS"
+store status-empty.json '.images = [{name: "dev", state: "installing", path: "/Users/you/Library/Application Support/agent-vm/Images/dev"}]'
 
 section "an image built outside the app, and a build that failed"
 omc_run AgentVM.main.activated
@@ -254,7 +270,7 @@ store status.json '.boxes = [] | .images |= map(.needs = [{kind: "full-disk-acce
 omc_run AgentVM.main.activated
 check "an image is done; no image has Full Disk Access, which is optional and stays a plain step; a box can be made" "d- d1 d1 d1 t1 t1" "$(lib_steps)"
 check "the images, the ones without the grant, and the box" \
-    "6 ready: dev, dev-acp, dev-agents, and 3 more|optional, and no image has it (dev, dev-acp, dev-agents, and 3 more). Boxes work without it: only a program that opens the box account's Desktop, Documents or Downloads waits, on a question macOS asks on the box's screen|none yet. A box is a working copy of an image, made in seconds, and it is what runs: keep one for your own work, or let avm or Cadabra make throw-away ones" \
+    "6 ready: dev, dev-acp, dev-agents, and 3 more|optional, and no macOS image has it (dev, dev-acp, dev-agents, and 3 more). Boxes work without it: only a program that opens the box account's Desktop, Documents or Downloads waits, on a question macOS asks on the box's screen|none yet. A box is a working copy of an image, made in seconds, and it is what runs: keep one for your own work, or let avm or Cadabra make throw-away ones" \
     "$(lib_fact 4)|$(lib_fact 5)|$(lib_fact 6)"
 chains_reset
 press 5 AgentVM.main.getstarted.access
@@ -266,17 +282,40 @@ check "some images have it: the step is done, and Set Up... is still there for t
     "d1|dev, dev-acp and dev-agents; not yet: dev-node, dev-xcode and dev-xcode-ios" "$(lib_steps | /usr/bin/cut -d' ' -f5)|$(lib_fact 5)"
 store status.json '.boxes = [] | .images |= map(.needs = [])'
 omc_run AgentVM.main.activated
-check "every image has it: nothing is left to set up" "d0|every ready image has it" "$(lib_steps | /usr/bin/cut -d' ' -f5)|$(lib_fact 5)"
+check "every image has it: nothing is left to set up" "d0|every ready macOS image has it" "$(lib_steps | /usr/bin/cut -d' ' -f5)|$(lib_fact 5)"
 chains_reset
 press 5 AgentVM.main.getstarted.access
 check "  Set Up..., run anyway, opens nothing" "0" "$(chain_asked AgentVM.access)"
+# Full Disk Access is a permission of macOS: a Linux image is neither one that has it nor one
+# that lacks it.
+store status-linux.json '.boxes = []'
+omc_run AgentVM.main.activated
+check "only Linux images: an image is done, Full Disk Access is done with nothing to set up, and a box can be made" "d- d1 d1 d1 d0 t1" "$(lib_steps)"
+check "  what the two steps say"    "4 ready: deb, deb-agents, ub, and 1 more|not needed: no image here runs macOS, and a Linux image has no such permission" "$(lib_fact 4)|$(lib_fact 5)"
+chains_reset
+press 5 AgentVM.main.getstarted.access
+check "  Set Up..., run anyway, opens nothing" "0" "$(chain_asked AgentVM.access)"
+store status-mixed.json '.boxes = []'
+omc_run AgentVM.main.activated
+check "both kinds: the macOS images are told, and no Linux image is among those that have it" \
+    "d1|dev, dev-acp and dev-agents; not yet: dev-node, dev-xcode and dev-xcode-ios" "$(lib_steps | /usr/bin/cut -d' ' -f5)|$(lib_fact 5)"
+store status-mixed.json '.boxes = [] | .images |= map(if .guest == "linux" then . else .needs = [] end)'
+omc_run AgentVM.main.activated
+check "  every macOS image has it"  "d0|every ready macOS image has it" "$(lib_steps | /usr/bin/cut -d' ' -f5)|$(lib_fact 5)"
+store status-mixed.json '.boxes = [] | .images |= map(if .guest == "linux" then . else .needs = [{kind: "full-disk-access", reason: "not-granted"}] end)'
+omc_run AgentVM.main.activated
+check "  no macOS image has it: the Linux images are not named among those without it" \
+    "t1|optional, and no macOS image has it (dev, dev-acp, dev-agents, and 3 more). Boxes work without it: only a program that opens the box account's Desktop, Documents or Downloads waits, on a question macOS asks on the box's screen" \
+    "$(lib_steps | /usr/bin/cut -d' ' -f5)|$(lib_fact 5)"
+store status.json '.boxes = [] | .images |= map(.needs = [])'
+omc_run AgentVM.main.activated
 # Images and no restore file show on Get started only while this Mac cannot run boxes.
 files none
 /usr/bin/jq '(.checks[] | select(.name == "virtualization")) |= (.status = "failure" | .detail = "no virtualization")' \
     "$FIXTURES_AGENTVM/doctor.json" > "$FAKE_AGENTVM_DIR/doctor.json"
 omc_run AgentVM.main.activated
-check "no restore file, with images: Get started says one is needed only for an image built from nothing" \
-    "1|t0 d0|none downloaded; one is needed only for an image built from nothing" "$(shown "$MAIN_GETSTARTED_ID")|$(steps | /usr/bin/cut -d' ' -f3-4)|$(fact 3)"
+check "no restore file, with images: Get started says one is needed only for a macOS image built from nothing" \
+    "1|t0 d0|none downloaded; one is needed only for a macOS image built from nothing" "$(shown "$MAIN_GETSTARTED_ID")|$(steps | /usr/bin/cut -d' ' -f3-4)|$(fact 3)"
 /bin/rm -f "$FAKE_AGENTVM_DIR/doctor.json"
 chains_reset
 press 6 AgentVM.main.box.new
