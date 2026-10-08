@@ -148,20 +148,24 @@ files none
 open_window
 check "agent-vm is asked for the restore files too, after the lists" "--version|doctor --json|status --json|image fetch-ipsw --list --json" \
     "$(fake_log | /usr/bin/paste -sd '|' -)"
-check "agent-vm and the Mac are done; a restore file is the next thing, and the only button but Check Again" "d- d1 t1 t0 t0 t0" "$(steps)"
+check "agent-vm and the Mac are done; a restore file and an image are to do, and both buttons are on: an image needs no restore file" "d- d1 t1 t1 t0 t0" "$(steps)"
 check "what the Mac can share"       "supported; this Mac has 10 CPU cores and 24 GB of memory to share with boxes" "$(fact 2)"
-check "the restore file, the image and the box, each with what comes first" \
-    "none downloaded yet: about 27 GB, the first thing an image is built from|none ready yet: a macOS restore file comes first|optional: granted once, by hand, on the screen of a macOS image. Boxes work without it|none yet. A box is a working copy of an image, made in seconds, and it is what runs: keep one for your own work, or let avm or Cadabra make throw-away ones" \
+check "the restore file is needed only for a macOS image, and a Linux image is built without one; the box, with what comes first" \
+    "none downloaded yet: one is needed only for a macOS image (about 27 GB). A Linux image is built without one|none ready yet: New Image... builds a Linux image in a few minutes. A macOS image needs the restore file of the step above first, and about 10 minutes|optional: granted once, by hand, on the screen of a macOS image. Boxes work without it|none yet. A box is a working copy of an image, made in seconds, and it is what runs: keep one for your own work, or let avm or Cadabra make throw-away ones" \
     "$(fact 3)|$(fact 4)|$(fact 5)|$(fact 6)"
 press 3 AgentVM.getmacos.open
 check "Get macOS... asks for the Get macOS window" "1|$APP_PID getmacos:window" "$(chain_asked AgentVM.getmacos)|$("$PB" agentvm_open_request_getmacos get)"
 "$PB" agentvm_open_request_getmacos set ""
+chains_reset
+press 4 AgentVM.main.image.new
+check "New Image... asks for the New Image window, with nothing downloaded and no image" "1|$APP_PID newimage:window" "$(chain_asked AgentVM.newimage)|$("$PB" agentvm_open_request_newimage get)"
+"$PB" agentvm_open_request_newimage set ""
 
 section "a download that runs"
 /usr/bin/jq -n '[{id: "20260930-120000-0000a1", command: ["image", "fetch-ipsw", "--json"], targets: ["ipsw"], state: "running",
     createdAt: "2026-09-30T12:00:00Z", startedAt: "2026-09-30T12:00:00Z", progress: {event: "progress", step: "download", fraction: 0.48, message: "Downloading"}}]' > "$JOBS"
 omc_run AgentVM.main.activated
-check "the step runs, and says how far it is" "d- d1 r1 t0 t0 t0|Downloading: 48%" "$(steps)|$(fact 3)"
+check "the step runs, and says how far it is; New Image... stays on meanwhile" "d- d1 r1 t1 t0 t0|Downloading: 48%" "$(steps)|$(fact 3)"
 /usr/bin/jq '. + [.[0] | .id = "20260930-120100-0000a2" | .state = "queued" | del(.startedAt) | del(.progress)]' "$JOBS" > "$JOBS.new" && /bin/mv "$JOBS.new" "$JOBS"
 omc_run AgentVM.main.activated
 check "with another waiting behind it, the one that runs is the one told" "Downloading: 48%" "$(fact 3)"
@@ -175,7 +179,9 @@ section "a restore file is here"
 files one
 omc_run AgentVM.main.activated
 check "the step is done, and an image is the next thing" "d- d1 d1 t1 t0 t0" "$(steps)"
-check "the file's macOS and size, and what an image takes" "macOS 27.0, 26.6 GB|none ready yet: a first image takes about 10 minutes to build. $LOCAL_NETWORK" "$(fact 3)|$(fact 4)"
+check "the file's macOS and size, and what an image of either system takes; Local Network access is a macOS image's question" \
+    "macOS 27.0, 26.6 GB|none ready yet: New Image... builds a Linux image in a few minutes, or a macOS image in about 10. For a macOS image, $LOCAL_NETWORK" "$(fact 3)|$(fact 4)"
+chains_reset
 press 4 AgentVM.main.image.new
 check "New Image... asks for the New Image window, with no image handed over" "1|$APP_PID " "$(chain_asked AgentVM.newimage)|$("$PB" agentvm_newimage_from get)"
 "$PB" agentvm_open_request_newimage set ""

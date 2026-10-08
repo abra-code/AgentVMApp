@@ -653,8 +653,9 @@ MAIN_LOCAL_NETWORK_TEXT="macOS asks whether AgentVM may find devices on local ne
 # 4 a ready image; 5 Full Disk Access in a ready macOS image, which is optional and so never
 # wants attention, and which a Linux image has not; 6 a box. From the caches, so the caller reads
 # first. A button is on only when what comes before its step is there: nothing can be asked of an
-# agent-vm that cannot be used, an image needs a restore file or another image, a box needs an
-# image.
+# agent-vm that cannot be used, an image needs a Mac that can run boxes (and nothing else: a Linux
+# image is built from a cloud image agent-vm downloads itself, and the New Image window offers
+# to get the restore file a macOS image needs), a box needs an image.
 main_stage_rows() {
     local _uuid="$1"
     if [ "$(main_agentvm_line "$_uuid" 1)" != "0" ]; then
@@ -696,11 +697,11 @@ main_stage_rows() {
     elif [ -n "$_ready" ]; then
         printf '3\ttodo\tnone downloaded; one is needed only for a macOS image built from nothing\t%s\n' "$_can"
     else
-        printf '3\ttodo\tnone downloaded yet: about 27 GB, the first thing an image is built from\t%s\n' "$_can"
+        printf '3\ttodo\tnone downloaded yet: one is needed only for a macOS image (about 27 GB). A Linux image is built without one\t%s\n' "$_can"
     fi
     local _build="$(main_rows "$_uuid" jobs | /usr/bin/awk -F'\t' '$3 ~ /^image:/ && $4 == "image create" && ($2 == "running" || ($2 == "queued" && !running)) { row = $0; running = ($2 == "running") } END { if (row != "") print row }')"
+    # New Image... needs nothing but a Mac that can run boxes: a Linux image is built from nothing.
     local _button="$_can"
-    [ -z "$_files" ] && [ -z "$_ready" ] && _button=0
     # An image being built by a command that is not a job (agent-vm image create in Terminal), and
     # the images whose build failed, when none is ready.
     local _building="$(main_rows "$_uuid" images | /usr/bin/awk -F'\t' '$2 == "installing" || $2 == "installed" || $2 == "provisioning" { print $1 }')"
@@ -719,9 +720,9 @@ main_stage_rows() {
     elif [ -n "$_broken" ]; then
         printf '4\tattention\tnone ready: %s appears not ready, and agent-vm reports a failed build. Delete... removes such an image and frees its space; New Image... builds another\t%s\n' "$(main_some_names "$_broken")" "$_button"
     elif [ -n "$_files" ]; then
-        printf '4\ttodo\tnone ready yet: a first image takes about 10 minutes to build. %s\t%s\n' "$MAIN_LOCAL_NETWORK_TEXT" "$_button"
+        printf '4\ttodo\tnone ready yet: New Image... builds a Linux image in a few minutes, or a macOS image in about 10. For a macOS image, %s\t%s\n' "$MAIN_LOCAL_NETWORK_TEXT" "$_button"
     else
-        printf '4\ttodo\tnone ready yet: a macOS restore file comes first\t%s\n' "$_button"
+        printf '4\ttodo\tnone ready yet: New Image... builds a Linux image in a few minutes. A macOS image needs the restore file of the step above first, and about 10 minutes\t%s\n' "$_button"
     fi
     # Full Disk Access is a permission of macOS: only the macOS images are asked about it.
     local _macos="$(main_rows "$_uuid" images | /usr/bin/awk -F'\t' '$2 == "ready" && $12 != "linux" { print $1 }')"
