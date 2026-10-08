@@ -3,9 +3,10 @@
 #
 # The fake answers from fixtures, so it keeps answering the way agent-vm did when they were
 # captured. This file runs the real agent-vm through the library, on an empty store in the
-# scratch folder, with the commands that start no virtual machine and need no image (one job is started, of a
-# box the store does not have, which can only fail): a JSON
-# change shows up here before the fake hides it.
+# scratch folder, with the commands that start no virtual machine and need no image (one job is
+# started, of a box the store does not have, which can only fail; one build is asked for, of a
+# Linux system agent-vm does not have, which it refuses before anything is made): a JSON change
+# shows up here before the fake hides it.
 #
 # Which agent-vm: AGENTVM_APP_CONTRACT_AGENT_VM when set, else the first build in the agent-vm
 # working tree beside this repository (../agent-vm/.build/signed/release, then .../work) that is
@@ -220,5 +221,36 @@ check "doctor counts them too, in its running VMs check" "number number" \
 AGENT_VM_HOME="$STORE" "$real" image update nosuch --system --tools --guest --json > /dev/null 2> "$OMCTEST_WORK/update.err"
 check "image update knows --system, --tools and --guest: what it refuses is the image" "1|Error: no image nosuch" \
     "$?|$(/usr/bin/tail -1 "$OMCTEST_WORK/update.err" | /usr/bin/cut -d';' -f1)"
+
+section "what agent-vm builds from nothing: the Linux systems, and a new image's sizes"
+# The New Image window offers these systems as starts and fills its size fields with these
+# numbers: it has no list and no number of its own.
+check "version --json lists the Linux systems: an id, a name, a distribution and a version each, all strings" "true" \
+    "$(/usr/bin/jq '(.linuxReleases | type == "array" and length > 0)
+        and ([.linuxReleases[] | (.id, .name, .distribution, .version) | type == "string"] | all)' "$OMCTEST_WORK/version.json")"
+releases="$(lib agentvm_linux_release_rows < "$OMCTEST_WORK/version.json")"
+check "  the library lists every one: no id is refused as an argument" "$(/usr/bin/jq -r '.linuxReleases | length' "$OMCTEST_WORK/version.json")" \
+    "$(printf '%s\n' "$releases" | /usr/bin/awk 'NF { n++ } END { print n + 0 }')"
+check "  and a new image's sizes, for macOS and for Linux: a count of CPUs, and byte counts that are whole numbers of GB" "true" \
+    "$(/usr/bin/jq '[.imageSizes.macos, .imageSizes.linux
+        | (.cpuCount | type == "number" and . >= 1),
+          ((.memoryBytes, .diskBytes, .minimumDiskBytes, .minimumDiskGrowthBytes) | type == "number" and . > 0 and . % 1073741824 == 0)] | all' \
+        "$OMCTEST_WORK/version.json")"
+check "  which the library reads as numbers, six fields for each system" "linux macos |" \
+    "$(lib agentvm_image_size_rows < "$OMCTEST_WORK/version.json" | col 1 | /usr/bin/sort | /usr/bin/tr '\n' ' ')|$(lib agentvm_image_size_rows < "$OMCTEST_WORK/version.json" \
+        | /usr/bin/awk -F'\t' '{ if (NF != 6) printf "%s:fields ", $1; for (i = 2; i <= NF; i++) if ($i !~ /^[0123456789]+$/) printf "%s:%d ", $1, i }')"
+# The window runs `image create <name> --linux <id> ...`, and the fake takes any option: here the
+# real agent-vm is asked for a system it does not build, so that it gets as far as reading the
+# option, and builds nothing.
+AGENT_VM_HOME="$STORE" "$real" image create nosuch --linux nosuch-system --json > /dev/null 2> "$OMCTEST_WORK/linux.err"
+refused=$?
+unnamed=""
+for id in $(printf '%s\n' "$releases" | col 1); do
+    named="$(/usr/bin/grep -c -F -- "$id" "$OMCTEST_WORK/linux.err")"
+    [ "$named" -ge 1 ] || unnamed="$unnamed $id"
+done
+check "image create knows --linux: what it refuses is the system, naming every one version --json lists" "1|--linux nosuch-system|" \
+    "$refused|$(/usr/bin/grep -o -e '--linux nosuch-system' "$OMCTEST_WORK/linux.err" | /usr/bin/head -1)|$unnamed"
+check "  and it left no image behind" "" "$(real_lib agentvm_status | lib agentvm_status_image_rows)"
 
 omctest_end

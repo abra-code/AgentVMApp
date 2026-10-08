@@ -2,7 +2,7 @@
 
 Real `--json` answers of agent-vm, which `Tests/helpers/fake_agent_vm.sh` serves to the tests, and which `Tests/10-agentvm-library.test.sh` feeds to the library's row filters directly.
 
-- `version.json` - `agent-vm version --json`.
+- `version.json` - `agent-vm version --json`: which agent-vm it is, the guest daemons it installs, the Linux systems it builds an image of (`linuxReleases`) and the sizes it gives a new image (`imageSizes`).
 - `doctor.json` - `agent-vm doctor --json` (134 GB free). Every check `ok`, the signature included (the installed, Developer ID signed agent-vm), and one `info`, the Linux guest daemon it found; no virtual machine ran.
 - `status.json` - `agent-vm status --json` on a store with six images (`dev`, `dev-acp`, `dev-agents`, `dev-node`, `dev-xcode`, `dev-xcode-ios`) and two stopped boxes (`cadabra-spike`, `s3`). Three images need Full Disk Access, and nothing needs a guest update or recreating. It was taken after `status --check-updates` and one `image update`, so it has the update fields: `newestMacOS`, `macOSUpdate` on the five images behind it, `revision`, `updatedAt`, `macOSCheckedAt` and `toolsCheckedAt` on `dev` (updated once), and `recipes` on `dev-acp` (built after agent-vm began to list them). `jobs` holds the two jobs that ended within the hour before it (an `image setup` and a `box stop`); a capture after a quiet hour has none. With every box stopped, the fields a running box adds (`pid`, `ownerPid`, `project` and the rest) are absent; `status-variety.json` carries them.
 - `image-info.json` - `agent-vm image info <name> --json` of the first ready image built from another (`dev-acp`, built from `dev-node`, with Full Disk Access): the record with what its disk takes (`diskUsage`) and what it added over its base (`addedOverBase`). The fake answers it for that image only; any other name is not found, unless a test leaves `image-info-<name>.json` in the fake's state folder.
@@ -55,6 +55,14 @@ agent-vm 0.7.12 counts the Linux images being built or updated apart from the ma
 - `doctor.json` was given `linuxImages: 0` in its `running VMs` check, and the Linux guest daemon's digest as 0.7.12 prints it.
 - The version strings of `status-variety.json` and `job-log-variety.json` were moved from 0.7.11 to 0.7.12. `status-linux.json` and `status-mixed.json` keep the versions their images were built with (0.7.4 to 0.7.11): they are those images' records.
 - `job-log-linux.json` is new, and is a capture of 0.7.12.
+
+## The move to agent-vm 0.7.13 (2026-10-08)
+
+agent-vm 0.7.13 says in `version --json` what it builds from nothing: `linuxReleases`, the Linux systems `image create --linux` takes (`id`, `name`, `distribution`, `version`), and `imageSizes`, under `macos` and `linux` the sizes it gives a new image and the two rules it holds a disk to (`cpuCount`, `memoryBytes`, `diskBytes`, `minimumDiskBytes`, `minimumDiskGrowthBytes`). The New Image window lists those systems as starts and takes its numbers from there. Nothing else the app reads changed.
+
+- `version.json` and `packs.json` were captured again from the installed agent-vm 0.7.13 (`refresh_agentvm_fixtures.sh <agent-vm> version packs recipe-check`; `recipe-check.json` came out as it was).
+- `doctor.json` was given the Linux guest daemon's digest as 0.7.13 prints it.
+- The version strings of `status-variety.json` and `job-log-variety.json` were moved from 0.7.12 to 0.7.13. `job-log-linux.json`, `status-linux.json` and `status-mixed.json` keep the versions they were captured with.
 
 ## Made by hand
 

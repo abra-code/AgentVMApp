@@ -35,7 +35,7 @@
 [ -n "${__AGENTVM_APP_LIB:-}" ] && return 0
 __AGENTVM_APP_LIB=1
 
-AGENTVM_MIN_VERSION="0.7.12"
+AGENTVM_MIN_VERSION="0.7.13"
 
 # The app's own state, and where agent-vm's installer puts the link to the newest agent-vm.
 agentvm_support_dir="$HOME/Library/Application Support/AgentVM"
@@ -943,9 +943,54 @@ agentvm_job_forget() {
 }
 
 # -- Building an image ---------------------------------------------------------------------------
-# A new image starts from a ready image or from a macOS restore file agent-vm downloaded, and gets
-# the tools of the recipes named, in the order given. The recipes offered are the ones that come
-# with the agent-vm in use.
+# A new image starts from a ready image, from a Linux system agent-vm builds out of the
+# distribution's cloud image, or from a macOS restore file agent-vm downloaded, and gets the tools
+# of the recipes named, in the order given. The recipes offered are the ones that come with the
+# agent-vm in use, and the Linux systems and a new image's sizes are the ones it reports.
+
+# agentvm_version_info  ->  `agent-vm version --json`: what this agent-vm is, the Linux systems
+# it builds an image of, and the sizes it gives a new image. It reads no store and asks nothing
+# of the network.
+agentvm_version_info() {
+    agentvm_json version
+}
+
+# agentvm_valid_linux_release <id>  ->  0 when it has the form of a Linux system's id, the word
+# `image create --linux` takes ("debian-13"): lower-case letters, digits, "." and "-", not
+# starting with "-", at most 63 characters. Checked because an id is an argv element, and comes
+# back from a pasteboard or a table row.
+agentvm_valid_linux_release() {
+    case "$1" in
+        ''|-*|*[!abcdefghijklmnopqrstuvwxyz0123456789.-]*) return 1 ;;
+    esac
+    [ "${#1}" -le 63 ]
+}
+
+# agentvm_linux_release_rows  <  version JSON  ->  one row per Linux system this agent-vm builds
+# an image of from nothing, in agent-vm's order (the newest of a distribution first):
+#    1 id (what `image create --linux` takes: "debian-13")   2 name ("Debian 13"; the id when
+#    agent-vm gives none)   3 distribution ("debian")   4 version ("13")
+# An entry whose id has not the form of one (agentvm_valid_linux_release) is left out.
+agentvm_linux_release_rows() {
+    /usr/bin/jq -r "$agentvm_jq_defs"' (.linuxReleases // [])[]
+        | select(.id | strings | (test("^[a-z0-9.][a-z0-9.-]*$") and length <= 63))
+        | [.id, (.name // .id), .distribution, .version] | row'
+}
+
+# agentvm_image_size_rows  <  version JSON  ->  one row per system an image can run, with the
+# sizes `image create` gives a new image of it when none is given, and the rules it holds a disk
+# to:
+#    1 guest (macos or linux)   2 CPUs   3 memory, in GB   4 disk, in GB
+#    5 the smallest disk it builds, in GB
+#    6 the least the disk of a copy may be larger than its image's by, in GB (a copy's disk may
+#      also stay as it is)
+# agent-vm gives every byte count as a whole number of GB.
+agentvm_image_size_rows() {
+    /usr/bin/jq -r "$agentvm_jq_defs"' def gb: if type == "number" then . / 1073741824 | floor else null end;
+        (.imageSizes // {}) | to_entries[] | select(.value | type == "object")
+        | [.key, .value.cpuCount, (.value.memoryBytes | gb), (.value.diskBytes | gb),
+           (.value.minimumDiskBytes | gb), (.value.minimumDiskGrowthBytes | gb)] | row'
+}
 
 # agentvm_status_build_rows  <  status JSON  ->  one row per image, with what a build that starts
 # from it needs to know:
@@ -1122,12 +1167,14 @@ agentvm_args_text() {
 }
 
 # agentvm_job_image_create  <  the arguments of `image create`, one per line: the new image's
-# name, then options and their values (--from <image> or --ipsw <path> first, then any of
-# --recipe <path>, --input <name=path>, --set <name=value>, --cpus, --memory-gb, --disk-gb <n>)
+# name, then options and their values (the start first, and only there: --from <image>, --linux
+# <a Linux system's id> or --ipsw <path>; then any of --recipe <path>, --input <name=path>, --set
+# <name=value>, --cpus, --memory-gb, --disk-gb <n>)
 #   ->  the id of a job that builds the image. One list for the job and for the command line a
 # window shows (agentvm_args_text), so the two cannot differ. Everything is checked again here,
 # since each line becomes an argument: an option is one of those above, a name is one agent-vm
-# accepts, a path is absolute, a number is digits, and no value begins with "-".
+# accepts, a Linux system's id has the form of one, a path is absolute, a number is digits, and no
+# value begins with "-".
 agentvm_job_image_create() {
     set --
     local _line
@@ -1140,8 +1187,8 @@ agentvm_job_image_create() {
     fi
     _agentvm_need_name image "$1" || return $?
     case "$2" in
-        --from|--ipsw) ;;
-        *)  _agentvm_refuse 2 "A build starts from an image or from a restore file."
+        --from|--linux|--ipsw) ;;
+        *)  _agentvm_refuse 2 "A build starts from an image, from a Linux system or from a restore file."
             return 2 ;;
     esac
     local _option="" _word _ok _count=0
@@ -1153,9 +1200,16 @@ agentvm_job_image_create() {
             continue
         fi
         _ok=1
+        # The third argument is the value of the first option, which is the start.
+        case "$_option" in
+            --from|--linux|--ipsw)
+                [ "$_count" -eq 3 ] || _ok=0 ;;
+        esac
         case "$_option" in
             --from)
                 agentvm_valid_name "$_word" || _ok=0 ;;
+            --linux)
+                agentvm_valid_linux_release "$_word" || _ok=0 ;;
             --ipsw|--recipe)
                 case "$_word" in
                     /*) ;;

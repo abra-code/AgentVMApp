@@ -1,7 +1,7 @@
 {
   "controlProtocol": 1,
   "guestDaemon": {
-    "digest": "d13209f0058c7ea8d34c0f17b682dd7922c28e41584419260777268198256399",
+    "digest": "136a9af6e720ec1cf11f038e47361a0443ba6c40ed337eb67a61c4b3365be49f",
     "features": [
       "terminal",
       "prompt-notices",
@@ -10,16 +10,46 @@
       "user-session",
       "terminal-pixels"
     ],
-    "path": "/Users/you/.local/share/agent-vm/versions/0.7.12/agent-vm-guest",
+    "path": "/Users/you/.local/share/agent-vm/versions/0.7.13/agent-vm-guest",
     "protocol": 1,
     "requirement": "identifier \"com.abracode.agent-vm-guest\" and anchor apple generic and certificate 1[field.1.2.840.113635.100.6.2.6] /* exists */ and certificate leaf[field.1.2.840.113635.100.6.1.13] /* exists */ and certificate leaf[subject.OU] = T9NM2ZLDTY",
-    "version": "0.7.12"
+    "version": "0.7.13"
   },
   "guestProtocol": 1,
-  "linuxGuestDaemon": {
-    "digest": "b87fda5b388416a7def704209084a4cf70719a819c0b7081b3f9741b2fbfb5f9",
-    "path": "/Users/you/.local/share/agent-vm/versions/0.7.12/linux/agent-vm-guest"
+  "imageSizes": {
+    "linux": {
+      "cpuCount": 4,
+      "diskBytes": 34359738368,
+      "memoryBytes": 4294967296,
+      "minimumDiskBytes": 8589934592,
+      "minimumDiskGrowthBytes": 1073741824
+    },
+    "macos": {
+      "cpuCount": 4,
+      "diskBytes": 68719476736,
+      "memoryBytes": 8589934592,
+      "minimumDiskBytes": 42949672960,
+      "minimumDiskGrowthBytes": 8589934592
+    }
   },
-  "path": "/Users/you/.local/share/agent-vm/versions/0.7.12/agent-vm",
-  "version": "0.7.12"
+  "linuxGuestDaemon": {
+    "digest": "1536ffd10e9601ac10ad0f885a200c5470b3328bd8af458fd86b35d172acee1f",
+    "path": "/Users/you/.local/share/agent-vm/versions/0.7.13/linux/agent-vm-guest"
+  },
+  "linuxReleases": [
+    {
+      "distribution": "debian",
+      "id": "debian-13",
+      "name": "Debian 13",
+      "version": "13"
+    },
+    {
+      "distribution": "ubuntu",
+      "id": "ubuntu-26.04",
+      "name": "Ubuntu 26.04",
+      "version": "26.04"
+    }
+  ],
+  "path": "/Users/you/.local/share/agent-vm/versions/0.7.13/agent-vm",
+  "version": "0.7.13"
 }

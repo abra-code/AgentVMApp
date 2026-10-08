@@ -322,7 +322,7 @@
                 {
                   "type": "Text",
                   "properties": {
-                    "text": "An image the new one starts as a copy of, or a macOS restore file to install macOS from.",
+                    "text": "An image the new one starts as a copy of, a Linux system to build anew, or a macOS restore file to install macOS from.",
                     "frame": {
                       "maxWidth": "infinity",
                       "alignment": "leading"
@@ -368,7 +368,7 @@
                     {
                       "type": "Text",
                       "properties": {
-                        "text": "A copy keeps what its image has, a macOS image's Full Disk Access grant included, and takes about a minute before its tools are installed. From a restore file, macOS is installed anew (about 6 minutes), and Full Disk Access is granted once afterwards.",
+                        "text": "A copy keeps what its image has, a macOS image's Full Disk Access grant included, and takes about a minute before its tools are installed. A Linux system is built from its distribution's cloud image, which agent-vm downloads and checks (a few minutes in all). From a restore file, macOS is installed anew (about 6 minutes), and Full Disk Access is granted once afterwards.",
                         "foregroundStyle": "secondary",
                         "frame": {
                           "maxWidth": "infinity",

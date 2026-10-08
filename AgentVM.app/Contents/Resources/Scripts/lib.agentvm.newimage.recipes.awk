@@ -24,14 +24,15 @@
 #   listed  of those, the ones a start is offered, at most `slots` of them: every recipe but one
 #           for the other system than the start's. The system is `guest` when it is given. When
 #           it is not, it is what the start runs: Linux when the start, the environment's
-#           NEW_START, is "image <name>" and that image's guest is linux, and macOS for anything
-#           else (a restore file, an image that is not listed). The start is read from the
-#           environment because -v would read a backslash in it as an escape.
+#           NEW_START, is "linux <id>" (a Linux system built from nothing), or "image <name>"
+#           and that image's guest is linux; macOS for anything else (a restore file, an image
+#           that is not listed). The start is read from the environment because -v would read
+#           a backslash in it as an escape.
 
 BEGIN {
     start = ENVIRON["NEW_START"]
     fixed = (guest != "")
-    if (!fixed) guest = "macos"
+    if (!fixed) guest = (start ~ /^linux /) ? "linux" : "macos"
 }
 
 role == "build" {

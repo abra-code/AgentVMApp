@@ -612,6 +612,35 @@ check "no update rows"               "" "$(lib agentvm_status_update_rows < "$FI
 check "and the virtual machines"     "0${TAB}2${TAB}0${TAB}0" "$(lib agentvm_status_vm_row < "$FIXTURES_AGENTVM/status-empty.json")"
 
 # -----------------------------------------------------------------------------------------------
+section "what agent-vm builds: the Linux systems, and a new image's sizes (version.json)"
+check "version --json is asked"      "version --json" "$(fake_reset; with_fake agentvm_version_info >/dev/null; fake_log | /usr/bin/tail -1)"
+rows="$(lib agentvm_linux_release_rows < "$FIXTURES_AGENTVM/version.json")"
+check "a row per Linux system, in agent-vm's order: its id, name, distribution and version" \
+    "debian-13${TAB}Debian 13${TAB}debian${TAB}13|ubuntu-26.04${TAB}Ubuntu 26.04${TAB}ubuntu${TAB}26.04" "$(printf '%s\n' "$rows" | /usr/bin/paste -sd '|' -)"
+check "an agent-vm that lists none: no rows" "" "$(printf '{"version": "0.7.13"}\n' | lib agentvm_linux_release_rows)"
+check "an entry whose id could not be an argument is left out; one with no name is listed under its id" \
+    "fedora-42${TAB}fedora-42${TAB}fedora${TAB}-|a.b${TAB}Named${TAB}-${TAB}-" \
+    "$(printf '%s\n' '{"linuxReleases": [{"id": "--force", "name": "Option"}, {"id": "Debian 13"}, {"id": "a/b"}, {"id": 13}, {"name": "No id"},
+        {"id": "fedora-42", "distribution": "fedora"}, {"id": "a.b", "name": "Named"}, {"id": ""}]}' | lib agentvm_linux_release_rows | /usr/bin/paste -sd '|' -)"
+check "  nor one whose id is too long" "" \
+    "$(/usr/bin/jq -n '{linuxReleases: [{id: ("a" * 64)}]}' | lib agentvm_linux_release_rows)"
+ids=""
+for id in debian-13 ubuntu-26.04 a 9 "" -x --linux "debian 13" Debian a_b a/b "a${TAB}b"; do
+    lib agentvm_valid_linux_release "$id" && ids="$ids[$id]"
+done
+check "what can be a Linux system's id: lower-case letters, digits, \".\" and \"-\", not starting with \"-\"" "[debian-13][ubuntu-26.04][a][9]" "$ids"
+check "  at most 63 characters"      "0|1" \
+    "$(lib agentvm_valid_linux_release "$(printf '%063d' 0)"; echo $?)|$(lib agentvm_valid_linux_release "$(printf '%064d' 0)"; echo $?)"
+rows="$(lib agentvm_image_size_rows < "$FIXTURES_AGENTVM/version.json")"
+check "a new macOS image: 4 CPUs, 8 GB, a 64 GB disk, 40 GB the smallest, and a copy's disk grows by 8 GB or more" \
+    "macos${TAB}4${TAB}8${TAB}64${TAB}40${TAB}8" "$(printf '%s\n' "$rows" | row_named macos)"
+check "a new Linux image: 4 CPUs, 4 GB, a 32 GB disk, 8 GB the smallest, and a copy's disk grows by 1 GB or more" \
+    "linux${TAB}4${TAB}4${TAB}32${TAB}8${TAB}1" "$(printf '%s\n' "$rows" | row_named linux)"
+check "two rows, six fields each"    "2|6" "$(printf '%s\n' "$rows" | /usr/bin/awk 'END { print NR }')|$(printf '%s\n' "$rows" | field_count)"
+check "a size agent-vm does not say is \"-\", and one that is not a number too" "linux${TAB}2${TAB}-${TAB}-${TAB}16${TAB}-" \
+    "$(printf '%s\n' '{"imageSizes": {"linux": {"cpuCount": 2, "memoryBytes": "4 GB", "minimumDiskBytes": 17179869184}, "macos": 3}}' | lib agentvm_image_size_rows)"
+check "an agent-vm that says no sizes: no rows" "" "$(printf '{"version": "0.7.13"}\n' | lib agentvm_image_size_rows)"
+
 section "drift: every field the library reads is in the real capture"
 # The checks the fixture refresh exists for. A field agent-vm renamed or dropped comes out as
 # "-", and these name it instead of letting the window show "-" as an answer. The running fields

@@ -8,30 +8,35 @@
 # selected image as the start. Sources lib.agentvm.main.sh for which agent-vm runs and for telling
 # the main window about the job.
 #
-# THE STEPS. 1 Start from: a ready image, of which the new one starts as a copy, or a macOS
-# restore file agent-vm downloaded. 2 Tools: the recipes that come with the agent-vm in use, each
-# with a checkbox; they are applied in the order listed, which is an order that satisfies what
-# each needs; a recipe file of the user's own, added with Add a Recipe File..., joins the list
-# after them. 3 Options: the input files and parameters the ticked recipes declare (skipped when
-# they declare none). 4 Name and size. 5 Check: what will be built, what stands in the way, the
-# command line, and Build.
+# THE STEPS. 1 Start from: a ready image, of which the new one starts as a copy, a Linux system
+# agent-vm builds from its distribution's cloud image, or a macOS restore file agent-vm
+# downloaded. 2 Tools: the recipes that come with the agent-vm in use, each with a checkbox; they
+# are applied in the order listed, which is an order that satisfies what each needs; a recipe
+# file of the user's own, added with Add a Recipe File..., joins the list after them. 3 Options:
+# the input files and parameters the ticked recipes declare (skipped when they declare none).
+# 4 Name and size. 5 Check: what will be built, what stands in the way, the command line, and
+# Build.
 #
 # MACOS AND LINUX. The new image runs what its start runs (newimage_guest): a copy of a Linux
-# image is a Linux image. A recipe is for macOS images, for Linux images, or for both, as agent-vm
-# says of each (`recipe check`), and the Tools step lists the ones for the start's system and the
-# ones for both. What a recipe needs before it, the least a copy's disk may grow by, the places
-# for macOS virtual machines, and everything about Full Disk Access follow the start's system too.
+# image is a Linux image, and so is one built from a Linux system. A recipe is for macOS images,
+# for Linux images, or for both, as agent-vm says of each (`recipe check`), and the Tools step
+# lists the ones for the start's system and the ones for both. What a recipe needs before it, the
+# least a copy's disk may grow by, the places for macOS virtual machines, and everything about
+# Full Disk Access follow the start's system too. The Linux systems offered, the sizes a new
+# image starts with, the smallest disk and the least a copy's disk grows by are what the
+# agent-vm in use says (`version --json`), never names or numbers of this window's own.
 #
 # WHAT THE WINDOW KEEPS. Pasteboard values of the window: "newimage" (1 while it is open),
-# "step", "start" ("image <name>" or "ipsw <file name>"), "ticks" (recipe names), "slots" (the
-# recipes the checkboxes were last laid out for, in the slots' order), "name", "cpus",
-# "memory", "disk", "auto_name" and "auto_disk" (the last suggestions put into those fields,
-# so that a suggestion the user did not change follows a changed start or tool), "busy" (the
-# click being worked on: newimage_enter), "taken" (the image Delete... offers to delete, while
-# the button is shown) and "delete" (the image the question now open asks about). The values of
-# the options are the cache file values.tsv (kind, name, value), and the recipes the user added
-# the cache file own.tsv (a row each, as newimage_recipe_rows gives one). Everything kept is checked
-# again when it is read back, and a start is looked up in what agent-vm last listed.
+# "step", "start" ("image <name>", "linux <a Linux system's id>" or "ipsw <file name>"), "ticks"
+# (recipe names), "slots" (the recipes the checkboxes were last laid out for, in the slots'
+# order), "name", "cpus", "memory", "disk", "auto_name" and "auto_disk" (the last suggestions
+# put into those fields, so that a suggestion the user did not change follows a changed start or
+# tool), "busy" (the click being worked on: newimage_enter), "taken" (the image Delete... offers
+# to delete, while the button is shown) and "delete" (the image the question now open asks
+# about). The values of the options are the cache file values.tsv (kind, name, value), and the
+# recipes the user added the cache file own.tsv (a row each, as newimage_recipe_rows gives one).
+# Everything kept is checked again when it is read back, and a start is looked up in what
+# agent-vm last listed.
 #
 # THE FIELDS ARE READ WHEN A BUTTON IS CLICKED, never per keystroke: a handler's view of the
 # fields is a snapshot from the moment of its click, and the fields of a step are filled before
@@ -41,9 +46,9 @@
 # recipe became another one because the start's system changed (newimage_paint_recipes).
 #
 # WHAT IT READS: `status` and the restore file list, into its own cache, on opening, on
-# activation, when a start is chosen and before Build; the recipes once, on opening. It has no
-# poll loop. Build starts the job, opens its progress window, has the main window follow it, and
-# closes this window.
+# activation, when a start is chosen and before Build; the recipes, the Linux systems and the
+# sizes once, on opening. It has no poll loop. Build starts the job, opens its progress window,
+# has the main window follow it, and closes this window.
 #
 # POSIX sh (bash 3.2 in POSIX mode) only. Validate with "sh -n".
 [ -n "${__AGENTVM_APP_NEWIMAGE_LIB:-}" ] && return 0
@@ -92,14 +97,7 @@ NEW_OPTION_TEXT_BASE=1240
 NEW_STEPS=5
 NEW_RECIPE_SLOTS=10
 NEW_OPTION_SLOTS=8
-# What `image create` gives an image built from a restore file when nothing is said.
-NEW_DEFAULT_CPUS=4
-NEW_DEFAULT_MEMORY=8
-NEW_DEFAULT_DISK=64
-# A copy's disk stays as it is or grows by at least this (agent-vm's rule: one number for a macOS
-# image, one for a Linux image); and what an image with Xcode is given when the start allows it.
-NEW_DISK_GROWTH=8
-NEW_LINUX_DISK_GROWTH=1
+# The disk an image with Xcode is given when the start allows it, in GB.
 NEW_XCODE_DISK=128
 # The recipes agent-vm ships, for macOS images and for Linux images, in an order that satisfies
 # what each needs whichever of the two the start is. Any other recipe in its folder comes after
@@ -179,9 +177,12 @@ EOF
 # newimage_read <uuid> [full]  ->  0 with the cache files build.tsv (agentvm_status_build_rows),
 # images.tsv and jobs.tsv (as the main window keeps them: for an image whose name is in the way),
 # vm.tsv and ipsw.tsv (agentvm_ipsw_rows) read anew; "full" first checks which agent-vm runs and
-# reads its recipes into recipes.tsv (newimage_recipe_rows; on opening). An agent-vm that cannot
-# be used is not run. A failed `status` keeps the previous rows and leaves its message in the
-# cache file status-error; a failed restore file list keeps the previous list.
+# reads its recipes into recipes.tsv (newimage_recipe_rows; on opening). What agent-vm says of
+# itself, the Linux systems it builds (linux.tsv, agentvm_linux_release_rows) and a new image's
+# sizes (sizes.tsv, agentvm_image_size_rows), is read with "full" too, and again by any reading
+# while the sizes are not known. An agent-vm that cannot be used is not run. A failed
+# `version` or `status` keeps the previous rows and leaves its message in the cache file
+# status-error; a failed restore file list keeps the previous list.
 newimage_read() {
     if [ "${2:-}" = "full" ]; then
         main_read_agentvm "$1" >/dev/null
@@ -192,6 +193,16 @@ newimage_read() {
     [ "$(main_agentvm_line "$1" 1)" = "0" ] || return 1
     local _error="$(ui_cache "$1" status-error)"
     local _json _status
+    if [ "${2:-}" = "full" ] || [ ! -s "$(ui_cache "$1" sizes.tsv)" ]; then
+        _json="$(agentvm_version_info)"
+        _status=$?
+        if [ "$_status" -ne 0 ]; then
+            ui_one_line "$(agentvm_last_error "$_status")" | ui_store "$_error"
+            return "$_status"
+        fi
+        printf '%s\n' "$_json" | agentvm_linux_release_rows | ui_store "$(ui_cache "$1" linux.tsv)"
+        printf '%s\n' "$_json" | agentvm_image_size_rows | ui_store "$(ui_cache "$1" sizes.tsv)"
+    fi
     _json="$(agentvm_status)"
     _status=$?
     if [ "$_status" -ne 0 ]; then
@@ -232,22 +243,38 @@ newimage_ipsw_row() {
     main_rows "$1" ipsw | /usr/bin/awk -F'\t' -v name="$2" '$1 "" == name { print; exit }'
 }
 
+# newimage_release_row <uuid> <id>  ->  that Linux system's row of linux.tsv, or nothing.
+newimage_release_row() {
+    main_rows "$1" linux | /usr/bin/awk -F'\t' -v id="$2" '$1 "" == id { print; exit }'
+}
+
+# newimage_size <uuid> <macos|linux> <n>  ->  field n of what agent-vm says of a new image of that
+# system (agentvm_image_size_rows: 2 CPUs, 3 memory, 4 disk, 5 the smallest disk, 6 the least a
+# copy's disk grows by; the last four in GB), or "-" when it did not say.
+newimage_size() {
+    local _value="$(main_rows "$1" sizes | /usr/bin/awk -F'\t' -v guest="$2" -v n="$3" '$1 == guest { print $n; exit }')"
+    printf '%s\n' "${_value:--}"
+}
+
 # -- The start -----------------------------------------------------------------------------------
 
-# newimage_start <uuid>  ->  "image <name>" or "ipsw <file name>" as kept, or nothing when nothing
-# is kept or it has neither form (it comes back from a pasteboard).
+# newimage_start <uuid>  ->  "image <name>", "linux <id>" or "ipsw <file name>" as kept, or nothing
+# when nothing is kept or it has none of the three forms (it comes back from a pasteboard).
 newimage_start() {
     local _start="$(ui_get start "$1")"
     newimage_valid_start "$_start" && printf '%s\n' "$_start"
     return 0
 }
 
-# newimage_valid_start <start>  ->  0 when it is "image <a name agent-vm accepts>" or "ipsw <a
-# file name ending in .ipsw, with no folder in it>".
+# newimage_valid_start <start>  ->  0 when it is "image <a name agent-vm accepts>", "linux <what
+# can be a Linux system's id>" or "ipsw <a file name ending in .ipsw, with no folder in it>".
 newimage_valid_start() {
     case "$1" in
         "image "*)
             agentvm_valid_name "${1#image }"
+            return $? ;;
+        "linux "*)
+            agentvm_valid_linux_release "${1#linux }"
             return $? ;;
         "ipsw "*)
             case "${1#ipsw }" in
@@ -258,14 +285,15 @@ newimage_valid_start() {
     return 1
 }
 
-# newimage_start_name <uuid>  ->  the start's name: the image's, or the restore file's.
+# newimage_start_name <uuid>  ->  the start's name: the image's, the Linux system's id, or the
+# restore file's.
 newimage_start_name() {
     local _start="$(newimage_start "$1")"
     [ -n "$_start" ] && printf '%s\n' "${_start#* }"
     return 0
 }
 
-# newimage_start_kind <uuid>  ->  image, ipsw, or nothing.
+# newimage_start_kind <uuid>  ->  image, linux, ipsw, or nothing.
 newimage_start_kind() {
     local _start="$(newimage_start "$1")"
     [ -n "$_start" ] && printf '%s\n' "${_start%% *}"
@@ -284,12 +312,14 @@ newimage_set_start() {
 }
 
 # newimage_start_key <uuid> <the table's hidden key> <its first column>  ->  the start a selected
-# row of the table stands for, or nothing. The key is "image <name>" or "ipsw <file name>"; when
-# it did not arrive, the row is found by its name among what the table was filled from. A key of
-# either form that does not hold a name is nothing.
+# row of the table stands for, or nothing. The key is "image <name>", "linux <id>" or "ipsw <file
+# name>"; when it did not arrive, the row is found by its first column among what the table was
+# filled from (a Linux system's is its name, "Debian 13", which no image can have: an image's
+# name has no capital and no space). A key of one of the forms that does not hold a name is
+# nothing.
 newimage_start_key() {
     case "$2" in
-        "image "*|"ipsw "*)
+        "image "*|"linux "*|"ipsw "*)
             newimage_valid_start "$2" && printf '%s\n' "$2"
             return 0 ;;
     esac
@@ -298,37 +328,44 @@ newimage_start_key() {
         printf 'image %s\n' "$3"
     elif [ -n "$(newimage_ipsw_row "$1" "$3")" ]; then
         printf 'ipsw %s\n' "$3"
+    else
+        main_rows "$1" linux | /usr/bin/awk -F'\t' -v name="$3" '$2 "" == name { print "linux " $1; exit }'
     fi
     return 0
 }
 
 # newimage_base <uuid> <n>  ->  field n of the start image's row (agentvm_status_build_rows); for
-# a restore file, the same fields as far as they apply: 4 its macOS, 5 to 7 agent-vm's defaults,
-# anything else "-". Nothing chosen: "-".
+# a Linux system or a restore file, the same fields as far as they apply: 4 a restore file's
+# macOS, 5 to 7 the sizes agent-vm gives a new image of that system, anything else "-". Nothing
+# chosen: "-".
 newimage_base() {
     local _name="$(newimage_start_name "$1")"
     local _value=""
     case "$(newimage_start_kind "$1")" in
         image)
             _value="$(newimage_image_row "$1" "$_name" | /usr/bin/cut -f"$2")" ;;
+        linux)
+            case "$2" in
+                5|6|7) _value="$(newimage_size "$1" linux "$(($2 - 3))")" ;;
+            esac ;;
         ipsw)
             case "$2" in
-                4) _value="$(newimage_ipsw_row "$1" "$_name" | /usr/bin/cut -f2)" ;;
-                5) _value="$NEW_DEFAULT_CPUS" ;;
-                6) _value="$NEW_DEFAULT_MEMORY" ;;
-                7) _value="$NEW_DEFAULT_DISK" ;;
+                4)     _value="$(newimage_ipsw_row "$1" "$_name" | /usr/bin/cut -f2)" ;;
+                5|6|7) _value="$(newimage_size "$1" macos "$(($2 - 3))")" ;;
             esac ;;
     esac
     printf '%s\n' "${_value:--}"
 }
 
 # newimage_guest <uuid>  ->  macos or linux: what the new image will run, which is what its start
-# runs. A restore file is macOS, and so is a start that is not listed.
+# runs. A Linux system is Linux; a restore file is macOS, and so is a start that is not listed.
 newimage_guest() {
     local _start="$(newimage_start "$1")"
     local _file="$(ui_cache "$1" build.tsv)"
     local _guest=""
     case "$_start" in
+        "linux "*)
+            _guest="linux" ;;
         "image "*)
             [ -f "$_file" ] && _guest="$(/usr/bin/awk -F'\t' -v name="${_start#image }" '$1 "" == name { print $13; exit }' "$_file")" ;;
     esac
@@ -340,13 +377,16 @@ newimage_guest() {
 }
 
 # newimage_system <uuid>  ->  the start's system in short ("macOS 27.0.1", "Debian 13"), or "-"
-# when it is not known; of a macOS image it is known when its version is.
+# when it is not known; of a macOS image it is known when its version is, and of a Linux system
+# when agent-vm lists it.
 newimage_system() {
     local _name="$(newimage_start_name "$1")"
     local _system=""
     case "$(newimage_start_kind "$1")" in
         image)
             _system="$(newimage_image_row "$1" "$_name" | /usr/bin/awk -F'\t' '{ print (($13 == "linux") ? ($14 != "-") : ($4 != "-")) ? $14 : "-" }')" ;;
+        linux)
+            _system="$(newimage_release_row "$1" "$_name" | /usr/bin/cut -f2)" ;;
         ipsw)
             _system="$(newimage_ipsw_row "$1" "$_name" | /usr/bin/awk -F'\t' '$2 != "" && $2 != "-" { print "macOS " $2 }')" ;;
     esac
@@ -354,7 +394,8 @@ newimage_system() {
 }
 
 # newimage_start_text <uuid>  ->  the start in words: "image dev (macOS 27.0.1)", "image deb
-# (Debian 13)", or "the restore file UniversalMac_27.0_26A428_Restore.ipsw (macOS 27.0)".
+# (Debian 13)", "a new Debian 13 system", or "the restore file
+# UniversalMac_27.0_26A428_Restore.ipsw (macOS 27.0)".
 newimage_start_text() {
     local _name="$(newimage_start_name "$1")"
     local _system="$(newimage_system "$1")"
@@ -362,6 +403,12 @@ newimage_start_text() {
     [ "$_system" != "-" ] && _suffix=" ($_system)"
     case "$(newimage_start_kind "$1")" in
         image) printf 'image %s%s\n' "$_name" "$_suffix" ;;
+        linux)
+            if [ "$_system" != "-" ]; then
+                printf 'a new %s system\n' "$_system"
+            else
+                printf 'a new Linux system (%s)\n' "$_name"
+            fi ;;
         ipsw)  printf 'the restore file %s%s\n' "$_name" "$_suffix" ;;
     esac
 }
@@ -380,6 +427,8 @@ newimage_start_blocker() {
             elif [ "$(printf '%s\n' "$_row" | /usr/bin/cut -f3)" = "true" ]; then
                 printf 'Another command is changing image %s. A build can start from it when that has ended.\n' "$_name"
             fi ;;
+        linux)
+            [ -n "$(newimage_release_row "$1" "$_name")" ] || printf 'This agent-vm builds no Linux system named %s. Choose another start.\n' "$_name" ;;
         ipsw)
             [ -n "$(newimage_ipsw_row "$1" "$_name")" ] || printf 'The restore file %s is not there any more. Choose another start.\n' "$_name" ;;
         *)
@@ -389,10 +438,12 @@ newimage_start_blocker() {
 
 # newimage_source_rows <uuid>  ->  the rows of the start table: name, its system in short ("macOS
 # 27.0.1", "Debian 13"), what it holds, its state, and (not shown) the key the row stands for.
-# Ready images first, then the restore files. An image that is not ready is not listed: nothing
-# can be built from it. What an image holds is the names of the recipes it keeps, else its
-# recipe's description (as newimage_recipe_text shows one), else macOS or Linux alone, with the
-# Command Line Tools or the compiler when it has them.
+# Ready images first, then the Linux systems agent-vm builds, then the restore files. An image
+# that is not ready is not listed: nothing can be built from it. What an image holds is the names
+# of the recipes it keeps, else its recipe's description (as newimage_recipe_text shows one),
+# else macOS or Linux alone, with the Command Line Tools or the compiler when it has them. A
+# Linux system is listed under agent-vm's name for it: no file of it is there to name, and
+# whether its cloud image was downloaded before is not something agent-vm says.
 newimage_source_rows() {
     main_rows "$1" build | /usr/bin/awk -F'\t' '
         $2 == "ready" {
@@ -408,6 +459,8 @@ newimage_source_rows() {
             runs = (linux ? ($14 != "-") : ($4 != "-")) ? $14 : "-"
             printf "%s\t%s\t%s\t%s\timage %s\n", $1, runs, holds, state, $1
         }'
+    main_rows "$1" linux | /usr/bin/awk -F'\t' '
+        { printf "%s\tLinux\ta new system, from its cloud image\tdownloaded when needed\tlinux %s\n", $2, $1 }'
     main_rows "$1" ipsw | /usr/bin/awk -F'\t' '
         {
             size = ($4 ~ /^[0-9]+$/) ? sprintf("%.1f GB", $4 / 1000000000) : "-"
@@ -480,6 +533,14 @@ newimage_offered() {
     return 0
 }
 
+# newimage_system_word <guest>  ->  "macOS" or "Linux".
+newimage_system_word() {
+    case "$1" in
+        linux) echo "Linux" ;;
+        *)     echo "macOS" ;;
+    esac
+}
+
 # newimage_images_words <guest>  ->  "macOS images" or "Linux images".
 newimage_images_words() {
     case "$1" in
@@ -491,7 +552,7 @@ newimage_images_words() {
 # newimage_start_words <guest>  ->  the starts of that system, as a sentence names them.
 newimage_start_words() {
     case "$1" in
-        linux) echo "a Linux image" ;;
+        linux) echo "a Linux image or a new Linux system" ;;
         *)     echo "a macOS image or a restore file" ;;
     esac
 }
@@ -723,19 +784,20 @@ newimage_take_ticks() {
     ui_set ticks "$1" "$_ticks"
 }
 
-# newimage_held <uuid>  ->  the recipes the start image keeps, one per line (none for a restore file).
+# newimage_held <uuid>  ->  the recipes the start image keeps, one per line (none for a Linux
+# system or a restore file).
 newimage_held() {
     local _names="$(newimage_base "$1" 8)"
     [ "$_names" = "-" ] && return 0
     printf '%s\n' "$_names" | /usr/bin/tr ',' '\n'
 }
 
-# newimage_holds_nothing <uuid>  ->  0 when the start is known to hold no recipe's tools: a
-# restore file, or an image with no recipe at all. An image built before agent-vm listed the
-# recipes kept has a description and no list, and what it holds is then not known here.
+# newimage_holds_nothing <uuid>  ->  0 when the start is known to hold no recipe's tools: a Linux
+# system, a restore file, or an image with no recipe at all. An image built before agent-vm
+# listed the recipes kept has a description and no list, and what it holds is then not known here.
 newimage_holds_nothing() {
     case "$(newimage_start_kind "$1")" in
-        ipsw)  return 0 ;;
+        linux|ipsw) return 0 ;;
         image) [ "$(newimage_base "$1" 8)" = "-" ] && [ "$(newimage_base "$1" 9)" = "-" ] ;;
         *)     return 1 ;;
     esac
@@ -945,21 +1007,26 @@ newimage_taken_text() {
 # newimage_suggested_name <uuid>  ->  a free name for the new image: for a copy, the start's name
 # and the tool ticked ("dev-node"; in lower case, and "-tools" when that cannot be a name, as a
 # recipe of the user's own may be called anything; without the "linux-" that agent-vm's recipes
-# for Linux images begin with, so "deb-node"), "-tools" for several, "-copy" for none; "dev"
-# for a build from a restore file; with a number when that is taken.
+# for Linux images begin with, so "deb-node"), "-tools" for several, "-copy" for none; for a
+# build from a Linux system its distribution ("debian"; "linux" when that cannot be a name);
+# "dev" for a build from a restore file; with a number when that is taken.
 newimage_suggested_name() {
     local _base="dev"
     local _ticks _count
-    if [ "$(newimage_start_kind "$1")" = "image" ]; then
-        _ticks="$(newimage_ticks "$1")"
-        _count="$(printf '%s\n' "$_ticks" | /usr/bin/awk 'NF { n++ } END { print n + 0 }')"
-        case "$_count" in
-            0) _base="$(newimage_start_name "$1")-copy" ;;
-            1) _base="$(newimage_start_name "$1")-$(printf '%s\n' "${_ticks#linux-}" | /usr/bin/tr 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' 'abcdefghijklmnopqrstuvwxyz')"
-               agentvm_valid_name "$_base" || _base="$(newimage_start_name "$1")-tools" ;;
-            *) _base="$(newimage_start_name "$1")-tools" ;;
-        esac
-    fi
+    case "$(newimage_start_kind "$1")" in
+        image)
+            _ticks="$(newimage_ticks "$1")"
+            _count="$(printf '%s\n' "$_ticks" | /usr/bin/awk 'NF { n++ } END { print n + 0 }')"
+            case "$_count" in
+                0) _base="$(newimage_start_name "$1")-copy" ;;
+                1) _base="$(newimage_start_name "$1")-$(printf '%s\n' "${_ticks#linux-}" | /usr/bin/tr 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' 'abcdefghijklmnopqrstuvwxyz')"
+                   agentvm_valid_name "$_base" || _base="$(newimage_start_name "$1")-tools" ;;
+                *) _base="$(newimage_start_name "$1")-tools" ;;
+            esac ;;
+        linux)
+            _base="$(newimage_release_row "$1" "$(newimage_start_name "$1")" | /usr/bin/cut -f3)"
+            agentvm_valid_name "$_base" || _base="linux" ;;
+    esac
     local _name="$_base"
     local _n=2
     while newimage_name_taken "$1" "$_name" && [ "$_n" -lt 100 ]; do
@@ -969,23 +1036,22 @@ newimage_suggested_name() {
     printf '%s\n' "$_name"
 }
 
-# newimage_disk_growth <uuid>  ->  the least the disk of a copy of the start may grow by, in GB.
+# newimage_disk_growth <uuid>  ->  the least the disk of a copy of the start may grow by, in GB,
+# as agent-vm says it for the start's system; "-" when it did not say.
 newimage_disk_growth() {
-    if [ "$(newimage_guest "$1")" = "linux" ]; then
-        printf '%s\n' "$NEW_LINUX_DISK_GROWTH"
-    else
-        printf '%s\n' "$NEW_DISK_GROWTH"
-    fi
+    newimage_size "$1" "$(newimage_guest "$1")" 6
 }
 
-# newimage_suggested_disk <uuid>  ->  the disk the fields start with, in GB: the start's, or
-# NEW_XCODE_DISK when xcode is ticked and the start's disk can grow to it.
+# newimage_suggested_disk <uuid>  ->  the disk the fields start with, in GB: the start's (for an
+# image whose record names none, what agent-vm gives a new image of its system), or
+# NEW_XCODE_DISK when xcode is ticked and the start's disk can grow to it. Nothing when neither
+# is known.
 newimage_suggested_disk() {
     local _disk="$(newimage_base "$1" 7)"
-    case "$_disk" in
-        ''|*[!0123456789]*) _disk="$NEW_DEFAULT_DISK" ;;
-    esac
+    newimage_number "$_disk" || _disk="$(newimage_size "$1" "$(newimage_guest "$1")" 4)"
+    newimage_number "$_disk" || return 0
     local _growth="$(newimage_disk_growth "$1")"
+    newimage_number "$_growth" || _growth=0
     if newimage_listed xcode "$(newimage_ticks "$1")" && [ $((_disk + _growth)) -le "$NEW_XCODE_DISK" ]; then
         _disk="$NEW_XCODE_DISK"
     fi
@@ -1062,10 +1128,21 @@ newimage_sizes_blocker() {
         printf 'Disk: a whole number of GB.\n'
         return 0
     fi
-    [ "$(newimage_start_kind "$1")" = "image" ] || return 0
+    # A system installed anew has a smallest disk; a copy's disk follows its image's. A number
+    # agent-vm did not give is left to agent-vm to judge: any disk for a new system, and any
+    # growth for a copy.
+    local _least
+    if [ "$(newimage_start_kind "$1")" != "image" ]; then
+        _least="$(newimage_size "$1" "$(newimage_guest "$1")" 5)"
+        if newimage_number "$_least" && [ "$_disk" -lt "$_least" ]; then
+            printf 'Disk: %s GB or more for a new %s image.\n' "$_least" "$(newimage_system_word "$(newimage_guest "$1")")"
+        fi
+        return 0
+    fi
     local _base="$(newimage_base "$1" 7)"
     newimage_number "$_base" || return 0
     local _growth="$(newimage_disk_growth "$1")"
+    newimage_number "$_growth" || _growth=1
     if [ "$_disk" -ne "$_base" ] && [ "$_disk" -lt $((_base + _growth)) ]; then
         printf 'The disk can stay at %s GB, as in image %s, or grow to %s GB or more. It cannot shrink.\n' \
             "$_base" "$(newimage_start_name "$1")" "$((_base + _growth))"
@@ -1075,11 +1152,22 @@ newimage_sizes_blocker() {
 
 # newimage_size_text <uuid>  ->  the line under the size fields.
 newimage_size_text() {
+    local _growth="$(newimage_disk_growth "$1")"
+    local _least="$(newimage_size "$1" "$(newimage_guest "$1")" 5)"
     if [ "$(newimage_start_kind "$1")" = "image" ]; then
-        printf "These start as image %s has them. The disk is a sparse file, which takes only what is written to it; the disk of a copy stays as it is or grows by at least %s GB.\n" \
-            "$(newimage_start_name "$1")" "$(newimage_disk_growth "$1")"
+        printf "These start as image %s has them. The disk is a sparse file, which takes only what is written to it" "$(newimage_start_name "$1")"
+        if newimage_number "$_growth"; then
+            printf "; the disk of a copy stays as it is or grows by at least %s GB.\n" "$_growth"
+        else
+            printf "; the disk of a copy stays as it is or grows.\n"
+        fi
     else
-        printf "These start as the defaults of agent-vm. The disk is a sparse file, which takes only what is written to it.\n"
+        printf "These start as the defaults of agent-vm for a %s image. The disk is a sparse file, which takes only what is written to it" "$(newimage_system_word "$(newimage_guest "$1")")"
+        if newimage_number "$_least"; then
+            printf "; it cannot be smaller than %s GB.\n" "$_least"
+        else
+            printf ".\n"
+        fi
     fi
     newimage_listed xcode "$(newimage_ticks "$1")" && printf 'Xcode takes about 4 GB and each simulator runtime about 8 GB: %s GB or more is a good disk for it.\n' "$NEW_XCODE_DISK"
     return 0
@@ -1090,9 +1178,10 @@ newimage_size_text() {
 # newimage_args <uuid>  ->  the arguments of `image create`, one per line, as
 # agentvm_job_image_create takes them: the name, the start, the recipes ticked in their order,
 # every input file, the parameters that are not at their defaults, and the sizes that are not the
-# start's; for a build from a restore file all three sizes, so that what Check says is what is
-# built whatever agent-vm's defaults are. Nothing when no start is known, or when the name or a
-# size kept is not a name or a number: each is one argument, and comes back from a pasteboard.
+# start's; for a build from a Linux system or a restore file all three sizes, so that what Check
+# says is what is built whatever agent-vm's defaults are. Nothing when no start is known, or when
+# the name or a size kept is not a name or a number: each is one argument, and comes back from a
+# pasteboard.
 newimage_args() {
     agentvm_valid_name "$(ui_get name "$1")" || return 0
     newimage_number "$(ui_get cpus "$1")" || return 0
@@ -1104,6 +1193,8 @@ newimage_args() {
     case "$(newimage_start_kind "$1")" in
         image)
             printf '%s\n--from\n%s\n' "$(ui_get name "$1")" "$_name" ;;
+        linux)
+            printf '%s\n--linux\n%s\n' "$(ui_get name "$1")" "$_name" ;;
         ipsw)
             _path="$(newimage_ipsw_row "$1" "$_name" | /usr/bin/cut -f6)"
             [ -n "$_path" ] || return 0
@@ -1175,17 +1266,17 @@ newimage_blocker() {
 newimage_summary_text() {
     local _name="$(ui_get name "$1")"
     local _ticks="$(newimage_ticks "$1")"
-    if [ "$(newimage_start_kind "$1")" = "image" ]; then
-        printf 'Image %s, built as a copy of %s.\n' "$_name" "$(newimage_start_text "$1")"
-    else
-        printf 'Image %s, with macOS installed from %s.\n' "$_name" "$(newimage_start_text "$1")"
-    fi
+    case "$(newimage_start_kind "$1")" in
+        image) printf 'Image %s, built as a copy of %s.\n' "$_name" "$(newimage_start_text "$1")" ;;
+        linux) printf 'Image %s, %s, built from its cloud image, which agent-vm downloads and checks.\n' "$_name" "$(newimage_start_text "$1")" ;;
+        *)     printf 'Image %s, with macOS installed from %s.\n' "$_name" "$(newimage_start_text "$1")" ;;
+    esac
     if [ -n "$_ticks" ]; then
         printf 'Tools, installed in this order: %s.\n' "$(ui_lines_text "$_ticks")"
     else
         printf 'No tools are added.\n'
     fi
-    printf '%s CPUs, %s GB of memory, a %s GB disk.\n' "$(ui_get cpus "$1")" "$(ui_get memory "$1")" "$(ui_get disk "$1")"
+    printf '%s CPUs, %s GB of memory, a disk of %s GB.\n' "$(ui_get cpus "$1")" "$(ui_get memory "$1")" "$(ui_get disk "$1")"
 }
 
 # newimage_advice_text <uuid>  ->  what to know before the build: a need that may be missing, what
@@ -1208,6 +1299,8 @@ newimage_advice_text() {
 # -- Painting ------------------------------------------------------------------------------------
 
 # newimage_paint_sources <uuid>  ->  the start table from the cache, with the start kept selected.
+# It is called as the window opens, when the only start kept is an image handed over, whose row
+# is found by its name in the first column.
 newimage_paint_sources() {
     newimage_source_rows "$1" | "$dialog" "$1" "$NEW_SOURCES_ID" omc_table_set_rows_from_stdin
     local _name="$(newimage_start_name "$1")"
