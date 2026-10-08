@@ -4,6 +4,7 @@
       "checks": 1,
       "description": "Xcode from a .xip you downloaded (next: Recipes/xcode-platforms for simulator runtimes)",
       "digest": "d30ac2a10d6a5c745af08ed9c818ab9509cc3f858ddc55faff8101d69947b2c6",
+      "guest": "macos",
       "inputs": [
         {
           "description": "an Xcode .xip from https://developer.apple.com/download/all/ (any Apple ID; Apple does not offer it without one)",
@@ -34,6 +35,7 @@
       "checks": 1,
       "description": "Simulator runtimes and Xcode components (needs Xcode: build from an image with Recipes/xcode)",
       "digest": "4dc06fc1c80fe4ba737f7536e7696a61f3309dd0897c3ff5818661248b99786f",
+      "guest": "macos",
       "inputs": [],
       "name": "xcode-platforms",
       "notes": [

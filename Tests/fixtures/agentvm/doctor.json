@@ -39,8 +39,14 @@
       "count": 0,
       "detail": "0 virtual machines running on this Mac (any application)",
       "limit": 2,
+      "linuxBoxes": 0,
       "name": "running VMs",
       "status": "ok"
+    },
+    {
+      "detail": "next to agent-vm (SHA-256 51775ba3f5fe...)",
+      "name": "linux guest daemon",
+      "status": "info"
     }
   ]
 }

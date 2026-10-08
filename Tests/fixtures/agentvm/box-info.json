@@ -26,8 +26,10 @@
     "bytes": 40191254528,
     "unsharedBytes": 2083131392
   },
+  "guest": "macos",
   "needs": [],
   "path": "/Users/you/Library/Application Support/agent-vm/Boxes/cadabra-spike",
   "running": false,
-  "state": "stopped"
+  "state": "stopped",
+  "system": "macOS 27.0 (26A428)"
 }

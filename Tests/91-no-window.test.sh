@@ -241,7 +241,7 @@ check "a job runs, and holds the box, under the empty uuid" "$JOB${TAB}running${
 check "an update could start under the empty uuid: a ready image, its parts ticked, agent-vm usable" "dev-xcode${TAB}ready|1 0 1|0" \
     "$(/usr/bin/awk -F'\t' '$1 == "dev-xcode"' "$TMPDIR/AgentVM/images.tsv" | /usr/bin/cut -f1,2)|$("$PB" agentvm_choices_ get)|$(/usr/bin/sed -n '1p' "$TMPDIR/AgentVM/agentvm")"
 check "a setup could start, and a guide open, under the empty uuid: the image needs the grant, a slot is free, the guide was offered" \
-    "full-disk-access|1${TAB}2|dev-xcode" \
+    "full-disk-access|1${TAB}2${TAB}0${TAB}0|dev-xcode" \
     "$(/usr/bin/awk -F'\t' '$1 == "dev-xcode"' "$TMPDIR/AgentVM/images.tsv" | /usr/bin/cut -f8)|$(/bin/cat "$TMPDIR/AgentVM/vm.tsv")|$("$PB" agentvm_access_offer_ get)"
 check "a build could start under the empty uuid: a New Image window on its last step, a ready start, a free name" \
     "1|5|image dev-xcode|dev-xcode${TAB}ready${TAB}false|" \

@@ -3,20 +3,47 @@
 Real `--json` answers of agent-vm, which `Tests/helpers/fake_agent_vm.sh` serves to the tests, and which `Tests/10-agentvm-library.test.sh` feeds to the library's row filters directly.
 
 - `version.json` - `agent-vm version --json`.
-- `doctor.json` - `agent-vm doctor --json` (134 GB free). Every check `ok`, the signature included (the installed, Developer ID signed agent-vm); no virtual machine ran.
+- `doctor.json` - `agent-vm doctor --json` (134 GB free). Every check `ok`, the signature included (the installed, Developer ID signed agent-vm), and one `info`, the Linux guest daemon it found; no virtual machine ran.
 - `status.json` - `agent-vm status --json` on a store with six images (`dev`, `dev-acp`, `dev-agents`, `dev-node`, `dev-xcode`, `dev-xcode-ios`) and two stopped boxes (`cadabra-spike`, `s3`). Three images need Full Disk Access, and nothing needs a guest update or recreating. It was taken after `status --check-updates` and one `image update`, so it has the update fields: `newestMacOS`, `macOSUpdate` on the five images behind it, `revision`, `updatedAt`, `macOSCheckedAt` and `toolsCheckedAt` on `dev` (updated once), and `recipes` on `dev-acp` (built after agent-vm began to list them). `jobs` holds the two jobs that ended within the hour before it (an `image setup` and a `box stop`); a capture after a quiet hour has none. With every box stopped, the fields a running box adds (`pid`, `ownerPid`, `project` and the rest) are absent; `status-variety.json` carries them.
 - `image-info.json` - `agent-vm image info <name> --json` of the first ready image built from another (`dev-acp`, built from `dev-node`, with Full Disk Access): the record with what its disk takes (`diskUsage`) and what it added over its base (`addedOverBase`). The fake answers it for that image only; any other name is not found, unless a test leaves `image-info-<name>.json` in the fake's state folder.
 - `box-info.json` - `agent-vm box info <name> --json` of the first box (`cadabra-spike`, stopped, made from `dev-agents`): its status entry with what its disk takes (`diskUsage`). The fake answers it for that box only; any other name is not found, unless a test leaves `box-info-<name>.json` in the fake's state folder.
 - `box-network.json` - `agent-vm box network <name> --json` with no change, which only reads: the same box's mode and rules. The fake answers it for any box, and keeps a change per box in its state folder.
 - `packs.json` - `agent-vm box packs --json`: the host packs of the installed agent-vm.
-- `recipe-check.json` - `agent-vm recipe check <two recipes> --json` (0.6.12) of two of the test recipes in `fixtures/recipes/`, `xcode` (an input file) and `xcode-platforms` (two parameters): both accepted, with the warnings agent-vm has for recipes whose steps do nothing, and a note each. Their folder is written as `recipes`. No store is read and nothing is built.
+- `recipe-check.json` - `agent-vm recipe check <two recipes> --json` (0.7.11) of two of the test recipes in `fixtures/recipes/`, `xcode` (an input file) and `xcode-platforms` (two parameters): both accepted, for macOS (`guest`, since neither names one), with the warnings agent-vm has for recipes whose steps do nothing, and a note each. Their folder is written as `recipes`. No store is read and nothing is built.
 - `ipsw-list.json` - `agent-vm image fetch-ipsw --list --json`: the one macOS restore file agent-vm downloaded on this Mac. The New Image window lists it as a start.
 - `ipsw-check.json` - `agent-vm image fetch-ipsw --check --json`: the newest restore file Apple offered on 2026-10-02 (macOS 27.0.1), not downloaded on this Mac, with the room left; the Get macOS window shows it. The tests edit it for the other states (partly downloaded, downloaded, no room).
 - `status-empty.json` - `agent-vm status --json` on an empty store.
 - `job-list.json` - `agent-vm job list --json` after one job (`box start` of a box that does not exist) was started against that empty store, where it can only fail: a job's record as agent-vm writes it. The store's path is written as the default one.
 - `job-log.json` - `agent-vm job log <id> --json` of that same job: its record under `job`, and `events` and `lines`, both empty, since it failed before its command reported a step.
+- `status-linux.json` - `agent-vm status --json` (0.7.11) on a store of Linux images and boxes only: `deb` (Debian 13, built from Debian's cloud image), `deb-agents` (built from `deb` with the recipes `linux-node` and `agent-clis`), `ub` (Ubuntu 26.04) and `ub-agents` (built from `ub` with `linux-node`, `linux-python` and `agent-clis`), and one stopped box, `lb`, made from `deb`. What a Linux entry has where a macOS one has its macOS version, its build and Full Disk Access: `guest`, `system`, `linux`, `base` (the cloud image it was first built from) and `systemCheckedAt`. The store's folder is written as the default one.
+- `image-info-linux.json` - `agent-vm image info deb-agents --json` in that store: the first ready Linux image built from another.
+- `box-info-linux.json` - `agent-vm box info lb --json` in that store: its first Linux box.
+- `status-mixed.json` - a store with both kinds, for what the window shows side by side: `status.json` with the images and the box of `status-linux.json` added, and nothing else changed. Made by `refresh_agentvm_fixtures.sh`, which runs `jq -S -s '.[1] as $linux | .[0] | .images += $linux.images | .boxes += $linux.boxes' status.json status-linux.json`.
 
-Captured on 2026-10-01 from agent-vm 0.5.13 with `Tests/helpers/refresh_agentvm_fixtures.sh`; `version.json`, `doctor.json` (134 GB free, eight checks) and `packs.json` again on 2026-10-04 from agent-vm 0.6.12. The library requires 0.6.14 now: its output (as that of 0.6.13) has the same shape, so only the version strings and the guest daemon's digest were edited in place. The store-bound captures were kept: the store holds two images and one box now, and a fresh capture differs from them only by fields agent-vm added (`passwordStorage`, `passwordID`, the box's `guestVersion` and `guestDigest`, a recorded input's `path`), none of which the app reads. The script replaces the home folder with `/Users/you` and sorts keys. When agent-vm's JSON changes, run it again with the new agent-vm and rerun the suite: the drift checks fail when a field the library reads is gone.
+Captured on 2026-10-01 from agent-vm 0.5.13 with `Tests/helpers/refresh_agentvm_fixtures.sh`; `doctor.json` (134 GB free; eight checks then, nine since the move to 0.7.11 below) again on 2026-10-04 from agent-vm 0.6.12. The script replaces the home folder with `/Users/you` and sorts keys. When agent-vm's JSON changes, run it again with the new agent-vm (naming the parts that changed, when the stores did not) and rerun the suite: the drift checks fail when a field the library reads is gone.
+
+## The move to agent-vm 0.7.11 (2026-10-08)
+
+agent-vm 0.7.11 knows Linux images and boxes, and says of every image and box which guest it is. The store-bound captures were kept, as before: the tests name their images and boxes. What changed:
+
+- `version.json`, `packs.json` (the packs `debian` and `ubuntu`) and `recipe-check.json` were captured again from the installed agent-vm 0.7.11 (`refresh_agentvm_fixtures.sh <agent-vm> version packs recipe-check`).
+- `status.json`, `status-variety.json`, `status-empty.json`, `image-info.json` and `box-info.json` were given what 0.7.11 adds to a macOS entry, by this edit, run in this folder (the system's words are the ones agent-vm forms, `GuestSystemText.description` in its `Sources/AgentVMKit/Images/GuestSystem.swift`):
+
+```sh
+for f in status status-variety status-empty; do
+  /usr/bin/jq -S 'def macos_system($v; $b): "macOS \($v // "?") (\($b // "?"))";
+    .images |= map(. + {guest: "macos", system: macos_system(.macOSVersion; .macOSBuild)})
+    | .boxes |= map(. + {guest: "macos", system: macos_system(.box.macOSVersion; .box.macOSBuild)})
+    | .runningVMs.linuxBoxes = 0' "$f.json" > "$f.new" && /bin/mv "$f.new" "$f.json"
+done
+/usr/bin/jq -S '. + {guest: "macos", system: "macOS \(.macOSVersion // "?") (\(.macOSBuild // "?"))"}' image-info.json > image-info.new && /bin/mv image-info.new image-info.json
+/usr/bin/jq -S '. + {guest: "macos", system: "macOS \(.box.macOSVersion // "?") (\(.box.macOSBuild // "?"))"}' box-info.json > box-info.new && /bin/mv box-info.new box-info.json
+```
+
+- `doctor.json` was given the two things 0.7.11 adds, copied from a real answer of that day: `linuxBoxes` in the `running VMs` check, and the `linux guest daemon` check. It was not captured again: that day's answer had a disk space warning and a virtual machine running, and the tests read the 134 GB and the nine quiet checks.
+- The version strings of `status-variety.json` and `job-log-variety.json` were moved from 0.6.14 to 0.7.11.
+- The three Linux fixtures are real answers of 0.7.11 from agent-vm's own test store, taken while a test run of agent-vm's used that store: the one image that run had made (`shtest-lbusy-8134`, being updated at that moment) was removed from `status-linux.json`, and its count of running virtual machines, which was 1 for that image's update, set to 0. Nothing else in them was edited. `refresh_agentvm_fixtures.sh <agent-vm> linux`, with `AGENTVM_FIXTURE_LINUX_HOME` naming such a store at rest, captures all three with no edit, and refuses a store where something runs or is being changed.
+- Not in any capture, since 0.7.11 does not say it: `runningVMs.linuxImages`, the Linux images being built or updated, which the agent-vm after 0.7.11 counts apart. The library reads it as 0 when it is absent, and the tests give it in JSON of their own.
 
 ## Made by hand
 

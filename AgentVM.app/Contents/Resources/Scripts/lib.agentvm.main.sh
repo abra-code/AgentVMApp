@@ -1086,7 +1086,7 @@ main_paint_box_detail() {
         # The cached `box info` adds the space, as of when it was last read, and only for this box.
         local _info="$(main_info "$_uuid" box "$_name")"
         "$dialog" "$_uuid" "$MAIN_BOX_SPACE_ID" \
-            "$(main_space_text "$(printf '%s\n' "$_info" | /usr/bin/cut -f23)" "$(printf '%s\n' "$_info" | /usr/bin/cut -f24)" \
+            "$(main_space_text "$(printf '%s\n' "$_info" | /usr/bin/cut -f26)" "$(printf '%s\n' "$_info" | /usr/bin/cut -f27)" \
                 "$(main_info_error "$_uuid" box "$_name")")"
 
         # The enable rules Cadabra's box window tested. The screen and a shell need a running box
@@ -1120,7 +1120,7 @@ main_paint_box_detail() {
 # that the image it was made from stays.
 main_box_delete_question() {
     local _text="The box's folder and disk are deleted, with everything installed or saved in it"
-    local _size="$(ui_size_text "$(main_info "$1" box "$2" | /usr/bin/cut -f24)")"
+    local _size="$(ui_size_text "$(main_info "$1" box "$2" | /usr/bin/cut -f27)")"
     [ -n "$_size" ] && _text="$_text, which frees about $_size"
     _text="$_text."
     local _image="$(main_row "$1" boxes "$2" | /usr/bin/cut -f3)"
@@ -1297,9 +1297,10 @@ main_space_text() {
 }
 
 # main_paint_image_detail <uuid>  ->  the selected image's detail pane, or the placeholder.
-# `status` gives the image's state and record (fields 1-11), always current; the cached `image
-# info` adds what only it has (fields 12-22: the guest daemon's features, Full Disk Access, the
-# tools, processors and memory, the build's length and the space), as of when it was last read.
+# `status` gives the image's state and record (fields 1-14), always current; the cached `image
+# info` adds what only it has (fields 15-28: the guest daemon's features, Full Disk Access, the
+# tools, processors and memory, the build's length, the space, and the cloud image a Linux image
+# was first built from), as of when it was last read.
 main_paint_image_detail() {
     local _uuid="$1"
     local _name="$(ui_get image "$_uuid")"
@@ -1323,14 +1324,18 @@ main_paint_image_detail() {
     local _info="$(main_info "$_uuid" image "$_name")"
     local _info_error="$(main_info_error "$_uuid" image "$_name")"
     local _maintenance="$(main_maintenance_text "$_uuid" images "$_name")"
-    # The status row's eleven fields, then image info's, or eleven "-" without it.
-    local _extra="-${ui_tab}-${ui_tab}-${ui_tab}-${ui_tab}-${ui_tab}-${ui_tab}-${ui_tab}-${ui_tab}-${ui_tab}-${ui_tab}-"
-    [ -n "$_info" ] && _extra="$(printf '%s\n' "$_info" | /usr/bin/cut -f12-22)"
+    # The status row's fourteen fields, then image info's fourteen, or fourteen "-" without it.
+    local _extra="-${ui_tab}-${ui_tab}-${ui_tab}-${ui_tab}-${ui_tab}-${ui_tab}-${ui_tab}-${ui_tab}-${ui_tab}-${ui_tab}-${ui_tab}-${ui_tab}-${ui_tab}-"
+    [ -n "$_info" ] && _extra="$(printf '%s\n' "$_info" | /usr/bin/cut -f15-28)"
     printf '%s\t%s\n' "$_row" "$_extra" | {
         local _n _state _failure _macos _build _based _recipe _needs _guest _created _path
-        local _features _missing _seconds _fda _checked _clt _cpus _memory _bytes _unshared _added _rest
+        local _kind _system _short
+        local _features _missing _seconds _fda _checked _clt _cpus _memory _bytes _unshared _added
+        local _release _base_build _base_file _rest
         IFS="$ui_tab" read -r _n _state _failure _macos _build _based _recipe _needs _guest _created _path \
-            _features _missing _seconds _fda _checked _clt _cpus _memory _bytes _unshared _added _rest
+            _kind _system _short \
+            _features _missing _seconds _fda _checked _clt _cpus _memory _bytes _unshared _added \
+            _release _base_build _base_file _rest
         # A job that holds the image says what it does and where it is, in place of the state.
         local _job="$(main_job "$_uuid" image "$_name")"
         # Progress... opens the job's window (lib.agentvm.progress.sh).
@@ -1480,7 +1485,7 @@ main_image_view() {
 # can no longer be recreated, since recreating makes it again from its image).
 main_image_delete_question() {
     local _text="The image's folder and disk are deleted"
-    local _size="$(ui_size_text "$(main_info "$1" image "$2" | /usr/bin/cut -f21)")"
+    local _size="$(ui_size_text "$(main_info "$1" image "$2" | /usr/bin/cut -f24)")"
     [ -n "$_size" ] && _text="$_text, which frees about $_size"
     _text="$_text."
     local _boxes="$(main_rows "$1" boxes | /usr/bin/awk -F'\t' -v name="$2" '$3 "" == name { print $1 }')"

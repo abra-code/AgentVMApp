@@ -18,8 +18,8 @@ AB=../OMC/Distribution/AppletBuilder.app/Contents/Resources/Agents/appletbuilder
 |---|---|
 | `lib.test.agentvm.sh` | sourced by every file: the guards that keep a test out of the real home folder, and the app's accessors |
 | `00-bundle.test.sh` | what `Info.plist` and `Command.json` declare: the main command and its one window, and the command that asks for a project folder |
-| `10-agentvm-library.test.sh` | `lib.agentvm.sh`: which agent-vm runs, when it can be used, the store setting, error messages, and the rows read from agent-vm's JSON, against the fake and the fixtures |
-| `11-agentvm-contract.test.sh` | the library against a real agent-vm on an empty store: the JSON fields the fixtures have are still there, a job's record and log included (one job that can only fail), and `recipe check` on recipes it accepts and refuses, with the names it gives them |
+| `10-agentvm-library.test.sh` | `lib.agentvm.sh`: which agent-vm runs, when it can be used, the store setting, error messages, and the rows read from agent-vm's JSON, for macOS and for Linux images and boxes, against the fake and the fixtures |
+| `11-agentvm-contract.test.sh` | the library against a real agent-vm on an empty store: the JSON fields the fixtures have are still there, a job's record and log included (one job that can only fail), `recipe check` on recipes it accepts and refuses, with the names it gives them and the guest each is for, and what it says of Linux without a Linux image |
 | `20-main-window.test.sh` | the main window: the face it shows, the box and image cards, each list's selection and its detail pane, Settings, the poll loop, activation and closing |
 | `21-maintenance.test.sh` | what needs doing to a box or an image: the mark on its card, the lines in its detail pane, and the state line of a running box nobody uses |
 | `30-image-detail.test.sh` | the image detail pane's measured facts (`image info`) and when they are read, Show in Finder for an image and a box, Delete and its question |
@@ -46,7 +46,7 @@ AB=../OMC/Distribution/AppletBuilder.app/Contents/Resources/Agents/appletbuilder
 | `helpers/fake_agent_vm.sh` | agent-vm, answered from `fixtures/agentvm/` |
 | `helpers/fake_install_tools.sh` | curl, spctl, pkgutil and installer, by the name it is started as, answered from files: nothing reaches the network, Gatekeeper or the real installer |
 | `helpers/fake_ps.sh`, `helpers/fake_sleep.sh`, `helpers/fake_open.sh` | the process list (a box's owner), the poll loop's wait, and Finder and Terminal (Show in Finder, the `.command` files), answered and recorded |
-| `helpers/refresh_agentvm_fixtures.sh` | captures `fixtures/agentvm/` from a real agent-vm |
+| `helpers/refresh_agentvm_fixtures.sh` | captures `fixtures/agentvm/` from a real agent-vm: all of it, or the parts named; the Linux fixtures from a store named by `AGENTVM_FIXTURE_LINUX_HOME` |
 | `fixtures/recipes/` | seven recipes named as agent-vm's own, made by hand: each has its description and the input files and parameters it declares, and steps that do nothing. `AGENTVM_APP_RECIPES` points the library at them |
 | `fixtures/agents.json` | agent-vm's list of agents, made by hand: three as agent-vm's own (id, name, the hosts each needs), and three that test what is left out. `AGENTVM_APP_AGENTS` points the library at it |
 
@@ -58,4 +58,4 @@ AB=../OMC/Distribution/AppletBuilder.app/Contents/Resources/Agents/appletbuilder
 Tests/helpers/refresh_agentvm_fixtures.sh ../agent-vm/.build/signed/release/agent-vm
 ```
 
-Then remake `status-variety.json` as `fixtures/agentvm/README.md` shows, and fix the tests that name what changed in the store. The contract test takes the first build in `../agent-vm/.build/signed/release` or `.../work` that is new enough, or `AGENTVM_APP_CONTRACT_AGENT_VM`.
+Then remake `status-variety.json` as `fixtures/agentvm/README.md` shows, and fix the tests that name what changed in the store. When the update changed nothing in a store's entries, name the parts that did change after the path (`version packs recipe-check`, say) and the others stay as they are: the tests name the images and boxes of `status.json`. The part `linux` takes the Linux fixtures from the store `AGENTVM_FIXTURE_LINUX_HOME` names, which must hold a ready Linux image built from another and a Linux box, with nothing running or being changed in it. The contract test takes the first build in `../agent-vm/.build/signed/release` or `.../work` that is new enough, or `AGENTVM_APP_CONTRACT_AGENT_VM`.

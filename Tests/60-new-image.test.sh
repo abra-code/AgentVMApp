@@ -190,7 +190,7 @@ store '.'
 # -----------------------------------------------------------------------------------------------
 section "the library: what a build from an image needs to know"
 rows="$(lib agentvm_status_build_rows < "$FIXTURES_AGENTVM/status-variety.json")"
-check "twelve fields"                "12" "$(printf '%s\n' "$rows" | field_count)"
+check "fourteen fields"              "14" "$(printf '%s\n' "$rows" | field_count)"
 check "a plain image: ready, not being changed, its macOS, 4 CPUs, 8 GB, a 64 GB disk, the Command Line Tools" \
     "dev${TAB}ready${TAB}false${TAB}27.0${TAB}4${TAB}8${TAB}64${TAB}-${TAB}-${TAB}Command Line Tools for Xcode 27.0-27.0" \
     "$(printf '%s\n' "$rows" | row_named dev | col 1-10)"
@@ -204,6 +204,12 @@ check "  and their descriptions"     "Homebrew; Node" \
 check "an image another command is changing" "true" \
     "$(/usr/bin/jq '(.images[] | select(.name == "dev")).updating = true' "$FIXTURES_AGENTVM/status-variety.json" | lib agentvm_status_build_rows | row_named dev | col 3)"
 check "an empty store: no rows"      "" "$(lib agentvm_status_build_rows < "$FIXTURES_AGENTVM/status-empty.json")"
+check "a macOS image: its guest, and its system in short" "macos${TAB}macOS 27.0" "$(printf '%s\n' "$rows" | row_named dev | col 13-14)"
+rows="$(lib agentvm_status_build_rows < "$FIXTURES_AGENTVM/status-mixed.json")"
+check "a Linux image: no macOS, 4 CPUs, 4 GB, a 32 GB disk, the compiler" \
+    "deb${TAB}ready${TAB}false${TAB}-${TAB}4${TAB}4${TAB}32${TAB}-${TAB}-${TAB}build-essential 12.12" "$(printf '%s\n' "$rows" | row_named deb | col 1-10)"
+check "  its guest, and its system in short" "linux${TAB}Debian 13" "$(printf '%s\n' "$rows" | row_named deb | col 13-14)"
+check "  the recipes one built from it keeps" "linux-node,agent-clis" "$(printf '%s\n' "$rows" | row_named deb-agents | col 8)"
 
 section "the library: the restore files"
 check "one row: name, macOS, build, bytes, newest, path" \
@@ -829,11 +835,11 @@ checked() {
 fake_reset
 rows="$(checked "$OWN/team-tools/recipe.json" "$OWN/Extra Things.json")"
 check "agent-vm is asked once about the files, in their order" "recipe check $OWN/team-tools/recipe.json $OWN/Extra Things.json --json" "$(fake_log)"
-check "a row: agent-vm's name, description, one input file, one parameter, its path, no mistake, no warnings" \
-    "team-tools${TAB}The linters of the team (needs Node: put Recipes/node before it)${TAB}1${TAB}1${TAB}$OWN/team-tools/recipe.json${TAB}-${TAB}0${TAB}-" \
+check "a row: agent-vm's name, description, one input file, one parameter, its path, no mistake, no warnings, and macOS for a recipe that names no guest" \
+    "team-tools${TAB}The linters of the team (needs Node: put Recipes/node before it)${TAB}1${TAB}1${TAB}$OWN/team-tools/recipe.json${TAB}-${TAB}0${TAB}-${TAB}macos" \
     "$(printf '%s\n' "$rows" | /usr/bin/sed -n '1p')"
-check "a recipe without a description" "Extra-Things${TAB}-${TAB}0${TAB}0${TAB}$OWN/Extra Things.json${TAB}-${TAB}0${TAB}-" "$(printf '%s\n' "$rows" | /usr/bin/sed -n '2p')"
-check "eight fields in every row"    "8" "$(printf '%s\n' "$rows" | field_count)"
+check "a recipe without a description" "Extra-Things${TAB}-${TAB}0${TAB}0${TAB}$OWN/Extra Things.json${TAB}-${TAB}0${TAB}-${TAB}macos" "$(printf '%s\n' "$rows" | /usr/bin/sed -n '2p')"
+check "nine fields in every row"     "9" "$(printf '%s\n' "$rows" | field_count)"
 with_fake agentvm_recipe_check "$OWN/team-tools/recipe.json" > /dev/null
 check "recipes agent-vm accepts: status 0" "0" "$?"
 rows="$(checked "$OWN/broken.json" "$OWN/list.json" "$OWN/none.json" "$OWN/third.json")"
@@ -842,6 +848,16 @@ check "what agent-vm refuses has its reason, and no name" \
     "$(printf '%s\n' "$rows" | /usr/bin/awk -F'\t' '{ printf "%s|%s;", $1, $6 }')"
 with_fake agentvm_recipe_check "$OWN/broken.json" > /dev/null
 check "  status 1, with the answer"  "1" "$?"
+# The guest a recipe is for, as agent-vm reads it from the file.
+/bin/mkdir -p "$OWN/for-linux" "$OWN/for-both" "$OWN/for-windows"
+printf '{ "version": 1, "guest": "linux" }\n' > "$OWN/for-linux/recipe.json"
+printf '{ "version": 1, "guest": "any" }\n' > "$OWN/for-both/recipe.json"
+printf '{ "version": 1, "guest": "windows" }\n' > "$OWN/for-windows/recipe.json"
+rows="$(checked "$OWN/for-linux/recipe.json" "$OWN/for-both/recipe.json" "$OWN/for-windows/recipe.json")"
+check "the guest a recipe is for: Linux, both, and none for one agent-vm refuses" "for-linux:linux|for-both:any|-:-|" \
+    "$(printf '%s\n' "$rows" | /usr/bin/awk -F'\t' '{ printf "%s:%s|", $1, $9 }')"
+check "  a guest that is none of agent-vm's is refused, with its reason" \
+    '"guest" must be one of "macos", "linux", "any"; leave it out for a macOS recipe' "$(printf '%s\n' "$rows" | /usr/bin/sed -n '3p' | col 6)"
 # A real answer's warnings, and what a build refuses in recipes it accepts one by one.
 /usr/bin/jq -n --arg path "$OWN/team-tools/recipe.json" '{error: "the input license is declared by team-tools and by other",
     recipes: [{path: $path, name: "team-tools", inputs: [{name: "license"}], parameters: [], steps: 1, updateSteps: 0, checks: 0, notes: [],

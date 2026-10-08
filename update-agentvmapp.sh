@@ -84,8 +84,11 @@ current="$(/usr/bin/sed -n 's/^AGENTVM_MIN_VERSION="\(.*\)"$/\1/p' "$library")"
 [ -n "$current" ] || fail "no AGENTVM_MIN_VERSION line in $library"
 if [ "$set_min_version" = "yes" ]; then
     agentvm_repo="${AGENTVM_REPO:-$script_dir/../agent-vm}"
-    version_file="$agentvm_repo/Sources/AgentVMKit/AgentVM.swift"
-    [ -f "$version_file" ] || fail "no agent-vm working tree at $agentvm_repo (no $version_file): set AGENTVM_REPO, or pass --keep-min-version"
+    # agent-vm 0.7.0 moved the file that holds its version into the guest daemon's target; a
+    # working tree from before that has it in the old place.
+    version_file="$agentvm_repo/Sources/AgentVMGuestKit/AgentVM.swift"
+    [ -f "$version_file" ] || version_file="$agentvm_repo/Sources/AgentVMKit/AgentVM.swift"
+    [ -f "$version_file" ] || fail "no agent-vm working tree at $agentvm_repo (no Sources/AgentVMGuestKit/AgentVM.swift, nor Sources/AgentVMKit/AgentVM.swift): set AGENTVM_REPO, or pass --keep-min-version"
     wanted="$(/usr/bin/sed -n 's/^ *public static let version = "\([0123456789.]*\)"$/\1/p' "$version_file")"
     [ -n "$wanted" ] || fail "cannot read agent-vm's version from $version_file"
     if [ "$current" != "$wanted" ]; then

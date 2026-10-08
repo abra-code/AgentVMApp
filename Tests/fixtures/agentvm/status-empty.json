@@ -4,6 +4,7 @@
   "jobs": [],
   "runningVMs": {
     "count": 0,
-    "limit": 2
+    "limit": 2,
+    "linuxBoxes": 0
   }
 }

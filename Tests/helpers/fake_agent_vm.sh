@@ -46,7 +46,8 @@
 #   image info <name> --json,
 #   image delete <name> --json, box delete <name> --json and box recreate <name> --json (which
 #   change nothing: the test changes status.json to match), box info <name> --json, and
-#   box view <name> [--interactive] --json (which shows nothing), box packs --json,
+#   box view <name> [--interactive] --json (which shows nothing, and is refused for a Linux box,
+#   which has no screen), box packs --json,
 #   box create <name> --image <image> [--cpus <n>] [--memory-gb <n>] [--net <mode>] [--allow <rule> ...]
 #   --json (the box is added, stopped, to what `status` answers; a name that is taken, an image
 #   that is not listed or not ready, and an option it does not know are refused),
@@ -153,8 +154,9 @@ recipe_name() {
 # recipe_check recipe check <path>... --json  ->  what `agent-vm recipe check` answers, and its
 # status: 1 when a recipe is refused. recipe-check.json in the state directory is the whole
 # answer when present (its status is then recipe-check-status, else 0). Otherwise every file is
-# read: one that is not there, is not JSON, is not an object or has no "version": 1 is refused in
-# agent-vm's words, and any other loads, with no warnings and no notes.
+# read: one that is not there, is not JSON, is not an object, has no "version": 1 or names a
+# guest that is none of agent-vm's three is refused in agent-vm's words, and any other loads, with
+# no warnings and no notes, for the guest it names (macos when it names none).
 recipe_check() {
     if [ -f "$state/recipe-check.json" ]; then
         /bin/cat "$state/recipe-check.json"
@@ -176,7 +178,9 @@ recipe_check() {
         /usr/bin/jq -c --arg path "$1" --arg name "$(recipe_name "$1")" '
             if type != "object" then {path: $path, error: "the top level must be a JSON object", notes: [], warnings: []}
             elif .version != 1 then {path: $path, error: "version must be 1", notes: [], warnings: []}
-            else {path: $path, name: $name, description: .description,
+            elif has("guest") and (.guest == "macos" or .guest == "linux" or .guest == "any" | not)
+                then {path: $path, error: "\"guest\" must be one of \"macos\", \"linux\", \"any\"; leave it out for a macOS recipe", notes: [], warnings: []}
+            else {path: $path, name: $name, description: .description, guest: (.guest // "macos"),
                   inputs: [(.inputs // {}) | to_entries[] | {name: .key, description: .value.description} | with_entries(select(.value != null))],
                   parameters: [(.parameters // {}) | to_entries[] | {name: .key, description: .value.description, default: .value.default} | with_entries(select(.value != null))],
                   steps: (.steps // [] | length), updateSteps: (.update // [] | length), checks: (.checks // [] | length),
@@ -295,16 +299,23 @@ case "$*" in
             exit 1
         fi
         /usr/bin/jq -R . "$state/box-allow.tmp" | /usr/bin/jq -s . > "$state/box-allow.json"
+        # A box runs what its image runs: agent-vm says the guest and the system beside the record
+        # of every box, and puts the guest and the Linux system inside the record of a Linux box
+        # only, which in turn has no macOS version or build.
         /usr/bin/jq --arg name "$box" --arg image "$image" --arg cpus "$cpus" --arg memory "$memory" --arg mode "$mode" \
             --slurpfile allow "$state/box-allow.json" '
             (.images[] | select(.name == $image)) as $from
-            | .boxes += [{ box: { cpuCount: (if $cpus == "" then $from.cpuCount else ($cpus | tonumber) end),
-                                  createdAt: "2026-09-30T12:00:00Z", disposable: false, image: $image,
-                                  macOSBuild: $from.macOSBuild, macOSVersion: $from.macOSVersion,
-                                  memoryBytes: (if $memory == "" then $from.memoryBytes else ($memory | tonumber) * 1073741824 end),
-                                  name: $name, network: { allow: $allow[0], mode: $mode } },
-                           needs: [], path: ("/Users/you/Library/Application Support/agent-vm/Boxes/" + $name),
-                           running: false, state: "stopped" }]' "$state/status-was.json" > "$state/status.json.new" \
+            | ($from.guest // "macos") as $guest
+            | .boxes += [{ box: ({ cpuCount: (if $cpus == "" then $from.cpuCount else ($cpus | tonumber) end),
+                                   createdAt: "2026-09-30T12:00:00Z", disposable: false, image: $image,
+                                   macOSBuild: $from.macOSBuild, macOSVersion: $from.macOSVersion,
+                                   guest: (if $guest == "linux" then $guest else null end), linux: $from.linux,
+                                   memoryBytes: (if $memory == "" then $from.memoryBytes else ($memory | tonumber) * 1073741824 end),
+                                   name: $name, network: { allow: $allow[0], mode: $mode } }
+                                 | with_entries(select(.value != null))),
+                           guest: $guest, needs: [], path: ("/Users/you/Library/Application Support/agent-vm/Boxes/" + $name),
+                           running: false, state: "stopped", system: $from.system }
+                         | with_entries(select(.value != null))]' "$state/status-was.json" > "$state/status.json.new" \
             && /bin/mv "$state/status.json.new" "$state/status.json"
         /usr/bin/jq --arg name "$box" '.boxes[] | select(.box.name == $name) | .box' "$state/status.json"
         /bin/rm -f "$state/status-was.json" "$state/box-allow.tmp" "$state/box-allow.json" ;;
@@ -338,8 +349,15 @@ case "$*" in
         else
             /bin/cat "$fixtures/box-execlog.json"
         fi ;;
-    "box delete "*" --json"|"box recreate "*" --json"|"box view "*" --json"|"box view "*" --interactive --json")
+    "box delete "*" --json"|"box recreate "*" --json")
         ;;
+    "box view "*" --json"|"box view "*" --interactive --json")
+        # A Linux box has no screen, and agent-vm says so.
+        guest="$(answer status | /usr/bin/jq -r --arg name "$3" '.boxes[] | select(.box.name == $name) | .guest // "macos"')"
+        if [ "$guest" = "linux" ]; then
+            printf 'Error: box %s runs Linux, which has no screen to show; open a shell with `agent-vm box shell <box>`\n' "$3" >&2
+            exit 1
+        fi ;;
     "job start "*)
         shift 2
         after=""

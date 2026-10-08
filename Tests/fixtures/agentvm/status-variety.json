@@ -25,10 +25,12 @@
         },
         "userName": "agent"
       },
+      "guest": "macos",
       "needs": [],
       "path": "/Users/you/Library/Application Support/agent-vm/Boxes/cadabra-spike",
       "running": false,
-      "state": "stopped"
+      "state": "stopped",
+      "system": "macOS 27.0 (26A428)"
     },
     {
       "activeExecs": 2,
@@ -56,6 +58,7 @@
         },
         "userName": "agent"
       },
+      "guest": "macos",
       "guestFeatures": [
         "terminal",
         "prompt-notices",
@@ -64,7 +67,7 @@
         "user-session",
         "terminal-pixels"
       ],
-      "guestVersion": "0.6.14",
+      "guestVersion": "0.7.11",
       "needs": [],
       "ownerPid": 812,
       "path": "/Users/you/Library/Application Support/agent-vm/Boxes/s3",
@@ -74,8 +77,9 @@
       "running": true,
       "startedAt": "2026-09-29T14:02:10Z",
       "state": "running",
-      "supervisorPath": "/Users/you/.local/share/agent-vm/versions/0.6.14/agent-vm",
-      "supervisorVersion": "0.6.14"
+      "supervisorPath": "/Users/you/.local/share/agent-vm/versions/0.7.11/agent-vm",
+      "supervisorVersion": "0.7.11",
+      "system": "macOS 27.0 (26A428)"
     },
     {
       "box": {
@@ -91,11 +95,13 @@
         "name": "try1",
         "userName": "agent"
       },
+      "guest": "macos",
       "needs": [],
       "path": "/Users/you/Library/Application Support/agent-vm/Boxes/try1",
       "running": true,
       "state": "unresponsive",
-      "statusError": "no answer from the supervisor within 5 s"
+      "statusError": "no answer from the supervisor within 5 s",
+      "system": "macOS 27.0 (26A428)"
     }
   ],
   "images": [
@@ -112,6 +118,7 @@
         "guestDigest": "8aecca450c3571b01b7ffbd7d69461394061f029d92d0eee07d678ceb909ccd6",
         "guestRequirement": "cdhash H\"8a009b1b825f636202afe7c9f4a85db617d1c908\""
       },
+      "guest": "macos",
       "guestDigest": "8aecca450c3571b01b7ffbd7d69461394061f029d92d0eee07d678ceb909ccd6",
       "guestFeatures": [
         "terminal",
@@ -143,6 +150,7 @@
       "provisionSeconds": 186.049275625,
       "revision": 2,
       "state": "ready",
+      "system": "macOS 27.0 (26A428)",
       "toolsCheckedAt": "2026-09-30T08:15:00Z",
       "updatedAt": "2026-09-30T08:15:00Z",
       "userName": "agent"
@@ -164,6 +172,7 @@
         "guestDigest": "8aecca450c3571b01b7ffbd7d69461394061f029d92d0eee07d678ceb909ccd6",
         "guestRequirement": "cdhash H\"8a009b1b825f636202afe7c9f4a85db617d1c908\""
       },
+      "guest": "macos",
       "guestDigest": "8aecca450c3571b01b7ffbd7d69461394061f029d92d0eee07d678ceb909ccd6",
       "guestFeatures": [
         "terminal",
@@ -209,6 +218,7 @@
         }
       ],
       "state": "ready",
+      "system": "macOS 27.0 (26A428)",
       "userName": "agent"
     },
     {
@@ -228,6 +238,7 @@
         "guestDigest": "8aecca450c3571b01b7ffbd7d69461394061f029d92d0eee07d678ceb909ccd6",
         "guestRequirement": "cdhash H\"8a009b1b825f636202afe7c9f4a85db617d1c908\""
       },
+      "guest": "macos",
       "guestDigest": "8aecca450c3571b01b7ffbd7d69461394061f029d92d0eee07d678ceb909ccd6",
       "guestFeatures": [
         "terminal",
@@ -253,6 +264,7 @@
         "digest": "b847b0b9403846a7cbd5b5054d2645e2bf5d735cac9a72f467c89f9cb29c7d4a"
       },
       "state": "ready",
+      "system": "macOS 27.0 (26A428)",
       "userName": "agent"
     },
     {
@@ -271,6 +283,7 @@
         "guestDigest": "8aecca450c3571b01b7ffbd7d69461394061f029d92d0eee07d678ceb909ccd6",
         "guestRequirement": "cdhash H\"8a009b1b825f636202afe7c9f4a85db617d1c908\""
       },
+      "guest": "macos",
       "guestDigest": "8aecca450c3571b01b7ffbd7d69461394061f029d92d0eee07d678ceb909ccd6",
       "guestFeatures": [
         "terminal",
@@ -307,6 +320,7 @@
         "digest": "edef427c53ca1f576a458db6504b52a1be6a3adbe179450fdef78870f95d5290"
       },
       "state": "ready",
+      "system": "macOS 27.0 (26A428)",
       "userName": "agent"
     },
     {
@@ -325,6 +339,7 @@
         "guestDigest": "8aecca450c3571b01b7ffbd7d69461394061f029d92d0eee07d678ceb909ccd6",
         "guestRequirement": "cdhash H\"8a009b1b825f636202afe7c9f4a85db617d1c908\""
       },
+      "guest": "macos",
       "guestDigest": "8aecca450c3571b01b7ffbd7d69461394061f029d92d0eee07d678ceb909ccd6",
       "guestFeatures": [
         "terminal",
@@ -363,6 +378,7 @@
         ]
       },
       "state": "ready",
+      "system": "macOS 27.0 (26A428)",
       "userName": "agent"
     },
     {
@@ -382,6 +398,7 @@
         "guestDigest": "8aecca450c3571b01b7ffbd7d69461394061f029d92d0eee07d678ceb909ccd6",
         "guestRequirement": "cdhash H\"8a009b1b825f636202afe7c9f4a85db617d1c908\""
       },
+      "guest": "macos",
       "guestDigest": "8aecca450c3571b01b7ffbd7d69461394061f029d92d0eee07d678ceb909ccd6",
       "guestFeatures": [
         "terminal",
@@ -416,6 +433,7 @@
         }
       },
       "state": "ready",
+      "system": "macOS 27.0 (26A428)",
       "userName": "agent"
     },
     {
@@ -432,6 +450,7 @@
         "guestDigest": "1a7fdef2c823b0fa5bf6cde1b7534ff6025ae9b9c1fd19dd6e63e248750320e3",
         "guestRequirement": "cdhash H\"45f7069ccf9ff1c9de66dc4fc103d05a261a1443\""
       },
+      "guest": "macos",
       "guestDigest": "1a7fdef2c823b0fa5bf6cde1b7534ff6025ae9b9c1fd19dd6e63e248750320e3",
       "guestFeatures": [
         "terminal",
@@ -454,12 +473,14 @@
       "path": "/Users/you/Library/Application Support/agent-vm/Images/latest-test",
       "provisionSeconds": 212.205459959,
       "state": "failed",
+      "system": "macOS 27.0 (26A428)",
       "userName": "agent"
     }
   ],
   "jobs": [],
   "runningVMs": {
     "count": 1,
-    "limit": 2
+    "limit": 2,
+    "linuxBoxes": 0
   }
 }

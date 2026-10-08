@@ -35,7 +35,7 @@
 [ -n "${__AGENTVM_APP_LIB:-}" ] && return 0
 __AGENTVM_APP_LIB=1
 
-AGENTVM_MIN_VERSION="0.6.14"
+AGENTVM_MIN_VERSION="0.7.11"
 
 # The app's own state, and where agent-vm's installer puts the link to the newest agent-vm.
 agentvm_support_dir="$HOME/Library/Application Support/AgentVM"
@@ -57,6 +57,24 @@ agentvm_too_old=3
 # false stays "false": `// "-"` would replace it too.
 agentvm_jq_defs='def cell: if . == null then "-" else tostring | gsub("[\t\n\r]"; " ") | if . == "" then "-" else . end end;
 def row: map(cell) | join("\t");'
+
+# The three cells that say what an image or a box runs, from its guest, agent-vm's words for its
+# system, its macOS version and its Linux system:
+#   guest         macos or linux. An entry that does not say is macOS, as agent-vm reads a record
+#                 from before it knew Linux.
+#   system        agent-vm's words: "macOS 27.0.1 (26A434)", "Debian GNU/Linux 13 (trixie)".
+#   systemShort   for a card or a table: "macOS 27.0.1"; for Linux the distribution with its
+#                 first letter in upper case and its version ("Debian 13"), which is how agent-vm's
+#                 own lists write it; agent-vm's words when the entry has neither.
+agentvm_jq_guest_defs='
+def guest_cells($guest; $system; $macos; $linux):
+    ($guest // "macos") as $kind
+    | (($linux.distribution // "") | if . == "" then null else (.[0:1] | ascii_upcase) + .[1:] end) as $name
+    | [$kind, $system,
+       (if $kind == "linux" and $name != null then
+            (if ($linux.version // "") == "" then $name else "\($name) \($linux.version)" end)
+        elif $kind != "linux" and ($macos // "") != "" then "macOS \($macos)"
+        else $system end)];'
 
 # agentvm_setting <key>  ->  that string from settings.json, or nothing.
 # Reads only: a missing or malformed file, or a value that is not a string, is nothing.
@@ -330,17 +348,21 @@ agentvm_status_checked() {
 #   13 disposable (true or false)   14 statusError   15 cpus   16 memoryGB   17 path
 #   18 needs (kinds, comma-joined: recreate, when its image is no longer what the box was made
 #      from; agent-vm says nothing for a box made before it recorded what it compares)
-#   19 macOSVersion   20 macOSBuild (what the box was made with)   21 createdAt
+#   19 macOSVersion   20 macOSBuild (what the box was made with; "-" for a Linux box)
+#   21 createdAt
 #   22 why it needs recreating: guest-update (the image's guest daemon was replaced),
-#      image-updated (macOS or the tools in it were updated) or image-rebuilt (another image was
-#      built under the name)
+#      image-updated (the system or the tools in it were updated) or image-rebuilt (another image
+#      was built under the name)
+#   23 guest (macos or linux)   24 system (agent-vm's words for what the box runs)
+#   25 the system in short ("macOS 27.0.1", "Debian 13"), as agentvm_jq_guest_defs forms it
 # The running fields (6-12) are "-" for a stopped box.
 agentvm_status_box_rows() {
-    /usr/bin/jq -r "$agentvm_jq_defs$agentvm_jq_box_defs"' .boxes[] | box_cells | row'
+    /usr/bin/jq -r "$agentvm_jq_defs$agentvm_jq_guest_defs$agentvm_jq_box_defs"' .boxes[] | box_cells | row'
 }
 
-# The 22 cells of a box, as agentvm_status_box_rows documents them: `status` gives each box's
-# entry, and `box info` the same entry with its sizes.
+# The 25 cells of a box, as agentvm_status_box_rows documents them: `status` gives each box's
+# entry, and `box info` the same entry with its sizes. The guest is said beside the box's record
+# for every box, and inside it for a Linux box only.
 agentvm_jq_box_defs='
 def box_cells: [
     .box.name, .state, .box.image,
@@ -351,7 +373,8 @@ def box_cells: [
     .path,
     (.needs // [] | map(.kind) | if length == 0 then null else join(",") end),
     .box.macOSVersion, .box.macOSBuild, .box.createdAt,
-    ([.needs // [] | .[] | select(.kind == "recreate") | .reason][0]) ];'
+    ([.needs // [] | .[] | select(.kind == "recreate") | .reason][0]) ]
+    + guest_cells(.guest // .box.guest; .system; .box.macOSVersion; .box.linux);'
 
 # agentvm_box_info <name>  ->  `agent-vm box info <name> --json`: the box's status entry and what
 # its disk takes, which agent-vm measures (about 0.1 s), so it is read for the selected box only
@@ -362,10 +385,10 @@ agentvm_box_info() {
     agentvm_json box info "$1"
 }
 
-# agentvm_box_info_row  <  box info JSON  ->  one row: fields 1-22 as agentvm_status_box_rows,
-# then 23 bytes (the space the box takes)   24 unsharedBytes (what deleting it frees).
+# agentvm_box_info_row  <  box info JSON  ->  one row: fields 1-25 as agentvm_status_box_rows,
+# then 26 bytes (the space the box takes)   27 unsharedBytes (what deleting it frees).
 agentvm_box_info_row() {
-    /usr/bin/jq -r "$agentvm_jq_defs$agentvm_jq_box_defs"' box_cells + [.diskUsage.bytes, .diskUsage.unsharedBytes] | row'
+    /usr/bin/jq -r "$agentvm_jq_defs$agentvm_jq_guest_defs$agentvm_jq_box_defs"' box_cells + [.diskUsage.bytes, .diskUsage.unsharedBytes] | row'
 }
 
 # agentvm_box_view <name> [interactive]  ->  0 once the box's supervisor shows its screen in a
@@ -632,27 +655,32 @@ agentvm_avm_file() {
 
 # agentvm_status_image_rows  <  status JSON  ->  one row per image:
 #    1 name   2 state (installing, installed, provisioning, ready, failed)   3 failure
-#    4 macOS (its version)   5 macOSBuild   6 basedOn (the image it was built from; "-" for one
-#    built from a restore file)   7 recipe (the recipe's description)   8 needs (kinds,
-#    comma-joined: guest-update, full-disk-access)   9 guestVersion   10 createdAt   11 path
+#    4 macOS (its version)   5 macOSBuild (both "-" for a Linux image)   6 basedOn (the image it
+#    was built from; "-" for one built from a restore file or a Linux cloud image)
+#    7 recipe (the recipe's description)   8 needs (kinds, comma-joined: guest-update,
+#    full-disk-access)   9 guestVersion   10 createdAt   11 path
+#   12 guest (macos or linux)   13 system (agent-vm's words for what the image runs)
+#   14 the system in short ("macOS 27.0.1", "Debian 13"), as agentvm_jq_guest_defs forms it
 agentvm_status_image_rows() {
-    /usr/bin/jq -r "$agentvm_jq_defs$agentvm_jq_image_defs"' .images[] | image_cells | row'
+    /usr/bin/jq -r "$agentvm_jq_defs$agentvm_jq_guest_defs$agentvm_jq_image_defs"' .images[] | image_cells | row'
 }
 
-# The first eleven cells of an image, as agentvm_status_image_rows documents them: `status`
+# The first fourteen cells of an image, as agentvm_status_image_rows documents them: `status`
 # gives each image's record, and `image info` the same record with its sizes.
 agentvm_jq_image_defs='
 def image_cells: [
     .name, .state, .failure, .macOSVersion, .macOSBuild, .derivedFrom.image,
     .recipe.description,
     (.needs // [] | map(.kind) | if length == 0 then null else join(",") end),
-    .guestVersion, .createdAt, .path ];'
+    .guestVersion, .createdAt, .path ]
+    + guest_cells(.guest; .system; .macOSVersion; .linux);'
 
 # agentvm_status_update_rows  <  status JSON  ->  one row per image, with what an update of it
 # would find and what the last one did:
 #    1 name   2 revision (how often an update changed its disk; "-" for never)   3 updatedAt
-#    4 macOSCheckedAt (when an update of the image last asked Apple)   5 toolsCheckedAt (when
-#    one last ran its recipes' update steps)
+#    4 when an update of the image last looked for a newer system (macOSCheckedAt: it asked
+#      Apple; for a Linux image systemCheckedAt: it asked the distribution's package servers)
+#    5 toolsCheckedAt (when one last ran its recipes' update steps)
 #    6 the newer macOS it can take, by what `status --check-updates` last learned ("-" when it
 #      is not behind, or nothing was learned)   7 that macOS's build   8 when that was learned
 #    9 the recipes it keeps (names, comma-joined, in the order they ran; "-" for an image built
@@ -660,14 +688,16 @@ def image_cells: [
 #   10 updating (true while an agent-vm command changes the image: an update or a setup, started
 #      as a job or not)
 #   11 what its guest daemon lacks (features, comma-joined; "-" when nothing)
+#   12 guest (macos or linux)
 agentvm_status_update_rows() {
     /usr/bin/jq -r "$agentvm_jq_defs"' .images[] | [
-        .name, .revision, .updatedAt, .macOSCheckedAt, .toolsCheckedAt,
+        .name, .revision, .updatedAt, (.macOSCheckedAt // .systemCheckedAt), .toolsCheckedAt,
         .macOSUpdate.version, .macOSUpdate.build, .macOSUpdate.checkedAt,
         ([.recipes // [] | .[] | select(.folder != null) | .name // .folder] | if length == 0 then null else join(",") end),
         (.updating // false),
         ([.needs // [] | .[] | select(.kind == "guest-update") | .missing // [] | .[]]
-            | if length == 0 then null else join(",") end) ] | row'
+            | if length == 0 then null else join(",") end),
+        (.guest // "macos") ] | row'
 }
 
 # agentvm_status_newest_row  <  status JSON  ->  version, build, checkedAt, error: the newest macOS
@@ -685,16 +715,20 @@ agentvm_image_info() {
     agentvm_json image info "$1"
 }
 
-# agentvm_image_info_row  <  image info JSON  ->  one row: fields 1-11 as agentvm_status_image_rows,
+# agentvm_image_info_row  <  image info JSON  ->  one row: fields 1-14 as agentvm_status_image_rows,
 # then
-#   12 guestFeatures (comma-joined)   13 missing (the features a guest update would add,
-#      comma-joined)   14 provisionSeconds (how long the build took, whole seconds)
-#   15 fullDiskAccess (granted, not-granted, or "-" when it was never checked)   16 its checkedAt
-#   17 commandLineTools   18 cpus   19 memoryGB   20 bytes (the space the image takes)
-#   21 unsharedBytes (what deleting it frees)   22 addedBytes (what it added over the image it
+#   15 guestFeatures (comma-joined)   16 missing (the features a guest update would add,
+#      comma-joined)   17 provisionSeconds (how long the build took, whole seconds)
+#   18 fullDiskAccess (granted, not-granted, or "-" when it was never checked, and for a Linux
+#      image, which has none to grant)   19 its checkedAt
+#   20 commandLineTools   21 cpus   22 memoryGB   23 bytes (the space the image takes)
+#   24 unsharedBytes (what deleting it frees)   25 addedBytes (what it added over the image it
 #      was built from)
+#   26 the Linux release it was first built from ("debian-13"; "-" for a macOS image, and for a
+#      cloud image file of the user's own)   27 that cloud image's build, when the distribution
+#      names one   28 its file's name
 agentvm_image_info_row() {
-    /usr/bin/jq -r "$agentvm_jq_defs$agentvm_jq_image_defs"' image_cells + [
+    /usr/bin/jq -r "$agentvm_jq_defs$agentvm_jq_guest_defs$agentvm_jq_image_defs"' image_cells + [
         (.guestFeatures // [] | if length == 0 then null else join(",") end),
         ([.needs // [] | .[] | select(.kind == "guest-update") | .missing // [] | .[]]
             | if length == 0 then null else join(",") end),
@@ -702,7 +736,8 @@ agentvm_image_info_row() {
         (if .fullDiskAccess == null then null elif .fullDiskAccess.granted then "granted" else "not-granted" end),
         .fullDiskAccess.checkedAt, .commandLineTools,
         .cpuCount, (if .memoryBytes == null then null else .memoryBytes / 1073741824 | floor end),
-        .diskUsage.bytes, .diskUsage.unsharedBytes, .addedOverBase.bytes ] | row'
+        .diskUsage.bytes, .diskUsage.unsharedBytes, .addedOverBase.bytes,
+        .base.release, .base.build, .base.file ] | row'
 }
 
 # agentvm_image_delete <name>  ->  0 when agent-vm deleted the image and its disk. agent-vm
@@ -713,11 +748,16 @@ agentvm_image_delete() {
     agentvm_json image delete "$1" >/dev/null
 }
 
-# agentvm_status_vm_row  <  status JSON  ->  count, limit: the virtual machines running on this
-# Mac (any application's, image builds included) and how many macOS guests can run at once.
-# count is "-" when agent-vm could not list processes.
+# agentvm_status_vm_row  <  status JSON  ->  count, limit, linuxBoxes, linuxImages: the virtual
+# machines running on this Mac (any application's, image builds included), how many macOS guests
+# can run at once, and how many of the count are this store's running Linux boxes and its Linux
+# images being built or updated: the limit concerns neither, so the macOS guests are the count
+# less both. Each is 0 when agent-vm does not say (agent-vm 0.7.11 says only the boxes, and so
+# counts a Linux image being built as a macOS guest). count is "-" when agent-vm could not list
+# processes.
 agentvm_status_vm_row() {
-    /usr/bin/jq -r "$agentvm_jq_defs"' [.runningVMs.count, .runningVMs.limit] | row'
+    /usr/bin/jq -r "$agentvm_jq_defs"' [.runningVMs.count, .runningVMs.limit,
+        (.runningVMs.linuxBoxes // 0), (.runningVMs.linuxImages // 0)] | row'
 }
 
 # -- Jobs ----------------------------------------------------------------------------------------
@@ -908,15 +948,19 @@ agentvm_job_forget() {
 #      image built before agent-vm listed them)
 #    9 its recipe's description   10 its Command Line Tools   11 needs (kinds, comma-joined)
 #   12 the descriptions of the recipes it keeps, joined with "; " ("-" for none)
+#   13 guest (macos or linux)   14 the system in short ("macOS 27.0.1", "Debian 13"), as
+#      agentvm_jq_guest_defs forms it
+# Field 4 is "-" for a Linux image.
 agentvm_status_build_rows() {
-    /usr/bin/jq -r "$agentvm_jq_defs"' .images[] | [
+    /usr/bin/jq -r "$agentvm_jq_defs$agentvm_jq_guest_defs"' .images[] | [
         .name, .state, (.updating // false), .macOSVersion, .cpuCount,
         (if .memoryBytes == null then null else .memoryBytes / 1073741824 | floor end),
         (if .diskBytes == null then null else .diskBytes / 1073741824 | floor end),
         ([.recipes // [] | .[] | select(.folder != null) | .name // empty] | if length == 0 then null else join(",") end),
         .recipe.description, .commandLineTools,
         (.needs // [] | map(.kind) | if length == 0 then null else join(",") end),
-        ([.recipes // [] | .[] | .description // empty] | if length == 0 then null else join("; ") end) ] | row'
+        ([.recipes // [] | .[] | .description // empty] | if length == 0 then null else join("; ") end) ]
+        + (guest_cells(.guest; .system; .macOSVersion; .linux) | [.[0], .[2]]) | row'
 }
 
 # agentvm_ipsw_list  ->  `agent-vm image fetch-ipsw --list --json`: the macOS restore files
@@ -1026,12 +1070,14 @@ agentvm_recipe_check() {
 #    files it asks for   4 how many parameters it has   5 the path, as it was given
 #    6 why a build would refuse it ("-" when it would not)   7 how many warnings
 #    8 the first warning, as "place: message"
+#    9 the guest it is for: macos, linux, or any for both ("-" for one agent-vm refuses)
 # The first five are a row as agentvm_recipe_rows gives one.
 agentvm_recipe_check_rows() {
     /usr/bin/jq -r "$agentvm_jq_defs"'
         .recipes[] | (.warnings // []) as $warnings
         | [.name, .description, (.inputs // [] | length), (.parameters // [] | length), .path, .error,
-           ($warnings | length), ($warnings[0] | if . == null then null else "\(.place): \(.message)" end)]
+           ($warnings | length), ($warnings[0] | if . == null then null else "\(.place): \(.message)" end),
+           .guest]
         | row' 2>/dev/null
 }
 

@@ -1,0 +1,270 @@
+{
+  "boxes": [
+    {
+      "box": {
+        "cpuCount": 4,
+        "createdAt": "2026-10-07T20:20:27Z",
+        "formatVersion": 3,
+        "guest": "linux",
+        "guestDigest": "b168000dc02dcda03446afab25cf87c56c01258fbdbb07ce19b1c853bf7e7908",
+        "guestProtocol": 1,
+        "guestVersion": "0.7.4",
+        "image": "deb",
+        "imageCreatedAt": "2026-10-07T19:48:23Z",
+        "imageRevision": 0,
+        "linux": {
+          "architecture": "arm64",
+          "distribution": "debian",
+          "kernel": "6.12.111+deb13-cloud-arm64",
+          "name": "Debian GNU/Linux 13 (trixie)",
+          "version": "13"
+        },
+        "macAddress": "1e:84:c1:de:7b:fe",
+        "memoryBytes": 4294967296,
+        "name": "lb",
+        "network": {
+          "allow": [
+            "pack:debian",
+            "example.com"
+          ],
+          "mode": "allowlist"
+        },
+        "userName": "agent"
+      },
+      "guest": "linux",
+      "needs": [],
+      "path": "/Users/you/Library/Application Support/agent-vm/Boxes/lb",
+      "running": false,
+      "state": "stopped",
+      "system": "Debian GNU/Linux 13 (trixie)"
+    }
+  ],
+  "images": [
+    {
+      "base": {
+        "file": "debian-13-genericcloud-arm64.tar.xz",
+        "release": "debian-13",
+        "sha512": "e5db094f06e3b60ccb747df6a136b72ad2c215c5fe6b810eb1f0219e022bdeb0533937a6259e17610988ecde466613817b7abeb8b9db3a45f0d316be4bdbaf39"
+      },
+      "commandLineTools": "build-essential 12.12",
+      "cpuCount": 4,
+      "createdAt": "2026-10-07T19:48:23Z",
+      "createdBy": "0.7.4",
+      "diskBytes": 34359738368,
+      "formatVersion": 3,
+      "guest": "linux",
+      "guestDigest": "b168000dc02dcda03446afab25cf87c56c01258fbdbb07ce19b1c853bf7e7908",
+      "guestFeatures": [
+        "terminal",
+        "time-sync",
+        "terminal-pixels"
+      ],
+      "guestProtocol": 1,
+      "guestVersion": "0.7.4",
+      "installSeconds": 7.126963917,
+      "linux": {
+        "architecture": "arm64",
+        "distribution": "debian",
+        "kernel": "6.12.111+deb13-cloud-arm64",
+        "name": "Debian GNU/Linux 13 (trixie)",
+        "version": "13"
+      },
+      "macAddress": "de:39:4b:8c:72:e9",
+      "memoryBytes": 4294967296,
+      "name": "deb",
+      "needs": [],
+      "path": "/Users/you/Library/Application Support/agent-vm/Images/deb",
+      "provisionSeconds": 38.065587333,
+      "state": "ready",
+      "system": "Debian GNU/Linux 13 (trixie)",
+      "systemCheckedAt": "2026-10-07T19:49:09Z",
+      "userName": "agent"
+    },
+    {
+      "base": {
+        "file": "debian-13-genericcloud-arm64.tar.xz",
+        "release": "debian-13",
+        "sha512": "e5db094f06e3b60ccb747df6a136b72ad2c215c5fe6b810eb1f0219e022bdeb0533937a6259e17610988ecde466613817b7abeb8b9db3a45f0d316be4bdbaf39"
+      },
+      "commandLineTools": "build-essential 12.12",
+      "cpuCount": 4,
+      "createdAt": "2026-10-07T23:27:03Z",
+      "createdBy": "0.7.9",
+      "derivedFrom": {
+        "image": "deb"
+      },
+      "diskBytes": 34359738368,
+      "formatVersion": 3,
+      "guest": "linux",
+      "guestDigest": "ed38a29a7132d42f87248e0d271d530dac7b2888984c3272f38b069d5c040d12",
+      "guestFeatures": [
+        "terminal",
+        "time-sync",
+        "terminal-pixels"
+      ],
+      "guestProtocol": 1,
+      "guestVersion": "0.7.9",
+      "linux": {
+        "architecture": "arm64",
+        "distribution": "debian",
+        "kernel": "6.12.111+deb13-cloud-arm64",
+        "name": "Debian GNU/Linux 13 (trixie)",
+        "version": "13"
+      },
+      "macAddress": "4e:36:cd:ae:91:80",
+      "memoryBytes": 4294967296,
+      "name": "deb-agents",
+      "needs": [],
+      "path": "/Users/you/Library/Application Support/agent-vm/Images/deb-agents",
+      "provisionSeconds": 24.207679542,
+      "recipe": {
+        "description": "Node and npm from nodejs.org, for Linux images; Claude Code, Codex and opencode (needs Node: put Recipes/node, or Recipes/linux-node in a Linux image, before it)",
+        "digest": "53352ad42e39d42988bc4038023c8cefeca78661ee74ade0549ddb0e286c371b",
+        "parameters": {
+          "major": "24"
+        }
+      },
+      "recipes": [
+        {
+          "description": "Node and npm from nodejs.org, for Linux images",
+          "digest": "1c8543887f910c45bc74c85b0153df1faaf106ed4d5f179c6ce51181e4d855c3",
+          "folder": "1-linux-node",
+          "name": "linux-node",
+          "parameters": {
+            "major": "24"
+          }
+        },
+        {
+          "description": "Claude Code, Codex and opencode (needs Node: put Recipes/node, or Recipes/linux-node in a Linux image, before it)",
+          "digest": "49313917a20f79053d20e8fcf45f1f472e5d0cf5f3327116465083beb524647c",
+          "folder": "2-agent-clis",
+          "name": "agent-clis"
+        }
+      ],
+      "state": "ready",
+      "system": "Debian GNU/Linux 13 (trixie)",
+      "systemCheckedAt": "2026-10-07T19:49:09Z",
+      "userName": "agent"
+    },
+    {
+      "base": {
+        "file": "resolute-server-cloudimg-arm64.img",
+        "release": "ubuntu-26.04",
+        "sha256": "63a93bd5a8d76e33b15ceb5daa3657bd79be804748051ab178e643b0f5da22e7",
+        "sha512": "28283759401fa6f3f46879a7ea71ebc2c94caa2a08ad0a5e612ee7210a74ef1a807b283bd3ab9dc98b4cd1962f4acfc20a3fe8394eca6fc5afab6fdf4cc98213"
+      },
+      "commandLineTools": "build-essential 12.12ubuntu2.26.04.2",
+      "cpuCount": 4,
+      "createdAt": "2026-10-08T02:56:20Z",
+      "createdBy": "0.7.11",
+      "diskBytes": 34359738368,
+      "formatVersion": 3,
+      "guest": "linux",
+      "guestDigest": "51775ba3f5fe6e2b7de100943b8b5ad44c9b394eba032cbc2553827dbf54f925",
+      "guestFeatures": [
+        "terminal",
+        "time-sync",
+        "terminal-pixels"
+      ],
+      "guestProtocol": 1,
+      "guestVersion": "0.7.11",
+      "installSeconds": 3.039121166,
+      "linux": {
+        "architecture": "arm64",
+        "distribution": "ubuntu",
+        "kernel": "7.0.0-34-generic",
+        "name": "Ubuntu 26.04.1 LTS",
+        "version": "26.04"
+      },
+      "macAddress": "92:45:3c:c4:cd:0b",
+      "memoryBytes": 4294967296,
+      "name": "ub",
+      "needs": [],
+      "path": "/Users/you/Library/Application Support/agent-vm/Images/ub",
+      "provisionSeconds": 124.999428375,
+      "state": "ready",
+      "system": "Ubuntu 26.04.1 LTS",
+      "systemCheckedAt": "2026-10-08T02:58:28Z",
+      "userName": "agent"
+    },
+    {
+      "base": {
+        "file": "resolute-server-cloudimg-arm64.img",
+        "release": "ubuntu-26.04",
+        "sha256": "63a93bd5a8d76e33b15ceb5daa3657bd79be804748051ab178e643b0f5da22e7",
+        "sha512": "28283759401fa6f3f46879a7ea71ebc2c94caa2a08ad0a5e612ee7210a74ef1a807b283bd3ab9dc98b4cd1962f4acfc20a3fe8394eca6fc5afab6fdf4cc98213"
+      },
+      "commandLineTools": "build-essential 12.12ubuntu2.26.04.2",
+      "cpuCount": 4,
+      "createdAt": "2026-10-08T02:58:34Z",
+      "createdBy": "0.7.11",
+      "derivedFrom": {
+        "image": "ub"
+      },
+      "diskBytes": 34359738368,
+      "formatVersion": 3,
+      "guest": "linux",
+      "guestDigest": "51775ba3f5fe6e2b7de100943b8b5ad44c9b394eba032cbc2553827dbf54f925",
+      "guestFeatures": [
+        "terminal",
+        "time-sync",
+        "terminal-pixels"
+      ],
+      "guestProtocol": 1,
+      "guestVersion": "0.7.11",
+      "linux": {
+        "architecture": "arm64",
+        "distribution": "ubuntu",
+        "kernel": "7.0.0-34-generic",
+        "name": "Ubuntu 26.04.1 LTS",
+        "version": "26.04"
+      },
+      "macAddress": "e6:e0:8c:00:c0:fc",
+      "memoryBytes": 4294967296,
+      "name": "ub-agents",
+      "needs": [],
+      "path": "/Users/you/Library/Application Support/agent-vm/Images/ub-agents",
+      "provisionSeconds": 48.143265125,
+      "recipe": {
+        "description": "Node and npm from nodejs.org, for Linux images; Python with venv, pip, pipx and uv, for Linux images; Claude Code, Codex and opencode (needs Node: put Recipes/node, or Recipes/linux-node in a Linux image, before it)",
+        "digest": "8aa25e272836cfede953cef70646aa89971b5357f904f9a34c5addb2aa411b94",
+        "parameters": {
+          "major": "24"
+        }
+      },
+      "recipes": [
+        {
+          "description": "Node and npm from nodejs.org, for Linux images",
+          "digest": "1c8543887f910c45bc74c85b0153df1faaf106ed4d5f179c6ce51181e4d855c3",
+          "folder": "1-linux-node",
+          "name": "linux-node",
+          "parameters": {
+            "major": "24"
+          }
+        },
+        {
+          "description": "Python with venv, pip, pipx and uv, for Linux images",
+          "digest": "30ed41b766446469c057dd820cb91326e83ae8a1d2724d5868fc64788c427405",
+          "folder": "2-linux-python",
+          "name": "linux-python"
+        },
+        {
+          "description": "Claude Code, Codex and opencode (needs Node: put Recipes/node, or Recipes/linux-node in a Linux image, before it)",
+          "digest": "49313917a20f79053d20e8fcf45f1f472e5d0cf5f3327116465083beb524647c",
+          "folder": "3-agent-clis",
+          "name": "agent-clis"
+        }
+      ],
+      "state": "ready",
+      "system": "Ubuntu 26.04.1 LTS",
+      "systemCheckedAt": "2026-10-08T02:58:28Z",
+      "userName": "agent"
+    }
+  ],
+  "jobs": [],
+  "runningVMs": {
+    "count": 0,
+    "limit": 2,
+    "linuxBoxes": 0
+  }
+}

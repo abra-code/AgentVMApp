@@ -414,7 +414,7 @@ section "step 2: the network"
 check "what the image's agents need is allowed already, each rule as agent-vm reads it" "pack:anthropic pack:openai opencode.ai models.opencode.ai" "$(rules)"
 check "the line above says whose"    "What the box may reach. Image dev-agents holds Claude Code, Codex and opencode: what they need is allowed already." "$(ui_value "$NBOX_AGENTS_TEXT_ID")"
 check "the mode: allowlist, and what it lets through" "1|$ALLOWLIST_TEXT" "$(ui_value "$NBOX_MODE_ID")|$(ui_value "$NBOX_MODE_NOTE_ID")"
-check "the packs, in agent-vm's order" "anthropic|anthropic-connectors|apple-updates|github|homebrew|npm|openai|pypi|swiftpm" \
+check "the packs, in agent-vm's order" "anthropic|anthropic-connectors|apple-updates|debian|github|homebrew|npm|openai|pypi|swiftpm|ubuntu" \
     "$(ui_rows "$NBOX_PACKS_ID" | col 2 | /usr/bin/paste -sd '|' -)"
 check "the agents' packs are ticked, the others not" "checkmark.square.fill|square|checkmark.square.fill" \
     "$(ui_rows "$NBOX_PACKS_ID" | /usr/bin/awk -F'\t' '$2 == "anthropic" || $2 == "github" || $2 == "openai" { print $1 }' | /usr/bin/paste -sd '|' -)"

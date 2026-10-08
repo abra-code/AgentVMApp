@@ -1,0 +1,42 @@
+{
+  "box": {
+    "cpuCount": 4,
+    "createdAt": "2026-10-07T20:20:27Z",
+    "formatVersion": 3,
+    "guest": "linux",
+    "guestDigest": "b168000dc02dcda03446afab25cf87c56c01258fbdbb07ce19b1c853bf7e7908",
+    "guestProtocol": 1,
+    "guestVersion": "0.7.4",
+    "image": "deb",
+    "imageCreatedAt": "2026-10-07T19:48:23Z",
+    "imageRevision": 0,
+    "linux": {
+      "architecture": "arm64",
+      "distribution": "debian",
+      "kernel": "6.12.111+deb13-cloud-arm64",
+      "name": "Debian GNU/Linux 13 (trixie)",
+      "version": "13"
+    },
+    "macAddress": "1e:84:c1:de:7b:fe",
+    "memoryBytes": 4294967296,
+    "name": "lb",
+    "network": {
+      "allow": [
+        "pack:debian",
+        "example.com"
+      ],
+      "mode": "allowlist"
+    },
+    "userName": "agent"
+  },
+  "diskUsage": {
+    "bytes": 2044194816,
+    "unsharedBytes": 159846400
+  },
+  "guest": "linux",
+  "needs": [],
+  "path": "/Users/you/Library/Application Support/agent-vm/Boxes/lb",
+  "running": false,
+  "state": "stopped",
+  "system": "Debian GNU/Linux 13 (trixie)"
+}

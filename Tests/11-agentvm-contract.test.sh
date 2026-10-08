@@ -158,10 +158,11 @@ check "recipes it accepts: status 0" "0" "$?"
 printf '%s\n' "$answer" > "$OMCTEST_WORK/recipe-check.json"
 check "  every field the fixture has" "" "$(missing_paths "$FIXTURES_AGENTVM/recipe-check.json" "$OMCTEST_WORK/recipe-check.json")"
 rows="$(printf '%s\n' "$answer" | lib agentvm_recipe_check_rows)"
-check "  eight fields in every row"  "8" "$(printf '%s\n' "$rows" | field_count)"
+check "  nine fields in every row"   "9" "$(printf '%s\n' "$rows" | field_count)"
 check "  the name, what is asked for, the path as given, and no mistake" \
     "xcode${TAB}1${TAB}0${TAB}$TEST_RECIPES/xcode/recipe.json${TAB}-|xcode-platforms${TAB}0${TAB}2${TAB}$TEST_RECIPES/xcode-platforms/recipe.json${TAB}-|" \
     "$(printf '%s\n' "$rows" | /usr/bin/cut -f1,3-6 | /usr/bin/tr '\n' '|')"
+check "  a recipe that names no guest is for macOS" "macos macos" "$(printf '%s\n' "$rows" | col 9 | /usr/bin/paste -sd ' ' -)"
 check "  nothing refused in them together" "" "$(printf '%s\n' "$answer" | lib agentvm_recipe_check_error)"
 answer="$(real_lib agentvm_recipe_check "$BAD/broken.json" "$BAD/team tools/recipe.json" "$BAD/none.json" "$TEST_RECIPES/node/recipe.json")"
 check "recipes it refuses: status 1, with the answer" "1" "$?"
@@ -182,5 +183,36 @@ check "  a recipe's name: its folder's or its file's, dashes for what cannot be 
     "team-tools|Extra-Things|recipe|noext|a123456789b123456789c123456789d123456789|" "$real_names"
 check "  the fake names them alike" "$real_names" \
     "$(with_fake agentvm_recipe_check "$BAD/team tools/recipe.json" "$BAD/Extra Things.json" "$BAD/---/recipe.json" "$BAD/noext" "$BAD/a123456789b123456789c123456789d123456789e123456789.json" | lib agentvm_recipe_check_rows | col 1 | /usr/bin/tr '\n' '|')"
+# The guest a recipe is for decides which images the New Image window offers it for, and the other
+# tests get it from the fake: the two must read a file alike, and refuse one alike.
+GUESTS="$OMCTEST_WORK/Guest Recipes"
+/bin/mkdir -p "$GUESTS/for-linux" "$GUESTS/for-both" "$GUESTS/for-macos" "$GUESTS/says-nothing" "$GUESTS/for-windows"
+printf '{ "version": 1, "guest": "linux" }\n' > "$GUESTS/for-linux/recipe.json"
+printf '{ "version": 1, "guest": "any" }\n' > "$GUESTS/for-both/recipe.json"
+printf '{ "version": 1, "guest": "macos" }\n' > "$GUESTS/for-macos/recipe.json"
+printf '{ "version": 1 }\n' > "$GUESTS/says-nothing/recipe.json"
+printf '{ "version": 1, "guest": "windows" }\n' > "$GUESTS/for-windows/recipe.json"
+# guests_of <real_lib|with_fake>  ->  each of those recipes with its guest, and why the last is refused.
+guests_of() {
+    "$1" agentvm_recipe_check "$GUESTS/for-linux/recipe.json" "$GUESTS/for-both/recipe.json" "$GUESTS/for-macos/recipe.json" \
+            "$GUESTS/says-nothing/recipe.json" "$GUESTS/for-windows/recipe.json" \
+        | lib agentvm_recipe_check_rows | /usr/bin/awk -F'\t' '{ printf "%s:%s:%s|", $1, $9, $6 }'
+}
+real_guests="$(guests_of real_lib)"
+check "  a recipe's guest: linux, any, macos, macos for one that says nothing, and a refusal of any other word" \
+    'for-linux:linux:-|for-both:any:-|for-macos:macos:-|says-nothing:macos:-|-:-:"guest" must be one of "macos", "linux", "any"; leave it out for a macOS recipe|' \
+    "$real_guests"
+check "  the fake reads and refuses them alike" "$real_guests" "$(guests_of with_fake)"
+
+section "what agent-vm says of Linux, as far as an empty store shows it"
+# A Linux image or box cannot be had here: it takes a download and a virtual machine. The keys
+# below are the ones that an empty store and no network still show.
+check "version --json names the Linux guest daemon it installs" "string string" \
+    "$(/usr/bin/jq -r '[(.linuxGuestDaemon.digest | type), (.linuxGuestDaemon.path | type)] | join(" ")' "$OMCTEST_WORK/version.json")"
+check "status counts the Linux boxes among the running virtual machines" "number" \
+    "$(/usr/bin/jq -r '.runningVMs.linuxBoxes | type' "$OMCTEST_WORK/status.json")"
+check "  and the library reads none on an empty store" "0" "$(printf '%s\n' "$vm_row" | col 3)"
+check "doctor counts them too, in its running VMs check" "number" \
+    "$(/usr/bin/jq -r '.checks[] | select(.name == "running VMs") | .linuxBoxes | type' "$OMCTEST_WORK/doctor.json")"
 
 omctest_end

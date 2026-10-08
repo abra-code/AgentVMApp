@@ -1,0 +1,74 @@
+{
+  "addedOverBase": {
+    "bytes": 1704382464,
+    "image": "deb"
+  },
+  "base": {
+    "file": "debian-13-genericcloud-arm64.tar.xz",
+    "release": "debian-13",
+    "sha512": "e5db094f06e3b60ccb747df6a136b72ad2c215c5fe6b810eb1f0219e022bdeb0533937a6259e17610988ecde466613817b7abeb8b9db3a45f0d316be4bdbaf39"
+  },
+  "commandLineTools": "build-essential 12.12",
+  "cpuCount": 4,
+  "createdAt": "2026-10-07T23:27:03Z",
+  "createdBy": "0.7.9",
+  "derivedFrom": {
+    "image": "deb"
+  },
+  "diskBytes": 34359738368,
+  "diskUsage": {
+    "bytes": 3572355072,
+    "unsharedBytes": 1704493056
+  },
+  "formatVersion": 3,
+  "guest": "linux",
+  "guestDigest": "ed38a29a7132d42f87248e0d271d530dac7b2888984c3272f38b069d5c040d12",
+  "guestFeatures": [
+    "terminal",
+    "time-sync",
+    "terminal-pixels"
+  ],
+  "guestProtocol": 1,
+  "guestVersion": "0.7.9",
+  "linux": {
+    "architecture": "arm64",
+    "distribution": "debian",
+    "kernel": "6.12.111+deb13-cloud-arm64",
+    "name": "Debian GNU/Linux 13 (trixie)",
+    "version": "13"
+  },
+  "macAddress": "4e:36:cd:ae:91:80",
+  "memoryBytes": 4294967296,
+  "name": "deb-agents",
+  "needs": [],
+  "path": "/Users/you/Library/Application Support/agent-vm/Images/deb-agents",
+  "provisionSeconds": 24.207679542,
+  "recipe": {
+    "description": "Node and npm from nodejs.org, for Linux images; Claude Code, Codex and opencode (needs Node: put Recipes/node, or Recipes/linux-node in a Linux image, before it)",
+    "digest": "53352ad42e39d42988bc4038023c8cefeca78661ee74ade0549ddb0e286c371b",
+    "parameters": {
+      "major": "24"
+    }
+  },
+  "recipes": [
+    {
+      "description": "Node and npm from nodejs.org, for Linux images",
+      "digest": "1c8543887f910c45bc74c85b0153df1faaf106ed4d5f179c6ce51181e4d855c3",
+      "folder": "1-linux-node",
+      "name": "linux-node",
+      "parameters": {
+        "major": "24"
+      }
+    },
+    {
+      "description": "Claude Code, Codex and opencode (needs Node: put Recipes/node, or Recipes/linux-node in a Linux image, before it)",
+      "digest": "49313917a20f79053d20e8fcf45f1f472e5d0cf5f3327116465083beb524647c",
+      "folder": "2-agent-clis",
+      "name": "agent-clis"
+    }
+  ],
+  "state": "ready",
+  "system": "Debian GNU/Linux 13 (trixie)",
+  "systemCheckedAt": "2026-10-07T19:49:09Z",
+  "userName": "agent"
+}
