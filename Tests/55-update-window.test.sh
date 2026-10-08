@@ -126,9 +126,9 @@ select_image latest-test
 check "a failed image cannot be updated" "0" "$(enabled "$MAIN_IMAGE_UPDATE_ID")"
 select_image dev
 check "a ready image can"            "1" "$(enabled "$MAIN_IMAGE_UPDATE_ID")"
-check "  and its macOS row says when it was last updated" "27.0 (26A428), updated Sep 30, 2026" "$(ui_value "$MAIN_IMAGE_MACOS_ID")"
+check "  and its System row says when it was last updated" "macOS 27.0 (26A428), updated Sep 30, 2026" "$(ui_value "$MAIN_IMAGE_SYSTEM_ID")"
 select_image dev-acp
-check "one never updated says only its macOS" "27.0 (26A428)" "$(ui_value "$MAIN_IMAGE_MACOS_ID")"
+check "one never updated says only its system" "macOS 27.0 (26A428)" "$(ui_value "$MAIN_IMAGE_SYSTEM_ID")"
 omc_run AgentVM.main.image.update
 check "it asks for an update window" "1" "$(chain_asked AgentVM.update)"
 check "  for the selected image, from this run of the app" "$APP_PID update:dev-acp" "$(request)"

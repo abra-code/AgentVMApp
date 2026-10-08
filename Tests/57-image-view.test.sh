@@ -112,6 +112,18 @@ check "an image another command is changing cannot" "0" "$(enabled "$MAIN_IMAGE_
 : > "$FAKE_AGENTVM_DIR/log"
 omc_run AgentVM.main.image.view
 check "  and the handler, which reads status itself, starts nothing" "" "$(started)"
+# A Linux image has no screen, and agent-vm refuses to show one: the store with both kinds.
+/bin/cp "$FIXTURES_AGENTVM/status-mixed.json" "$FAKE_AGENTVM_DIR/status.json"
+omc_run AgentVM.main.activated
+select_image deb
+check "a ready Linux image cannot: View is neither shown nor on" "0 0" \
+    "$(ui_visible "$MAIN_IMAGE_VIEW_ID") $(enabled "$MAIN_IMAGE_VIEW_ID")"
+: > "$FAKE_AGENTVM_DIR/log"
+omc_run AgentVM.main.image.view
+check "  and the handler starts nothing for it" "" "$(started)"
+select_image dev-acp
+check "  a ready macOS image in the same store can, and View is shown again" "1 1" \
+    "$([ "$(ui_visible "$MAIN_IMAGE_VIEW_ID")" = "1" ] && echo 1 || echo 0) $(enabled "$MAIN_IMAGE_VIEW_ID")"
 store '.'
 omc_run AgentVM.main.activated
 

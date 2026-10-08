@@ -327,6 +327,89 @@ check "  not a number: nothing"        ""        "$(ui ui_duration_text 1.5)"
 check "a day, no leading space"        "Sep 3, 2026" "$(ui ui_date_text 2026-09-03T12:00:00Z)"
 check "  not agent-vm's form: nothing" ""        "$(ui ui_date_text yesterday)"
 
+# -----------------------------------------------------------------------------------------------
+section "a Linux image"
+# The store with both kinds. `image info` is answered for deb-agents, the image the Linux capture
+# measured; any other Linux image is not found until a test leaves its answer.
+visible() {
+    [ "$(ui_visible "$1")" = "1" ] && echo 1 || echo 0
+}
+fake_reset
+/bin/cp "$FIXTURES_AGENTVM/status-mixed.json" "$FAKE_AGENTVM_DIR/status.json"
+/bin/cp "$FIXTURES_AGENTVM/image-info-linux.json" "$FAKE_AGENTVM_DIR/image-info-deb-agents.json"
+open_window
+select_image deb-agents
+check_status "the handler exits cleanly" 0
+check "its system, in agent-vm's words" "Debian GNU/Linux 13 (trixie)" "$(ui_value "$MAIN_IMAGE_SYSTEM_ID")"
+check "what it was built from"  "deb" "$(ui_value "$MAIN_IMAGE_BASE_ID")"
+check "its tools: its recipes and the compiler" \
+    "Node and npm from nodejs.org, for Linux images; Claude Code, Codex and opencode (needs Node: put Recipes/node, or Recipes/linux-node in a Linux image, before it); build-essential 12.12" \
+    "$(ui_value "$MAIN_IMAGE_TOOLS_ID")"
+check "the guest daemon and its three features" "0.7.9: terminal, time-sync, terminal-pixels" "$(ui_value "$MAIN_IMAGE_GUEST_ID")"
+check "Full Disk Access is not needed, and the row says so" "not needed: a Linux image has no such permission" "$(ui_value "$MAIN_IMAGE_FDA_ID")"
+check "  with no Set Up..., shown or on" "0 0" "$(ui_visible "$MAIN_IMAGE_ACCESS_ID") $(enabled "$MAIN_IMAGE_ACCESS_ID")"
+check "no View either: a Linux image has no screen" "0 0" "$(ui_visible "$MAIN_IMAGE_VIEW_ID") $(enabled "$MAIN_IMAGE_VIEW_ID")"
+check "Update, New Image and New Box are on" "1 1 1" \
+    "$(enabled "$MAIN_IMAGE_UPDATE_ID") $(enabled "$MAIN_IMAGE_DERIVE_ID") $(enabled "$MAIN_IMAGE_BOX_ID")"
+check "processors and memory"   "4 CPUs, 4 GB" "$(ui_value "$MAIN_IMAGE_HARDWARE_ID")"
+check "the space: all, its own, and what it added over its base" \
+    "3.6 GB; 1.7 GB its own (what Delete frees); 1.7 GB added over deb" "$(ui_value "$MAIN_IMAGE_SPACE_ID")"
+check "the day it was made, and how long the build took" "Oct 7, 2026, built in 24 s" "$(ui_value "$MAIN_IMAGE_CREATED_ID")"
+select_image deb
+check "one built from no image, before agent-vm measured it: a cloud image, and nothing known of its tools" \
+    "a cloud image|the system only" "$(ui_value "$MAIN_IMAGE_BASE_ID")|$(ui_value "$MAIN_IMAGE_TOOLS_ID")"
+check "  Full Disk Access is not needed whether it was measured or not" \
+    "not needed: a Linux image has no such permission" "$(ui_value "$MAIN_IMAGE_FDA_ID")"
+check "  the box made from it, and the image built from it" "lb (stopped)|deb-agents" \
+    "$(ui_value "$MAIN_IMAGE_BOXES_ID")|$(ui_value "$MAIN_IMAGE_DERIVED_ID")"
+/usr/bin/jq '.name = "deb" | del(.derivedFrom) | del(.recipe) | del(.recipes) | del(.addedOverBase) | .base.build = "20261001-2618"' \
+    "$FIXTURES_AGENTVM/image-info-linux.json" > "$FAKE_AGENTVM_DIR/image-info-deb.json"
+select_image deb-agents
+select_image deb
+check "  once measured: the cloud image's file and its build, and the compiler as its tools" \
+    "the cloud image debian-13-genericcloud-arm64.tar.xz, build 20261001-2618|build-essential 12.12" \
+    "$(ui_value "$MAIN_IMAGE_BASE_ID")|$(ui_value "$MAIN_IMAGE_TOOLS_ID")"
+/usr/bin/jq '.name = "deb" | del(.derivedFrom) | del(.base.build)' \
+    "$FIXTURES_AGENTVM/image-info-linux.json" > "$FAKE_AGENTVM_DIR/image-info-deb.json"
+select_image deb-agents
+select_image deb
+check "  a cloud image whose distribution names no build: its file alone" \
+    "the cloud image debian-13-genericcloud-arm64.tar.xz" "$(ui_value "$MAIN_IMAGE_BASE_ID")"
+# The handler behind Set Up..., run as a URL naming it would run it: the button is not shown.
+chains_reset
+omc_run AgentVM.main.image.access
+check "Set Up..., however it came to run, opens no guide for a Linux image" "0" "$(chain_asked AgentVM.access)"
+select_image dev-acp
+check "a macOS image selected after it has Set Up... and View again, shown and on" "1 1 1 1" \
+    "$(visible "$MAIN_IMAGE_ACCESS_ID") $(enabled "$MAIN_IMAGE_ACCESS_ID") $(visible "$MAIN_IMAGE_VIEW_ID") $(enabled "$MAIN_IMAGE_VIEW_ID")"
+check "  and its system, with the build" "macOS 27.0 (26A428)" "$(ui_value "$MAIN_IMAGE_SYSTEM_ID")"
+omc_run AgentVM.main.image.access
+check "  and its guide is asked for" "1" "$(chain_asked AgentVM.access)"
+"$PB" agentvm_open_request_access set ""
+/usr/bin/jq '(.images[] | select(.name == "ub")).state = "installing" | (.images[] | select(.name == "ub-agents")).state = "installed"
+    | (.images[] | select(.name == "dev")).state = "installing"' "$FIXTURES_AGENTVM/status-mixed.json" > "$FAKE_AGENTVM_DIR/status.json"
+omc_run AgentVM.main.activated
+select_image ub
+check "a Linux image being built: what is being installed is the system" "Building: installing the system" "$(ui_value "$MAIN_IMAGE_STATE_ID")"
+select_image ub-agents
+check "  and then is installed" "Building: the system is installed" "$(ui_value "$MAIN_IMAGE_STATE_ID")"
+select_image dev
+check "  a macOS image: macOS" "Building: installing macOS" "$(ui_value "$MAIN_IMAGE_STATE_ID")"
+/usr/bin/jq '(.images[] | select(.name == "dev")) |= (del(.macOSVersion) | del(.macOSBuild) | .system = "macOS ? (?)")' \
+    "$FIXTURES_AGENTVM/status-mixed.json" > "$FAKE_AGENTVM_DIR/status.json"
+omc_run AgentVM.main.activated
+check "a macOS image whose version agent-vm does not know: nothing known, not agent-vm's question marks" "-, updated Oct 1, 2026" \
+    "$(ui_value "$MAIN_IMAGE_SYSTEM_ID")"
+/usr/bin/jq '(.images[] | select(.name == "dev")) |= (del(.macOSBuild) | .system = "macOS 27.0.1 (?)")' \
+    "$FIXTURES_AGENTVM/status-mixed.json" > "$FAKE_AGENTVM_DIR/status.json"
+omc_run AgentVM.main.activated
+check "  one whose build it does not know: its version alone" "macOS 27.0.1, updated Oct 1, 2026" "$(ui_value "$MAIN_IMAGE_SYSTEM_ID")"
+/usr/bin/jq '(.images[] | select(.name == "dev")) |= del(.system)' \
+    "$FIXTURES_AGENTVM/status-mixed.json" > "$FAKE_AGENTVM_DIR/status.json"
+omc_run AgentVM.main.activated
+check "  a record with its version and build is shown by them, whatever its words" "macOS 27.0.1 (26A434), updated Oct 1, 2026" \
+    "$(ui_value "$MAIN_IMAGE_SYSTEM_ID")"
+
 section "no writes to views the window does not have"
 check "no undeclared ids" "" "$(ui_unknown_writes)"
 check "no harness errors" "" "$(ui_errors)"

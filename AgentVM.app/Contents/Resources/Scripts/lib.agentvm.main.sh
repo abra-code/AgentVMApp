@@ -12,8 +12,9 @@
 #
 # THE STATUS FACE is a TabView: Boxes, Images and Settings. Boxes and Images are each a split
 # view with a list of cards in the sidebar and the selected card's details beside it. A card
-# carries what is checked at a glance (name, state, image or macOS, and a "Needs maintenance"
-# mark); the detail pane has the rest, including what the maintenance is. Settings shows which
+# carries what is checked at a glance (name, state, image or system, and a "Needs maintenance"
+# mark), and its color says which system it runs as well as its state (MAIN_LINUX_*_COLOR); the
+# detail pane has the rest, including what the maintenance is. Settings shows which
 # agent-vm runs and what this Mac has room for.
 #
 # A DETAIL PANE IS AN OVERVIEW. What has work of its own opens in a window of its own, one per
@@ -112,7 +113,7 @@ MAIN_IMAGE_BOX_ID=431
 MAIN_IMAGE_UPDATE_ID=435
 MAIN_IMAGE_VIEW_ID=436
 MAIN_IMAGE_ACCESS_ID=462
-MAIN_IMAGE_MACOS_ID=451
+MAIN_IMAGE_SYSTEM_ID=451
 MAIN_IMAGE_BASE_ID=452
 MAIN_IMAGE_TOOLS_ID=453
 MAIN_IMAGE_GUEST_ID=454
@@ -131,6 +132,16 @@ MAIN_DISK_ID=512
 
 MAIN_POLL_IDLE_SECONDS=15
 MAIN_POLL_BUSY_SECONDS=2
+
+# A card of a Linux image or box has colors of its own, so that it is told from a macOS one at a
+# glance: a ready Linux image is teal where a macOS one is indigo; a Linux box is teal while it
+# runs, where a macOS one is green, and slate while it is stopped, where a macOS one is gray. What
+# says that something is happening or wrong is the same for both systems: blue while an image is
+# built or a box is started or stopped, orange for a box that does not answer, red for an image
+# that failed.
+MAIN_LINUX_IMAGE_COLOR="#0E8C94"
+MAIN_LINUX_RUNNING_COLOR="#0E8C94"
+MAIN_LINUX_STOPPED_COLOR="#56707D"
 
 # -- Reading ------------------------------------------------------------------------------------
 
@@ -563,14 +574,24 @@ main_agentvm_location_text() {
     esac
 }
 
-# main_vms_text <uuid> [short]  ->  "1 of 2 virtual machines running", or "1 of 2 running" when
-# short (beside a "Virtual machines" label); nothing before status answered.
+# main_vms_text <uuid> [short]  ->  "1 of 2 macOS virtual machines running", or "1 of 2 macOS
+# running" when short (beside a "Virtual machines" label), with ", 3 Linux" after it when Linux
+# boxes run or Linux images are being built; nothing before status answered. Only macOS guests
+# take one of the two slots, so they are what the count is of: agent-vm's count of every virtual
+# machine on this Mac, less the Linux ones of this store, which agent-vm counts apart.
 main_vms_text() {
     local _what="virtual machines "
     [ "${2:-}" = "short" ] && _what=""
     main_rows "$1" vm | /usr/bin/awk -F'\t' -v what="$_what" '
-        NR == 1 && $1 == "-" { printf "at most %s %sat once\n", $2, what }
-        NR == 1 && $1 != "-" { printf "%s of %s %srunning\n", $1, $2, what }'
+        NR == 1 && $1 == "-" { printf "at most %s macOS %sat once\n", $2, what }
+        NR == 1 && $1 != "-" {
+            linux = $3 + $4
+            macos = $1 - linux
+            if (macos < 0) macos = 0
+            printf "%s of %s macOS %srunning", macos, $2, what
+            if (linux > 0) printf ", %s Linux", linux
+            printf "\n"
+        }'
 }
 
 # main_disk_text <uuid>  ->  doctor's free space ("67 GB free"), or nothing.
@@ -816,13 +837,16 @@ main_flagged() {
 }
 
 # main_box_card_rows <uuid>  ->  the box list's rows, one card each:
-#   1 name   2 the state's symbol   3 image and macOS version   4 "Needs maintenance" or empty
-#   5 its symbol or empty   6 the card's color, from the state
+#   1 name   2 the state's symbol   3 image and system ("dev - macOS 27.0.1", "deb - Debian 13")
+#   4 "Needs maintenance" or empty   5 its symbol or empty
+#   6 the card's color, from the state and, for a box that runs or is stopped, from its system
+#     (MAIN_LINUX_RUNNING_COLOR, MAIN_LINUX_STOPPED_COLOR)
 # A box a job holds (it is being started or stopped, or waits to be) looks as a box in between
 # does, and its caption begins with what the job does, or with "Waiting" for a job queued after
 # another.
 main_box_card_rows() {
-    main_rows "$1" boxes | /usr/bin/awk -F'\t' -v flagged="$(main_flagged "$1" boxes)" -v jobs="$(ui_cache "$1" jobs.tsv)" '
+    main_rows "$1" boxes | /usr/bin/awk -F'\t' -v flagged="$(main_flagged "$1" boxes)" -v jobs="$(ui_cache "$1" jobs.tsv)" \
+        -v linux_running="$MAIN_LINUX_RUNNING_COLOR" -v linux_stopped="$MAIN_LINUX_STOPPED_COLOR" '
         BEGIN {
             while ((getline line < jobs) > 0) {
                 split(line, job, "\t")
@@ -835,12 +859,14 @@ main_box_card_rows() {
         }
         {
             symbol = "questionmark.circle"; color = "#8E8E93"
-            if ($2 == "running")                           { symbol = "play.circle.fill"; color = "#2E9E4F" }
-            else if ($2 == "stopped")                      { symbol = "stop.circle" }
+            linux = ($23 == "linux")
+            if ($2 == "running")                           { symbol = "play.circle.fill"; color = linux ? linux_running : "#2E9E4F" }
+            else if ($2 == "stopped")                      { symbol = "stop.circle"; if (linux) color = linux_stopped }
             else if ($2 == "starting" || $2 == "stopping") { symbol = "circle.dotted"; color = "#0A84FF" }
             else if ($2 == "unresponsive")                 { symbol = "exclamationmark.circle.fill"; color = "#E8861A" }
             caption = $3
-            if ($19 != "-") caption = caption " - macOS " $19
+            # The system in short: for a macOS box only when its version is known, as before.
+            if (linux ? ($25 != "-") : ($19 != "-")) caption = caption " - " $25
             if ($1 in held) { symbol = "circle.dotted"; color = "#0A84FF"; caption = held[$1] " - " caption }
             mark = ""; mark_symbol = ""
             if (index(flagged, " " $1 " ")) { mark = "Needs maintenance"; mark_symbol = "exclamationmark.triangle.fill" }
@@ -849,16 +875,18 @@ main_box_card_rows() {
 }
 
 # main_image_card_rows <uuid>  ->  the image list's rows, one card each:
-#   1 name   2 the state's symbol   3 macOS version and what it was built from, or Building or
-#   Failed   4 "Needs maintenance" or empty   5 its symbol or empty   6 the card's color
-#   7 how many boxes were made from it
+#   1 name   2 the state's symbol   3 its system and what it was built from ("macOS 27.0.1 - from
+#   a restore file", "Debian 13 - from its cloud image", "macOS 27.0.1 - from dev"), or Building
+#   or Failed   4 "Needs maintenance" or empty   5 its symbol or empty
+#   6 the card's color, from the state and, for a ready image, from its system
+#     (MAIN_LINUX_IMAGE_COLOR)   7 how many boxes were made from it
 # A ready image a job holds (it is being updated or set up, or waits to be) looks as an image
 # being built does, and its caption begins with what the job does, or with "Waiting". One that an
 # agent-vm command started elsewhere without a job is changing (agent-vm's `updating`) says "Busy".
 main_image_card_rows() {
     local _counts="$(main_rows "$1" boxes | /usr/bin/cut -f3 | /usr/bin/sort | /usr/bin/uniq -c | /usr/bin/awk '{ printf "%s=%s ", $2, $1 }')"
     main_rows "$1" images | /usr/bin/awk -F'\t' -v flagged="$(main_flagged "$1" images)" -v counts="$_counts" -v jobs="$(ui_cache "$1" jobs.tsv)" \
-        -v updates="$(ui_cache "$1" updates.tsv)" '
+        -v updates="$(ui_cache "$1" updates.tsv)" -v linux_ready="$MAIN_LINUX_IMAGE_COLOR" '
         BEGIN {
             while ((getline line < updates) > 0) {
                 split(line, update, "\t")
@@ -880,14 +908,18 @@ main_image_card_rows() {
         }
         {
             symbol = "hammer.fill"; color = "#0A84FF"; caption = "Building"
-            macos = ($4 == "-") ? "" : "macOS " $4
+            linux = ($12 == "linux")
+            # The system in short: for a macOS image only when its version is known, as before.
+            runs = (linux ? ($14 != "-") : ($4 != "-")) ? $14 : ""
             if ($2 == "ready") {
-                symbol = "square.stack.3d.up.fill"; color = "#5E5CE6"
-                caption = ($6 == "-") ? "from a restore file" : "from " $6
+                symbol = "square.stack.3d.up.fill"; color = linux ? linux_ready : "#5E5CE6"
+                # An image built from no other: a macOS one from a restore file, a Linux one from
+                # the cloud image of its distribution.
+                caption = ($6 != "-") ? "from " $6 : (linux ? "from its cloud image" : "from a restore file")
             } else if ($2 == "failed") {
                 symbol = "xmark.octagon.fill"; color = "#D93025"; caption = "Failed"
             }
-            if (macos != "") caption = ($2 == "ready") ? macos " - " caption : caption " - " macos
+            if (runs != "") caption = ($2 == "ready") ? runs " - " caption : caption " - " runs
             if ($2 == "ready" && !($1 in held) && ($1 in busy)) held[$1] = "Busy"
             if ($2 == "ready" && ($1 in held)) { symbol = "hammer.fill"; color = "#0A84FF"; caption = held[$1] " - " caption }
             mark = ""; mark_symbol = ""
@@ -998,9 +1030,9 @@ main_paint_box_detail() {
     "$dialog" "$_uuid" "$MAIN_BOX_MAINTENANCE_ID" "$(main_maintenance_text "$_uuid" boxes "$_name")"
     printf '%s\n' "$_row" | {
         local _n _state _image _mode _rules _pid _owner _project _ro _execs _started _version _disposable _error
-        local _cpus _memory _path _needs _macos _build _created _reason _rest
+        local _cpus _memory _path _needs _macos _build _created _reason _kind _system _short _rest
         IFS="$ui_tab" read -r _n _state _image _mode _rules _pid _owner _project _ro _execs _started _version _disposable _error \
-            _cpus _memory _path _needs _macos _build _created _reason _rest
+            _cpus _memory _path _needs _macos _build _created _reason _kind _system _short _rest
         # A job that holds the box says what it does, in place of the state it has not left yet.
         local _job="$(main_job "$_uuid" box "$_name")"
         # Progress... opens the job's window (lib.agentvm.progress.sh).
@@ -1020,8 +1052,12 @@ main_paint_box_detail() {
                 ui_show "$_uuid" "$MAIN_STOPPED_BOX_ACTIONS_ID" 1 ;;
         esac
 
+        # What the box was made with: a macOS box its version and build, a Linux box its system in
+        # agent-vm's words.
         local _text="$_image"
-        if [ "${_macos:--}" != "-" ]; then
+        if [ "$_kind" = "linux" ]; then
+            [ "${_system:--}" != "-" ] && _text="$_text ($_system)"
+        elif [ "${_macos:--}" != "-" ]; then
             _text="$_text (macOS $_macos"
             [ "${_build:--}" != "-" ] && _text="$_text, $_build"
             _text="$_text)"
@@ -1107,6 +1143,13 @@ main_paint_box_detail() {
         [ "$(main_row "$_uuid" images "$_image" | /usr/bin/cut -f2)" = "ready" ] && _image_ready=1
         ui_enable "$_uuid" "$MAIN_BOX_STOP_ID" "$(( _stoppable * _free ))"
         ui_enable "$_uuid" "$MAIN_BOX_START_ID" "$(( _stopped * _free ))"
+        # A Linux box has no screen: View, last among the buttons of a running box, is not shown
+        # for one.
+        if [ "$_kind" = "linux" ]; then
+            ui_show "$_uuid" "$MAIN_BOX_VIEW_ID" 0
+        else
+            ui_show "$_uuid" "$MAIN_BOX_VIEW_ID" 1
+        fi
         ui_enable "$_uuid" "$MAIN_BOX_VIEW_ID" "$(( _running * _free ))"
         ui_enable "$_uuid" "$MAIN_BOX_SHELL_ID" "$(( _running * _free ))"
         # avm starts a stopped box itself.
@@ -1196,8 +1239,9 @@ main_image_busy() {
     [ "$(main_row "$1" updates "$2" | /usr/bin/cut -f10)" = "true" ]
 }
 
-# main_image_state_text <state> <failure> [busy]  ->  the image detail's state line. "busy" is for
-# a ready image that a command no job runs is changing.
+# main_image_state_text <state> <failure> [busy] [guest]  ->  the image detail's state line. "busy"
+# is for a ready image that a command no job runs is changing; the guest, macos or linux, for what
+# a build is installing.
 main_image_state_text() {
     case "$1" in
         ready)
@@ -1206,8 +1250,18 @@ main_image_state_text() {
             else
                 echo "Ready"
             fi ;;
-        installing)   echo "Building: installing macOS" ;;
-        installed)    echo "Building: macOS is installed" ;;
+        installing)
+            if [ "${4:-}" = "linux" ]; then
+                echo "Building: installing the system"
+            else
+                echo "Building: installing macOS"
+            fi ;;
+        installed)
+            if [ "${4:-}" = "linux" ]; then
+                echo "Building: the system is installed"
+            else
+                echo "Building: macOS is installed"
+            fi ;;
         provisioning) echo "Building: setting up its tools" ;;
         failed)
             if [ "$2" = "-" ]; then
@@ -1345,7 +1399,7 @@ main_paint_image_detail() {
         else
             local _busy=""
             main_image_busy "$_uuid" "$_name" && _busy="busy"
-            "$dialog" "$_uuid" "$MAIN_IMAGE_STATE_ID" "$(main_image_state_text "$_state" "$_failure" "$_busy")"
+            "$dialog" "$_uuid" "$MAIN_IMAGE_STATE_ID" "$(main_image_state_text "$_state" "$_failure" "$_busy" "$_kind")"
             ui_show "$_uuid" "$MAIN_IMAGE_PROGRESS_ID" 0
         fi
 
@@ -1356,22 +1410,46 @@ main_paint_image_detail() {
         fi
         "$dialog" "$_uuid" "$MAIN_IMAGE_MAINTENANCE_ID" "$_maintenance"
 
-        local _text="$_macos"
-        [ "$_macos" != "-" ] && [ "$_build" != "-" ] && _text="$_macos ($_build)"
+        # What the image runs: a Linux image in agent-vm's words ("Debian GNU/Linux 13 (trixie)"),
+        # a macOS image by its version and build ("macOS 27.0.1 (26A434)"), which are agent-vm's
+        # words too when both are known; where agent-vm would put a question mark for one it does
+        # not know, the row leaves it out, and says "-" when neither is known.
+        local _text="$_system"
+        if [ "$_kind" != "linux" ]; then
+            _text="-"
+            if [ "$_macos" != "-" ]; then
+                _text="macOS $_macos"
+                [ "$_build" != "-" ] && _text="$_text ($_build)"
+            fi
+        fi
         # When it was last updated, from status's update row.
         local _updated="$(ui_date_text "$(main_row "$_uuid" updates "$_name" | /usr/bin/cut -f3)")"
         [ -n "$_updated" ] && _text="$_text, updated $_updated"
-        "$dialog" "$_uuid" "$MAIN_IMAGE_MACOS_ID" "$_text"
+        "$dialog" "$_uuid" "$MAIN_IMAGE_SYSTEM_ID" "$_text"
+        # An image built from no other: a macOS one from a restore file, a Linux one from the
+        # cloud image of its distribution, which image info names.
         _text="$_based"
-        [ "$_based" = "-" ] && _text="a macOS restore file"
+        if [ "$_based" = "-" ] && [ "$_kind" = "linux" ]; then
+            _text="a cloud image"
+            if [ "$_base_file" != "-" ]; then
+                _text="the cloud image $_base_file"
+                [ "$_base_build" != "-" ] && _text="$_text, build $_base_build"
+            fi
+        elif [ "$_based" = "-" ]; then
+            _text="a macOS restore file"
+        fi
         "$dialog" "$_uuid" "$MAIN_IMAGE_BASE_ID" "$_text"
 
-        # An image can have the Command Line Tools without a recipe (image create
-        # --command-line-tools): "macOS only" is for neither.
+        # An image can have the Command Line Tools (a Linux image: the compiler) without a recipe
+        # (image create --command-line-tools): "macOS only", or "the system only", is for neither.
         _text=""
         [ "$_recipe" != "-" ] && _text="$_recipe"
         [ "$_clt" != "-" ] && _text="${_text:+$_text; }$_clt"
-        "$dialog" "$_uuid" "$MAIN_IMAGE_TOOLS_ID" "${_text:-macOS only}"
+        if [ "$_kind" = "linux" ]; then
+            "$dialog" "$_uuid" "$MAIN_IMAGE_TOOLS_ID" "${_text:-the system only}"
+        else
+            "$dialog" "$_uuid" "$MAIN_IMAGE_TOOLS_ID" "${_text:-macOS only}"
+        fi
 
         _text="$_guest"
         [ "$_features" != "-" ] && _text="$_text: $(printf '%s' "$_features" | /usr/bin/sed 's/,/, /g')"
@@ -1379,8 +1457,10 @@ main_paint_image_detail() {
 
         # status's need is current and wins over image info's answer, which may be older (access
         # granted or lost since it was read). Without either, only image info can say "not checked".
+        # A Linux image has no such permission to grant, and the row says so in place of a state.
         local _date="$(ui_date_text "$_checked")"
-        case ",$_needs,:$_fda" in
+        case "$_kind:,$_needs,:$_fda" in
+            linux:*)                          _text="not needed: a Linux image has no such permission" ;;
             *,full-disk-access,*:not-granted) _text="not granted${_date:+ (checked $_date)}" ;;
             *,full-disk-access,*)             _text="not granted" ;;
             *:granted)                        _text="granted${_date:+ (checked $_date)}" ;;
@@ -1421,8 +1501,16 @@ main_paint_image_detail() {
     # as the start: for a ready image, and the window says when something is changing it.
     # New Box from It... opens the New Box window (lib.agentvm.newbox.sh) with the image chosen,
     # under the same rule.
+    # A Linux image has no Full Disk Access to grant and no screen to show: Set Up... and View,
+    # each the last thing in its row, are not shown for one, and stay off.
+    local _mac=1
+    if [ "$(printf '%s\n' "$_row" | /usr/bin/cut -f12)" = "linux" ]; then
+        _mac=0
+    fi
+    ui_show "$_uuid" "$MAIN_IMAGE_ACCESS_ID" "$_mac"
+    ui_show "$_uuid" "$MAIN_IMAGE_VIEW_ID" "$_mac"
     if [ "$(printf '%s\n' "$_row" | /usr/bin/cut -f2)" = "ready" ]; then
-        ui_enable "$_uuid" "$MAIN_IMAGE_ACCESS_ID" 1
+        ui_enable "$_uuid" "$MAIN_IMAGE_ACCESS_ID" "$_mac"
         ui_enable "$_uuid" "$MAIN_IMAGE_DERIVE_ID" 1
         ui_enable "$_uuid" "$MAIN_IMAGE_BOX_ID" 1
     else
@@ -1441,10 +1529,11 @@ main_paint_image_detail() {
     fi
     ui_enable "$_uuid" "$MAIN_IMAGE_DELETE_ID" 1
     # Update... opens the image's update window (lib.agentvm.update.sh), and View starts the job
-    # that shows the image's screen (main_image_view): for a ready image only.
+    # that shows the image's screen (main_image_view): for a ready image only, and View for a
+    # macOS one only.
     if [ "$(printf '%s\n' "$_row" | /usr/bin/cut -f2)" = "ready" ]; then
         ui_enable "$_uuid" "$MAIN_IMAGE_UPDATE_ID" 1
-        ui_enable "$_uuid" "$MAIN_IMAGE_VIEW_ID" 1
+        ui_enable "$_uuid" "$MAIN_IMAGE_VIEW_ID" "$_mac"
     else
         ui_enable "$_uuid" "$MAIN_IMAGE_UPDATE_ID" 0
         ui_enable "$_uuid" "$MAIN_IMAGE_VIEW_ID" 0
@@ -1452,10 +1541,12 @@ main_paint_image_detail() {
 }
 
 # main_image_viewable <uuid> <name>  ->  0 when the image's screen can be opened now, from the rows
-# just read: it is ready, no job holds it and no other command changes it (the rule
-# main_paint_image_detail enables View by).
+# just read: it is a macOS image (a Linux one has no screen, and agent-vm refuses to show one), it
+# is ready, no job holds it and no other command changes it (the rule main_paint_image_detail
+# enables View by).
 main_image_viewable() {
     [ "$(main_row "$1" images "$2" | /usr/bin/cut -f2)" = "ready" ] || return 1
+    [ "$(main_row "$1" images "$2" | /usr/bin/cut -f12)" != "linux" ] || return 1
     [ -z "$(main_job "$1" image "$2")" ] || return 1
     main_image_busy "$1" "$2" && return 1
     return 0

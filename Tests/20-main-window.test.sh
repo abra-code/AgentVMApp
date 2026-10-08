@@ -114,7 +114,7 @@ check "Get started is not"       "0" "$(visible "$MAIN_GETSTARTED_ID")"
 check "agent-vm was asked: version, doctor, status" \
     "--version doctor --json status --json " "$(fake_log | /usr/bin/tr '\n' ' ')"
 check "the poll loop is chained" "1" "$(chain_asked AgentVM.main.poll)"
-check "the box list's footer: the virtual machines" "1 of 2 virtual machines running" "$(ui_value "$MAIN_BOXES_FOOTER_ID")"
+check "the box list's footer: the macOS virtual machines, which are the ones with a limit" "1 of 2 macOS virtual machines running" "$(ui_value "$MAIN_BOXES_FOOTER_ID")"
 check "the image list's footer: how many" "7 images" "$(ui_value "$MAIN_IMAGES_FOOTER_ID")"
 check "no error note"            "" "$(ui_value "$MAIN_BOXES_NOTE_ID")$(ui_value "$MAIN_IMAGES_NOTE_ID")"
 check "no box selected yet: the placeholder, not the one for no box at all" "1 0 0" "$(visible "$MAIN_BOX_NONE_ID") $(visible "$MAIN_BOX_DETAIL_ID") $(visible "$MAIN_NO_BOXES_ID")"
@@ -123,7 +123,7 @@ check "no image selected yet: the placeholder"  "1 0" "$(visible "$MAIN_IMAGE_NO
 section "Settings"
 check "agent-vm's version"       "$VERSION" "$(ui_value "$MAIN_AGENTVM_VERSION_ID")"
 check "the test agent-vm is named as such" "$FAKE_AGENTVM (test agent-vm)" "$(ui_value "$MAIN_AGENTVM_LOCATION_ID")"
-check "the virtual machines, without repeating the label" "1 of 2 running" "$(ui_value "$MAIN_VMS_ID")"
+check "the virtual machines, without repeating the label" "1 of 2 macOS running" "$(ui_value "$MAIN_VMS_ID")"
 check "the free disk space"      "134 GB free" "$(ui_value "$MAIN_DISK_ID")"
 
 section "the box cards"
@@ -159,6 +159,59 @@ check "an image being built: a hammer, blue" \
     "dev-xcode-ios${TAB}hammer.fill${TAB}Building - macOS 27.0" \
     "$(card "$MAIN_IMAGES_ID" dev-xcode-ios | col 1-3)"
 store status-variety.json
+
+# -----------------------------------------------------------------------------------------------
+section "a store with both kinds: a Linux image's card is told from a macOS one's by its color"
+# mixed <jq edit of status-mixed.json>  ->  the fake answers status with that, and the window reads it.
+mixed() {
+    /usr/bin/jq "$1" "$FIXTURES_AGENTVM/status-mixed.json" > "$FAKE_AGENTVM_DIR/status.json"
+    poll 1
+}
+mixed '.'
+check "one card per image, of either kind" "10" "$(ui_row_count "$MAIN_IMAGES_ID")"
+check "a ready macOS image: indigo, from a restore file" \
+    "dev${TAB}square.stack.3d.up.fill${TAB}macOS 27.0.1 - from a restore file${TAB}${TAB}${TAB}#5E5CE6${TAB}0" \
+    "$(card "$MAIN_IMAGES_ID" dev)"
+check "a ready Linux image: teal, its system in short, from its cloud image, with the box made from it" \
+    "deb${TAB}square.stack.3d.up.fill${TAB}Debian 13 - from its cloud image${TAB}${TAB}${TAB}#0E8C94${TAB}1" \
+    "$(card "$MAIN_IMAGES_ID" deb)"
+check "one built from another Linux image: what it was built from" \
+    "deb-agents${TAB}square.stack.3d.up.fill${TAB}Debian 13 - from deb${TAB}${TAB}${TAB}#0E8C94${TAB}0" \
+    "$(card "$MAIN_IMAGES_ID" deb-agents)"
+check "Ubuntu, by its release" "Ubuntu 26.04 - from its cloud image" "$(card "$MAIN_IMAGES_ID" ub | col 3)"
+check "a newer macOS that Apple offers marks macOS images only" "dev-acp dev-agents dev-node dev-xcode dev-xcode-ios" \
+    "$(ui_rows "$MAIN_IMAGES_ID" | /usr/bin/awk -F'\t' '$4 != "" { print $1 }' | /usr/bin/sort | /usr/bin/paste -sd ' ' -)"
+check "the image list's footer counts both kinds" "10 images" "$(ui_value "$MAIN_IMAGES_FOOTER_ID")"
+mixed '(.images[] | select(.name == "deb-agents")).state = "provisioning" | (.images[] | select(.name == "ub")) |= . + {state: "failed", failure: "the build was canceled"}'
+check "a Linux image being built is blue, as a macOS one is: the color says that something is happening" \
+    "deb-agents${TAB}hammer.fill${TAB}Building - Debian 13${TAB}${TAB}${TAB}#0A84FF" "$(card "$MAIN_IMAGES_ID" deb-agents | col 1-6)"
+check "  and a failed one red" "ub${TAB}xmark.octagon.fill${TAB}Failed - Ubuntu 26.04${TAB}${TAB}${TAB}#D93025" "$(card "$MAIN_IMAGES_ID" ub | col 1-6)"
+
+section "a store with both kinds: a Linux box's card"
+mixed '.'
+check "one card per box, of either kind" "3" "$(ui_row_count "$MAIN_BOXES_ID")"
+check "a stopped macOS box: gray" \
+    "s3${TAB}stop.circle${TAB}dev-acp - macOS 27.0${TAB}${TAB}${TAB}#8E8E93" "$(card "$MAIN_BOXES_ID" s3)"
+check "a stopped Linux box: slate, with its image and its system in short" \
+    "lb${TAB}stop.circle${TAB}deb - Debian 13${TAB}${TAB}${TAB}#56707D" "$(card "$MAIN_BOXES_ID" lb)"
+RUNNING='. + {state: "running", running: true, pid: 4242, startedAt: "2026-09-29T14:02:10Z"}'
+mixed "(.boxes[] | select(.box.name == \"lb\" or .box.name == \"s3\")) |= ($RUNNING) | .runningVMs = {count: 2, limit: 2, linuxBoxes: 1}"
+check "a running macOS box: green" "play.circle.fill${TAB}#2E9E4F" "$(card "$MAIN_BOXES_ID" s3 | col 2,6)"
+check "a running Linux box: teal"  "play.circle.fill${TAB}#0E8C94" "$(card "$MAIN_BOXES_ID" lb | col 2,6)"
+check "the footer counts the macOS machines against the two slots, and the Linux one apart" \
+    "1 of 2 macOS virtual machines running, 1 Linux" "$(ui_value "$MAIN_BOXES_FOOTER_ID")"
+check "  and so does Settings" "1 of 2 macOS running, 1 Linux" "$(ui_value "$MAIN_VMS_ID")"
+mixed "(.boxes[] | select(.box.name == \"lb\")) |= ($RUNNING) | .runningVMs = {count: 3, limit: 2, linuxBoxes: 1, linuxImages: 2}"
+check "Linux images being built take no slot either, once agent-vm counts them" \
+    "0 of 2 macOS virtual machines running, 3 Linux" "$(ui_value "$MAIN_BOXES_FOOTER_ID")"
+mixed '(.boxes[] | select(.box.name == "lb")) |= . + {state: "starting"}'
+check "a Linux box being started is blue, as a macOS one is" "circle.dotted${TAB}#0A84FF" "$(card "$MAIN_BOXES_ID" lb | col 2,6)"
+mixed '(.boxes[] | select(.box.name == "lb")) |= . + {state: "unresponsive", running: true, statusError: "no answer from the supervisor within 5 s"}'
+check "  and one that does not answer orange" "exclamationmark.circle.fill${TAB}#E8861A" "$(card "$MAIN_BOXES_ID" lb | col 2,6)"
+mixed 'del(.runningVMs.count)'
+check "a count agent-vm could not take: what the limit is of" "at most 2 macOS virtual machines at once" "$(ui_value "$MAIN_BOXES_FOOTER_ID")"
+store status-variety.json
+poll 1
 
 section "the installed agent-vm, in Settings"
 use_installed
@@ -330,7 +383,7 @@ check "ready"                  "Ready" "$(ui_value "$MAIN_IMAGE_STATE_ID")"
 check "what it needs, in full" \
     "Needs maintenance|Needs a guest update for agent-vm $VERSION." \
     "$(ui_value "$MAIN_IMAGE_MAINTENANCE_ID" | /usr/bin/paste -sd '|' -)"
-check "macOS, with the build"  "27.0 (26A428)" "$(ui_value "$MAIN_IMAGE_MACOS_ID")"
+check "its system, in agent-vm's words" "macOS 27.0 (26A428)" "$(ui_value "$MAIN_IMAGE_SYSTEM_ID")"
 check "what it was built from" "dev" "$(ui_value "$MAIN_IMAGE_BASE_ID")"
 check "its tools"              "Homebrew and Node" "$(ui_value "$MAIN_IMAGE_TOOLS_ID")"
 check "the guest daemon"       "0.2.18" "$(ui_value "$MAIN_IMAGE_GUEST_ID")"

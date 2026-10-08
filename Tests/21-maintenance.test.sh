@@ -161,6 +161,22 @@ check "a start time that is not a time is not guessed at" "Running" "$(box_state
 open_with "$IDLE"
 check "a clock behind the start time is not either" "Running" "$(box_state s3 $((S3_STARTED - 60)))"
 
+section "Linux images and boxes"
+# The store with both kinds, where Apple's newer macOS is known and five macOS images are behind it.
+/usr/bin/jq '(.boxes[] | select(.box.name == "lb")).needs = [{kind: "recreate", reason: "image-updated"}]
+    | (.images[] | select(.name == "ub")).needs = [{kind: "guest-update", missing: ["terminal-pixels"]}]' \
+    "$FIXTURES_AGENTVM/status-mixed.json" > "$FAKE_AGENTVM_DIR/status.json"
+ui_reset
+omc_control_defaults AgentVM
+omc_run AgentVM.main.init
+check "a Linux box made before its image was updated is marked, as a macOS one is" "$MARK" "$(box_mark lb)"
+check "  with what to do" \
+    "Needs maintenance|Made before image deb was updated. Recreate it to get the update; what was changed inside it is lost." "$(box_lines lb)"
+check "a Linux image that needs a guest update is marked" "$MARK" "$(image_mark ub)"
+check "  with what to do" "Needs maintenance|Needs a guest update for agent-vm $VERSION." "$(image_lines ub)"
+check "a newer macOS is nothing to do for a Linux image" "${TAB}|" "$(image_mark deb)|$(image_lines deb)"
+check "  while it is for the macOS images behind it" "$MARK" "$(image_mark dev-acp)"
+
 section "no writes to views the window does not have"
 check "no undeclared ids" "" "$(ui_unknown_writes)"
 

@@ -190,8 +190,8 @@
                               "properties": { "hidden": true, "spacing": 8.0 },
                               "children": [
                                 { "type": "Button", "id": 331, "properties": { "title": "Stop", "systemImage": "stop.fill", "imageScale": "large", "disabled": true, "actionID": "AgentVM.main.box.stop", "help": "Shut the box down. Asks first when another program started it or programs run in it." } },
-                                { "type": "Button", "id": 332, "properties": { "title": "View", "systemImage": "macwindow", "imageScale": "large", "disabled": true, "actionID": "AgentVM.main.box.view", "help": "Show the box's screen in a window. Keys and clicks reach the box." } },
-                                { "type": "Button", "id": 334, "properties": { "title": "Connect", "systemImage": "apple.terminal.fill", "imageScale": "large", "disabled": true, "actionID": "AgentVM.main.box.shell", "help": "Open a shell in the box in Terminal." } }
+                                { "type": "Button", "id": 334, "properties": { "title": "Connect", "systemImage": "apple.terminal.fill", "imageScale": "large", "disabled": true, "actionID": "AgentVM.main.box.shell", "help": "Open a shell in the box in Terminal." } },
+                                { "type": "Button", "id": 332, "properties": { "title": "View", "systemImage": "macwindow", "imageScale": "large", "disabled": true, "actionID": "AgentVM.main.box.view", "help": "Show the box's screen in a window. Keys and clicks reach the box." } }
                               ]
                             },
                             {
@@ -390,7 +390,7 @@
                     {
                       "type": "Form",
                       "children": [
-                        { "type": "LabeledContent", "properties": { "title": "macOS" }, "children": [ { "type": "Text", "id": 451, "properties": { "text": "", "textSelection": "enabled", "frame": { "maxWidth": "infinity", "alignment": "leading" } } } ] },
+                        { "type": "LabeledContent", "properties": { "title": "System" }, "children": [ { "type": "Text", "id": 451, "properties": { "text": "", "textSelection": "enabled", "frame": { "maxWidth": "infinity", "alignment": "leading" } } } ] },
                         { "type": "LabeledContent", "properties": { "title": "Built from" }, "children": [ { "type": "Text", "id": 452, "properties": { "text": "", "textSelection": "enabled", "frame": { "maxWidth": "infinity", "alignment": "leading" } } } ] },
                         { "type": "LabeledContent", "properties": { "title": "Tools" }, "children": [ { "type": "Text", "id": 453, "properties": { "text": "", "textSelection": "enabled", "frame": { "maxWidth": "infinity", "alignment": "leading" } } } ] },
                         { "type": "LabeledContent", "properties": { "title": "Guest daemon" }, "children": [ { "type": "Text", "id": 454, "properties": { "text": "", "textSelection": "enabled", "frame": { "maxWidth": "infinity", "alignment": "leading" } } } ] },

@@ -372,6 +372,41 @@ check "two questions were asked" "cadabra-spike cadabra-spike" "$(pending recrea
 omc_run AgentVM.main.close
 check "  closing forgets both" " " "$(pending recreate) $(pending delete)"
 
+# -----------------------------------------------------------------------------------------------
+section "a Linux box"
+# The store with both kinds, with its Linux box and one macOS box running. `box info` is answered
+# for lb, the box the Linux capture measured.
+visible() {
+    [ "$(ui_visible "$1")" = "1" ] && echo 1 || echo 0
+}
+fake_reset
+/usr/bin/jq '(.boxes[] | select(.box.name == "lb" or .box.name == "s3")) |= . + {state: "running", running: true, pid: 4242, startedAt: "2026-09-29T14:02:10Z"}
+    | .runningVMs = {count: 2, limit: 2, linuxBoxes: 1}' "$FIXTURES_AGENTVM/status-mixed.json" > "$FAKE_AGENTVM_DIR/status.json"
+/bin/cp "$FIXTURES_AGENTVM/box-info-linux.json" "$FAKE_AGENTVM_DIR/box-info-lb.json"
+open_window
+select_box lb
+check_status "the handler exits cleanly" 0
+check "its image, and what it runs in agent-vm's words" "deb (Debian GNU/Linux 13 (trixie))" "$(ui_value "$MAIN_BOX_IMAGE_ID")"
+check "its space, and its own"  "2.0 GB; 160 MB its own (what Delete frees)" "$(ui_value "$MAIN_BOX_SPACE_ID")"
+check "it runs: Stop and Connect are on" "1 1" "$(enabled "$MAIN_BOX_STOP_ID") $(enabled "$MAIN_BOX_SHELL_ID")"
+check "  and View is not shown: a Linux box has no screen" "0" "$(ui_visible "$MAIN_BOX_VIEW_ID")"
+# The handler behind View, run as a URL naming it would run it: the button is not shown.
+alerts_reset
+: > "$FAKE_AGENTVM_DIR/log"
+omc_run AgentVM.main.box.view
+check "View, however it came to run, asks agent-vm nothing and says nothing" "|" "$(fake_log)|$(ui_alert_title)"
+select_box s3
+check "a macOS box selected after it has View again, shown and on" "1 1" "$(visible "$MAIN_BOX_VIEW_ID") $(enabled "$MAIN_BOX_VIEW_ID")"
+check "  and its image with the macOS it was made with" "dev-acp (macOS 27.0, 26A428)" "$(ui_value "$MAIN_BOX_IMAGE_ID")"
+: > "$FAKE_AGENTVM_DIR/log"
+omc_run AgentVM.main.box.view
+check "  and its screen is asked for" "box view s3 --interactive --json" "$(fake_log)"
+/usr/bin/jq '.' "$FIXTURES_AGENTVM/status-mixed.json" > "$FAKE_AGENTVM_DIR/status.json"
+omc_run AgentVM.main.activated
+select_box lb
+check "stopped: Start, Run an Agent, Recreate and Delete, as for a macOS box" "1 1 1 1" \
+    "$(enabled "$MAIN_BOX_START_ID") $(enabled "$MAIN_BOX_AGENT_ID") $(enabled "$MAIN_BOX_RECREATE_ID") $(enabled "$MAIN_BOX_DELETE_ID")"
+
 section "no writes to views the window does not have"
 check "no undeclared ids" "" "$(ui_unknown_writes)"
 check "no harness errors" "" "$(ui_errors)"
