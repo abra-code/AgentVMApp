@@ -16,21 +16,29 @@
 # they declare none). 4 Name and size. 5 Check: what will be built, what stands in the way, the
 # command line, and Build.
 #
+# MACOS AND LINUX. The new image runs what its start runs (newimage_guest): a copy of a Linux
+# image is a Linux image. A recipe is for macOS images, for Linux images, or for both, as agent-vm
+# says of each (`recipe check`), and the Tools step lists the ones for the start's system and the
+# ones for both. What a recipe needs before it, the least a copy's disk may grow by, the places
+# for macOS virtual machines, and everything about Full Disk Access follow the start's system too.
+#
 # WHAT THE WINDOW KEEPS. Pasteboard values of the window: "newimage" (1 while it is open),
-# "step", "start" ("image <name>" or "ipsw <file name>"), "ticks" (recipe names), "name", "cpus",
+# "step", "start" ("image <name>" or "ipsw <file name>"), "ticks" (recipe names), "slots" (the
+# recipes the checkboxes were last laid out for, in the slots' order), "name", "cpus",
 # "memory", "disk", "auto_name" and "auto_disk" (the last suggestions put into those fields,
 # so that a suggestion the user did not change follows a changed start or tool), "busy" (the
 # click being worked on: newimage_enter), "taken" (the image Delete... offers to delete, while
 # the button is shown) and "delete" (the image the question now open asks about). The values of
 # the options are the cache file values.tsv (kind, name, value), and the recipes the user added
-# the cache file own.tsv (a row each, as agentvm_recipe_rows gives one). Everything kept is checked
+# the cache file own.tsv (a row each, as newimage_recipe_rows gives one). Everything kept is checked
 # again when it is read back, and a start is looked up in what agent-vm last listed.
 #
 # THE FIELDS ARE READ WHEN A BUTTON IS CLICKED, never per keystroke: a handler's view of the
 # fields is a snapshot from the moment of its click, and the fields of a step are filled before
 # the step is shown, so at Continue, Back or Choose... the snapshot is what the user sees. A
 # checkbox click keeps the ticks the same way. Nothing in the window is set by the program while
-# the user can edit it, except the one field Choose... fills.
+# the user can edit it, except the one field Choose... fills, and the checkbox of a slot whose
+# recipe became another one because the start's system changed (newimage_paint_recipes).
 #
 # WHAT IT READS: `status` and the restore file list, into its own cache, on opening, on
 # activation, when a start is chosen and before Build; the recipes once, on opening. It has no
@@ -88,13 +96,17 @@ NEW_OPTION_SLOTS=8
 NEW_DEFAULT_CPUS=4
 NEW_DEFAULT_MEMORY=8
 NEW_DEFAULT_DISK=64
-# A copy's disk stays as it is or grows by at least this (agent-vm's rule); and what an image with
-# Xcode is given when the start allows it.
+# A copy's disk stays as it is or grows by at least this (agent-vm's rule: one number for a macOS
+# image, one for a Linux image); and what an image with Xcode is given when the start allows it.
 NEW_DISK_GROWTH=8
+NEW_LINUX_DISK_GROWTH=1
 NEW_XCODE_DISK=128
-# The recipes agent-vm ships, in an order that satisfies what each needs. Any other recipe in its
-# folder comes after them, by name.
-NEW_RECIPE_ORDER="homebrew node python agent-clis acp-agents xcode xcode-platforms"
+# The recipes agent-vm ships, for macOS images and for Linux images, in an order that satisfies
+# what each needs whichever of the two the start is. Any other recipe in its folder comes after
+# them, by name.
+NEW_RECIPE_ORDER="homebrew node python linux-node linux-python agent-clis acp-agents xcode xcode-platforms linux-sudo"
+# The program that lists the recipes from the window's cache files (newimage_recipes).
+NEW_RECIPES_AWK="$OMC_APP_BUNDLE_PATH/Contents/Resources/Scripts/lib.agentvm.newimage.recipes.awk"
 
 # newimage_is <uuid>  ->  0 while that window is an open New Image window.
 newimage_is() {
@@ -137,21 +149,39 @@ newimage_step_title() {
 
 # -- Reading -------------------------------------------------------------------------------------
 
-# newimage_recipe_rows  ->  agentvm_recipe_rows in the order the window lists and applies them:
-# NEW_RECIPE_ORDER first, then the others as the folder has them.
+# newimage_recipe_rows  ->  agentvm_recipe_rows with a sixth field, the guest each recipe is for
+# (macos, linux, or any for both), in the order the window lists and applies them:
+# NEW_RECIPE_ORDER first, then the others as the folder has them. agent-vm is asked about them
+# all in one run (`recipe check`), and its answer is matched by path. A recipe it says no guest
+# of (it refuses the file, or could not be asked) has "-" there: it is offered for every start,
+# and agent-vm refuses it, in its words, when it is ticked.
 newimage_recipe_rows() {
-    agentvm_recipe_rows | /usr/bin/awk -F'\t' -v order="$NEW_RECIPE_ORDER" '
+    local _rows="$(agentvm_recipe_rows)"
+    [ -n "$_rows" ] || return 0
+    local _paths="$(printf '%s\n' "$_rows" | /usr/bin/cut -f5)"
+    local _path
+    set --
+    while IFS= read -r _path; do
+        [ -n "$_path" ] && set -- "$@" "$_path"
+    done <<EOF
+$_paths
+EOF
+    {
+        agentvm_recipe_check "$@" | agentvm_recipe_check_rows | /usr/bin/cut -f5,9
+        printf '%s\n' "$_rows"
+    } | /usr/bin/awk -F'\t' -v order="$NEW_RECIPE_ORDER" '
         BEGIN { n = split(order, names, " "); for (i = 1; i <= n; i++) rank[names[i]] = i }
-        { printf "%05d\t%s\n", (($1 in rank) ? rank[$1] : 1000 + NR), $0 }' \
+        NF == 2 { guest[$1] = $2; next }
+        NF == 5 { printf "%05d\t%s\t%s\n", (($1 in rank) ? rank[$1] : 1000 + NR), $0, (guest[$5] ~ /^(macos|linux|any)$/) ? guest[$5] : "-" }' \
         | /usr/bin/sort -s -k1,1 | /usr/bin/cut -f2-
 }
 
 # newimage_read <uuid> [full]  ->  0 with the cache files build.tsv (agentvm_status_build_rows),
 # images.tsv and jobs.tsv (as the main window keeps them: for an image whose name is in the way),
 # vm.tsv and ipsw.tsv (agentvm_ipsw_rows) read anew; "full" first checks which agent-vm runs and
-# reads its recipes into recipes.tsv (on opening). An agent-vm that cannot be used is not run. A
-# failed `status` keeps the previous rows and leaves its message in the cache file status-error;
-# a failed restore file list keeps the previous list.
+# reads its recipes into recipes.tsv (newimage_recipe_rows; on opening). An agent-vm that cannot
+# be used is not run. A failed `status` keeps the previous rows and leaves its message in the
+# cache file status-error; a failed restore file list keeps the previous list.
 newimage_read() {
     if [ "${2:-}" = "full" ]; then
         main_read_agentvm "$1" >/dev/null
@@ -292,13 +322,44 @@ newimage_base() {
     printf '%s\n' "${_value:--}"
 }
 
-# newimage_start_text <uuid>  ->  the start in words: "image dev (macOS 27.0.1)", or "the restore
-# file UniversalMac_27.0_26A428_Restore.ipsw (macOS 27.0)".
+# newimage_guest <uuid>  ->  macos or linux: what the new image will run, which is what its start
+# runs. A restore file is macOS, and so is a start that is not listed.
+newimage_guest() {
+    local _start="$(newimage_start "$1")"
+    local _file="$(ui_cache "$1" build.tsv)"
+    local _guest=""
+    case "$_start" in
+        "image "*)
+            [ -f "$_file" ] && _guest="$(/usr/bin/awk -F'\t' -v name="${_start#image }" '$1 "" == name { print $13; exit }' "$_file")" ;;
+    esac
+    if [ "$_guest" = "linux" ]; then
+        echo linux
+    else
+        echo macos
+    fi
+}
+
+# newimage_system <uuid>  ->  the start's system in short ("macOS 27.0.1", "Debian 13"), or "-"
+# when it is not known; of a macOS image it is known when its version is.
+newimage_system() {
+    local _name="$(newimage_start_name "$1")"
+    local _system=""
+    case "$(newimage_start_kind "$1")" in
+        image)
+            _system="$(newimage_image_row "$1" "$_name" | /usr/bin/awk -F'\t' '{ print (($13 == "linux") ? ($14 != "-") : ($4 != "-")) ? $14 : "-" }')" ;;
+        ipsw)
+            _system="$(newimage_ipsw_row "$1" "$_name" | /usr/bin/awk -F'\t' '$2 != "" && $2 != "-" { print "macOS " $2 }')" ;;
+    esac
+    printf '%s\n' "${_system:--}"
+}
+
+# newimage_start_text <uuid>  ->  the start in words: "image dev (macOS 27.0.1)", "image deb
+# (Debian 13)", or "the restore file UniversalMac_27.0_26A428_Restore.ipsw (macOS 27.0)".
 newimage_start_text() {
     local _name="$(newimage_start_name "$1")"
-    local _macos="$(newimage_base "$1" 4)"
+    local _system="$(newimage_system "$1")"
     local _suffix=""
-    [ "$_macos" != "-" ] && _suffix=" (macOS $_macos)"
+    [ "$_system" != "-" ] && _suffix=" ($_system)"
     case "$(newimage_start_kind "$1")" in
         image) printf 'image %s%s\n' "$_name" "$_suffix" ;;
         ipsw)  printf 'the restore file %s%s\n' "$_name" "$_suffix" ;;
@@ -326,46 +387,113 @@ newimage_start_blocker() {
     esac
 }
 
-# newimage_source_rows <uuid>  ->  the rows of the start table: name, macOS, what it holds, its
-# state, and (not shown) the key the row stands for. Ready images first, then the restore files.
-# An image that is not ready is not listed: nothing can be built from it. What an image holds is
-# the names of the recipes it keeps, else its recipe's description (as newimage_recipe_text
-# shows one), else macOS.
+# newimage_source_rows <uuid>  ->  the rows of the start table: name, its system in short ("macOS
+# 27.0.1", "Debian 13"), what it holds, its state, and (not shown) the key the row stands for.
+# Ready images first, then the restore files. An image that is not ready is not listed: nothing
+# can be built from it. What an image holds is the names of the recipes it keeps, else its
+# recipe's description (as newimage_recipe_text shows one), else macOS or Linux alone, with the
+# Command Line Tools or the compiler when it has them.
 newimage_source_rows() {
     main_rows "$1" build | /usr/bin/awk -F'\t' '
         $2 == "ready" {
-            holds = ($8 != "-") ? $8 : (($9 != "-") ? $9 : "macOS")
+            linux = ($13 == "linux")
+            holds = ($8 != "-") ? $8 : (($9 != "-") ? $9 : (linux ? "Linux" : "macOS"))
             if ($8 != "-") gsub(/,/, ", ", holds)
             else sub(/ \([^()]*\)$/, "", holds)
-            if ($10 != "-" && $8 == "-" && $9 == "-") holds = "macOS and the Command Line Tools"
+            if ($10 != "-" && $8 == "-" && $9 == "-") holds = linux ? "Linux with the compiler and make" : "macOS and the Command Line Tools"
             state = "ready"
             if ($11 ~ /full-disk-access/) state = "no Full Disk Access"
             if ($3 == "true") state = "being changed"
-            printf "%s\t%s\t%s\t%s\timage %s\n", $1, $4, holds, state, $1
+            # The system in short: for a macOS image only when its version is known.
+            runs = (linux ? ($14 != "-") : ($4 != "-")) ? $14 : "-"
+            printf "%s\t%s\t%s\t%s\timage %s\n", $1, runs, holds, state, $1
         }'
     main_rows "$1" ipsw | /usr/bin/awk -F'\t' '
         {
             size = ($4 ~ /^[0-9]+$/) ? sprintf("%.1f GB", $4 / 1000000000) : "-"
-            printf "%s\t%s\ta restore file: macOS is installed from it\t%s\tipsw %s\n", $1, $2, size, $1
+            runs = ($2 != "" && $2 != "-") ? "macOS " $2 : "-"
+            printf "%s\t%s\ta restore file: macOS is installed from it\t%s\tipsw %s\n", $1, runs, size, $1
         }'
 }
 
 # -- The tools -----------------------------------------------------------------------------------
 
-# newimage_own_rows <uuid>  ->  the recipes the user added, a row each (as agentvm_recipe_rows), as
-# far as a row has its five fields and a full path (the rows come back from a file).
-newimage_own_rows() {
-    main_rows "$1" own | /usr/bin/awk -F'\t' 'NF == 5 && $5 ~ /^\// && $1 ~ /^[ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789._-]+$/'
+# newimage_recipes <uuid> <own|all|listed>  ->  recipe rows read from the window's cache files by
+# lib.agentvm.newimage.recipes.awk, which says what each of the three is: the recipes the user
+# added, every recipe the window knows, or the ones the start as it is now is offered. One awk
+# run, since the Tools step asks for its list many times in one click.
+newimage_recipes() {
+    local _uuid="$1"
+    local _want="$2"
+    local _start=""
+    [ "$_want" = "listed" ] && _start="$(newimage_start "$_uuid")"
+    local _role _file
+    set --
+    for _role in build shipped own; do
+        case "$_want:$_role" in
+            own:build|own:shipped|all:build) continue ;;
+        esac
+        case "$_role" in
+            shipped) _file="$(ui_cache "$_uuid" recipes.tsv)" ;;
+            *)       _file="$(ui_cache "$_uuid" "$_role.tsv")" ;;
+        esac
+        [ -f "$_file" ] && set -- "$@" "role=$_role" "$_file"
+    done
+    [ "$#" -gt 0 ] || return 0
+    NEW_START="$_start" /usr/bin/awk -F'\t' -v want="$_want" -v slots="$NEW_RECIPE_SLOTS" -f "$NEW_RECIPES_AWK" "$@"
 }
 
-# newimage_recipe_list <uuid>  ->  the rows of the recipes the window has a slot for: the ones
-# that come with agent-vm, in the order they are applied, then the ones the user added, in the
-# order added. A name is listed once.
+# newimage_own_rows <uuid>  ->  the recipes the user added, a row each (as newimage_recipe_rows),
+# as far as a row has its six fields, a full path, a guest and a name that can be one (the rows
+# come back from a file).
+newimage_own_rows() {
+    newimage_recipes "$1" own
+}
+
+# newimage_recipe_all <uuid>  ->  the rows of every recipe the window knows, whichever system it
+# is for: the ones that come with agent-vm, in the order they are applied, then the ones the user
+# added, in the order added. A name is there once.
+newimage_recipe_all() {
+    newimage_recipes "$1" all
+}
+
+# newimage_recipe_list <uuid>  ->  the rows of the recipes the Tools step lists, each in a slot:
+# the ones of newimage_recipe_all that the start as it is now is offered, as far as the window
+# has slots.
 newimage_recipe_list() {
-    {
-        main_rows "$1" recipes
-        newimage_own_rows "$1"
-    } | /usr/bin/awk -F'\t' -v slots="$NEW_RECIPE_SLOTS" '!seen[$1]++ && ++n <= slots'
+    newimage_recipes "$1" listed
+}
+
+# newimage_recipe_for <guest>  <  recipe rows  ->  the ones a start of that system is offered, as
+# far as the window has slots: the rule newimage_recipe_list applies, for a system that is given.
+newimage_recipe_for() {
+    /usr/bin/awk -F'\t' -v want=listed -v guest="$1" -v slots="$NEW_RECIPE_SLOTS" -v role=shipped -f "$NEW_RECIPES_AWK"
+}
+
+# newimage_offered <a recipe's guest> <a start's guest>  ->  0 when a start of that system is
+# offered a recipe for that guest: every recipe but one for the other system (the same rule, for
+# one recipe).
+newimage_offered() {
+    case "$2:$1" in
+        linux:macos|macos:linux) return 1 ;;
+    esac
+    return 0
+}
+
+# newimage_images_words <guest>  ->  "macOS images" or "Linux images".
+newimage_images_words() {
+    case "$1" in
+        linux) echo "Linux images" ;;
+        *)     echo "macOS images" ;;
+    esac
+}
+
+# newimage_start_words <guest>  ->  the starts of that system, as a sentence names them.
+newimage_start_words() {
+    case "$1" in
+        linux) echo "a Linux image" ;;
+        *)     echo "a macOS image or a restore file" ;;
+    esac
 }
 
 # newimage_recipe_names <uuid>  ->  the names of those recipes, one per line.
@@ -385,10 +513,11 @@ newimage_is_own() {
     [ -n "$(newimage_own_rows "$1" | /usr/bin/awk -F'\t' -v name="$2" '$1 "" == name { print "yes"; exit }')" ]
 }
 
-# newimage_add_own <uuid> <path>  ->  adds that recipe file to the list when agent-vm accepts it
-# as a recipe (`recipe check`), and prints the line for the note: that it is in the list, with
-# what agent-vm warns about in it, or why it cannot be added. Adding is not ticking: the
-# checkboxes are the user's.
+# newimage_add_own <uuid> <path>  ->  adds that recipe file to the recipes the window knows when
+# agent-vm accepts it as a recipe (`recipe check`), and prints the line for the note: that it is
+# in the list, with what agent-vm warns about in it, or why it cannot be added. A recipe for the
+# other system than the start's is kept too, and the note says when it is listed: the start can
+# still change. Adding is not ticking: the checkboxes are the user's.
 newimage_add_own() {
     case "$2" in
         /*) ;;
@@ -425,11 +554,25 @@ newimage_add_own() {
         printf 'The path of that file has a tab or a line break in it. Rename the file or its folder to add this recipe.\n'
         return 0
     fi
-    local _list="$(newimage_recipe_list "$1")"
+    # The guest agent-vm read in the file says which starts the recipe is listed for.
+    local _guest="$(printf '%s\n' "$_checked" | /usr/bin/cut -f9)"
+    case "$_guest" in
+        macos|linux|any) ;;
+        *) _guest="-" ;;
+    esac
+    local _now="$(newimage_guest "$1")"
+    # A recipe is looked for among all the window knows, the other system's too: one that is
+    # not listed now would be in the way when the start changes.
+    local _all="$(newimage_recipe_all "$1")"
     # The path goes to awk in the environment: -v would read a backslash in it as an escape.
-    local _there="$(printf '%s\n' "$_list" | NEW_RECIPE_PATH="$2" /usr/bin/awk -F'\t' '$5 == ENVIRON["NEW_RECIPE_PATH"] { print $1; exit }')"
+    local _there="$(printf '%s\n' "$_all" | NEW_RECIPE_PATH="$2" /usr/bin/awk -F'\t' '$5 == ENVIRON["NEW_RECIPE_PATH"] { print $1 "\t" $6; exit }')"
     if [ -n "$_there" ]; then
-        printf 'That is the recipe %s, which is in the list already.\n' "$_there"
+        if newimage_offered "${_there#*"$ui_tab"}" "$_now"; then
+            printf 'That is the recipe %s, which is in the list already.\n' "${_there%%"$ui_tab"*}"
+        else
+            printf 'That is the recipe %s, which is for %s: it is listed when the start is %s.\n' "${_there%%"$ui_tab"*}" \
+                "$(newimage_images_words "${_there#*"$ui_tab"}")" "$(newimage_start_words "${_there#*"$ui_tab"}")"
+        fi
         return 0
     fi
     local _name="${_row%%"$ui_tab"*}"
@@ -440,18 +583,36 @@ newimage_add_own() {
             printf 'A recipe cannot be listed under the name %s. Rename the file or its folder to add this recipe.\n' "$_name"
             return 0 ;;
     esac
-    if [ -n "$(printf '%s\n' "$_list" | /usr/bin/awk -F'\t' -v name="$_name" '$1 "" == name { print "yes"; exit }')" ]; then
-        printf 'A recipe named %s is in the list already. A recipe is named by its folder, or by its file when that is not recipe.json: rename one to add this recipe.\n' "$_name"
+    _there="$(printf '%s\n' "$_all" | /usr/bin/awk -F'\t' -v name="$_name" '$1 "" == name { print "=" $6; exit }')"
+    if [ -n "$_there" ]; then
+        if newimage_offered "${_there#=}" "$_now"; then
+            printf 'A recipe named %s is in the list already. A recipe is named by its folder, or by its file when that is not recipe.json: rename one to add this recipe.\n' "$_name"
+        else
+            printf 'A recipe named %s is there already, for %s. A recipe is named by its folder, or by its file when that is not recipe.json: rename one to add this recipe.\n' \
+                "$_name" "$(newimage_images_words "${_there#=}")"
+        fi
         return 0
     fi
-    local _count="$(printf '%s\n' "$_list" | /usr/bin/awk 'NF { n++ } END { print n + 0 }')"
-    if [ "$_count" -ge "$NEW_RECIPE_SLOTS" ]; then
-        printf 'This window lists %s recipes. With more, build the image with agent-vm image create in Terminal.\n' "$NEW_RECIPE_SLOTS"
+    # Room is needed in every list the recipe joins: the one shown now, and the other system's
+    # when the recipe is for that one, or for both.
+    local _other="linux"
+    [ "$_now" = "linux" ] && _other="macos"
+    local _kind _count
+    for _kind in "$_now" "$_other"; do
+        newimage_offered "$_guest" "$_kind" || continue
+        _count="$(printf '%s\n' "$_all" | newimage_recipe_for "$_kind" | /usr/bin/awk 'NF { n++ } END { print n + 0 }')"
+        [ "$_count" -ge "$NEW_RECIPE_SLOTS" ] || continue
+        if [ "$_kind" = "$_now" ]; then
+            printf 'This window lists %s recipes. With more, build the image with agent-vm image create in Terminal.\n' "$NEW_RECIPE_SLOTS"
+        else
+            printf 'This window lists %s recipes for %s already. With more, build the image with agent-vm image create in Terminal.\n' \
+                "$NEW_RECIPE_SLOTS" "$(newimage_images_words "$_kind")"
+        fi
         return 0
-    fi
+    done
     {
         newimage_own_rows "$1"
-        printf '%s\n' "$_row"
+        printf '%s\t%s\n' "$_row" "$_guest"
     } | ui_store "$(ui_cache "$1" own.tsv)"
     # Warnings are agent-vm's guesses from the commands' text: they are shown, and stop nothing.
     local _warnings="$(printf '%s\n' "$_checked" | /usr/bin/cut -f7)"
@@ -461,7 +622,12 @@ newimage_add_own() {
         1)  _warned=" agent-vm warns about it: $(printf '%s\n' "$_checked" | /usr/bin/cut -f8)." ;;
         *)  _warned=" agent-vm warns about it: $(printf '%s\n' "$_checked" | /usr/bin/cut -f8), and $((_warnings - 1)) more (agent-vm recipe check lists them)." ;;
     esac
-    printf '%s is in the list now. Tick it to install it.%s\n' "$_name" "$_warned"
+    if newimage_offered "$_guest" "$_now"; then
+        printf '%s is in the list now. Tick it to install it.%s\n' "$_name" "$_warned"
+    else
+        printf '%s is a recipe for %s, and the new image starts from %s. It is kept, and listed when the start is %s.%s\n' \
+            "$_name" "$(newimage_images_words "$_guest")" "$(newimage_start_text "$1")" "$(newimage_start_words "$_guest")" "$_warned"
+    fi
 }
 
 # newimage_recipes_blocker <uuid>  ->  why the recipes ticked cannot be built with now, or
@@ -511,14 +677,16 @@ newimage_recipe_text() {
     printf '%s\n' "$1" | /usr/bin/sed 's/ ([^()]*)$//'
 }
 
-# newimage_recipe_need <name>  ->  the recipe that one of agent-vm's own recipes needs before it,
-# or nothing. agent-vm's recipes say this in words only (their descriptions, and a first step
-# that fails at once); this table is those words.
+# newimage_recipe_need <name> <the start's guest>  ->  the recipe that one of agent-vm's own
+# recipes needs before it in an image of that system, or nothing. agent-vm's recipes say this in
+# words only (their descriptions, and a first step that fails at once); this table is those
+# words. The agents need Node in either system, which is another recipe in each.
 newimage_recipe_need() {
-    case "$1" in
-        node|python)           echo "homebrew" ;;
-        agent-clis|acp-agents) echo "node" ;;
-        xcode-platforms)       echo "xcode" ;;
+    case "$2:$1" in
+        macos:node|macos:python)           echo "homebrew" ;;
+        macos:agent-clis|macos:acp-agents) echo "node" ;;
+        linux:agent-clis|linux:acp-agents) echo "linux-node" ;;
+        macos:xcode-platforms)             echo "xcode" ;;
     esac
 }
 
@@ -529,11 +697,25 @@ newimage_ticks() {
     newimage_recipe_names "$1" | /usr/bin/awk -v kept="$_kept" 'index(kept, " " $1 " ") > 0'
 }
 
+# newimage_slots <uuid>  ->  the recipes the checkboxes were last laid out for, in the slots'
+# order, on one line; nothing when what is kept is not recipe names (it comes back from a
+# pasteboard, and is split into words).
+newimage_slots() {
+    local _slots="$(ui_get slots "$1")"
+    case "$_slots" in
+        *[!ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789._\ -]*) return 0 ;;
+    esac
+    printf '%s\n' "$_slots"
+}
+
 # newimage_take_ticks <uuid>  ->  keeps the checkboxes as the handler that runs saw them (a
-# checkbox's value is "true" or "false"; anything else is not ticked).
+# checkbox's value is "true" or "false"; anything else is not ticked). A checkbox stands for the
+# recipe its slot shows, which is the one it was last laid out for: the list as it is now can be
+# another when the start left agent-vm's list while the step was shown, and a tick read by it
+# would pass to the recipe that has the slot's place there.
 newimage_take_ticks() {
     local _ticks="" _name _value _slot=0
-    for _name in $(newimage_recipe_names "$1"); do
+    for _name in $(newimage_slots "$1"); do
         _slot=$((_slot + 1))
         eval "_value=\"\${OMC_ACTIONUI_VIEW_$((NEW_RECIPE_TICK_BASE + _slot))_VALUE:-}\""
         [ "$_value" = "true" ] && _ticks="${_ticks:+$_ticks }$_name"
@@ -564,9 +746,10 @@ newimage_holds_nothing() {
 newimage_missing() {
     local _ticks="$(newimage_ticks "$1")"
     local _held="$(newimage_held "$1")"
+    local _guest="$(newimage_guest "$1")"
     local _name _need
     for _name in $_ticks; do
-        _need="$(newimage_recipe_need "$_name")"
+        _need="$(newimage_recipe_need "$_name" "$_guest")"
         [ -n "$_need" ] || continue
         newimage_listed "$_need" "$_ticks" && continue
         newimage_listed "$_need" "$_held" && continue
@@ -761,7 +944,8 @@ newimage_taken_text() {
 
 # newimage_suggested_name <uuid>  ->  a free name for the new image: for a copy, the start's name
 # and the tool ticked ("dev-node"; in lower case, and "-tools" when that cannot be a name, as a
-# recipe of the user's own may be called anything), "-tools" for several, "-copy" for none; "dev"
+# recipe of the user's own may be called anything; without the "linux-" that agent-vm's recipes
+# for Linux images begin with, so "deb-node"), "-tools" for several, "-copy" for none; "dev"
 # for a build from a restore file; with a number when that is taken.
 newimage_suggested_name() {
     local _base="dev"
@@ -771,7 +955,7 @@ newimage_suggested_name() {
         _count="$(printf '%s\n' "$_ticks" | /usr/bin/awk 'NF { n++ } END { print n + 0 }')"
         case "$_count" in
             0) _base="$(newimage_start_name "$1")-copy" ;;
-            1) _base="$(newimage_start_name "$1")-$(printf '%s\n' "$_ticks" | /usr/bin/tr 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' 'abcdefghijklmnopqrstuvwxyz')"
+            1) _base="$(newimage_start_name "$1")-$(printf '%s\n' "${_ticks#linux-}" | /usr/bin/tr 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' 'abcdefghijklmnopqrstuvwxyz')"
                agentvm_valid_name "$_base" || _base="$(newimage_start_name "$1")-tools" ;;
             *) _base="$(newimage_start_name "$1")-tools" ;;
         esac
@@ -785,6 +969,15 @@ newimage_suggested_name() {
     printf '%s\n' "$_name"
 }
 
+# newimage_disk_growth <uuid>  ->  the least the disk of a copy of the start may grow by, in GB.
+newimage_disk_growth() {
+    if [ "$(newimage_guest "$1")" = "linux" ]; then
+        printf '%s\n' "$NEW_LINUX_DISK_GROWTH"
+    else
+        printf '%s\n' "$NEW_DISK_GROWTH"
+    fi
+}
+
 # newimage_suggested_disk <uuid>  ->  the disk the fields start with, in GB: the start's, or
 # NEW_XCODE_DISK when xcode is ticked and the start's disk can grow to it.
 newimage_suggested_disk() {
@@ -792,7 +985,8 @@ newimage_suggested_disk() {
     case "$_disk" in
         ''|*[!0123456789]*) _disk="$NEW_DEFAULT_DISK" ;;
     esac
-    if newimage_listed xcode "$(newimage_ticks "$1")" && [ $((_disk + NEW_DISK_GROWTH)) -le "$NEW_XCODE_DISK" ]; then
+    local _growth="$(newimage_disk_growth "$1")"
+    if newimage_listed xcode "$(newimage_ticks "$1")" && [ $((_disk + _growth)) -le "$NEW_XCODE_DISK" ]; then
         _disk="$NEW_XCODE_DISK"
     fi
     printf '%s\n' "$_disk"
@@ -871,9 +1065,10 @@ newimage_sizes_blocker() {
     [ "$(newimage_start_kind "$1")" = "image" ] || return 0
     local _base="$(newimage_base "$1" 7)"
     newimage_number "$_base" || return 0
-    if [ "$_disk" -ne "$_base" ] && [ "$_disk" -lt $((_base + NEW_DISK_GROWTH)) ]; then
+    local _growth="$(newimage_disk_growth "$1")"
+    if [ "$_disk" -ne "$_base" ] && [ "$_disk" -lt $((_base + _growth)) ]; then
         printf 'The disk can stay at %s GB, as in image %s, or grow to %s GB or more. It cannot shrink.\n' \
-            "$_base" "$(newimage_start_name "$1")" "$((_base + NEW_DISK_GROWTH))"
+            "$_base" "$(newimage_start_name "$1")" "$((_base + _growth))"
     fi
     return 0
 }
@@ -882,7 +1077,7 @@ newimage_sizes_blocker() {
 newimage_size_text() {
     if [ "$(newimage_start_kind "$1")" = "image" ]; then
         printf "These start as image %s has them. The disk is a sparse file, which takes only what is written to it; the disk of a copy stays as it is or grows by at least %s GB.\n" \
-            "$(newimage_start_name "$1")" "$NEW_DISK_GROWTH"
+            "$(newimage_start_name "$1")" "$(newimage_disk_growth "$1")"
     else
         printf "These start as the defaults of agent-vm. The disk is a sparse file, which takes only what is written to it.\n"
     fi
@@ -958,7 +1153,8 @@ newimage_command_text() {
 
 # newimage_blocker <uuid>  ->  why the build cannot be started now, or nothing: agent-vm cannot be
 # read, something about the start, the tools, the options or the name changed since its step, or
-# every virtual machine slot is taken, since a build runs the image in one.
+# the new image is a macOS one and both places for a macOS virtual machine are taken, since a
+# build runs the image in one. A Linux image needs none of them.
 newimage_blocker() {
     local _why="$(newimage_unreadable "$1")"
     [ -n "$_why" ] || _why="$(newimage_start_blocker "$1")"
@@ -970,9 +1166,9 @@ newimage_blocker() {
         printf '%s\n' "$_why"
         return 0
     fi
-    main_rows "$1" vm | /usr/bin/awk -F'\t' '
-        NR == 1 && $1 ~ /^[0-9]+$/ && $2 ~ /^[0-9]+$/ && $1 + 0 >= $2 + 0 {
-            printf "%s of %s virtual machines are running, and a build needs one. Stop a box first.\n", $1, $2 }'
+    [ "$(newimage_guest "$1")" = "linux" ] && return 0
+    main_macos_vms "$1" | /usr/bin/awk -F'\t' '$1 >= $2 {
+        printf "%s of %s macOS virtual machines are running, and the build of a macOS image needs one. Stop a macOS box first.\n", $1, $2 }'
 }
 
 # newimage_summary_text <uuid>  ->  what Build makes, in words.
@@ -993,19 +1189,19 @@ newimage_summary_text() {
 }
 
 # newimage_advice_text <uuid>  ->  what to know before the build: a need that may be missing, what
-# Full Disk Access will be in the new image, and that the window can go.
+# Full Disk Access will be in the new image when it is a macOS one (a Linux image has no such
+# permission), and that the window can go.
 newimage_advice_text() {
     newimage_tools_warning "$1"
     local _name="$(newimage_start_name "$1")"
-    if [ "$(newimage_start_kind "$1")" = "ipsw" ]; then
-        printf 'An image built from a restore file has no Full Disk Access yet: Set Up... in its pane grants it, once, after the build.\n'
-    else
-        case "$(newimage_base "$1" 11)" in
-            *full-disk-access*)
-                printf 'Image %s has no Full Disk Access, so the new image will have none either. Set Up... in the pane of either grants it.\n' "$_name" ;;
-            *)  printf 'The new image keeps the Full Disk Access of image %s.\n' "$_name" ;;
-        esac
-    fi
+    case "$(newimage_guest "$1"):$(newimage_start_kind "$1"):$(newimage_base "$1" 11)" in
+        linux:*) ;;
+        *:ipsw:*)
+            printf 'An image built from a restore file has no Full Disk Access yet: Set Up... in its pane grants it, once, after the build.\n' ;;
+        *full-disk-access*)
+            printf 'Image %s has no Full Disk Access, so the new image will have none either. Set Up... in the pane of either grants it.\n' "$_name" ;;
+        *)  printf 'The new image keeps the Full Disk Access of image %s.\n' "$_name" ;;
+    esac
     printf 'The build runs as a job. Its progress window opens, and the build goes on when the windows, or the app, are closed.\n'
 }
 
@@ -1031,14 +1227,44 @@ newimage_paint_recipe_notes() {
     "$dialog" "$1" "$NEW_NOTE_ID" "$_note"
 }
 
-# newimage_paint_recipes <uuid>  ->  the recipe slots: one shown per recipe, with its name and
-# description, and for one the user added, where its file is. The checkboxes are the user's and
-# are not set. Add a Recipe File... is on while a slot is free.
+# newimage_paint_recipes <uuid>  ->  the recipe slots: one shown per recipe listed, with its name
+# and description, and for one the user added, where its file is; a slot that has no recipe any
+# more is hidden. Add a Recipe File... is on while a slot is free.
+#
+# The checkboxes are the user's, and one whose slot keeps its recipe is not set. When the start
+# became one of the other system, a slot holds another recipe than its checkbox was last shown
+# beside: that checkbox is set to whether its new recipe is ticked, so a tick stays with its
+# recipe and never passes to the one that took its slot. A recipe that is not listed any more
+# loses its tick. A slot that showed no recipe is not ticked, so one that gets a recipe the
+# user never ticked (a recipe file just added) is left alone.
 newimage_paint_recipes() {
     "$dialog" "$1" "$NEW_TOOLS_TEXT_ID" "$(newimage_tools_text "$1")"
-    local _slot=0 _name _text
-    for _name in $(newimage_recipe_names "$1"); do
+    # The recipes listed now, and the ones the slots last showed: each list ends in a space, so
+    # that a slot's name is taken off its front, and is nothing when the list has run out.
+    local _now="$(newimage_recipe_names "$1" | /usr/bin/tr '\n' ' ')"
+    local _before="$(newimage_slots "$1") "
+    local _laid="${_now% }"
+    local _ticks="$(newimage_ticks "$1")"
+    local _slot=0 _free=0 _name _was _text _on
+    while [ "$_slot" -lt "$NEW_RECIPE_SLOTS" ]; do
         _slot=$((_slot + 1))
+        _name="${_now%% *}"
+        _now="${_now#* }"
+        _was="${_before%% *}"
+        _before="${_before#* }"
+        if [ "$_was" != "$_name" ]; then
+            _on="false"
+            [ -n "$_name" ] && newimage_listed "$_name" "$_ticks" && _on="true"
+            # A slot that showed no recipe is not ticked: it is set only to tick it.
+            if [ -n "$_was" ] || [ "$_on" = "true" ]; then
+                "$dialog" "$1" "$((NEW_RECIPE_TICK_BASE + _slot))" "$_on"
+            fi
+        fi
+        if [ -z "$_name" ]; then
+            _free=$((_free + 1))
+            [ -n "$_was" ] && ui_show "$1" "$((NEW_RECIPE_ROW_BASE + _slot))" 0
+            continue
+        fi
         _text="$(newimage_recipe_text "$(newimage_recipe_field "$1" "$_name" 2)")"
         if newimage_is_own "$1" "$_name"; then
             [ "$_text" = "-" ] && _text="Your recipe"
@@ -1048,7 +1274,8 @@ newimage_paint_recipes() {
         "$dialog" "$1" "$((NEW_RECIPE_TEXT_BASE + _slot))" "$_text"
         ui_show "$1" "$((NEW_RECIPE_ROW_BASE + _slot))" 1
     done
-    if [ "$_slot" -lt "$NEW_RECIPE_SLOTS" ]; then
+    ui_set slots "$1" "$_laid"
+    if [ "$_free" -gt 0 ]; then
         ui_enable "$1" "$NEW_ADD_RECIPE_ID" 1
     else
         ui_enable "$1" "$NEW_ADD_RECIPE_ID" 0

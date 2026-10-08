@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "guest": "linux",
+  "description": "Node and npm from nodejs.org, for Linux images",
+  "parameters": {
+    "major": { "description": "Node's major version; its newest release is installed (24 or later: an older Node cannot use a box's proxy for fetch)", "default": "24" }
+  },
+  "steps": [ { "name": "Node", "run": "true" } ],
+  "checks": [ "node --version" ]
+}

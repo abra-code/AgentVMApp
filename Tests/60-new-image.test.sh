@@ -6,9 +6,11 @@
 # five steps with what each keeps and refuses, and Build: the job it starts, with the command
 # line shown, the progress window, and the main window following the job at once.
 #
-# agent-vm is the fake: status from a jq edit of fixtures/agentvm/status-variety.json, the restore
-# files from fixtures/agentvm/ipsw-list.json, and the recipes from fixtures/recipes (small copies
-# of agent-vm's own, with their descriptions, inputs and parameters).
+# agent-vm is the fake: status from a jq edit of fixtures/agentvm/status-variety.json, or of
+# status-mixed.json where a start runs Linux, the restore files from
+# fixtures/agentvm/ipsw-list.json, and the recipes from fixtures/recipes (small copies of
+# agent-vm's own, for macOS images, for Linux images and for both, with their descriptions,
+# inputs and parameters).
 #
 # POSIX sh only. Validate with "sh -n", never "bash -n".
 . "${OMCTEST_LIB:?set OMCTEST_LIB, or run via: appletbuilder test}"
@@ -240,7 +242,7 @@ check "no such agent-vm: nothing"    "" \
 
 section "the library: the recipes and what they ask for"
 rows="$(with_fake agentvm_recipe_rows)"
-check "seven recipes, five fields each" "7|5" "$(printf '%s\n' "$rows" | /usr/bin/awk 'END { print NR }')|$(printf '%s\n' "$rows" | field_count)"
+check "ten recipes, five fields each" "10|5" "$(printf '%s\n' "$rows" | /usr/bin/awk 'END { print NR }')|$(printf '%s\n' "$rows" | field_count)"
 check "a recipe: its folder's name, description, one input, no parameter, its file" \
     "xcode${TAB}Xcode from a .xip you downloaded (next: Recipes/xcode-platforms for simulator runtimes)${TAB}1${TAB}0${TAB}$RECIPES/xcode/recipe.json" \
     "$(printf '%s\n' "$rows" | row_named xcode)"
@@ -262,6 +264,41 @@ check "parameters: each with its default; an empty default is none" \
 check "a recipe that asks for nothing" "" "$(lib agentvm_recipe_option_rows "$RECIPES/homebrew/recipe.json")"
 printf '{"parameters": {"ok_1": {"default": "x"}, "--force": {"default": "y"}, "a b": {}}}\n' > "$BROKEN/good/recipe.json"
 check "a name that could not be part of an argument is left out" "ok_1" "$(lib agentvm_recipe_option_rows "$BROKEN/good/recipe.json" | col 2)"
+
+section "the library: the recipes as the window lists them, and the system each is for"
+# newlib <function> [args...]  ->  a function of the window's library, with agent-vm the fake.
+newlib() {
+    ( . "$APP_SCRIPTS/lib.agentvm.newimage.sh" >/dev/null 2>&1; "$@" )
+}
+# offered <guest>  <  recipe rows  ->  the names a start of that system is offered, on one line.
+offered() {
+    newlib newimage_recipe_for "$1" | col 1 | /usr/bin/paste -sd ' ' -
+}
+fake_reset
+rows="$(newlib newimage_recipe_rows)"
+check "six fields each"              "6" "$(printf '%s\n' "$rows" | field_count)"
+check "in the order they are applied, each with the system agent-vm says it is for" \
+    "homebrew:macos node:macos python:macos linux-node:linux linux-python:linux agent-clis:any acp-agents:any xcode:macos xcode-platforms:macos linux-sudo:linux" \
+    "$(printf '%s\n' "$rows" | /usr/bin/awk -F'\t' '{ printf "%s%s:%s", (NR > 1) ? " " : "", $1, $6 } END { print "" }')"
+check "the first five fields are the recipe's row" "$(with_fake agentvm_recipe_rows | row_named linux-node)" "$(printf '%s\n' "$rows" | row_named linux-node | col 1-5)"
+check "agent-vm is asked once, about all of them" "1|10" \
+    "$(fake_log | /usr/bin/grep -c '^recipe check ')|$(fake_log | /usr/bin/grep '^recipe check ' | /usr/bin/grep -o 'recipe\.json' | /usr/bin/awk 'END { print NR }')"
+check "a macOS start is offered the recipes for macOS images and for both" "homebrew node python agent-clis acp-agents xcode xcode-platforms" "$(printf '%s\n' "$rows" | offered macos)"
+check "a Linux start the recipes for Linux images and for both" "linux-node linux-python agent-clis acp-agents linux-sudo" "$(printf '%s\n' "$rows" | offered linux)"
+printf 'no such command\n' > "$FAKE_AGENTVM_DIR/fail-recipe"
+printf '64\n' > "$FAKE_AGENTVM_DIR/fail-recipe-status"
+unknown="$(newlib newimage_recipe_rows)"
+/bin/rm -f "$FAKE_AGENTVM_DIR/fail-recipe" "$FAKE_AGENTVM_DIR/fail-recipe-status"
+check "an agent-vm that cannot say: every recipe is there, for no system known" "10|-" \
+    "$(printf '%s\n' "$unknown" | /usr/bin/awk 'END { print NR }')|$(printf '%s\n' "$unknown" | col 6 | /usr/bin/sort -u)"
+check "  and is offered whatever the start" "10|10" \
+    "$(printf '%s\n' "$unknown" | offered macos | /usr/bin/awk '{ print NF }')|$(printf '%s\n' "$unknown" | offered linux | /usr/bin/awk '{ print NF }')"
+check "no more are offered than the window has slots" "10" \
+    "$( { printf '%s\n' "$unknown"; printf 'eleventh\tOne more\t0\t0\t/x/eleventh.json\tany\n'; } | offered macos | /usr/bin/awk '{ print NF }')"
+check "what a recipe needs before it, in a macOS image" "homebrew|homebrew|node|node|xcode||" \
+    "$(newlib newimage_recipe_need node macos)|$(newlib newimage_recipe_need python macos)|$(newlib newimage_recipe_need agent-clis macos)|$(newlib newimage_recipe_need acp-agents macos)|$(newlib newimage_recipe_need xcode-platforms macos)|$(newlib newimage_recipe_need homebrew macos)|$(newlib newimage_recipe_need xcode macos)"
+check "  and in a Linux image: the agents need the Node for Linux images, the others nothing" "linux-node|linux-node|||" \
+    "$(newlib newimage_recipe_need agent-clis linux)|$(newlib newimage_recipe_need acp-agents linux)|$(newlib newimage_recipe_need linux-node linux)|$(newlib newimage_recipe_need linux-python linux)|$(newlib newimage_recipe_need linux-sudo linux)"
 
 section "the library: a command line as it would be typed"
 check "plain arguments are not quoted, others are" \
@@ -329,20 +366,20 @@ open_new
 check_status "the init handler exits cleanly" 0
 check "takes the request, and what was handed over, once" "|" "$(request)|$("$PB" agentvm_newimage_from get)"
 check "becomes the New Image window" "$APP_PID $UUID|1" "$(registered)|$(kept newimage)"
-check "asks agent-vm which it is, reads status and the restore files" "--version|status --json|image fetch-ipsw --list --json" \
-    "$(fake_log | /usr/bin/paste -sd '|' -)"
+check "asks agent-vm which it is and about its recipes, reads status and the restore files" "--version|recipe check|status --json|image fetch-ipsw --list --json" \
+    "$(fake_log | /usr/bin/sed 's/^recipe check .*/recipe check/' | /usr/bin/paste -sd '|' -)"
 check "its title"                    "New Image" "$(ui_title)"
 check "step 1 of 5: its panel, the first mark is now" "Step 1 of 5 - Start from|1|ntttt" "$(step_shown)"
 check "Back is off, Continue is there, Build is not" "0|1|0" "$(enabled "$NEW_BACK_ID")|$(shown "$NEW_NEXT_ID")|$(shown "$NEW_BUILD_ID")"
 check "the ready images, then the restore file; the failed image is not listed" \
     "dev|dev-acp|dev-agents|dev-node|dev-xcode|dev-xcode-ios|$IPSW" "$(ui_rows "$NEW_SOURCES_ID" | col 1 | /usr/bin/paste -sd '|' -)"
-check "a plain image: its macOS, what it holds, ready, and its key" \
-    "dev${TAB}27.0${TAB}macOS and the Command Line Tools${TAB}ready${TAB}image dev" "$(ui_rows "$NEW_SOURCES_ID" | row_named dev)"
+check "a plain image: its system, what it holds, ready, and its key" \
+    "dev${TAB}macOS 27.0${TAB}macOS and the Command Line Tools${TAB}ready${TAB}image dev" "$(ui_rows "$NEW_SOURCES_ID" | row_named dev)"
 check "an old image holds what its recipe said; one without Full Disk Access says so" \
     "Homebrew and Node${TAB}no Full Disk Access" "$(ui_rows "$NEW_SOURCES_ID" | row_named dev-node | col 3-4)"
 check "  without the recipe's advice for the command line" "Simulator runtimes and Xcode components" "$(ui_rows "$NEW_SOURCES_ID" | row_named dev-xcode-ios | col 3)"
-check "the restore file: its macOS, that macOS is installed from it, its size, its key" \
-    "$IPSW${TAB}27.0${TAB}a restore file: macOS is installed from it${TAB}26.6 GB${TAB}ipsw $IPSW" "$(ui_rows "$NEW_SOURCES_ID" | row_named "$IPSW")"
+check "the restore file: its system, that macOS is installed from it, its size, its key" \
+    "$IPSW${TAB}macOS 27.0${TAB}a restore file: macOS is installed from it${TAB}26.6 GB${TAB}ipsw $IPSW" "$(ui_rows "$NEW_SOURCES_ID" | row_named "$IPSW")"
 check "nothing writes to a view the window does not have" "" "$(ui_unknown_writes)"
 next
 check "Continue with nothing selected: the step stays, and says why" "Step 1 of 5 - Start from|1|ntttt|Choose what the new image starts from." "$(step_shown)|$(note)"
@@ -700,13 +737,16 @@ check "nothing stands in the way"    "|1" "$(note)|$(enabled "$NEW_BUILD_ID")"
 section "what stands in the way of a build"
 store '.runningVMs.count = 2'
 omc_run AgentVM.newimage.activated
-check "no virtual machine slot is free: Build is off, and says why" "2 of 2 virtual machines are running, and a build needs one. Stop a box first.|0" "$(note)|$(enabled "$NEW_BUILD_ID")"
+check "both places for a macOS virtual machine are taken: Build is off, and says why" "2 of 2 macOS virtual machines are running, and the build of a macOS image needs one. Stop a macOS box first.|0" "$(note)|$(enabled "$NEW_BUILD_ID")"
 : > "$FAKE_AGENTVM_DIR/log"
 omc_run AgentVM.newimage.build
 check "  Build, clicked anyway, starts nothing" "0" "$(started)"
+store '.runningVMs.count = 2 | .runningVMs.linuxBoxes = 1'
+omc_run AgentVM.newimage.activated
+check "one of the two machines is a Linux box: a place for a macOS build is free" "|1" "$(note)|$(enabled "$NEW_BUILD_ID")"
 store '(.images[] | select(.name == "dev")).updating = true'
 omc_run AgentVM.newimage.activated
-check "the start is being changed"   "Another command is changing image dev. A build can start from it when that has ended.|0" "$(note)|$(enabled "$NEW_BUILD_ID")"
+check "the start is being changed"  "Another command is changing image dev. A build can start from it when that has ended.|0" "$(note)|$(enabled "$NEW_BUILD_ID")"
 store '.images += [.images[0] | .name = "dev-tools"]'
 omc_run AgentVM.newimage.activated
 check "the name was taken meanwhile" "An image named dev-tools is there already. Give the new image another name.|0" "$(note)|$(enabled "$NEW_BUILD_ID")"
@@ -926,11 +966,11 @@ add_own "$OWN/third.json"
 check "a click while another one is worked on adds nothing" "$SHIPPED team-tools Extra-Things|1" "$(listed)"
 # Rows that are not a recipe's, should the file of the recipes added ever hold one: not listed,
 # and gone when the file is next written.
-printf 'junk\nfifth\tThe fifth\t0\t0\trelative/fifth.json\n' >> "$TMPDIR/AgentVM/$UUID/own.tsv"
+printf 'junk\nfifth\tThe fifth\t0\t0\trelative/fifth.json\tmacos\nsixth\tThe sixth\t0\t0\t/x/sixth.json\twindows\nold\tA row of five fields\t0\t0\t/x/old.json\n' >> "$TMPDIR/AgentVM/$UUID/own.tsv"
 "$PB" "agentvm_busy_$UUID" set ""
 add_own "$OWN/third.json"
 check "a third: every slot is taken, and Add a Recipe File... is off" "$SHIPPED team-tools Extra-Things third|0" "$(listed)"
-check "  a row without its fields, or without a full path, was not taken for a recipe" "3" "$(/usr/bin/awk 'END { print NR }' "$TMPDIR/AgentVM/$UUID/own.tsv")"
+check "  a row without its fields, without a full path, or for no system agent-vm has, was not taken for a recipe" "3" "$(/usr/bin/awk 'END { print NR }' "$TMPDIR/AgentVM/$UUID/own.tsv")"
 add_own "$OWN/fourth.json"
 check "one more is refused"          "This window lists 10 recipes. With more, build the image with agent-vm image create in Terminal.|$SHIPPED team-tools Extra-Things third|0" "$(note)|$(listed)"
 
@@ -939,7 +979,7 @@ before="$(listed)"
 add_own "$OWN/omc_hide.json"
 check "a name the window tool would read as an instruction is refused" \
     "A recipe cannot be listed under the name omc_hide. Rename the file or its folder to add this recipe.|$before" "$(note)|$(listed)"
-printf 'a b\tA name with a space\t0\t0\t/x/a b.json\n' >> "$TMPDIR/AgentVM/$UUID/own.tsv"
+printf 'a b\tA name with a space\t0\t0\t/x/a b.json\tmacos\n' >> "$TMPDIR/AgentVM/$UUID/own.tsv"
 check "a row whose name could not be a recipe's is not one" "" \
     "$( . "$APP_SCRIPTS/lib.agentvm.newimage.sh" >/dev/null 2>&1; newimage_own_rows "$UUID" | /usr/bin/grep -c 'a b' | /usr/bin/grep -v '^0$' )"
 
@@ -1042,6 +1082,8 @@ check "a recipe with a warning is added, and the note has the warning" \
     "team-tools is in the list now. Tick it to install it. agent-vm warns about it: step 1: it runs sudo, which asks for a password.|$SHIPPED team-tools|1" "$(note)|$(listed)"
 check "  agent-vm was asked once, about that file" "recipe check $OWN/team-tools/recipe.json --json" "$(fake_log | /usr/bin/grep '^recipe ')"
 omc_run AgentVM.newimage.close
+# The answer about team-tools goes before the window opens again: opening asks about every recipe.
+/bin/rm -f "$FAKE_AGENTVM_DIR/recipe-check.json"
 open_new dev
 ticked
 agentvm_says '.recipes[0].warnings = [{code: "sudo", place: "step 1", message: "it runs sudo"}, {code: "no-checks", place: "the recipe", message: "it has no checks"}, {code: "unused-input", place: "input license", message: "no step uses it"}]'
@@ -1106,6 +1148,255 @@ add_own "$OWN/back\\tslash.json"
 check "a path with a backslash in it" "$SHIPPED 1 1.0 back-tslash|0|The back_tslash, from $OWN/back\\tslash.json" "$(listed)|$(ui_value $((R_TEXT + 10)))"
 add_own "$OWN/back\\tslash.json"
 check "  the same file again is known by its path" "That is the recipe back-tslash, which is in the list already." "$(note)"
+omc_run AgentVM.newimage.close
+
+# -----------------------------------------------------------------------------------------------
+section "a start that runs Linux"
+# mixed <jq edit of status-mixed.json>  ->  the fake answers status with that: the six macOS
+# images of status.json, and the Linux images deb, deb-agents, ub and ub-agents.
+mixed() {
+    /usr/bin/jq "$1" "$FIXTURES_AGENTVM/status-mixed.json" > "$FAKE_AGENTVM_DIR/status.json"
+}
+LINUX="linux-node linux-python agent-clis acp-agents linux-sudo"
+# ticked_linux <recipe...>  ->  the checkboxes as the user left them when the start runs Linux.
+ticked_linux() {
+    local _slot=0 _name _on
+    for _name in $LINUX - -; do
+        _slot=$((_slot + 1))
+        _on=false
+        case " $* " in
+            *" $_name "*) _on=true ;;
+        esac
+        omc_control "$((R_TICK + _slot))" "$_on"
+    done
+}
+# slots  ->  every slot: the name it last showed, and whether it is shown (1), hidden (0), or
+# was never either.
+slots() {
+    local _slot=0 _all=""
+    while [ "$_slot" -lt 10 ]; do
+        _slot=$((_slot + 1))
+        _all="$_all$(ui_value $((R_NAME + _slot)))/$(ui_visible $((R_ROW + _slot))) "
+    done
+    printf '%s\n' "$_all"
+}
+# boxes <n>  ->  what the window set the first n checkboxes to, "-" for one it never set.
+boxes() {
+    local _slot=0 _all="" _value
+    while [ "$_slot" -lt "$1" ]; do
+        _slot=$((_slot + 1))
+        _value="$(ui_value $((R_TICK + _slot)))"
+        _all="$_all${_value:--} "
+    done
+    printf '%s\n' "${_all% }"
+}
+# tick_calls  ->  how many times the window set a checkbox.
+tick_calls() {
+    local _slot=0 _n=0
+    while [ "$_slot" -lt 10 ]; do
+        _slot=$((_slot + 1))
+        _n=$((_n + $(ui_calls "${UUID}${TAB}$((R_TICK + _slot))${TAB}")))
+    done
+    printf '%s\n' "$_n"
+}
+fake_reset
+mixed '.'
+open_new
+check "the table says what each image runs" "macOS 27.0.1|Debian 13|Debian 13|Ubuntu 26.04" \
+    "$(ui_rows "$NEW_SOURCES_ID" | row_named dev | col 2)|$(ui_rows "$NEW_SOURCES_ID" | row_named deb | col 2)|$(ui_rows "$NEW_SOURCES_ID" | row_named deb-agents | col 2)|$(ui_rows "$NEW_SOURCES_ID" | row_named ub | col 2)"
+check "a Linux image with no recipe holds Linux and the compiler; it is ready, with nothing said of Full Disk Access" \
+    "Linux with the compiler and make${TAB}ready${TAB}image deb" "$(ui_rows "$NEW_SOURCES_ID" | row_named deb | col 3-5)"
+check "  one built with recipes holds them" "linux-node, agent-clis" "$(ui_rows "$NEW_SOURCES_ID" | row_named deb-agents | col 3)"
+pick "image deb" deb
+next
+check "step 2, and the line above the tools names the start with its system" \
+    "Step 2 of 5 - Tools|Tick the tools to install on top of image deb (Debian 13). They are installed in the order listed. With nothing ticked, the new image is the start as it is." \
+    "$(ui_value "$NEW_HEADER_ID")|$(ui_value "$NEW_TOOLS_TEXT_ID")"
+check "the recipes for Linux images and for both, in the order they are applied; no recipe for macOS images" \
+    "linux-node/1 linux-python/1 agent-clis/1 acp-agents/1 linux-sudo/1 / / / / / " "$(slots)"
+check "  a description as agent-vm has it" "Node and npm from nodejs.org, for Linux images|sudo without a password for the box user: any program in a box can then become root" \
+    "$(ui_value $((R_TEXT + 1)))|$(ui_value $((R_TEXT + 5)))"
+check "no checkbox is set by the window: none is ticked for the user, the one for sudo least of all" "- - - - - - -" "$(boxes 7)"
+check "Add a Recipe File... is on: five slots are free" "1" "$(enabled "$NEW_ADD_RECIPE_ID")"
+ticked_linux agent-clis
+omc_run AgentVM.newimage.tick
+check "the agents alone: what they need in a Linux image" "agent-clis|needs linux-node|agent-clis needs linux-node: tick linux-node too." \
+    "$(kept ticks)|$(ui_value $((R_NOTE + 3)))|$(note)"
+next
+check "Continue: the step stays"     "Step 2 of 5 - Tools" "$(ui_value "$NEW_HEADER_ID")"
+ticked_linux linux-node
+next
+check "one tool: it names the image, without the linux- its recipe's name begins with" "Step 3 of 5 - Options" "$(ui_value "$NEW_HEADER_ID")"
+seen "$((O_FIELD + 1))"
+next
+check "  the name"                   "deb-node" "$(ui_value "$NEW_NAME_ID")"
+seen "$NEW_NAME_ID" "$NEW_CPUS_ID" "$NEW_MEMORY_ID" "$NEW_DISK_ID"
+back
+back
+ticked_linux agent-clis linux-node
+omc_run AgentVM.newimage.tick
+check "both ticked: kept in the order they are applied, and nothing is missing" "linux-node agent-clis|||" \
+    "$(kept ticks)|$(ui_value $((R_NOTE + 1)))|$(ui_value $((R_NOTE + 3)))|$(note)"
+next
+check "what the Node for Linux images asks for: its major version, with its default" "Step 3 of 5 - Options|major=24" \
+    "$(ui_value "$NEW_HEADER_ID")|$(ui_value $((O_LABEL + 1)))=$(ui_value $((O_FIELD + 1)))"
+omc_control "$((O_FIELD + 1))" "26"
+next
+check "the name, and the sizes of the Linux image: 4 CPUs, 4 GB, a 32 GB disk" "Step 4 of 5 - Name and size|deb-tools|4|4|32" \
+    "$(ui_value "$NEW_HEADER_ID")|$(ui_value "$NEW_NAME_ID")|$(ui_value "$NEW_CPUS_ID")|$(ui_value "$NEW_MEMORY_ID")|$(ui_value "$NEW_DISK_ID")"
+check "the line under them: a Linux copy's disk grows by 1 GB or more" \
+    "These start as image deb has them. The disk is a sparse file, which takes only what is written to it; the disk of a copy stays as it is or grows by at least 1 GB." "$(ui_value "$NEW_SIZE_TEXT_ID")"
+check "a smaller disk"               "Step 4 of 5 - Name and size|The disk can stay at 32 GB, as in image deb, or grow to 33 GB or more. It cannot shrink." "$(size_try deb-node 4 4 16)"
+check "one GB more is growth enough" "Step 5 of 5 - Check|" "$(size_try deb-node 4 4 33)"
+check "what is built"                "Image deb-node, built as a copy of image deb (Debian 13).|Tools, installed in this order: linux-node and agent-clis.|4 CPUs, 4 GB of memory, a 33 GB disk." \
+    "$(ui_value "$NEW_SUMMARY_ID" | /usr/bin/paste -sd '|' -)"
+check "the advice says nothing of Full Disk Access: only that the build is a job" \
+    "The build runs as a job. Its progress window opens, and the build goes on when the windows, or the app, are closed." "$(ui_value "$NEW_ADVICE_ID")"
+LINUX_EXPECTED="deb-node|--from|deb|--recipe|$RECIPES/linux-node/recipe.json|--recipe|$RECIPES/agent-clis/recipe.json|--set|major=26|--disk-gb|33"
+check "the command: the recipes in order, the parameter that is not at its default, the disk that grew" \
+    "agent-vm image create $(printf '%s\n' "$LINUX_EXPECTED" | /usr/bin/tr '|' '\n' | lib agentvm_args_text)" "$(ui_value "$NEW_COMMAND_ID")"
+check "nothing stands in the way"    "|1" "$(note)|$(enabled "$NEW_BUILD_ID")"
+mixed '.runningVMs.count = 2'
+omc_run AgentVM.newimage.activated
+check "both places for a macOS virtual machine are taken: a Linux build needs none of them" "|1" "$(note)|$(enabled "$NEW_BUILD_ID")"
+: > "$FAKE_AGENTVM_DIR/log"
+omc_run AgentVM.newimage.build
+check "Build: one job, image create with the arguments the window listed" "1|image|create|$LINUX_EXPECTED" "$(started)|$(job_args | /usr/bin/paste -sd '|' -)"
+check "the command line shown is the one run" "$(ui_value "$NEW_COMMAND_ID")" "agent-vm $(job_args | lib agentvm_args_text)"
+omc_run AgentVM.newimage.close
+"$PB" agentvm_open_request_progress set ""
+
+section "New Image from This..., on a Linux image"
+fake_reset
+mixed '.'
+open_new deb-agents
+check "step 2, with the Linux recipes"  "Step 2 of 5 - Tools|image deb-agents|$LINUX" "$(ui_value "$NEW_HEADER_ID")|$(kept start)|$(kept slots)"
+check "the recipes it keeps say so"  "deb-agents has it||deb-agents has it" "$(ui_value $((R_NOTE + 1)))|$(ui_value $((R_NOTE + 2)))|$(ui_value $((R_NOTE + 3)))"
+ticked_linux acp-agents
+omc_run AgentVM.newimage.tick
+check "what the ACP agents need is in the image: nothing is missing" "acp-agents||" "$(kept ticks)|$(ui_value $((R_NOTE + 4)))|$(note)"
+omc_run AgentVM.newimage.close
+
+section "a start of the other system: the slots, and the ticks, follow"
+fake_reset
+mixed '.'
+open_new
+pick "image dev" dev
+next
+check "a macOS start: the seven recipes for it" "homebrew/1 node/1 python/1 agent-clis/1 acp-agents/1 xcode/1 xcode-platforms/1 / / / " "$(slots)"
+ticked homebrew agent-clis xcode-platforms
+omc_run AgentVM.newimage.tick
+check "three ticked"                 "homebrew agent-clis xcode-platforms" "$(kept ticks)"
+back
+check "Back to the start; no checkbox was set so far" "Step 1 of 5 - Start from|- - - - - - -" "$(ui_value "$NEW_HEADER_ID")|$(boxes 7)"
+pick "image deb" deb
+next
+check "a Linux start: its five recipes, and the two slots left over are hidden" \
+    "linux-node/1 linux-python/1 agent-clis/1 acp-agents/1 linux-sudo/1 xcode/0 xcode-platforms/0 / / / " "$(slots)"
+check "every checkbox whose recipe changed is set: the agents keep their tick in their new slot, and no other recipe inherits one" \
+    "false false true false false false false|7" "$(boxes 7)|$(tick_calls)"
+check "the slots kept are the ones shown" "$LINUX" "$(kept slots)"
+check "the note says what the tick that stayed needs now" "agent-clis needs linux-node: tick linux-node too." "$(note)"
+seen $((R_TICK + 1)) $((R_TICK + 2)) $((R_TICK + 3)) $((R_TICK + 4)) $((R_TICK + 5)) $((R_TICK + 6)) $((R_TICK + 7))
+omc_run AgentVM.newimage.tick
+check "what is ticked now: the ticks of the macOS recipes are gone" "agent-clis" "$(kept ticks)"
+ticked_linux agent-clis linux-sudo
+omc_run AgentVM.newimage.tick
+calls_before="$(tick_calls)"
+back
+pick "image dev" dev
+next
+check "back to a macOS start: seven recipes again, the two slots shown again" "homebrew/1 node/1 python/1 agent-clis/1 acp-agents/1 xcode/1 xcode-platforms/1 / / / " "$(slots)"
+check "  the agents' tick moved back with them, and the one for sudo passed to nothing" "false false false true false false false" "$(boxes 7)"
+check "  the five whose recipe changed were set; a slot that showed no recipe is not ticked, and was left alone" "$((calls_before + 5))" "$(tick_calls)"
+seen $((R_TICK + 1)) $((R_TICK + 2)) $((R_TICK + 3)) $((R_TICK + 4)) $((R_TICK + 5)) $((R_TICK + 6)) $((R_TICK + 7))
+back
+pick "image dev-xcode" dev-xcode
+next
+check "another start of the same system: no checkbox is set" "$((calls_before + 5))|agent-clis" "$(tick_calls)|$(kept ticks)"
+omc_run AgentVM.newimage.close
+# The start leaves agent-vm's list while its tools are shown: the slots still show the Linux
+# recipes, and the list the window would make now is the one for a start it does not know.
+open_new
+pick "image deb" deb
+next
+mixed 'del(.images[] | select(.name == "deb"))'
+omc_run AgentVM.newimage.activated
+ticked_linux linux-node
+omc_run AgentVM.newimage.tick
+check "a checkbox stands for the recipe shown beside it, whatever became of the start" "linux-node" "$(kept ticks)"
+mixed '.'
+back
+pick "image dev" dev
+next
+check "  and its tick passes to no recipe of the other system: the five slots that changed are not ticked" "false false false false false - -" "$(boxes 7)"
+"$PB" "agentvm_slots_$UUID" set "homebrew * node"
+ticked homebrew node python
+omc_run AgentVM.newimage.tick
+check "slots kept that are not recipe names stand for nothing" "" "$(kept ticks)"
+omc_run AgentVM.newimage.close
+
+section "a recipe of one's own for the other system"
+/bin/mkdir -p "$OWN/linux-sudo"
+printf '{ "version": 1, "guest": "linux", "description": "Another sudo" }\n' > "$OWN/linux-sudo/recipe.json"
+fake_reset
+mixed '.'
+open_new dev
+ticked
+add_own "$OWN/for-linux/recipe.json"
+check "a recipe for Linux images, with a macOS start: kept, not listed, and the note says when it will be" \
+    "for-linux is a recipe for Linux images, and the new image starts from image dev (macOS 27.0.1). It is kept, and listed when the start is a Linux image.|$SHIPPED|1" "$(note)|$(listed)"
+add_own "$OWN/for-linux/recipe.json"
+check "the same file again"          "That is the recipe for-linux, which is for Linux images: it is listed when the start is a Linux image." "$(note)"
+add_own "$RECIPES/linux-node/recipe.json"
+check "one of agent-vm's own recipes for Linux images" "That is the recipe linux-node, which is for Linux images: it is listed when the start is a Linux image." "$(note)"
+add_own "$OWN/linux-sudo/recipe.json"
+check "another recipe of a name that is not listed now" \
+    "A recipe named linux-sudo is there already, for Linux images. A recipe is named by its folder, or by its file when that is not recipe.json: rename one to add this recipe.|$SHIPPED|1" "$(note)|$(listed)"
+add_own "$OWN/for-both/recipe.json"
+check "a recipe for both systems is listed now" "for-both is in the list now. Tick it to install it.|$SHIPPED for-both|1" "$(note)|$(listed)"
+omc_control "$((R_TICK + 8))" "true"
+omc_run AgentVM.newimage.tick
+check "  and ticked"                 "for-both" "$(kept ticks)"
+back
+pick "image deb" deb
+next
+check "a Linux start: both are listed, in the order added, after agent-vm's" "$LINUX for-linux for-both|1" "$(listed)"
+check "  the one that was ticked is ticked in its new slot, and its old slot is hidden and not ticked" "true|false|0" \
+    "$(ui_value $((R_TICK + 7)))|$(ui_value $((R_TICK + 8)))|$(ui_visible $((R_ROW + 8)))"
+check "  where the file of the first is"  "Your recipe, from $OWN/for-linux/recipe.json" "$(ui_value $((R_TEXT + 6)))"
+ticked_linux
+add_own "$OWN/team-tools/recipe.json"
+check "a recipe for macOS images, with a Linux start" \
+    "team-tools is a recipe for macOS images, and the new image starts from image deb (Debian 13). It is kept, and listed when the start is a macOS image or a restore file.|$LINUX for-linux for-both|1" "$(note)|$(listed)"
+add_own "$RECIPES/homebrew/recipe.json"
+check "one of agent-vm's own recipes for macOS images" "That is the recipe homebrew, which is for macOS images: it is listed when the start is a macOS image or a restore file." "$(note)"
+omc_run AgentVM.newimage.close
+# Room in the other system's list: a macOS start lists seven recipes of ten, a Linux start five.
+for n in 1 2 3 4 5 6; do
+    printf '{ "version": 1, "guest": "linux", "description": "Linux tool %s" }\n' "$n" > "$OWN/lt$n.json"
+done
+open_new dev
+ticked
+for n in 1 2 3 4 5; do
+    add_own "$OWN/lt$n.json"
+done
+check "five recipes for Linux images, added with a macOS start: all kept, none listed" \
+    "lt5 is a recipe for Linux images, and the new image starts from image dev (macOS 27.0.1). It is kept, and listed when the start is a Linux image.|$SHIPPED|1|5" \
+    "$(note)|$(listed)|$(/usr/bin/awk 'END { print NR }' "$TMPDIR/AgentVM/$UUID/own.tsv")"
+add_own "$OWN/lt6.json"
+check "a sixth has no slot when the start is a Linux image, and is refused" \
+    "This window lists 10 recipes for Linux images already. With more, build the image with agent-vm image create in Terminal.|5" \
+    "$(note)|$(/usr/bin/awk 'END { print NR }' "$TMPDIR/AgentVM/$UUID/own.tsv")"
+add_own "$OWN/for-both/recipe.json"
+check "  so is a recipe for both systems, which would be listed there too" \
+    "This window lists 10 recipes for Linux images already. With more, build the image with agent-vm image create in Terminal.|$SHIPPED|1" "$(note)|$(listed)"
+add_own "$OWN/third.json"
+check "  a recipe for macOS images still has its slot" "third is in the list now. Tick it to install it.|$SHIPPED third|1" "$(note)|$(listed)"
+back
+pick "image deb" deb
+next
+check "the Linux start lists all ten, and Add a Recipe File... is off" "$LINUX lt1 lt2 lt3 lt4 lt5|0" "$(listed)"
 omc_run AgentVM.newimage.close
 
 section "a name that an image which is not ready has"

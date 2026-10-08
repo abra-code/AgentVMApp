@@ -1,6 +1,7 @@
 {
   "version": 1,
-  "description": "ACP agents: Claude Agent ACP, Codex ACP and opencode (needs Node: put Recipes/homebrew and Recipes/node before it)",
+  "guest": "any",
+  "description": "ACP agents: Claude Agent ACP, Codex ACP and opencode (needs Node: put Recipes/node, or Recipes/linux-node in a Linux image, before it)",
   "parameters": {
     "claude_acp": { "description": "version of @agentclientprotocol/claude-agent-acp (latest, or empty, for the newest)", "default": "0.81.2" },
     "codex_acp": { "description": "version of @agentclientprotocol/codex-acp (latest, or empty, for the newest)", "default": "1.13.1" },

@@ -335,14 +335,14 @@
                   "properties": {
                     "columns": [
                       "Name",
-                      "macOS",
+                      "System",
                       "Holds",
                       "State"
                     ],
                     "widths": [
-                      160,
-                      60,
-                      210,
+                      150,
+                      100,
+                      200,
                       130
                     ],
                     "minWidths": [
@@ -368,7 +368,7 @@
                     {
                       "type": "Text",
                       "properties": {
-                        "text": "A copy keeps what its image has, the Full Disk Access grant included, and takes about a minute before its tools are installed. From a restore file, macOS is installed anew (about 6 minutes), and Full Disk Access is granted once afterwards.",
+                        "text": "A copy keeps what its image has, a macOS image's Full Disk Access grant included, and takes about a minute before its tools are installed. From a restore file, macOS is installed anew (about 6 minutes), and Full Disk Access is granted once afterwards.",
                         "foregroundStyle": "secondary",
                         "frame": {
                           "maxWidth": "infinity",

@@ -1,0 +1,7 @@
+{
+  "version": 1,
+  "guest": "linux",
+  "description": "Python with venv, pip, pipx and uv, for Linux images",
+  "steps": [ { "name": "Python", "run": "true" } ],
+  "checks": [ "python3 --version" ]
+}

@@ -1,0 +1,7 @@
+{
+  "version": 1,
+  "guest": "linux",
+  "description": "sudo without a password for the box user: any program in a box can then become root",
+  "steps": [ { "name": "sudo", "run": "true" } ],
+  "checks": [ "sudo -n true" ]
+}
