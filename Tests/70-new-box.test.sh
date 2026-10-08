@@ -271,8 +271,8 @@ check "step 1 of 4: its panel, the first mark is now" "Step 1 of 4 - Image|1|ntt
 check "Back is off, Continue is there, Create is not" "0|1|0" "$(enabled "$NBOX_BACK_ID")|$(shown "$NBOX_NEXT_ID")|$(shown "$NBOX_CREATE_ID")"
 check "the ready images; the failed image is not listed" \
     "dev|dev-acp|dev-agents|dev-node|dev-xcode|dev-xcode-ios" "$(ui_rows "$NBOX_IMAGES_ID" | col 1 | /usr/bin/paste -sd '|' -)"
-check "an image: its macOS, what it holds, its state, and its key" \
-    "dev-agents${TAB}27.0${TAB}Claude Code, Codex and opencode${TAB}ready${TAB}dev-agents" "$(ui_rows "$NBOX_IMAGES_ID" | row_named dev-agents)"
+check "an image: its system, what it holds, its state, and its key" \
+    "dev-agents${TAB}macOS 27.0${TAB}Claude Code, Codex and opencode${TAB}ready${TAB}dev-agents" "$(ui_rows "$NBOX_IMAGES_ID" | row_named dev-agents)"
 check "one without Full Disk Access says so" "no Full Disk Access" "$(ui_rows "$NBOX_IMAGES_ID" | row_named dev-node | col 4)"
 check "nothing is selected: no line under the table, Set Up... off" "|0" "$(ui_value "$NBOX_IMAGE_NOTE_ID")|$(enabled "$NBOX_ACCESS_ID")"
 check "nothing writes to a view the window does not have" "" "$(ui_unknown_writes)"
@@ -559,8 +559,13 @@ check "  and the rules an agent needs" "*.example.com${TAB}Star|pack:npm${TAB}St
 section "what stands in the way"
 store '.runningVMs.count = 2'
 omc_run AgentVM.newbox.activated
-check "no virtual machine slot is free, and the box is to be started: Create is off, and says why" \
-    "2 of 2 virtual machines are running, so the box cannot be started now. Stop a box first, or go back and choose not to start it.|0" "$(note)|$(enabled "$NBOX_CREATE_ID")"
+check "no place for a macOS virtual machine is free, and the box is to be started: Create is off, and says why" \
+    "2 of 2 macOS virtual machines are running, so the box cannot be started now. Stop a macOS box first, or go back and choose not to start it.|0" "$(note)|$(enabled "$NBOX_CREATE_ID")"
+store '.runningVMs = {count: 3, limit: 2, linuxBoxes: 1, linuxImages: 1}'
+omc_run AgentVM.newbox.activated
+check "  three machines run, two of them Linux: a place is free, and nothing stands in the way" "|1" "$(note)|$(enabled "$NBOX_CREATE_ID")"
+store '.runningVMs.count = 2'
+omc_run AgentVM.newbox.activated
 : > "$FAKE_AGENTVM_DIR/log"
 omc_run AgentVM.newbox.create
 check "  Create, clicked anyway, makes nothing" "0" "$(created)"
@@ -722,6 +727,67 @@ open_new dev-agents
 check "packs that cannot be read: the step says why, and the agents' rules are there all the same" \
     "The packs could not be read: the packs file is broken|pack:anthropic pack:openai opencode.ai models.opencode.ai|" \
     "$(ui_value "$NBOX_AGENTS_TEXT_ID" | /usr/bin/sed -n '2p')|$(rules)|$(ui_rows "$NBOX_PACKS_ID")"
+omc_run AgentVM.newbox.close
+
+# -----------------------------------------------------------------------------------------------
+section "a box from a Linux image"
+# The store with both kinds, with both places for a macOS virtual machine taken: a Linux box
+# needs neither.
+fake_reset
+/usr/bin/jq '.runningVMs = {count: 2, limit: 2, linuxBoxes: 0, linuxImages: 0}' "$FIXTURES_AGENTVM/status-mixed.json" > "$FAKE_AGENTVM_DIR/status.json"
+"$PB" agentvm_window_newbox_window set ""
+open_new
+check "the ready images of both kinds" "dev|dev-acp|dev-agents|dev-node|dev-xcode|dev-xcode-ios|deb|deb-agents|ub|ub-agents" \
+    "$(ui_rows "$NBOX_IMAGES_ID" | col 1 | /usr/bin/paste -sd '|' -)"
+check "a Linux image: its system in short, what it holds, its state, and its key" \
+    "deb-agents${TAB}Debian 13${TAB}linux-node, agent-clis${TAB}ready${TAB}deb-agents" "$(ui_rows "$NBOX_IMAGES_ID" | row_named deb-agents)"
+check "one with no recipe: Linux and its compiler, where a macOS image has macOS and the Command Line Tools" \
+    "Ubuntu 26.04${TAB}Linux with the compiler and make|macOS 27.0.1${TAB}macOS and the Command Line Tools" \
+    "$(ui_rows "$NBOX_IMAGES_ID" | row_named ub | col 2-3)|$(ui_rows "$NBOX_IMAGES_ID" | row_named dev | col 2-3)"
+check "no Linux image is said to lack Full Disk Access" "" \
+    "$(ui_rows "$NBOX_IMAGES_ID" | /usr/bin/awk -F'\t' '$2 !~ /^macOS/ && $4 != "ready" { print $1 }')"
+pick deb-agents
+# The test agent whose id is "node" is found too: the image keeps linux-node, whose description
+# has the word.
+check "selecting it: its sizes and its agents, nothing of Full Disk Access, and Set Up... off" \
+    "Image deb-agents: 4 CPUs, 4 GB of memory. Agents in it: Claude Code, Codex, opencode and A Rule That Is None.|0" \
+    "$(ui_value "$NBOX_IMAGE_NOTE_ID")|$(enabled "$NBOX_ACCESS_ID")"
+pick deb
+check "  one with no agent" "Image deb: 4 CPUs, 4 GB of memory." "$(ui_value "$NBOX_IMAGE_NOTE_ID")"
+pick deb-agents
+next
+check "what its agents need is allowed already, as for a macOS image that holds them" \
+    "Step 2 of 4 - Network|pack:anthropic pack:openai opencode.ai models.opencode.ai pack:npm" "$(ui_value "$NBOX_HEADER_ID")|$(rules)"
+next
+check "its sizes are the Linux image's" "4|4" "$(ui_value "$NBOX_CPUS_ID")|$(ui_value "$NBOX_MEMORY_ID")"
+sizes "penguin" 4 4 true
+next
+check "what is made, with the system in short" "Box penguin, a copy of image deb-agents (Debian 13).|4 CPUs, 4 GB of memory." \
+    "$(ui_value "$NBOX_SUMMARY_ID" | /usr/bin/sed -n '1,2p' | /usr/bin/paste -sd '|' -)"
+check "the advice says how a box with no screen is used" \
+    "A Linux box has no screen: it is used through Connect, which opens a shell in it, and Run an Agent.|The box is kept until it is deleted. What is installed or written in it stays in the box, and its network can be changed later in its Network window." \
+    "$(ui_value "$NBOX_ADVICE_ID" | /usr/bin/paste -sd '|' -)"
+check "both macOS places are taken and the box is to be started: nothing stands in the way of a Linux box" "|1" \
+    "$(note)|$(enabled "$NBOX_CREATE_ID")"
+: > "$FAKE_AGENTVM_DIR/log"
+omc_run AgentVM.newbox.create
+check "the box is made from the Linux image, and its start is a job" \
+    "1|penguin --image deb-agents --allow pack:anthropic --allow pack:openai --allow opencode.ai --allow models.opencode.ai --allow pack:npm|1" \
+    "$(created)|$(create_args)|$(started)"
+check "  and it runs what its image runs" "linux|Debian GNU/Linux 13 (trixie)" \
+    "$(/usr/bin/jq -r '.boxes[] | select(.box.name == "penguin") | "\(.guest)|\(.system)"' "$FAKE_AGENTVM_DIR/status.json")"
+omc_run AgentVM.newbox.close
+# The same counts, and a macOS image: the box cannot be started.
+"$PB" agentvm_window_newbox_window set ""
+open_new
+pick dev-agents
+next
+next
+sizes "apple" 4 8 true
+next
+check "a macOS box in that store is held back, and says what is taken" \
+    "2 of 2 macOS virtual machines are running, so the box cannot be started now. Stop a macOS box first, or go back and choose not to start it.|0" \
+    "$(note)|$(enabled "$NBOX_CREATE_ID")"
 omc_run AgentVM.newbox.close
 
 section "nothing went wrong in the harness"

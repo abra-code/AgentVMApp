@@ -180,11 +180,23 @@ newbox_field() {
     printf '%s\n' "${_value:--}"
 }
 
-# newbox_image_text <uuid>  ->  the image in words: "image dev (macOS 27.0.1)".
+# newbox_linux <uuid> [image]  ->  0 when the image kept (or the one given) runs Linux.
+newbox_linux() {
+    local _image="${2:-$(newbox_image "$1")}"
+    [ -n "$_image" ] || return 1
+    [ "$(newbox_image_row "$1" "$_image" | /usr/bin/cut -f13)" = "linux" ]
+}
+
+# newbox_image_text <uuid>  ->  the image in words, with its system in short: "image dev (macOS
+# 27.0.1)", "image deb (Debian 13)". A macOS image whose version is not known is named alone.
 newbox_image_text() {
-    local _macos="$(newbox_field "$1" 4)"
+    local _short="$(newbox_field "$1" 14)"
     local _suffix=""
-    [ "$_macos" != "-" ] && _suffix=" (macOS $_macos)"
+    if newbox_linux "$1"; then
+        [ "$_short" != "-" ] && _suffix=" ($_short)"
+    elif [ "$(newbox_field "$1" 4)" != "-" ]; then
+        _suffix=" ($_short)"
+    fi
     printf 'image %s%s\n' "$(newbox_image "$1")" "$_suffix"
 }
 
@@ -227,21 +239,26 @@ newbox_needs_access() {
     return 1
 }
 
-# newbox_image_rows <uuid>  ->  the rows of the image table: name, macOS, what it holds, its
-# state, and (not shown) the name again as the row's key. An image that is not ready is not
-# listed: no box can be made from it. What an image holds is the names of the recipes it keeps,
-# else its recipe's description without its advice for the command line, else macOS.
+# newbox_image_rows <uuid>  ->  the rows of the image table: name, its system in short ("macOS
+# 27.0.1", "Debian 13"), what it holds, its state, and (not shown) the name again as the row's
+# key. An image that is not ready is not listed: no box can be made from it. What an image holds is
+# the names of the recipes it keeps, else its recipe's description without its advice for the
+# command line, else macOS or Linux alone, with the Command Line Tools or the compiler when it
+# has them.
 newbox_image_rows() {
     main_rows "$1" build | /usr/bin/awk -F'\t' '
         $2 == "ready" {
-            holds = ($8 != "-") ? $8 : (($9 != "-") ? $9 : "macOS")
+            linux = ($13 == "linux")
+            holds = ($8 != "-") ? $8 : (($9 != "-") ? $9 : (linux ? "Linux" : "macOS"))
             if ($8 != "-") gsub(/,/, ", ", holds)
             else sub(/ \([^()]*\)$/, "", holds)
-            if ($10 != "-" && $8 == "-" && $9 == "-") holds = "macOS and the Command Line Tools"
+            if ($10 != "-" && $8 == "-" && $9 == "-") holds = linux ? "Linux with the compiler and make" : "macOS and the Command Line Tools"
             state = "ready"
             if ($11 ~ /full-disk-access/) state = "no Full Disk Access"
             if ($3 == "true") state = "being changed"
-            printf "%s\t%s\t%s\t%s\t%s\n", $1, $4, holds, state, $1
+            # The system in short: for a macOS image only when its version is known.
+            runs = (linux ? ($14 != "-") : ($4 != "-")) ? $14 : "-"
+            printf "%s\t%s\t%s\t%s\t%s\n", $1, runs, holds, state, $1
         }'
 }
 
@@ -279,9 +296,12 @@ newbox_selection_text() {
     fi
     local _row="$(newbox_image_row "$1" "$2")"
     local _agents="$(newbox_agent_names "$1" "$2")"
-    printf 'Image %s: %s CPUs, %s GB of memory, Full Disk Access granted.%s\n' "$2" \
+    # Full Disk Access is said of a macOS image only: a Linux image has none to grant.
+    local _access=", Full Disk Access granted"
+    newbox_linux "$1" "$2" && _access=""
+    printf 'Image %s: %s CPUs, %s GB of memory%s.%s\n' "$2" \
         "$(printf '%s\n' "$_row" | /usr/bin/cut -f5)" "$(printf '%s\n' "$_row" | /usr/bin/cut -f6)" \
-        "${_agents:+ Agents in it: $_agents.}"
+        "$_access" "${_agents:+ Agents in it: $_agents.}"
 }
 
 # -- The rules -----------------------------------------------------------------------------------
@@ -551,8 +571,8 @@ newbox_command_text() {
 }
 
 # newbox_blocker <uuid>  ->  why the box cannot be made now, or nothing: agent-vm cannot be read,
-# something about the image or the name changed since its step, or the box is to be started and
-# every virtual machine slot is taken.
+# something about the image or the name changed since its step, or the box is a macOS one that is
+# to be started while both places for a macOS virtual machine are taken. A Linux box needs none.
 newbox_blocker() {
     local _why="$(newbox_unreadable "$1")"
     [ -n "$_why" ] || _why="$(newbox_image_blocker "$1")"
@@ -562,9 +582,9 @@ newbox_blocker() {
         return 0
     fi
     newbox_starts "$1" || return 0
-    main_rows "$1" vm | /usr/bin/awk -F'\t' '
-        NR == 1 && $1 ~ /^[0-9]+$/ && $2 ~ /^[0-9]+$/ && $1 + 0 >= $2 + 0 {
-            printf "%s of %s virtual machines are running, so the box cannot be started now. Stop a box first, or go back and choose not to start it.\n", $1, $2 }'
+    newbox_linux "$1" && return 0
+    main_macos_vms "$1" | /usr/bin/awk -F'\t' '$1 >= $2 {
+        printf "%s of %s macOS virtual machines are running, so the box cannot be started now. Stop a macOS box first, or go back and choose not to start it.\n", $1, $2 }'
 }
 
 # newbox_summary_text <uuid>  ->  what Create makes, in words.
@@ -587,6 +607,9 @@ newbox_advice_text() {
     local _image="$(newbox_image "$1")"
     if newbox_needs_access "$1" "$_image"; then
         printf "Image %s has no Full Disk Access, so the box has none either. It works without it: only a program that opens the box account's Desktop, Documents or Downloads waits, on a question macOS asks on the box's screen. Set Up... on the first step grants it; a box made before that gets it when it is recreated.\n" "$_image"
+    fi
+    if newbox_linux "$1"; then
+        printf 'A Linux box has no screen: it is used through Connect, which opens a shell in it, and Run an Agent.\n'
     fi
     printf 'The box is kept until it is deleted. What is installed or written in it stays in the box, and its network can be changed later in its Network window.\n'
 }

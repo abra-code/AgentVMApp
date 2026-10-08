@@ -290,14 +290,14 @@
                   "properties": {
                     "columns": [
                       "Name",
-                      "macOS",
+                      "System",
                       "Holds",
                       "State"
                     ],
                     "widths": [
-                      160,
-                      60,
-                      210,
+                      150,
+                      100,
+                      200,
                       130
                     ],
                     "minWidths": [
