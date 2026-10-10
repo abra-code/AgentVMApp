@@ -253,7 +253,10 @@ BROKEN="$OMCTEST_WORK/broken-recipes"
 printf '{"version": 1, "description": "Good"}\n' > "$BROKEN/good/recipe.json"
 printf 'not json\n' > "$BROKEN/notjson/recipe.json"
 printf '{"version": 1, "description": "Bad"}\n' > "$BROKEN/Bad Name/recipe.json"
-check "a folder with no recipe, one that is not JSON, and a name agent-vm would not accept are left out" "good" \
+# What agent-vm keeps beside its recipes: the digests of every version of each, and its notes.
+printf '{"version": 1, "recipes": {"good": ["0f4eab42"]}}\n' > "$BROKEN/history.json"
+printf '# Recipes\n' > "$BROKEN/README.md"
+check "a folder with no recipe, one that is not JSON, a name agent-vm would not accept, and the files beside the recipes are left out" "good" \
     "$(AGENTVM_APP_RECIPES="$BROKEN"; export AGENTVM_APP_RECIPES; with_fake agentvm_recipe_rows | col 1)"
 check "no folder: no rows"           "" "$(AGENTVM_APP_RECIPES="$OMCTEST_WORK/nosuch"; export AGENTVM_APP_RECIPES; with_fake agentvm_recipe_rows)"
 check "an input: no default, its description" \

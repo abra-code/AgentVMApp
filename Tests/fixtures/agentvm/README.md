@@ -74,6 +74,15 @@ agent-vm 0.7.14 to 0.7.23 keep a deleted box's logs and say so. What an applicat
 - The version strings of `status-variety.json` and `job-log-variety.json` were moved from 0.7.13 to 0.7.23.
 - The fake answers `box delete` as 0.7.23 does: `{"deleted": <name>}`, with `keptLogs` when a test leaves the folder's path in the file `kept-logs` of its state folder.
 
+## The move to agent-vm 0.7.26 (2026-10-09)
+
+agent-vm 0.7.24 to 0.7.26 change nothing in the JSON the app reads. What changed is what `image update` does: a tools update replaces a kept recipe that is an older version of one that came with agent-vm, and a guest daemon asked for with the system or the tools is updated first, as an update of its own, so one job reports `boot` and `commit` twice. The installed `Recipes` folder has a file that is not a recipe, `history.json`.
+
+- `version.json` and `packs.json` were captured again from the installed agent-vm 0.7.26 (`refresh_agentvm_fixtures.sh <agent-vm> version packs recipe-check`; `recipe-check.json` came out as it was).
+- `doctor.json` was given the Linux guest daemon's digest as 0.7.26 prints it.
+- The version strings of `status-variety.json` and `job-log-variety.json` were moved from 0.7.23 to 0.7.26.
+- The check of `fixtures/recipes/python` is `python3 --version`, as the recipe's own: it no longer provides `python` without the 3.
+
 ## Made by hand
 
 `box-netlog.json` is made by hand, not captured: a real connection log lists what programs in a box reached, which does not belong in a public repository. Its ten connections hold one of each kind the network window treats differently: hosts reached through a pack, a host refused three times over a tunnel to port 443, one refused over plain HTTP to port 80 (allowed by its host name), one refused over a raw tunnel to port 80 and one refused by IP address (neither gets a rule), and a failure to resolve. Its fields are those of a real `box netlog --json` entry on agent-vm 0.4.4.

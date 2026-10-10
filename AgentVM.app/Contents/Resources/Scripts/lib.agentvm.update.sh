@@ -19,6 +19,12 @@
 # looking takes seconds. The ticks are the window's pasteboard value "choices" ("1 0 1": system,
 # tools, guest), kept by the handlers, since a handler's view of the checkboxes is a snapshot.
 #
+# EACH PART IS agent-vm's TO ORDER. A tools update first replaces a kept recipe that is an older
+# version of one that came with agent-vm by the installed one. A guest daemon asked for with
+# another part is updated first, as an update of its own that is put in place before the rest
+# begins: the job then boots and puts a disk in place twice, and a failure in the rest leaves the
+# image with the new daemon. The window says both, and computes neither.
+#
 # THE WINDOW STARTS ONE JOB AND CLOSES. Update starts `image update <name>` with the parts ticked
 # as an agent-vm job, opens that job's progress window (lib.agentvm.progress.sh), has the main
 # window read the jobs again, and closes. The update goes on whether or not the app is open.
@@ -253,7 +259,9 @@ update_system_text() {
         "$_newest" "$(update_newest "$1" 2)" "${_asked:+, as of $_asked}"
 }
 
-# update_tools_text <uuid> <name>  ->  what a tools update runs in the image.
+# update_tools_text <uuid> <name>  ->  what a tools update runs in the image. Which kept recipes
+# agent-vm would replace by newer ones of its own is not known beforehand: the job's log names
+# them.
 update_tools_text() {
     local _recipes="$(update_field "$1" updates "$2" 9)"
     if [ "$_recipes" = "-" ]; then
@@ -263,11 +271,12 @@ update_tools_text() {
     local _ran="$(ui_date_text "$(update_field "$1" updates "$2" 5)")"
     local _when="Not run since the image was built."
     [ -n "$_ran" ] && _when="Last run on $_ran."
-    printf "Runs the update steps of the recipes this image keeps (%s), then every recipe's checks. %s\n" \
+    printf "Runs the update steps of the recipes this image keeps (%s), then every recipe's checks. A recipe that came with agent-vm is first replaced by the installed version, when that is newer. %s\n" \
         "$(printf '%s' "$_recipes" | /usr/bin/sed 's/,/, /g')" "$_when"
 }
 
-# update_guest_text <uuid> <name>  ->  what replacing the guest daemon would do.
+# update_guest_text <uuid> <name>  ->  what replacing the guest daemon would do, and that it is
+# done first when another part is ticked too.
 update_guest_text() {
     local _guest="$(update_field "$1" images "$2" 9)"
     local _mine="$(main_agentvm_line "$1" 2)"
@@ -283,18 +292,27 @@ update_guest_text() {
     # macOS ties a Full Disk Access grant to the daemon it was made for; a Linux image has none.
     local _access=" Its Full Disk Access may have to be granted again afterwards; the image's pane says so then."
     update_linux "$1" "$2" && _access=""
-    printf "%s is replaced by this agent-vm's, %s%s.%s\n" "$_theirs" "$_mine" "$_adds" "$_access"
+    printf "%s is replaced by this agent-vm's, %s%s.%s With another part ticked too, the daemon is replaced first, and stays even if that part fails.\n" \
+        "$_theirs" "$_mine" "$_adds" "$_access"
 }
 
 # update_after_text <uuid> <name>  ->  what an update means for what was made from the image, and
-# what a failure leaves, one line each.
+# what a failure leaves, one line each. With the guest daemon ticked beside another part, a
+# failure leaves the daemon's update, which agent-vm puts in place before the rest. Whether the
+# daemon differs is agent-vm's to say at the update (it compares digests, and the window knows
+# versions), so the line holds either way.
 update_after_text() {
     local _boxes="$(main_rows "$1" boxes | /usr/bin/awk -F'\t' -v name="$2" '$3 "" == name && $13 != "true" { print $1 }')"
     [ -n "$_boxes" ] && printf 'Boxes made from it (%s) keep what they have until they are recreated.\n' "$(ui_lines_text "$_boxes")"
     local _derived="$(main_rows "$1" images | /usr/bin/awk -F'\t' -v name="$2" '$6 "" == name { print $1 }')"
     [ -n "$_derived" ] && printf 'Images built from it (%s) are not updated with it: each is updated by itself.\n' "$(ui_lines_text "$_derived")"
     printf 'The image can be used meanwhile: a box made during the update gets the image as it was.\n'
-    printf 'An update that fails or is stopped leaves the image as it is now.\n'
+    case "$(update_choices "$1" "$2")" in
+        "1 "[01]" 1"|[01]" 1 1")
+            printf 'An update that fails or is stopped leaves the image as it is now, except for its guest daemon once that is replaced.\n' ;;
+        *)
+            printf 'An update that fails or is stopped leaves the image as it is now.\n' ;;
+    esac
 }
 
 # update_command_text <uuid> <name>  ->  the command Update runs, as it would be typed in Terminal.

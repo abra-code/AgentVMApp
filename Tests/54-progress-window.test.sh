@@ -225,7 +225,7 @@ check "the steps, oldest first; the last shows how far it is" \
     "Cloning dev-node (macOS 26A428)=done|Booting=done|Recipe: ACP agents (3 steps, 2 checks)=done|[1/3] Homebrew=done|[2/3] Node=done|[3/3] Agents=67%" "$(steps)"
 check "the bar is shown, at the step's fraction" "1|67" "$(shown "$PROGRESS_BAR_ID")|$(ui_value "$PROGRESS_BAR_ID")"
 check "the log: agent-vm's lines and the guest's, the notice of a step that is over where it was written, then the other lines" \
-    "agent-vm-guest 0.7.23 answers over vsock|==> Downloading and installing Homebrew...|==> Installation successful!|Homebrew is already installed in the base image|==> Pouring node--24.9.0.arm64_tahoe.bottle.tar.gz|a line with a tab in it|added 212 packages in 9s|warning: a line that is neither an event nor the error" \
+    "agent-vm-guest 0.7.26 answers over vsock|==> Downloading and installing Homebrew...|==> Installation successful!|Homebrew is already installed in the base image|==> Pouring node--24.9.0.arm64_tahoe.bottle.tar.gz|a line with a tab in it|added 212 packages in 9s|warning: a line that is neither an event nor the error" \
     "$(ui_value "$PROGRESS_LOG_ID" | /usr/bin/paste -sd '|' -)"
 check "a notice of a step the job has left is not on the notice line" "" "$(ui_value "$PROGRESS_NOTICE_ID")"
 
@@ -474,6 +474,75 @@ check "  the end of the log is the end of agent-vm's" "Set up in 68 s" "$(ui_val
 check "  no bar for a job that ended" "0" "$(shown "$PROGRESS_BAR_ID")"
 "$PB" "agentvm_window_progress_$LINUX_BUILD" set ""
 /bin/rm -f "$JOBS" "$FAKE_AGENTVM_DIR/job-log-$LINUX_BUILD.json"
+
+section "an update whose guest daemon goes first"
+# agent-vm updates the guest daemon first, as an update of its own, when it was asked for with the
+# system or the tools: one job boots and puts a disk in place twice. The events are made by hand,
+# in the order and the words of agent-vm 0.7.26.
+TWICE="20260930-120000-0000d1"
+"$PB" "agentvm_window_progress_$TWICE" set ""
+/usr/bin/jq -n --arg id "$TWICE" '[{id: $id, command: ["image", "update", "dev", "--tools", "--guest", "--json"], targets: ["image:dev"],
+    state: "running", createdAt: "2026-09-30T12:00:00Z", startedAt: "2026-09-30T12:00:00Z"}]' > "$JOBS"
+# twice_log <how many events>  ->  the job's log up to that event.
+twice_log() {
+    /usr/bin/jq -n --argjson upto "$1" '
+        def step(name; text): {event: "progress", image: "dev", step: name, message: text};
+        {lines: [], events: ([
+            step("boot"; "Booting a copy of dev"),
+            step("replace-guest-daemon"; "Replacing agent-vm-guest"),
+            step("shutdown"; "Shutting down"),
+            step("check-guest-daemon"; "Booting again to check the new agent-vm-guest"),
+            step("shutdown"; "Shutting down"),
+            step("commit"; "Putting the updated disk in place"),
+            {event: "log", image: "dev", message: "Recipe python: this agent-vm has a newer one than dev keeps; it is used, and kept when the update succeeds (--kept-recipes runs the old one)"},
+            step("boot"; "Booting a copy of dev"),
+            (step("tools-update"; "Updating the tools of python") + {index: 1, count: 1}),
+            step("shutdown"; "Shutting down"),
+            step("commit"; "Putting the updated disk in place"),
+            {event: "log", image: "dev", message: "  dev keeps the new python recipe"}
+        ][0:$upto])}' > "$FAKE_AGENTVM_DIR/job-log-$TWICE.json"
+}
+twice_log 6
+ui_reset
+alerts_reset
+open_progress "$TWICE"
+check "the daemon's update is being put in place: its steps, each a row" \
+    "Booting a copy of dev=done|Replacing agent-vm-guest=done|Shutting down=done|Booting again to check the new agent-vm-guest=done|Shutting down=done|Putting the updated disk in place=running" "$(steps)"
+omc_run AgentVM.progress.stop
+check "  stopping now leaves the image as it was" "yes" "$(ui_alert_message | /usr/bin/grep -q 'The image stays as it was before the update\.$' && echo yes)"
+twice_log 9
+omc_run AgentVM.progress.activated
+check "the tools' update has begun: the boot is a row again, after the disk put in place" \
+    "Putting the updated disk in place=done|Booting a copy of dev=done|Updating the tools of python=running" \
+    "$(ui_rows "$PROGRESS_STEPS_ID" | /usr/bin/sed -n '6,$p' | /usr/bin/awk -F'\t' '{ printf "%s%s=%s", (NR > 1 ? "|" : ""), $1, $2 }')"
+check "  the log names the recipe agent-vm replaced" "1" "$(ui_value "$PROGRESS_LOG_ID" | /usr/bin/grep -c '^Recipe python: this agent-vm has a newer one than dev keeps')"
+alerts_reset
+omc_run AgentVM.progress.stop
+check "  stopping now leaves the new daemon, and the question says so" "yes" \
+    "$(ui_alert_message | /usr/bin/grep -q 'The guest daemon is already updated, and stays; the rest of the image stays as it was\.$' && echo yes)"
+job_state "$TWICE" '{state: "failed", status: 1, endedAt: "2026-09-30T12:04:00Z", error: "the check of python failed: python3 is 3.9.6"}'
+omc_run AgentVM.progress.activated
+check "the tools' update failed: the status says what stays" \
+    "Image dev was not updated: the check of python failed: python3 is 3.9.6. The guest daemon was updated before that, and stays." "$(ui_value "$PROGRESS_STATUS_ID")"
+check "  and the step it failed at" "Updating the tools of python=failed" "$(steps | /usr/bin/tr '|' '\n' | /usr/bin/tail -1)"
+job_state "$TWICE" '{state: "canceled", status: 143, error: null}'
+omc_run AgentVM.progress.activated
+check "stopped there: the same" "Stopped before it finished. The guest daemon was updated before that, and stays." "$(ui_value "$PROGRESS_STATUS_ID")"
+twice_log 12
+job_state "$TWICE" '{state: "done", status: 0}'
+omc_run AgentVM.progress.activated
+check "both updates done: ten rows, the boot and the disk put in place twice each" "10|2|2|Image dev is up to date." \
+    "$(ui_rows "$PROGRESS_STEPS_ID" | /usr/bin/awk 'END { print NR }')|$(ui_rows "$PROGRESS_STEPS_ID" | /usr/bin/grep -c '^Booting a copy of dev')|$(ui_rows "$PROGRESS_STEPS_ID" | /usr/bin/grep -c '^Putting the updated disk in place')|$(ui_value "$PROGRESS_STATUS_ID")"
+# One update only, failed after its guest daemon was replaced in the copy: nothing was put in place.
+/usr/bin/jq -n '
+    def step(name; text): {event: "progress", image: "dev", step: name, message: text};
+    {lines: [], events: [step("boot"; "Booting a copy of dev"), step("replace-guest-daemon"; "Replacing agent-vm-guest"), step("shutdown"; "Shutting down")]}' \
+    > "$FAKE_AGENTVM_DIR/job-log-$TWICE.json"
+job_state "$TWICE" '{state: "failed", status: 1, error: "the guest did not shut down"}'
+omc_run AgentVM.progress.activated
+check "an update that put nothing in place says nothing of what stays" "Image dev was not updated: the guest did not shut down" "$(ui_value "$PROGRESS_STATUS_ID")"
+"$PB" "agentvm_window_progress_$TWICE" set ""
+/bin/rm -f "$JOBS" "$FAKE_AGENTVM_DIR/job-log-$TWICE.json"
 
 section "the words"
 words() { ( . "$APP_SCRIPTS/lib.agentvm.progress.sh" >/dev/null 2>&1; "$@" ); }

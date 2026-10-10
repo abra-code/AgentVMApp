@@ -16,6 +16,6 @@ progress_moving "$window_uuid" || exit 0
 row="$(progress_job "$window_uuid")"
 ui_set job_stop "$window_uuid" "$job"
 "$dialog" "$window_uuid" omc_window omc_present_alert "Stop $(progress_title "$row" | /usr/bin/awk '{ print tolower(substr($0, 1, 1)) substr($0, 2) }')?" \
-    "$(progress_stop_question "$row")" \
+    "$(progress_stop_question "$row" "$window_uuid")" \
     "Keep Going:cancel:" "Stop:destructive:AgentVM.progress.stop.confirmed"
 exit 0

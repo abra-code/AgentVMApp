@@ -101,6 +101,11 @@ ticks() {
         "$("$PB" "agentvm_choices_$UUID" get)"
 }
 
+# after_failure  ->  the window's line about what an update that fails or is stopped leaves.
+after_failure() {
+    ui_value "$UPDATE_AFTER_ID" | /usr/bin/tail -1
+}
+
 # started  ->  the jobs agent-vm was asked to start.
 started() {
     fake_log | /usr/bin/grep '^job start' | /usr/bin/paste -sd '|' -
@@ -161,13 +166,13 @@ check "macOS: what is available, when that was learned, and what it costs" \
     "macOS 27.0.1 (26A434) is available, as Apple said on Sep 29, 2026. Installing it takes about 15 minutes, and about 15 GB of disk that the image then no longer shares with its older boxes. Newer Command Line Tools are installed with it." \
     "$(ui_value "$UPDATE_SYSTEM_TEXT_ID")"
 check "the tools: the recipes it keeps" \
-    "Runs the update steps of the recipes this image keeps (dev-acp), then every recipe's checks. Not run since the image was built." \
+    "Runs the update steps of the recipes this image keeps (dev-acp), then every recipe's checks. A recipe that came with agent-vm is first replaced by the installed version, when that is newer. Not run since the image was built." \
     "$(ui_value "$UPDATE_TOOLS_TEXT_ID")"
 check "the guest daemon: another version, replaced by this agent-vm's" \
-    "The image's agent-vm-guest 0.2.18 is replaced by this agent-vm's, $VERSION. Its Full Disk Access may have to be granted again afterwards; the image's pane says so then." \
+    "The image's agent-vm-guest 0.2.18 is replaced by this agent-vm's, $VERSION. Its Full Disk Access may have to be granted again afterwards; the image's pane says so then. With another part ticked too, the daemon is replaced first, and stays even if that part fails." \
     "$(ui_value "$UPDATE_GUEST_TEXT_ID")"
-check "afterwards: its box, and what a failure leaves" \
-    "Boxes made from it (s3) keep what they have until they are recreated.|The image can be used meanwhile: a box made during the update gets the image as it was.|An update that fails or is stopped leaves the image as it is now." \
+check "afterwards: its box, and what a failure leaves: the guest daemon, which goes first when another part is ticked" \
+    "Boxes made from it (s3) keep what they have until they are recreated.|The image can be used meanwhile: a box made during the update gets the image as it was.|An update that fails or is stopped leaves the image as it is now, except for its guest daemon once that is replaced." \
     "$(ui_value "$UPDATE_AFTER_ID" | /usr/bin/paste -sd '|' -)"
 check "all three have something to do: all three ticked" "true true true|1 1 1" "$(ticks)"
 check "the command it would run"     "agent-vm image update dev-acp --system --tools --guest" "$(ui_value "$UPDATE_COMMAND_ID")"
@@ -204,9 +209,19 @@ open_update dev-acp
 tick true false false
 check "macOS alone"                  "1 0 0|agent-vm image update dev-acp --system|1" \
     "$("$PB" "agentvm_choices_$UUID" get)|$(ui_value "$UPDATE_COMMAND_ID")|$(enabled "$UPDATE_START_ID")"
+check "  one part: a failure leaves the image as it is" "An update that fails or is stopped leaves the image as it is now." "$(after_failure)"
 tick false true true
 check "the tools and the guest daemon" "0 1 1|agent-vm image update dev-acp --tools --guest" \
     "$("$PB" "agentvm_choices_$UUID" get)|$(ui_value "$UPDATE_COMMAND_ID")"
+check "  the daemon goes first, so a failure may leave it replaced" \
+    "An update that fails or is stopped leaves the image as it is now, except for its guest daemon once that is replaced." "$(after_failure)"
+tick true true false
+check "macOS and the tools are one update: a failure leaves the image as it is" "An update that fails or is stopped leaves the image as it is now." "$(after_failure)"
+tick false false true
+check "the guest daemon alone is one update too" "An update that fails or is stopped leaves the image as it is now." "$(after_failure)"
+tick true false true
+check "macOS and the guest daemon: the daemon goes first" \
+    "An update that fails or is stopped leaves the image as it is now, except for its guest daemon once that is replaced." "$(after_failure)"
 tick false false false
 check "nothing ticked: no command, and Update is off" "0 0 0|Tick what to update.|0" \
     "$("$PB" "agentvm_choices_$UUID" get)|$(ui_value "$UPDATE_COMMAND_ID")|$(enabled "$UPDATE_START_ID")"
@@ -226,7 +241,7 @@ check "macOS: not behind what Apple last said" \
     "No newer macOS is known for this image: the newest is 27.0.1 (26A434), as of Sep 29, 2026. The update asks Apple again, and installs what is offered." \
     "$(ui_value "$UPDATE_SYSTEM_TEXT_ID")"
 check "the guest daemon: what the new one adds" \
-    "The image's agent-vm-guest 0.2.18 is replaced by this agent-vm's, $VERSION, which adds terminal-pixels. Its Full Disk Access may have to be granted again afterwards; the image's pane says so then." \
+    "The image's agent-vm-guest 0.2.18 is replaced by this agent-vm's, $VERSION, which adds terminal-pixels. Its Full Disk Access may have to be granted again afterwards; the image's pane says so then. With another part ticked too, the daemon is replaced first, and stays even if that part fails." \
     "$(ui_value "$UPDATE_GUEST_TEXT_ID")"
 check "afterwards: the images built from it" \
     "Images built from it (dev-acp and dev-agents) are not updated with it: each is updated by itself." \
@@ -266,7 +281,7 @@ store "$BEHIND"' | (.images[] | select(.name == "dev")).recipes = [{name: "homeb
 open_update dev
 check "when it was last updated"     "macOS 27.0 (26A428). Last updated on Sep 30, 2026." "$(ui_value "$UPDATE_STATE_ID")"
 check "the recipes in order, and when their update steps last ran" \
-    "Runs the update steps of the recipes this image keeps (homebrew, node), then every recipe's checks. Last run on Sep 30, 2026." \
+    "Runs the update steps of the recipes this image keeps (homebrew, node), then every recipe's checks. A recipe that came with agent-vm is first replaced by the installed version, when that is newer. Last run on Sep 30, 2026." \
     "$(ui_value "$UPDATE_TOOLS_TEXT_ID")"
 omc_run AgentVM.update.close
 
@@ -469,7 +484,7 @@ check "macOS: the newest is not called a new major version" \
     "No newer macOS is known for this image: the newest is 27.0.1 (26A434), as of Sep 29, 2026. The update asks Apple again, and installs what is offered." \
     "$(ui_value "$UPDATE_SYSTEM_TEXT_ID")"
 check "the guest daemon: replaced, without a version to name" \
-    "The image's agent-vm-guest, whose version is not on record, is replaced by this agent-vm's, $VERSION. Its Full Disk Access may have to be granted again afterwards; the image's pane says so then." \
+    "The image's agent-vm-guest, whose version is not on record, is replaced by this agent-vm's, $VERSION. Its Full Disk Access may have to be granted again afterwards; the image's pane says so then. With another part ticked too, the daemon is replaced first, and stays even if that part fails." \
     "$(ui_value "$UPDATE_GUEST_TEXT_ID")"
 omc_run AgentVM.update.close
 store '(.images[] | select(.name == "dev-agents")) |= del(.macOSVersion, .macOSBuild)'
@@ -566,7 +581,7 @@ check "the system is ticked, though nobody can say beforehand that it needs doin
     "true true true|1 1 1" "$(ticks)"
 check "Check Now is not shown: Apple has nothing to say of a Linux image" "0" "$(ui_visible "$UPDATE_CHECK_ID")"
 check "the guest daemon's part says nothing of Full Disk Access" \
-    "The image's agent-vm-guest 0.7.9 is replaced by this agent-vm's, $VERSION." "$(ui_value "$UPDATE_GUEST_TEXT_ID")"
+    "The image's agent-vm-guest 0.7.9 is replaced by this agent-vm's, $VERSION. With another part ticked too, the daemon is replaced first, and stays even if that part fails." "$(ui_value "$UPDATE_GUEST_TEXT_ID")"
 check "the command it would run: the system's part is --system" \
     "agent-vm image update deb-agents --system --tools --guest|1" "$(ui_value "$UPDATE_COMMAND_ID")|$(enabled "$UPDATE_START_ID")"
 mixed '.runningVMs = {count: 2, limit: 2, linuxBoxes: 0, linuxImages: 0}'

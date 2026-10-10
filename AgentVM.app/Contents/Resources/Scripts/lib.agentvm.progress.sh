@@ -128,7 +128,8 @@ progress_capital() {
 
 # progress_status_text <uuid>  ->  the window's headline: for a job that runs, its step now, and
 # how long that step took last time when agent-vm knows; for one that waits, that it waits; for
-# one that ended, how (main_job_outcome's words, with agent-vm's reason after a failure).
+# one that ended, how (main_job_outcome's words, with agent-vm's reason after a failure), and what
+# an update that did not finish left in the image all the same (progress_kept_text).
 progress_status_text() {
     local _job="$(progress_job "$1")"
     local _state="$(printf '%s\n' "$_job" | /usr/bin/cut -f2)"
@@ -151,12 +152,18 @@ progress_status_text() {
             printf '%s.\n' "$(main_job_outcome "$_job")"
             return 0 ;;
         canceled)
-            printf 'Stopped before it finished.\n'
+            printf 'Stopped before it finished.%s\n' "$(progress_kept_text "$1")"
             return 0 ;;
     esac
     local _error="$(printf '%s\n' "$_job" | /usr/bin/cut -f15)"
     [ "$_error" = "-" ] && _error="agent-vm gave no reason."
-    printf '%s: %s\n' "$(main_job_outcome "$_job")" "$_error"
+    local _kept="$(progress_kept_text "$1")"
+    # agent-vm's reason may or may not end its sentence.
+    case "$_error" in
+        *[.!?]) ;;
+        *) [ -n "$_kept" ] && _error="$_error." ;;
+    esac
+    printf '%s: %s%s\n' "$(main_job_outcome "$_job")" "$_error" "$_kept"
 }
 
 # progress_elapsed_text <uuid>  ->  "Elapsed 2 min" for a job that runs, "took 2 min" for one that
@@ -208,6 +215,30 @@ progress_step_rows() {
                 printf "%s\t%s\n", text[i], how
             }
         }' "$_events"
+}
+
+# progress_daemon_kept <uuid>  ->  0 when the job's events show an image update whose first part
+# is in place and whose second has begun: a disk put in place (commit), then a boot. agent-vm
+# updates the guest daemon first, as an update of its own, when it was asked for with the system
+# or the tools, so that is the daemon's update, and nothing that happens later takes it back.
+progress_daemon_kept() {
+    local _events="$(ui_cache "$1" events.tsv)"
+    [ -f "$_events" ] || return 1
+    /usr/bin/awk -F'\t' '
+        $1 == "progress" && $2 == "commit" { placed = 1 }
+        $1 == "progress" && $2 == "boot" && placed { kept = 1 }
+        END { exit kept ? 0 : 1 }' "$_events"
+}
+
+# progress_kept_text <uuid>  ->  what a failed or stopped image update left in the image all the
+# same, as a sentence with a space before it, or nothing.
+progress_kept_text() {
+    case "$(progress_job "$1" | /usr/bin/cut -f4)" in
+        "image update") ;;
+        *) return 0 ;;
+    esac
+    progress_daemon_kept "$1" && printf ' The guest daemon was updated before that, and stays.'
+    return 0
 }
 
 # progress_percent <uuid>  ->  how far the step the job is at has come, 0-100, when the job runs
@@ -377,14 +408,20 @@ progress_poll() {
     return 0
 }
 
-# progress_stop_question <job row>  ->  the Stop question's message: what stopping leaves behind.
+# progress_stop_question <job row> [uuid]  ->  the Stop question's message: what stopping leaves
+# behind. With the window's uuid, an update whose guest daemon is already in place says that it
+# stays (progress_daemon_kept).
 progress_stop_question() {
     local _text="agent-vm stops the job at its next safe point, which can take up to a minute."
     case "$(printf '%s\n' "$1" | /usr/bin/cut -f4)" in
         "image create")
             _text="$_text The image is left marked failed: it can be deleted, or built again." ;;
         "image update"|"image update-guest")
-            _text="$_text The image stays as it was before the update." ;;
+            if [ -n "${2:-}" ] && progress_daemon_kept "$2"; then
+                _text="$_text The guest daemon is already updated, and stays; the rest of the image stays as it was."
+            else
+                _text="$_text The image stays as it was before the update."
+            fi ;;
         "image fetch-ipsw")
             _text="$_text What was downloaded is kept for the next time." ;;
         "image view")
