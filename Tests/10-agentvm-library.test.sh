@@ -659,9 +659,12 @@ check "and the virtual machines"     "0${TAB}2${TAB}0${TAB}0" "$(lib agentvm_sta
 # -----------------------------------------------------------------------------------------------
 section "what agent-vm builds: the Linux systems, and a new image's sizes (version.json)"
 check "version --json is asked"      "version --json" "$(fake_reset; with_fake agentvm_version_info >/dev/null; fake_log | /usr/bin/tail -1)"
-rows="$(lib agentvm_linux_release_rows < "$FIXTURES_AGENTVM/version.json")"
+rows="$(printf '%s\n' '{"linuxReleases": [{"distribution": "debian", "id": "debian-13", "name": "Debian 13", "version": "13"},
+    {"distribution": "ubuntu", "id": "ubuntu-26.04", "name": "Ubuntu 26.04", "version": "26.04"}]}' | lib agentvm_linux_release_rows)"
 check "a row per Linux system, in agent-vm's order: its id, name, distribution and version" \
     "debian-13${TAB}Debian 13${TAB}debian${TAB}13|ubuntu-26.04${TAB}Ubuntu 26.04${TAB}ubuntu${TAB}26.04" "$(printf '%s\n' "$rows" | /usr/bin/paste -sd '|' -)"
+check "the fixture: every system agent-vm says it builds gets a row" "$(/usr/bin/jq -r '.linuxReleases | length' "$FIXTURES_AGENTVM/version.json")" \
+    "$(lib agentvm_linux_release_rows < "$FIXTURES_AGENTVM/version.json" | /usr/bin/grep -c .)"
 check "an agent-vm that lists none: no rows" "" "$(printf '{"version": "0.7.13"}\n' | lib agentvm_linux_release_rows)"
 check "an entry whose id could not be an argument is left out; one with no name is listed under its id" \
     "fedora-42${TAB}fedora-42${TAB}fedora${TAB}-|a.b${TAB}Named${TAB}-${TAB}-" \

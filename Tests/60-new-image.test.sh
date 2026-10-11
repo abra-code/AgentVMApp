@@ -58,6 +58,8 @@ AGENTVM_APP_OPEN="$TEST_HELPERS/fake_open.sh"
 FAKE_SLEEP_LOG="$OMCTEST_WORK/sleeps"
 FAKE_OPEN_LOG="$OMCTEST_WORK/opened"
 TZ=UTC
+# The names of the Linux systems agent-vm builds, as the window lists them: whatever the fixture holds.
+LINUX_NAMES="$(/usr/bin/jq -r '[.linuxReleases[].name] | join("|")' "$FIXTURES_AGENTVM/version.json")"
 AGENTVM_APP_NOW=1790769612
 export AGENTVM_APP_AGENT_VM AGENTVM_APP_RECIPES AGENTVM_APP_PS AGENTVM_APP_SLEEP AGENTVM_APP_OPEN FAKE_SLEEP_LOG FAKE_OPEN_LOG TZ AGENTVM_APP_NOW
 PB="$OMC_OMC_SUPPORT_PATH/pasteboard"
@@ -392,7 +394,7 @@ check "its title"                    "New Image" "$(ui_title)"
 check "step 1 of 5: its panel, the first mark is now" "Step 1 of 5 - Start from|1|ntttt" "$(step_shown)"
 check "Back is off, Continue is there, Build is not" "0|1|0" "$(enabled "$NEW_BACK_ID")|$(shown "$NEW_NEXT_ID")|$(shown "$NEW_BUILD_ID")"
 check "the ready images, the Linux systems agent-vm builds, then the restore file; the failed image is not listed" \
-    "dev|dev-acp|dev-agents|dev-node|dev-xcode|dev-xcode-ios|Debian 13|Ubuntu 26.04|$IPSW" "$(ui_rows "$NEW_SOURCES_ID" | col 1 | /usr/bin/paste -sd '|' -)"
+    "dev|dev-acp|dev-agents|dev-node|dev-xcode|dev-xcode-ios|$LINUX_NAMES|$IPSW" "$(ui_rows "$NEW_SOURCES_ID" | col 1 | /usr/bin/paste -sd '|' -)"
 check "a plain image: its system, what it holds, ready, and its key" \
     "dev${TAB}macOS 27.0${TAB}macOS and the Command Line Tools${TAB}ready${TAB}image dev" "$(ui_rows "$NEW_SOURCES_ID" | row_named dev)"
 check "an old image holds what its recipe said; one without Full Disk Access says so" \
@@ -845,7 +847,7 @@ omc_run AgentVM.newimage.close
 printf '[]\n' > "$FAKE_AGENTVM_DIR/ipsw-list.json"
 store '.images = []'
 open_new
-check "no image and no restore file: the Linux systems alone" "Debian 13|Ubuntu 26.04" "$(ui_rows "$NEW_SOURCES_ID" | col 1 | /usr/bin/paste -sd '|' -)"
+check "no image and no restore file: the Linux systems alone" "$LINUX_NAMES" "$(ui_rows "$NEW_SOURCES_ID" | col 1 | /usr/bin/paste -sd '|' -)"
 omc_run AgentVM.newimage.close
 /bin/rm -f "$FAKE_AGENTVM_DIR/ipsw-list.json"
 
@@ -1305,7 +1307,7 @@ fake_reset
 mixed '.'
 open_new
 check "the Linux systems agent-vm builds are listed after the images and before the restore file" \
-    "ub-agents|Debian 13|Ubuntu 26.04|$IPSW" "$(ui_rows "$NEW_SOURCES_ID" | col 1 | /usr/bin/tail -4 | /usr/bin/paste -sd '|' -)"
+    "ub-agents|$LINUX_NAMES|$IPSW" "$(ui_rows "$NEW_SOURCES_ID" | col 1 | /usr/bin/tail -"$(($(printf '%s\n' "$LINUX_NAMES" | /usr/bin/tr '|' '\n' | /usr/bin/grep -c .) + 2))" | /usr/bin/paste -sd '|' -)"
 check "a row: agent-vm's name for the system, that it is a Linux built from its cloud image, and its key" \
     "Debian 13${TAB}Linux${TAB}a new system, from its cloud image${TAB}downloaded when needed${TAB}linux debian-13" "$(ui_rows "$NEW_SOURCES_ID" | row_named "Debian 13")"
 pick "linux debian-13" "Debian 13"
@@ -1350,6 +1352,9 @@ omc_run AgentVM.newimage.close
 
 fake_reset
 mixed '.images += [.images[0] | .name = "debian"]'
+# A second system beside the first: the window lists and builds whatever agent-vm says it builds.
+/usr/bin/jq '.linuxReleases = [.linuxReleases[0], {distribution: "alpine", id: "alpine-3.22", name: "Alpine 3.22", version: "3.22"}]' \
+    "$FIXTURES_AGENTVM/version.json" > "$FAKE_AGENTVM_DIR/version.json"
 open_new
 pick "linux debian-13" "Debian 13"
 next
@@ -1375,12 +1380,12 @@ back
 back
 back
 check "back on step 1"               "Step 1 of 5 - Start from|1|ntttt" "$(step_shown)"
-pick "linux ubuntu-26.04" "Ubuntu 26.04"
+pick "linux alpine-3.22" "Alpine 3.22"
 next
 check "another system: the line above the tools names it" \
-    "Tick the tools to install on top of a new Ubuntu 26.04 system. They are installed in the order listed. With nothing ticked, the new image is the start as it is." "$(ui_value "$NEW_TOOLS_TEXT_ID")"
+    "Tick the tools to install on top of a new Alpine 3.22 system. They are installed in the order listed. With nothing ticked, the new image is the start as it is." "$(ui_value "$NEW_TOOLS_TEXT_ID")"
 next
-check "  and the name follows it"    "ubuntu" "$(ui_value "$NEW_NAME_ID")"
+check "  and the name follows it"    "alpine" "$(ui_value "$NEW_NAME_ID")"
 seen "$NEW_NAME_ID" "$NEW_CPUS_ID" "$NEW_MEMORY_ID" "$NEW_DISK_ID"
 back
 back

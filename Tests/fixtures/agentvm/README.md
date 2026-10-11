@@ -154,3 +154,18 @@ What was done to the fixtures:
 - One virtual machine runs.
 
 Added by hand since, as agent-vm added them to `status` (0.5.7): `revision`, `updatedAt`, `macOSCheckedAt` and `toolsCheckedAt` on `dev`, as after two updates; and on `dev-acp` the `recipes` of the real capture. It has no `newestMacOS` and no `macOSUpdate`, as a store where Apple was never asked: a test that needs them adds them with a jq edit. Its images are otherwise those of 2026-09-30, so `dev-acp` there is an older image than the one `image-info.json` measures now.
+
+## The move to agent-vm 0.7.41 (2026-10-11)
+
+What an application sees of agent-vm 0.7.40 and 0.7.41:
+
+- `linuxReleases` in `version --json` lists Debian 13 alone (0.7.41). Ubuntu 26.04 is withheld: it packages no kernel with 16 KiB pages. `image create --linux ubuntu` and `image rebuild --linux ubuntu` are refused before anything is made. The app lists whatever `linuxReleases` holds, so it offers Debian only.
+- `--page-size 64k` is refused for every system (0.7.40): a Mac's processor has no 64 KiB pages. The line about it under 0.7.39 above no longer holds. The app passes no page size.
+- Ubuntu images and boxes that exist are listed, started and updated as before, and the pack `ubuntu` stays, so `status-linux.json`, `status-mixed.json` and `packs.json` keep theirs.
+
+What was done to the fixtures:
+
+- `version.json`, `packs.json` and `recipe-check.json` were captured again from the installed agent-vm 0.7.41 (`refresh_agentvm_fixtures.sh <agent-vm> version packs recipe-check`). `version.json` now lists one Linux system.
+- `doctor.json`: the digest of the Linux guest daemon in the check's detail, by hand.
+- `status-variety.json` and `job-log-variety.json`: the version strings, by hand.
+- The tests no longer take a second Linux system from `version.json`: the library test gives its own two-system answer, and the New Image test adds a made-up second system to the fake's answer where it needs one.
