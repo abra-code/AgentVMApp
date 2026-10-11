@@ -192,7 +192,7 @@ main_read_doctor() {
 }
 
 # main_read_status <uuid> [check]  ->  0, with the cache files boxes.tsv, images.tsv, updates.tsv,
-# newest.tsv, vm.tsv, kept.tsv and jobs.tsv holding the rows lib.agentvm.sh documents; or agent-vm's status,
+# newest.tsv, vm.tsv, kept.tsv, kernels.tsv and jobs.tsv holding the rows lib.agentvm.sh documents; or agent-vm's status,
 # with the previous rows kept and its message in the cache file "status-error" (empty after a
 # success). "check" has agent-vm ask Apple for the newest macOS first (agentvm_status_checked).
 main_read_status() {
@@ -215,16 +215,31 @@ main_read_status() {
     printf '%s\n' "$_json" | agentvm_status_newest_row | ui_store "$(ui_cache "$1" newest.tsv)"
     printf '%s\n' "$_json" | agentvm_status_vm_row | ui_store "$(ui_cache "$1" vm.tsv)"
     printf '%s\n' "$_json" | agentvm_status_kept_logs_row | ui_store "$(ui_cache "$1" kept.tsv)"
+    printf '%s\n' "$_json" | agentvm_status_kernel_rows | ui_store "$(ui_cache "$1" kernels.tsv)"
     printf '%s\n' "$_json" | agentvm_job_rows | ui_store "$(ui_cache "$1" jobs.tsv)"
     : | ui_store "$_error"
     return 0
 }
 
-# main_rows <uuid> <boxes|images|updates|newest|doctor|vm|kept|jobs>  ->  that cache file's rows, nothing when it is missing.
+# main_rows <uuid> <boxes|images|updates|newest|doctor|vm|kept|kernels|jobs>  ->  that cache file's rows, nothing when it is missing.
 main_rows() {
     local _file="$(ui_cache "$1" "$2.tsv")"
     [ -f "$_file" ] || return 0
     /usr/bin/awk 'NF' "$_file"
+}
+
+# main_page_bytes <uuid> <image|box> <name>  ->  the size of the memory pages of that Linux
+# image's or box's kernel, in bytes, from the last status; nothing for a macOS one.
+main_page_bytes() {
+    main_rows "$1" kernels | /usr/bin/awk -F'\t' -v kind="$2" -v name="$3" '$1 == kind && $2 "" == name && $4 ~ /^[0-9]+$/ { print $4; exit }'
+}
+
+# main_kernel_text <uuid> <image|box> <name>  ->  "kernel with 16 KiB pages" for a Linux image or
+# box, and nothing for a macOS one.
+main_kernel_text() {
+    local _bytes="$(main_page_bytes "$1" "$2" "$3")"
+    [ -n "$_bytes" ] || return 0
+    printf 'kernel with %s KiB pages\n' "$((_bytes / 1024))"
 }
 
 # main_row <uuid> <boxes|images|updates> <name>  ->  the cached row of that box or image, or nothing.
@@ -1426,10 +1441,13 @@ main_paint_box_detail() {
         esac
 
         # What the box was made with: a macOS box its version and build, a Linux box its system in
-        # agent-vm's words.
+        # agent-vm's words, and its kernel's page size, which is the box's own: an image updated
+        # since may have another.
         local _text="$_image"
         if [ "$_kind" = "linux" ]; then
             [ "${_system:--}" != "-" ] && _text="$_text ($_system)"
+            local _kernel="$(main_kernel_text "$_uuid" box "$_name")"
+            [ -n "$_kernel" ] && _text="$_text; $_kernel"
         elif [ "${_macos:--}" != "-" ]; then
             _text="$_text (macOS $_macos"
             [ "${_build:--}" != "-" ] && _text="$_text, $_build"
@@ -1815,6 +1833,11 @@ main_paint_image_detail() {
                 [ "$_build" != "-" ] && _text="$_text ($_build)"
             fi
         fi
+        # A ready Linux image: its kernel's page size. Not one being built: a build that changes
+        # the kernel records the cloud image's until its end.
+        local _kernel=""
+        [ "$_state" = "ready" ] && _kernel="$(main_kernel_text "$_uuid" image "$_name")"
+        [ -n "$_kernel" ] && _text="$_text, $_kernel"
         # When it was last updated, from status's update row.
         local _updated="$(ui_date_text "$(main_row "$_uuid" updates "$_name" | /usr/bin/cut -f3)")"
         [ -n "$_updated" ] && _text="$_text, updated $_updated"

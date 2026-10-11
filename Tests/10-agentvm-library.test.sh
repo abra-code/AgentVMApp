@@ -323,6 +323,23 @@ check "  the recipe it keeps"        "dev-acp" "$(printf '%s\n' "$rows" | row_na
 check "an image built before recipes were listed keeps none" "-" "$(printf '%s\n' "$rows" | row_named dev-node | col 9)"
 check "every one of them is a macOS image" "macos" "$(printf '%s\n' "$rows" | col 12 | /usr/bin/sort -u)"
 
+section "kernel rows (status-mixed.json)"
+rows="$(lib agentvm_status_kernel_rows < "$FIXTURES_AGENTVM/status-mixed.json")"
+check "one row per Linux image and Linux box, four fields each, and none for a macOS one" \
+    "image:deb image:deb-agents image:ub image:ub-agents box:lb|4" \
+    "$(printf '%s\n' "$rows" | /usr/bin/awk -F'\t' '{ printf "%s%s:%s", (NR > 1 ? " " : ""), $1, $2 }')|$(printf '%s\n' "$rows" | field_count)"
+check "a record from before agent-vm kept the page size: its kernel, and 4 KiB pages" \
+    "6.12.111+deb13-cloud-arm64${TAB}4096" "$(printf '%s\n' "$rows" | /usr/bin/awk -F'\t' '$1 == "image" && $2 == "deb"' | col 3-4)"
+rows="$(/usr/bin/jq '(.images[] | select(.name == "deb")).linux |= (.pageSize = 16384 | .kernel = "6.12.111+deb13-arm64-16k")
+    | (.boxes[] | select(.box.name == "lb")).box.linux |= del(.kernel)' "$FIXTURES_AGENTVM/status-mixed.json" | lib agentvm_status_kernel_rows)"
+check "an image that says its page size" "6.12.111+deb13-arm64-16k${TAB}16384" "$(printf '%s\n' "$rows" | /usr/bin/awk -F'\t' '$1 == "image" && $2 == "deb"' | col 3-4)"
+check "  its box keeps its own, and one whose record names no kernel has -" "-${TAB}4096" "$(printf '%s\n' "$rows" | /usr/bin/awk -F'\t' '$1 == "box" && $2 == "lb"' | col 3-4)"
+rows="$(/usr/bin/jq '(.images[] | select(.name == "deb")) |= (del(.linux) | .state = "building") | (.boxes[] | select(.box.name == "lb")).box |= del(.linux)' "$FIXTURES_AGENTVM/status-mixed.json" | lib agentvm_status_kernel_rows)"
+check "a Linux image or box whose record has no system yet: no row, since nothing is known of its kernel" \
+    "image:deb-agents image:ub image:ub-agents" "$(printf '%s\n' "$rows" | /usr/bin/awk -F'\t' '{ printf "%s%s:%s", (NR > 1 ? " " : ""), $1, $2 }')"
+check "a store of macOS images and boxes, and an empty one: no row" "|" \
+    "$(lib agentvm_status_kernel_rows < "$FIXTURES_AGENTVM/status.json")|$(lib agentvm_status_kernel_rows < "$FIXTURES_AGENTVM/status-empty.json")"
+
 section "update rows of Linux images (status-linux.json)"
 rows="$(lib agentvm_status_update_rows < "$FIXTURES_AGENTVM/status-linux.json")"
 check "one row per image, twelve fields each" "4 12" "$(printf '%s\n' "$rows" | /usr/bin/awk 'END { print NR }') $(printf '%s\n' "$rows" | field_count)"

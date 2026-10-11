@@ -340,7 +340,16 @@ fake_reset
 open_window
 select_image deb-agents
 check_status "the handler exits cleanly" 0
-check "its system, in agent-vm's words" "Debian GNU/Linux 13 (trixie)" "$(ui_value "$MAIN_IMAGE_SYSTEM_ID")"
+# The capture is of an image built before agent-vm kept a kernel's page size: 4 KiB pages.
+check "its system, in agent-vm's words, and its kernel's pages" \
+    "Debian GNU/Linux 13 (trixie), kernel with 4 KiB pages" "$(ui_value "$MAIN_IMAGE_SYSTEM_ID")"
+/usr/bin/jq '(.images[] | select(.name == "deb-agents")) |= (.linux.pageSize = 16384 | .linux.kernel = "6.12.111+deb13-arm64-16k" | .updatedAt = "2026-10-09T10:00:00Z")' \
+    "$FIXTURES_AGENTVM/status-mixed.json" > "$FAKE_AGENTVM_DIR/status.json"
+poll 1
+check "  one built with the Mac's page size, before the day it was updated" \
+    "Debian GNU/Linux 13 (trixie), kernel with 16 KiB pages, updated Oct 9, 2026" "$(ui_value "$MAIN_IMAGE_SYSTEM_ID")"
+/bin/cp "$FIXTURES_AGENTVM/status-mixed.json" "$FAKE_AGENTVM_DIR/status.json"
+poll 1
 check "what it was built from"  "deb" "$(ui_value "$MAIN_IMAGE_BASE_ID")"
 check "its tools: its recipes and the compiler" \
     "Node and npm from nodejs.org, for Linux images; Claude Code, Codex and opencode (needs Node: put Recipes/node, or Recipes/linux-node in a Linux image, before it); build-essential 12.12" \
@@ -382,7 +391,7 @@ check "Set Up..., however it came to run, opens no guide for a Linux image" "0" 
 select_image dev-acp
 check "a macOS image selected after it has Set Up... and View again, shown and on" "1 1 1 1" \
     "$(visible "$MAIN_IMAGE_ACCESS_ID") $(enabled "$MAIN_IMAGE_ACCESS_ID") $(visible "$MAIN_IMAGE_VIEW_ID") $(enabled "$MAIN_IMAGE_VIEW_ID")"
-check "  and its system, with the build" "macOS 27.0 (26A428)" "$(ui_value "$MAIN_IMAGE_SYSTEM_ID")"
+check "  and its system, with the build, and no word of a kernel" "macOS 27.0 (26A428)" "$(ui_value "$MAIN_IMAGE_SYSTEM_ID")"
 omc_run AgentVM.main.image.access
 check "  and its guide is asked for" "1" "$(chain_asked AgentVM.access)"
 "$PB" agentvm_open_request_access set ""
@@ -391,6 +400,7 @@ check "  and its guide is asked for" "1" "$(chain_asked AgentVM.access)"
 omc_run AgentVM.main.activated
 select_image ub
 check "a Linux image being built: what is being installed is the system" "Building: installing the system" "$(ui_value "$MAIN_IMAGE_STATE_ID")"
+check "  and nothing is said of its kernel, which the build may still change" "Ubuntu 26.04.1 LTS" "$(ui_value "$MAIN_IMAGE_SYSTEM_ID")"
 select_image ub-agents
 check "  and then is installed" "Building: the system is installed" "$(ui_value "$MAIN_IMAGE_STATE_ID")"
 select_image dev

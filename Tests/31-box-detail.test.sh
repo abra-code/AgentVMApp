@@ -386,7 +386,18 @@ fake_reset
 open_window
 select_box lb
 check_status "the handler exits cleanly" 0
-check "its image, and what it runs in agent-vm's words" "deb (Debian GNU/Linux 13 (trixie))" "$(ui_value "$MAIN_BOX_IMAGE_ID")"
+# The capture is of a box made before agent-vm kept a kernel's page size: 4 KiB pages.
+check "its image, what it runs in agent-vm's words, and its kernel's pages" \
+    "deb (Debian GNU/Linux 13 (trixie)); kernel with 4 KiB pages" "$(ui_value "$MAIN_BOX_IMAGE_ID")"
+# The page size is the box's own: its image may have been updated since.
+/usr/bin/jq '(.boxes[] | select(.box.name == "lb")).box.linux.pageSize = 16384' "$FAKE_AGENTVM_DIR/status.json" > "$FAKE_AGENTVM_DIR/status.new" \
+    && /bin/mv "$FAKE_AGENTVM_DIR/status.new" "$FAKE_AGENTVM_DIR/status.json"
+poll 1
+check "  a box with the Mac's page size says that, whatever its image has" \
+    "deb (Debian GNU/Linux 13 (trixie)); kernel with 16 KiB pages" "$(ui_value "$MAIN_BOX_IMAGE_ID")"
+/usr/bin/jq '(.boxes[] | select(.box.name == "lb")).box.linux |= del(.pageSize)' "$FAKE_AGENTVM_DIR/status.json" > "$FAKE_AGENTVM_DIR/status.new" \
+    && /bin/mv "$FAKE_AGENTVM_DIR/status.new" "$FAKE_AGENTVM_DIR/status.json"
+poll 1
 check "its space, and its own"  "2.0 GB; 160 MB its own (what Delete frees)" "$(ui_value "$MAIN_BOX_SPACE_ID")"
 check "it runs: Stop and Connect are on" "1 1" "$(enabled "$MAIN_BOX_STOP_ID") $(enabled "$MAIN_BOX_SHELL_ID")"
 check "  and View is not shown: a Linux box has no screen" "0" "$(ui_visible "$MAIN_BOX_VIEW_ID")"

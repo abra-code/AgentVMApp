@@ -710,6 +710,24 @@ agentvm_status_update_rows() {
         (.guest // "macos") ] | row'
 }
 
+# agentvm_status_kernel_rows  <  status JSON  ->  one row per Linux image and Linux box whose
+# record says what it runs, none for macOS ones:
+#    1 image or box   2 name   3 its kernel ("6.12.111+deb13-arm64-16k"; "-" when its record
+#    names none)   4 the size of the kernel's memory pages, in bytes (4096, 16384)
+# A record without a page size was written before agent-vm kept one (0.7.30), when every image
+# ran its cloud image's kernel: 4096, as agent-vm itself reads it.
+# One whose record has no Linux system at all (an image whose build has not read it yet, or
+# failed before it did) has no row: nothing is known of its kernel, and agent-vm does not call
+# its pages small either.
+agentvm_status_kernel_rows() {
+    /usr/bin/jq -r "$agentvm_jq_defs"'
+        ((.images // [])[] | select((.guest // "macos") == "linux" and (.linux | type) == "object")
+            | ["image", .name, .linux.kernel, (.linux.pageSize // 4096)]),
+        ((.boxes // [])[] | select((.guest // .box.guest // "macos") == "linux" and (.box.linux | type) == "object")
+            | ["box", .box.name, .box.linux.kernel, (.box.linux.pageSize // 4096)])
+        | row'
+}
+
 # agentvm_status_newest_row  <  status JSON  ->  version, build, checkedAt, error: the newest macOS
 # this Mac's virtual machines can run, as `status --check-updates` last learned it and agent-vm
 # kept it; all "-" when it was never asked. The error is why the lookup of this very call failed.

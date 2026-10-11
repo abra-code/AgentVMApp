@@ -26,6 +26,7 @@ Since version 1.1 the app makes and runs Linux images and boxes beside macOS one
 - **Tools.** They are added as for a macOS image, by ticking recipes: in the same build, or later in a copy of the image. The window lists the recipes that fit the system you start from.
 - **Boxes.** A Linux box is made, started, stopped, recreated and deleted like a macOS box, with the same network rules and shared folder. Connect opens a shell in it and Run an Agent starts an agent in it. It has no screen, so it has no View.
 - **Updates.** Update... on a Linux image installs the distribution's package updates, the tools' own updates and the newer guest daemon, the part of agent-vm that runs in the image.
+- **The kernel's memory pages.** A Linux image is built with a kernel whose memory pages are 16 KiB, the Mac's own size, or larger. The image and box panes say which each has.
 - **Told apart at a glance.** The card of a Linux image or of a running Linux box is teal (a stopped box: slate), and every pane says which system an image or a box runs.
 - **Beside two macOS boxes.** macOS runs at most two macOS virtual machines at once. Linux ones are not counted among them, and the app never holds a Linux box or build back for that limit.
 
