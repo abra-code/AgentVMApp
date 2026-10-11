@@ -99,6 +99,22 @@ What was done to the fixtures:
 - The version strings of `status-variety.json` and `job-log-variety.json` were moved from 0.7.26 to 0.7.33.
 - The Linux fixtures were NOT captured again: `status-linux.json`, `status-mixed.json`, `image-info-linux.json` and `box-info-linux.json` are records of images built before 0.7.30, which have no `pageSize`, and `job-log-linux.json` is a build of 0.7.12, in one boot with twelve setup steps. A capture needs a Debian image built by 0.7.32 or later as a job (about 140 MB of downloads). Until then the two-boot build and the update that changes the kernel are in `Tests/54-progress-window.test.sh`, as events made by hand in the order and the words of two real text logs of 0.7.32.
 
+## The move to agent-vm 0.7.39 (2026-10-11)
+
+agent-vm 0.7.34 to 0.7.39 change nothing in the JSON the app reads. What an application sees:
+
+- `box rename <box> <new-name>` and `image rename <image> <new-name>` (0.7.39). With `--json` each prints the record under its new name; a renamed box's record may have `formerNames`, oldest first. The boxes made from a renamed image, and the images built from it, name it by its new name at once.
+- A rename that was interrupted makes reading that box or image fail, with a message that names the command which finishes it.
+- `--page-size 64k` is accepted for Ubuntu (0.7.37), and the Linux setup steps that can download a kernel may be silent for three hours (0.7.38). The app passes no page size and has no time limit of its own for a job's step.
+- `session start --git-only` and what avm remembers of it per folder (0.7.34 to 0.7.36). The app starts no sessions and shows no session reports.
+
+What was done to the fixtures:
+
+- `version.json` and `packs.json` were captured again from the installed agent-vm 0.7.39 (`refresh_agentvm_fixtures.sh <agent-vm> version packs recipe-check`; `recipe-check.json` came out as it was).
+- `doctor.json` was given the Linux guest daemon's digest as 0.7.39 prints it.
+- The version strings of `status-variety.json` and `job-log-variety.json` were moved from 0.7.33 to 0.7.39.
+- No fixture has `formerNames`: none was captured after a rename. The Linux fixtures are as described above for 0.7.33.
+
 ## Made by hand
 
 `box-netlog.json` is made by hand, not captured: a real connection log lists what programs in a box reached, which does not belong in a public repository. Its ten connections hold one of each kind the network window treats differently: hosts reached through a pack, a host refused three times over a tunnel to port 443, one refused over plain HTTP to port 80 (allowed by its host name), one refused over a raw tunnel to port 80 and one refused by IP address (neither gets a rule), and a failure to resolve. Its fields are those of a real `box netlog --json` entry on agent-vm 0.4.4.
