@@ -523,7 +523,7 @@ kept_store "{count: 0, bytes: 0, holdDays: 30, directory: \"$KEPT_FOLDER\"}"
 /bin/rm -f "$mac_folder/supervisor.log"
 check "a box that has logged nothing leaves none: nothing is promised" "$DELETE_TEXT This cannot be undone.|$RECREATE_TEXT This cannot be undone." \
     "$(asked AgentVM.main.box.delete)|$(asked AgentVM.main.box.recreate)"
-check "nothing is kept yet: Logs of Deleted Boxes, in the bar under the list, is off" "0" "$(enabled "$MAIN_KEPT_LOGS_ID")"
+check "nothing is kept yet: Show in Finder, in Settings, is off" "0" "$(enabled "$MAIN_KEPT_SHOW_ID")"
 # The delete: agent-vm moves the logs and says where; the store then holds one box's logs.
 : > "$mac_folder/supervisor.log"
 omc_run AgentVM.main.box.delete
@@ -532,18 +532,18 @@ kept_store "{count: 1, bytes: 2048, holdDays: 30, directory: \"$KEPT_FOLDER\"}" 
 omc_run AgentVM.main.box.delete.confirmed
 check "Delete: agent-vm kept the box's logs, and a toast says so, and for how long" "1" \
     "$(ui_calls 'omc_present_toast.Box s3 is deleted\. Its logs are kept for 30 days\..5')"
-check "  their folder is not on this Mac: Logs of Deleted Boxes stays off, and opens nothing" "0|" \
-    "$(enabled "$MAIN_KEPT_LOGS_ID")|$(: > "$FAKE_OPEN_LOG"; omc_run AgentVM.main.box.logs.kept; opened)"
+check "  their folder is not on this Mac: Show in Finder stays off, and opens nothing" "0|" \
+    "$(enabled "$MAIN_KEPT_SHOW_ID")|$(: > "$FAKE_OPEN_LOG"; omc_run AgentVM.main.box.logs.kept; opened)"
 /bin/mkdir -p "$KEPT_FOLDER/s3-20261008T120000Z"
 poll 1
-check "  with the folder on this Mac: on" "1" "$(enabled "$MAIN_KEPT_LOGS_ID")"
+check "  with the folder on this Mac: on" "1" "$(enabled "$MAIN_KEPT_SHOW_ID")"
 : > "$FAKE_OPEN_LOG"
 omc_run AgentVM.main.box.logs.kept
 check "  and it opens the folder of all the kept logs in Finder" "$KEPT_FOLDER" "$(opened)"
 kept_store "{count: 0, bytes: 0, holdDays: 30, directory: \"$KEPT_FOLDER\"}" 'del(.boxes[] | select(.box.name == "s3"))'
 poll 1
 check "agent-vm removed them since: off again, and it opens nothing" "0|" \
-    "$(enabled "$MAIN_KEPT_LOGS_ID")|$(: > "$FAKE_OPEN_LOG"; omc_run AgentVM.main.box.logs.kept; opened)"
+    "$(enabled "$MAIN_KEPT_SHOW_ID")|$(: > "$FAKE_OPEN_LOG"; omc_run AgentVM.main.box.logs.kept; opened)"
 /bin/rm -f "$FAKE_AGENTVM_DIR/kept-logs"
 select_box lb
 omc_run AgentVM.main.box.delete

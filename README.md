@@ -44,7 +44,7 @@ agent-vm records what it started in a box, what the box contacted and what was r
 
 - **A box and an image** each have a Logs row: the box's log files in Finder, and for an image the log of the job that last built or updated it (a Linux image also has the console of its system).
 - **A build, an update or a start** has Show Log in Finder in its progress window: every step and line of the job, which agent-vm keeps for a week.
-- **A deleted box** leaves its logs behind, for 30 days unless you change it. The button under the box list shows them in Finder, and Settings says how many are kept and what they take, removes them, and sets for how long they are kept.
+- **A deleted box** leaves its logs behind, for 30 days unless you change it. Settings says how many are kept and what they take, shows them in Finder, removes them, and sets for how long they are kept.
 - **Where the Logs Are...,** in How to Use a Box, says which file answers which question, and gives the Terminal commands that read them.
 
 ## How it works

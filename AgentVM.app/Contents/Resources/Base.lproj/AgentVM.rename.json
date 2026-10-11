@@ -1,0 +1,118 @@
+{
+  "type": "VStack",
+  "properties": {
+    "alignment": "leading",
+    "spacing": 12,
+    "padding": 20,
+    "frame": {
+      "minWidth": 480,
+      "idealWidth": 480,
+      "minHeight": 250,
+      "idealHeight": 250
+    }
+  },
+  "children": [
+    {
+      "type": "Text",
+      "id": 5101,
+      "properties": {
+        "text": "",
+        "font": "headline"
+      }
+    },
+    {
+      "type": "Text",
+      "id": 5102,
+      "properties": {
+        "text": "",
+        "frame": {
+          "maxWidth": "infinity",
+          "alignment": "leading"
+        }
+      }
+    },
+    {
+      "type": "HStack",
+      "properties": {
+        "alignment": "firstTextBaseline",
+        "spacing": 10
+      },
+      "children": [
+        {
+          "type": "Text",
+          "properties": {
+            "text": "New name"
+          }
+        },
+        {
+          "type": "TextField",
+          "id": 5103,
+          "properties": {
+            "title": "New name",
+            "labelsHidden": true,
+            "frame": {
+              "width": 300
+            }
+          }
+        }
+      ]
+    },
+    {
+      "type": "Text",
+      "properties": {
+        "text": "Lower-case letters, digits, \".\", \"_\" and \"-\", starting with a letter or a digit, at most 63 characters.",
+        "font": "callout",
+        "foregroundStyle": "secondary",
+        "frame": {
+          "maxWidth": "infinity",
+          "alignment": "leading"
+        }
+      }
+    },
+    {
+      "type": "Text",
+      "id": 5104,
+      "properties": {
+        "text": "",
+        "foregroundStyle": "orange",
+        "frame": {
+          "maxWidth": "infinity",
+          "alignment": "leading"
+        }
+      }
+    },
+    {
+      "type": "Spacer"
+    },
+    {
+      "type": "HStack",
+      "properties": {
+        "spacing": 8
+      },
+      "children": [
+        {
+          "type": "Spacer"
+        },
+        {
+          "type": "Button",
+          "id": 5105,
+          "properties": {
+            "title": "Cancel",
+            "role": "cancel",
+            "actionID": "AgentVM.rename.cancel"
+          }
+        },
+        {
+          "type": "Button",
+          "id": 5106,
+          "properties": {
+            "title": "Rename",
+            "buttonStyle": "borderedProminent",
+            "actionID": "AgentVM.rename.apply",
+            "help": "Give it the new name, at once."
+          }
+        }
+      ]
+    }
+  ]
+}

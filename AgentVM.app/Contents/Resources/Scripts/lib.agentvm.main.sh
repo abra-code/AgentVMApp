@@ -81,8 +81,8 @@ MAIN_BOX_SHOW_ID=342
 MAIN_BOX_AGENT_ID=343
 MAIN_BOX_RECREATE_ID=344
 MAIN_BOX_DELETE_ID=345
+MAIN_BOX_RENAME_ID=348
 MAIN_HOWTO_ID=346
-MAIN_KEPT_LOGS_ID=347
 MAIN_BOX_IMAGE_ID=351
 MAIN_BOX_NETWORK_ID=352
 MAIN_BOX_NETWORK_DETAILS_ID=361
@@ -112,6 +112,7 @@ MAIN_IMAGE_MAINTENANCE_ID=423
 MAIN_IMAGE_PROGRESS_ID=424
 MAIN_IMAGE_SHOW_ID=433
 MAIN_IMAGE_DELETE_ID=434
+MAIN_IMAGE_RENAME_ID=437
 MAIN_IMAGE_DERIVE_ID=432
 MAIN_IMAGE_BOX_ID=431
 MAIN_IMAGE_UPDATE_ID=435
@@ -1561,6 +1562,9 @@ main_paint_box_detail() {
         ui_enable "$_uuid" "$MAIN_BOX_AGENT_ID" "$(( (_running + _stopped) * _kept * _free ))"
         ui_enable "$_uuid" "$MAIN_BOX_RECREATE_ID" "$(( _stopped * _kept * _image_ready * _free ))"
         ui_enable "$_uuid" "$MAIN_BOX_DELETE_ID" "$(( _stopped * _free ))"
+        # The Rename button beside the name: agent-vm renames a stopped box only, and not one that is
+        # deleted when it stops.
+        ui_enable "$_uuid" "$MAIN_BOX_RENAME_ID" "$(( _stopped * _kept * _free ))"
     }
 }
 
@@ -1603,6 +1607,24 @@ main_box_askable() {
     [ "$3" = "recreate" ] || return 0
     [ "$(printf '%s\n' "$_row" | /usr/bin/cut -f13)" != "true" ] || return 1
     [ "$(main_row "$1" images "$(printf '%s\n' "$_row" | /usr/bin/cut -f3)" | /usr/bin/cut -f2)" = "ready" ]
+}
+
+# main_box_renamable <uuid> <name>  ->  0 when the box can be given another name now, from the
+# rows last read: it is stopped, no job holds it, and it is kept (the rule main_paint_box_detail
+# enables Rename by).
+main_box_renamable() {
+    main_box_askable "$1" "$2" delete || return 1
+    [ "$(main_row "$1" boxes "$2" | /usr/bin/cut -f13)" != "true" ]
+}
+
+# main_image_renamable <uuid> <name>  ->  0 when the image can be given another name now, from
+# the rows last read: it is listed, no job holds it and no other command is changing it (the
+# rule main_paint_image_detail enables Rename by).
+main_image_renamable() {
+    [ -n "$(main_row "$1" images "$2")" ] || return 1
+    [ -z "$(main_job "$1" image "$2")" ] || return 1
+    main_image_busy "$1" "$2" && return 1
+    return 0
 }
 
 # main_alert <uuid> <title> <message>  ->  an alert on the window with an OK button.
@@ -1961,11 +1983,13 @@ main_paint_image_detail() {
     # made from it), and says so.
     if [ -n "$(main_job "$_uuid" image "$_name")" ] || main_image_busy "$_uuid" "$_name"; then
         ui_enable "$_uuid" "$MAIN_IMAGE_DELETE_ID" 0
+        ui_enable "$_uuid" "$MAIN_IMAGE_RENAME_ID" 0
         ui_enable "$_uuid" "$MAIN_IMAGE_UPDATE_ID" 0
         ui_enable "$_uuid" "$MAIN_IMAGE_VIEW_ID" 0
         return 0
     fi
     ui_enable "$_uuid" "$MAIN_IMAGE_DELETE_ID" 1
+    ui_enable "$_uuid" "$MAIN_IMAGE_RENAME_ID" 1
     # Update... opens the image's update window (lib.agentvm.update.sh), and View starts the job
     # that shows the image's screen (main_image_view): for a ready image only, and View for a
     # macOS one only.
@@ -2061,12 +2085,6 @@ main_paint() {
         "$dialog" "$_uuid" "$MAIN_BOXES_FOOTER_ID" "$(main_vms_text "$_uuid")"
         "$dialog" "$_uuid" "$MAIN_IMAGES_FOOTER_ID" "$(main_count_text "$(main_rows "$_uuid" images | /usr/bin/awk 'END { print NR }')" image)"
         "$dialog" "$_uuid" "$MAIN_BOXES_NOTE_ID" "$_error"
-        # Logs of Deleted Boxes, in the bar under the box list: on while agent-vm keeps any.
-        if [ -n "$(main_kept_logs_folder "$_uuid")" ]; then
-            ui_enable "$_uuid" "$MAIN_KEPT_LOGS_ID" 1
-        else
-            ui_enable "$_uuid" "$MAIN_KEPT_LOGS_ID" 0
-        fi
         "$dialog" "$_uuid" "$MAIN_IMAGES_NOTE_ID" "$_error"
         main_paint_settings "$_uuid"
         main_paint_lists "$_uuid"

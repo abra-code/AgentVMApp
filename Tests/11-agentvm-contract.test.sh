@@ -106,6 +106,16 @@ real_lib agentvm_image_delete nosuch
 check "image delete fails" "1" "$?"
 check "  saying there is no such image" "no image nosuch" "$(lib agentvm_last_error | /usr/bin/cut -d';' -f1)"
 
+section "box rename and image rename of what the store does not have"
+# The Rename window shows the refusal as agent-vm's own message. A refusal about the name, and
+# not about the command, says that agent-vm knows both commands.
+real_lib agentvm_box_rename nosuch other
+check "box rename fails" "1" "$?"
+check "  saying there is no such box" "no box nosuch" "$(lib agentvm_last_error | /usr/bin/cut -d';' -f1)"
+real_lib agentvm_image_rename nosuch other
+check "image rename fails" "1" "$?"
+check "  saying there is no such image" "no image nosuch" "$(lib agentvm_last_error | /usr/bin/cut -d';' -f1)"
+
 section "a job, its record and its log"
 # One job that can only fail: the empty store has no such box, so nothing starts.
 id="$(real_lib agentvm_job_box_start nosuch)"

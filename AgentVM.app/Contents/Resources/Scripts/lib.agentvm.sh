@@ -414,6 +414,26 @@ agentvm_box_recreate() {
     agentvm_json box recreate "$1" >/dev/null
 }
 
+# agentvm_box_rename <name> <new name>  ->  0 once the stopped box has the new name. What it holds,
+# its network rules and its logs stay; the name inside the box (its host name) does not change.
+# agent-vm refuses a box that runs, a temporary one, one an unfinished job was started for, and a
+# name that is taken. It returns at once, so it is not a job.
+agentvm_box_rename() {
+    _agentvm_need_name box "$1" || return $?
+    _agentvm_need_name box "$2" || return $?
+    agentvm_json box rename "$1" "$2" >/dev/null
+}
+
+# agentvm_image_rename <name> <new name>  ->  0 once the image has the new name. The boxes made
+# from it, running ones too, and the images built from it name it by the new name at once.
+# agent-vm refuses while the image or one built from it is being built, updated or copied, while
+# an unfinished job names it, and a name that is taken. Not a job either.
+agentvm_image_rename() {
+    _agentvm_need_name image "$1" || return $?
+    _agentvm_need_name image "$2" || return $?
+    agentvm_json image rename "$1" "$2" >/dev/null
+}
+
 # agentvm_box_delete <name>  ->  0 once the box and its disk are gone, with one row on stdout that
 # says what became of its logs: the folder agent-vm moved them to, and why some or all of them
 # could not be kept ("-" for each that does not apply). agent-vm holds the logs of a deleted box

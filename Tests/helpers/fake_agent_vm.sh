@@ -53,7 +53,10 @@
 #   image info <name> --json,
 #   image delete <name> --json, box delete <name> --json and box recreate <name> --json (which
 #   change nothing: the test changes status.json to match; box delete answers as agent-vm does,
-#   see kept-logs above), box info <name> --json, and
+#   see kept-logs above), box rename <name> <new-name> --json and image rename <name> <new-name>
+#   --json (the name is changed in what `status` answers, with the boxes of a renamed image and
+#   the images built from it following; a name that is not listed or is taken, and a box that is
+#   not stopped, are refused; a renamed box's record gets `formerNames`), box info <name> --json, and
 #   box view <name> [--interactive] --json (which shows nothing, and is refused for a Linux box,
 #   which has no screen), box packs --json,
 #   box create <name> --image <image> [--cpus <n>] [--memory-gb <n>] [--net <mode>] [--allow <rule> ...]
@@ -369,6 +372,48 @@ case "$*" in
             + (if $kept == "" then {} else {keptLogs: $kept} end) + (if $problem == "" then {} else {logsProblem: $problem} end)' ;;
     "box recreate "*" --json")
         ;;
+    "box rename "*" "*" --json")
+        [ "$#" -eq 5 ] || exit 64
+        answer status > "$state/status-was.json"
+        box_state="$(/usr/bin/jq -r --arg name "$3" '.boxes[] | select(.box.name == $name) | .state' "$state/status-was.json")"
+        if [ -z "$box_state" ]; then
+            printf 'Error: no box %s; `agent-vm box list` shows the existing ones\n' "$3" >&2
+            exit 1
+        fi
+        if [ -n "$(/usr/bin/jq -r --arg name "$4" '.boxes[] | select(.box.name == $name) | .box.name' "$state/status-was.json")" ]; then
+            printf 'Error: box %s already exists\n' "$4" >&2
+            exit 1
+        fi
+        if [ "$box_state" != "stopped" ]; then
+            printf 'Error: box %s is running; stop it first (`agent-vm box stop %s`)\n' "$3" "$3" >&2
+            exit 1
+        fi
+        /usr/bin/jq --arg name "$3" --arg new "$4" '
+            (.boxes[] | select(.box.name == $name)) |= (.box.formerNames = ((.box.formerNames // []) + [$name])
+                | .box.name = $new | .path = ("/Users/you/Library/Application Support/agent-vm/Boxes/" + $new))' \
+            "$state/status-was.json" > "$state/status.json.new" && /bin/mv "$state/status.json.new" "$state/status.json"
+        /usr/bin/jq --arg name "$4" '.boxes[] | select(.box.name == $name) | .box' "$state/status.json"
+        /bin/rm -f "$state/status-was.json" ;;
+    "image rename "*" "*" --json")
+        [ "$#" -eq 5 ] || exit 64
+        answer status > "$state/status-was.json"
+        if [ -z "$(/usr/bin/jq -r --arg name "$3" '.images[] | select(.name == $name) | .name' "$state/status-was.json")" ]; then
+            printf 'Error: no image %s; `agent-vm image list` shows the existing ones\n' "$3" >&2
+            exit 1
+        fi
+        if [ -n "$(/usr/bin/jq -r --arg name "$4" '.images[] | select(.name == $name) | .name' "$state/status-was.json")" ]; then
+            printf 'Error: image %s already exists\n' "$4" >&2
+            exit 1
+        fi
+        # Everything that names the image follows: the boxes made from it and the images built
+        # from it.
+        /usr/bin/jq --arg name "$3" --arg new "$4" '
+            (.images[] | select(.name == $name)).name = $new
+            | (.images[] | select(.derivedFrom.image? == $name)).derivedFrom.image = $new
+            | (.boxes[] | select(.box.image == $name)).box.image = $new' \
+            "$state/status-was.json" > "$state/status.json.new" && /bin/mv "$state/status.json.new" "$state/status.json"
+        /usr/bin/jq --arg name "$4" '.images[] | select(.name == $name)' "$state/status.json"
+        /bin/rm -f "$state/status-was.json" ;;
     "store logs --remove-older-than 0 --json")
         # Every kept log goes: as many deleted boxes' as the state file kept-logs-count says.
         count=0

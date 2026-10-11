@@ -1,6 +1,6 @@
 #!/bin/sh
 # AgentVM.main.box.logs.kept.sh
-# Logs of Deleted Boxes, in the bar under the box list: the folder where agent-vm keeps the logs
+# Show in Finder, in the Logs of deleted boxes part of Settings: the folder where agent-vm keeps the logs
 # of boxes that were deleted or recreated, a folder per box named after the box and the time,
 # opens in Finder. Nothing when agent-vm keeps none, or the folder is not on this Mac.
 
