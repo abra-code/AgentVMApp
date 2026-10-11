@@ -22,7 +22,7 @@ AgentVM is the other way to run an AI agent.
 
 Since version 1.1 the app makes and runs Linux images and boxes beside macOS ones. A Linux box starts in seconds and is for work that does not need a Mac.
 
-- **A first image without downloading macOS.** New Image... lists the Linux systems your agent-vm builds (Debian 13 and Ubuntu 26.04 today), each made from the distribution's own cloud image, which agent-vm downloads when it is needed. That takes a few minutes and no macOS restore file.
+- **A first image without downloading macOS.** New Image... lists the Linux systems your agent-vm builds (Debian 13 and Ubuntu 26.04 today), each made from the distribution's own cloud image, which agent-vm downloads when it is needed. That needs no macOS restore file. How long it takes is mostly the downloads (the cloud image, and for Debian a kernel with 16 KiB memory pages): a few minutes on a fast connection.
 - **Tools.** They are added as for a macOS image, by ticking recipes: in the same build, or later in a copy of the image. The window lists the recipes that fit the system you start from.
 - **Boxes.** A Linux box is made, started, stopped, recreated and deleted like a macOS box, with the same network rules and shared folder. Connect opens a shell in it and Run an Agent starts an agent in it. It has no screen, so it has no View.
 - **Updates.** Update... on a Linux image installs the distribution's package updates, the tools' own updates and the newer guest daemon, the part of agent-vm that runs in the image.

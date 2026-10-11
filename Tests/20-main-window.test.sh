@@ -262,7 +262,7 @@ check "Get started is shown" "1" "$(visible "$MAIN_GETSTARTED_ID")"
 check "the version and where it is" \
     "$VERSION, test agent-vm at $FAKE_AGENTVM" "$(fact 1)"
 check "what exists and what does not" \
-    "none ready yet: New Image... builds a Linux image in a few minutes, or a macOS image in about 10. For a macOS image, $LOCAL_NETWORK|none yet. A box is a working copy of an image, made in seconds, and it is what runs: keep one for your own work, or let avm or Cadabra make throw-away ones" "$(fact 4)|$(fact 6)"
+    "none ready yet: New Image... builds a Linux image, in a few minutes on a fast connection (its system is downloaded), or a macOS image in about 10. For a macOS image, $LOCAL_NETWORK|none yet. A box is a working copy of an image, made in seconds, and it is what runs: keep one for your own work, or let avm or Cadabra make throw-away ones" "$(fact 4)|$(fact 6)"
 
 section "images but no box: Status, and the Boxes tab says what a box is"
 /usr/bin/jq '.boxes = []' "$FIXTURES_AGENTVM/status.json" > "$FAKE_AGENTVM_DIR/status.json"

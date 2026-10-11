@@ -225,9 +225,10 @@ check "the steps, oldest first; the last shows how far it is" \
     "Cloning dev-node (macOS 26A428)=done|Booting=done|Recipe: ACP agents (3 steps, 2 checks)=done|[1/3] Homebrew=done|[2/3] Node=done|[3/3] Agents=67%" "$(steps)"
 check "the bar is shown, at the step's fraction" "1|67" "$(shown "$PROGRESS_BAR_ID")|$(ui_value "$PROGRESS_BAR_ID")"
 check "the log: agent-vm's lines and the guest's, the notice of a step that is over where it was written, then the other lines" \
-    "agent-vm-guest 0.7.26 answers over vsock|==> Downloading and installing Homebrew...|==> Installation successful!|Homebrew is already installed in the base image|==> Pouring node--24.9.0.arm64_tahoe.bottle.tar.gz|a line with a tab in it|added 212 packages in 9s|warning: a line that is neither an event nor the error" \
+    "agent-vm-guest 0.7.33 answers over vsock|==> Downloading and installing Homebrew...|==> Installation successful!|Homebrew is already installed in the base image|==> Pouring node--24.9.0.arm64_tahoe.bottle.tar.gz|a line with a tab in it|added 212 packages in 9s|warning: a line that is neither an event nor the error" \
     "$(ui_value "$PROGRESS_LOG_ID" | /usr/bin/paste -sd '|' -)"
-check "a notice of a step the job has left is not on the notice line" "" "$(ui_value "$PROGRESS_NOTICE_ID")"
+check "a notice of a step the job has left is on the notice line too, said to be from an earlier step" \
+    "From an earlier step: Homebrew is already installed in the base image" "$(ui_value "$PROGRESS_NOTICE_ID")"
 
 section "a notice is shown while the job is at the step it was written in"
 NOTE_TEXT="note: this Mac is not letting agent-vm reach the guest at 192.168.64.3. The build keeps trying."
@@ -248,8 +249,59 @@ job_log "$BUILD" "{events: [{event: \"progress\", step: \"first-boot\", message:
     {event: \"notice\", message: \"$NOTE_TEXT\"},
     {event: \"progress\", step: \"guest\", message: \"Installing the guest daemon\"}], lines: []}"
 poll 1
-check "the next step: the notice line is empty, and the notice is in the log" "|address 192.168.64.3|$NOTE_TEXT" \
+check "the next step: the notice line says it is from an earlier step, and the notice is in the log" "From an earlier step: $NOTE_TEXT|address 192.168.64.3|$NOTE_TEXT" \
     "$(ui_value "$PROGRESS_NOTICE_ID")|$(ui_value "$PROGRESS_LOG_ID" | /usr/bin/paste -sd '|' -)"
+# A job comes to a step of the same name again (an update shuts down twice): the notice of the
+# first is not of the second.
+OFF_TEXT="note: the guest did not power off (no answer); waiting for it to answer and asking again"
+job_log "$BUILD" "{events: [{event: \"progress\", step: \"shutdown\", message: \"Shutting down\"},
+    {event: \"notice\", message: \"$OFF_TEXT\"},
+    {event: \"progress\", step: \"check-guest-daemon\", message: \"Checking the guest daemon\"},
+    {event: \"progress\", step: \"shutdown\", message: \"Shutting down\"}], lines: []}"
+poll 1
+check "a later step of the same name: from an earlier step, and in the log" "From an earlier step: $OFF_TEXT|$OFF_TEXT" \
+    "$(ui_value "$PROGRESS_NOTICE_ID")|$(ui_value "$PROGRESS_LOG_ID" | /usr/bin/paste -sd '|' -)"
+
+section "a notice said before the step it is about"
+# agent-vm looks at the Mac's memory before it boots a Linux guest on a kernel with 4 KiB pages,
+# and says what it found before the boot's step, and a box's start says its note before its first
+# step. The texts are examples: the window matches on nothing in them.
+MEMORY_TEXT="note: this Mac has about 3.0 GB of memory to spare for a guest of 4 GB. If it fails, quit programs that use much memory and try again"
+job_log "$BUILD" "{events: [{event: \"notice\", message: \"$MEMORY_TEXT\"}], lines: []}"
+poll 1
+check "before any step: on the notice line" "$MEMORY_TEXT|Started; no step reported yet." "$(ui_value "$PROGRESS_NOTICE_ID")|$(ui_value "$PROGRESS_STATUS_ID")"
+job_log "$BUILD" "{events: [{event: \"notice\", message: \"$MEMORY_TEXT\"},
+    {event: \"progress\", step: \"boot\", message: \"Booting a copy of deb\"}], lines: []}"
+poll 1
+check "the first step is the one it was said for: as it is, and not in the log too" "$MEMORY_TEXT|" \
+    "$(ui_value "$PROGRESS_NOTICE_ID")|$(ui_value "$PROGRESS_LOG_ID")"
+job_log "$BUILD" "{events: [{event: \"notice\", message: \"$MEMORY_TEXT\"},
+    {event: \"progress\", step: \"boot\", message: \"Booting a copy of deb\"},
+    {event: \"progress\", step: \"system-update\", message: \"Installing Debian 13's package updates\"}], lines: []}"
+poll 1
+check "a later step: it stays, as one from an earlier step, and the log has it" "From an earlier step: $MEMORY_TEXT|1" \
+    "$(ui_value "$PROGRESS_NOTICE_ID")|$(ui_value "$PROGRESS_LOG_ID" | /usr/bin/grep -c '^note: this Mac has about 3.0 GB of memory to spare')"
+# In a build the notice follows the download's step and comes before the unpacking and the boot.
+job_log "$BUILD" "{events: [{event: \"progress\", step: \"base-check\", message: \"Asking cloud.debian.org for the checksum\"},
+    {event: \"notice\", message: \"$MEMORY_TEXT\"},
+    {event: \"progress\", step: \"unpack\", message: \"Unpacking the disk\"},
+    {event: \"progress\", step: \"first-boot\", message: \"First boot: the system installs the guest daemon\"}], lines: []}"
+poll 1
+check "a build at its first boot still shows what was said of the Mac's memory" "From an earlier step: $MEMORY_TEXT" "$(ui_value "$PROGRESS_NOTICE_ID")"
+job_state "$BUILD" '{state: "failed", status: 1, endedAt: "2026-09-30T12:04:00Z", error: "the guest stopped"}'
+omc_run AgentVM.progress.activated
+check "  and after the build failed" "From an earlier step: $MEMORY_TEXT" "$(ui_value "$PROGRESS_NOTICE_ID")"
+job_state "$BUILD" '{state: "done", status: 0, error: null}'
+omc_run AgentVM.progress.activated
+check "  and not after one that ended well" "" "$(ui_value "$PROGRESS_NOTICE_ID")"
+# A build agent-vm refused for the Mac's memory: no step, and the reason whole, since it says what to do.
+REFUSAL="this Mac has about 512 MB of memory to spare, and macOS reports memory pressure (warning); the first boot of the build runs on a kernel with 4 KiB memory pages, which can lose kernel memory and fail when the Mac runs short of memory (macOS 27). Quit programs that use much memory or stop running boxes, and try again"
+job_log "$BUILD" '{events: [], lines: []}'
+job_state "$BUILD" "{state: \"failed\", status: 1, error: \"$REFUSAL\"}"
+omc_run AgentVM.progress.activated
+check "a build refused before its first step: the reason whole, and no step" "Image dev-new was not built: $REFUSAL|" "$(ui_value "$PROGRESS_STATUS_ID")|$(steps)"
+job_edit "map(if .id == \"$BUILD\" then .state = \"running\" | del(.status) | del(.endedAt) | del(.error) else . end)"
+omc_run AgentVM.progress.activated
 
 section "a step that moves on keeps its row"
 job_log "$BUILD" '{events: [{event: "progress", step: "install", message: "Installing macOS", fraction: 0.1},
@@ -290,10 +342,10 @@ printf 'the store is locked\n' > "$FAKE_AGENTVM_DIR/fail-job-log"
 poll 1
 /bin/rm -f "$FAKE_AGENTVM_DIR/fail-job-log"
 check "what was read before stays"   "[3/3] Agents|6" "$(ui_value "$PROGRESS_STATUS_ID")|$(ui_row_count "$PROGRESS_STEPS_ID")"
-check "  and the reason is on the notice line" "the store is locked" \
+check "  and the reason is on the notice line, under the notice" "From an earlier step: Homebrew is already installed in the base image|the store is locked" \
     "$(ui_value "$PROGRESS_NOTICE_ID" | /usr/bin/paste -sd '|' -)"
 poll 1
-check "the next reading clears it"   "" "$(ui_value "$PROGRESS_NOTICE_ID")"
+check "the next reading clears it"   "From an earlier step: Homebrew is already installed in the base image" "$(ui_value "$PROGRESS_NOTICE_ID")"
 
 section "Stop..."
 alerts_reset
@@ -474,6 +526,104 @@ check "  the end of the log is the end of agent-vm's" "Set up in 68 s" "$(ui_val
 check "  no bar for a job that ended" "0" "$(shown "$PROGRESS_BAR_ID")"
 "$PB" "agentvm_window_progress_$LINUX_BUILD" set ""
 /bin/rm -f "$JOBS" "$FAKE_AGENTVM_DIR/job-log-$LINUX_BUILD.json"
+
+section "a Debian image built in two boots"
+# Since agent-vm 0.7.32 a Debian build installs the kernel with 16 KiB pages first, shuts down and
+# boots again on it: a shutdown in the middle, and numbered setup steps on both sides of it. The
+# events are made by hand, in the order and the words of a real build's text log (agent-vm 0.7.32).
+KERNEL="20260930-120000-0000e1"
+"$PB" "agentvm_window_progress_$KERNEL" set ""
+/usr/bin/jq -n --arg id "$KERNEL" '[{id: $id, command: ["image", "create", "t17", "--linux", "debian-13", "--json"], targets: ["image:t17"],
+    state: "running", createdAt: "2026-09-30T12:00:00Z", startedAt: "2026-09-30T12:00:00Z"}]' > "$JOBS"
+# kernel_log <how many events>  ->  the build's log up to that event.
+kernel_log() {
+    /usr/bin/jq -n --argjson upto "$1" '
+        def step(name; text): {event: "progress", image: "t17", step: name, message: text};
+        def setup(n; text): step("linux-setup"; "[\(n)/14] \(text)") + {index: n, count: 14, fraction: ((n - 1) / 14)};
+        {lines: [], events: ([
+            step("base-check"; "Asking cloud.debian.org for the checksum of Debian 13\u0027s cloud image"),
+            step("unpack"; "Unpacking the disk"),
+            step("first-boot"; "First boot: the system installs the guest daemon"),
+            step("guest-daemon"; "The guest daemon answers"),
+            setup(1; "wait for the first boot to finish"),
+            setup(2; "package lists"),
+            setup(3; "kernel with 16 KiB pages (linux-image-arm64-16k)"),
+            step("shutdown"; "Shutting down"),
+            step("check-boot"; "Booting again on the kernel with 16 KiB pages"),
+            {event: "log", image: "t17", message: "kernel 6.12.111+deb13-arm64-16k, 16 KiB pages"},
+            setup(4; "wait for the boot on the new kernel"),
+            setup(5; "account agent"),
+            setup(6; "system updates"),
+            setup(7; "git, jq, unzip, zip"),
+            setup(8; "git settings"),
+            step("seal"; "Sealing the image: no ssh server, no background updates, no first-boot setup"),
+            setup(9; "remove the ssh server, background updates and polkitd"),
+            setup(10; "no update timers"),
+            setup(11; "network settings for any card"),
+            setup(12; "console and boot menu"),
+            setup(13; "vsock at boot"),
+            setup(14; "stop at a kernel fault"),
+            step("shutdown"; "Shutting down")
+        ][0:$upto])}' > "$FAKE_AGENTVM_DIR/job-log-$KERNEL.json"
+}
+kernel_log 8
+ui_reset
+alerts_reset
+open_progress "$KERNEL"
+check "the shutdown in the middle is a step like another, and the build goes on" \
+    "[3/14] kernel with 16 KiB pages (linux-image-arm64-16k)=done|Shutting down=running|Shutting down" \
+    "$(steps | /usr/bin/tr '|' '\n' | /usr/bin/tail -2 | /usr/bin/paste -sd '|' -)|$(ui_value "$PROGRESS_STATUS_ID")"
+check "  Stop is on, and the window says the job goes on" "1|yes" \
+    "$(enabled "$PROGRESS_STOP_ID")|$(ui_value "$PROGRESS_FOOTER_ID" | /usr/bin/grep -q 'the job goes on' && echo yes)"
+kernel_log 11
+omc_run AgentVM.progress.activated
+check "the boot on the new kernel, and the setup steps go on where they stopped" \
+    "Shutting down=done|Booting again on the kernel with 16 KiB pages=done|[4/14] wait for the boot on the new kernel=21%" \
+    "$(steps | /usr/bin/tr '|' '\n' | /usr/bin/tail -3 | /usr/bin/paste -sd '|' -)"
+kernel_log 23
+job_state "$KERNEL" '{state: "done", status: 0, endedAt: "2026-09-30T12:37:19Z"}'
+omc_run AgentVM.progress.activated
+check "the build over: twenty-two steps, the shutdown twice, each done" "22|2|22" \
+    "$(ui_row_count "$PROGRESS_STEPS_ID")|$(ui_rows "$PROGRESS_STEPS_ID" | /usr/bin/grep -c '^Shutting down')|$(ui_rows "$PROGRESS_STEPS_ID" | /usr/bin/awk -F'\t' '$2 == "done"' | /usr/bin/awk 'END { print NR }')"
+"$PB" "agentvm_window_progress_$KERNEL" set ""
+/bin/rm -f "$JOBS" "$FAKE_AGENTVM_DIR/job-log-$KERNEL.json"
+
+section "an update that gives a Debian image another kernel first"
+# `image update --system` of a Debian image built before agent-vm 0.7.30 installs the kernel with
+# 16 KiB pages, shuts down and boots on it before the package updates. Nothing is put in place
+# until the end, so it is not an update whose guest daemon went first. The events are made by
+# hand, in the order and the words of a real update's text log (agent-vm 0.7.32).
+SWITCH="20260930-120000-0000e2"
+"$PB" "agentvm_window_progress_$SWITCH" set ""
+/usr/bin/jq -n --arg id "$SWITCH" '[{id: $id, command: ["image", "update", "deb", "--system", "--json"], targets: ["image:deb"],
+    state: "running", createdAt: "2026-09-30T12:00:00Z", startedAt: "2026-09-30T12:00:00Z"}]' > "$JOBS"
+/usr/bin/jq -n '
+    def step(name; text): {event: "progress", image: "deb", step: name, message: text};
+    def setup(n; of; text): step("linux-setup"; "[\(n)/\(of)] \(text)") + {index: n, count: of};
+    {lines: [], events: [
+        step("boot"; "Booting a copy of deb"),
+        {event: "notice", image: "deb", message: "note: Debian 13\u0027s kernel with 16 KiB pages takes the place of the one with 4 KiB pages"},
+        setup(1; 3; "wait for the network"),
+        setup(2; 3; "package lists"),
+        setup(3; 3; "kernel with 16 KiB pages (linux-image-arm64-16k)"),
+        step("shutdown"; "Shutting down"),
+        step("check-boot"; "Booting again on the kernel with 16 KiB pages"),
+        step("system-update"; "Installing Debian 13\u0027s package updates"),
+        setup(1; 4; "wait for the network"),
+        setup(2; 4; "package lists")]}' > "$FAKE_AGENTVM_DIR/job-log-$SWITCH.json"
+ui_reset
+alerts_reset
+open_progress "$SWITCH"
+check "the steps: the setup steps of the kernel and those of the updates are rows of their own" \
+    "Booting a copy of deb=done|[1/3] wait for the network=done|[2/3] package lists=done|[3/3] kernel with 16 KiB pages (linux-image-arm64-16k)=done|Shutting down=done|Booting again on the kernel with 16 KiB pages=done|Installing Debian 13's package updates=done|[1/4] wait for the network=done|[2/4] package lists=running" "$(steps)"
+check "  agent-vm's note of the kernel stays in view" "From an earlier step: note: Debian 13's kernel with 16 KiB pages takes the place of the one with 4 KiB pages" "$(ui_value "$PROGRESS_NOTICE_ID")"
+omc_run AgentVM.progress.stop
+check "  stopping after the boot on the new kernel still leaves the image as it was" "yes" "$(ui_alert_message | /usr/bin/grep -q 'The image stays as it was before the update\.$' && echo yes)"
+job_state "$SWITCH" '{state: "failed", status: 1, endedAt: "2026-09-30T12:30:00Z", error: "apt-get failed"}'
+omc_run AgentVM.progress.activated
+check "  and one that fails there says nothing of a guest daemon" "Image deb was not updated: apt-get failed" "$(ui_value "$PROGRESS_STATUS_ID")"
+"$PB" "agentvm_window_progress_$SWITCH" set ""
+/bin/rm -f "$JOBS" "$FAKE_AGENTVM_DIR/job-log-$SWITCH.json"
 
 section "an update whose guest daemon goes first"
 # agent-vm updates the guest daemon first, as an update of its own, when it was asked for with the

@@ -83,6 +83,22 @@ agent-vm 0.7.24 to 0.7.26 change nothing in the JSON the app reads. What changed
 - The version strings of `status-variety.json` and `job-log-variety.json` were moved from 0.7.23 to 0.7.26.
 - The check of `fixtures/recipes/python` is `python3 --version`, as the recipe's own: it no longer provides `python` without the 3.
 
+## The move to agent-vm 0.7.33 (2026-10-10)
+
+agent-vm 0.7.27 to 0.7.33 change nothing in the JSON the app reads, and add to it. What an application sees:
+
+- A Linux image's or box's `linux` says its kernel's page size, `pageSize`, in bytes. An entry without it was built before 0.7.30, with the cloud image's kernel: 4096.
+- `doctor --json` has one more check, `linux kernels` (a `warning`), last, and only when a ready Linux image has a kernel with 4 KiB pages.
+- A Debian image is built in two boots: the setup steps that install the kernel with 16 KiB pages, a `shutdown`, `check-boot`, and then the other setup steps, numbered on over both. `image update --system` of a Debian image built before does the same before `system-update`.
+- A `notice` may come before the step it is about: what agent-vm found of the Mac's memory before it boots a guest on a kernel with 4 KiB pages, and a box's note at its start. A job refused for the Mac's memory fails before its first step.
+
+What was done to the fixtures:
+
+- `version.json` and `packs.json` were captured again from the installed agent-vm 0.7.33 (`refresh_agentvm_fixtures.sh <agent-vm> version packs recipe-check`; `recipe-check.json` came out as it was).
+- `doctor.json` was given the Linux guest daemon's digest as 0.7.33 prints it. It has no `linux kernels` check, as a store with no such image.
+- The version strings of `status-variety.json` and `job-log-variety.json` were moved from 0.7.26 to 0.7.33.
+- The Linux fixtures were NOT captured again: `status-linux.json`, `status-mixed.json`, `image-info-linux.json` and `box-info-linux.json` are records of images built before 0.7.30, which have no `pageSize`, and `job-log-linux.json` is a build of 0.7.12, in one boot with twelve setup steps. A capture needs a Debian image built by 0.7.32 or later as a job (about 140 MB of downloads). Until then the two-boot build and the update that changes the kernel are in `Tests/54-progress-window.test.sh`, as events made by hand in the order and the words of two real text logs of 0.7.32.
+
 ## Made by hand
 
 `box-netlog.json` is made by hand, not captured: a real connection log lists what programs in a box reached, which does not belong in a public repository. Its ten connections hold one of each kind the network window treats differently: hosts reached through a pack, a host refused three times over a tunnel to port 443, one refused over plain HTTP to port 80 (allowed by its host name), one refused over a raw tunnel to port 80 and one refused by IP address (neither gets a rule), and a failure to resolve. Its fields are those of a real `box netlog --json` entry on agent-vm 0.4.4.

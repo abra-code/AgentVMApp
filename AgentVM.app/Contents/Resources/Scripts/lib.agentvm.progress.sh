@@ -249,34 +249,59 @@ progress_percent() {
         END { if (fraction != "" && fraction != "-") printf "%d\n", fraction * 100 + 0.5 }' "$(ui_cache "$1" events.tsv)" 2>/dev/null
 }
 
-# progress_notice_text <uuid>  ->  the job's last notice, while it is about what the job does
-# now: a notice says what the user may need to act on in the step it was written in ("this Mac
-# is not letting agent-vm reach the guest... The build keeps trying"), so once the job has gone
-# on to another step, or has ended well, the notice is of something that was overcome, and is
-# nothing here: it would read as something still wrong. It stays in the log
-# (progress_log_text). A step is a progress event's name with its index, as in
-# progress_step_rows. A job whose events hold no notice (agent-vm keeps the record's notice
-# apart from them) shows the record's.
-progress_notice_text() {
+# progress_notice_past <uuid>  ->  0 when the job has gone on to another step since its last
+# notice was written. A step is a progress event's name with its index, as in progress_step_rows.
+# A notice written before the job's first step is past once the second begins: agent-vm says
+# such a one just before the step it is about. Steps are counted, not compared by name: a job
+# comes to a step of the same name again (a second shutdown, a second boot), and that is not
+# the step the notice was written in.
+progress_notice_past() {
+    local _events="$(ui_cache "$1" events.tsv)"
+    [ -f "$_events" ] || return 1
+    /usr/bin/awk -F'\t' '
+        $1 == "progress" { step = $2 "\t" $4; if (step != last) { steps++; last = step } }
+        $1 == "notice" { seen = 1; count = steps + 0 }
+        END { exit (seen && steps + 0 != count && !(count == 0 && steps == 1)) ? 0 : 1 }' "$_events"
+}
+
+# progress_notice_now <uuid>  ->  the job's last notice, while the job is at the step it was
+# written in, or nothing. A job whose events hold no notice (agent-vm keeps the record's notice
+# apart from them) has the record's. Nothing for a job that ended well: its notices were of
+# things that were overcome, and stay in the log.
+progress_notice_now() {
     local _job="$(progress_job "$1")"
     local _notice="$(printf '%s\n' "$_job" | /usr/bin/cut -f14)"
     [ -n "$_notice" ] && [ "$_notice" != "-" ] || return 0
     [ "$(printf '%s\n' "$_job" | /usr/bin/cut -f2)" != "done" ] || return 0
-    local _events="$(ui_cache "$1" events.tsv)"
-    local _past=""
-    if [ -f "$_events" ]; then
-        _past="$(/usr/bin/awk -F'\t' '
-            $1 == "progress" { step = $2 "\t" $4 }
-            $1 == "notice" { seen = 1; at = step }
-            END { if (seen && step != at) print "past" }' "$_events")"
-    fi
-    [ -z "$_past" ] || return 0
+    progress_notice_past "$1" && return 0
     printf '%s\n' "$_notice"
+}
+
+# progress_notice_text <uuid>  ->  the notice line: the job's last notice, until the job ends
+# well. A notice says what the user may need to act on. Some are of the step they were written
+# in ("this Mac is not letting agent-vm reach the guest... The build keeps trying"), and would
+# read as something still wrong once the job has gone on; others are said before the steps they
+# are about ("this Mac has about 3 GB of memory to spare... If it fails, quit programs that use
+# much memory"), and must not be gone when the next step begins. The window cannot tell them
+# apart, and agent-vm's words are not matched on, so a notice of a step the job has left stays,
+# and is said to be from an earlier step. It is in the log as well then (progress_log_text).
+progress_notice_text() {
+    local _now="$(progress_notice_now "$1")"
+    if [ -n "$_now" ]; then
+        printf '%s\n' "$_now"
+        return 0
+    fi
+    local _job="$(progress_job "$1")"
+    local _notice="$(printf '%s\n' "$_job" | /usr/bin/cut -f14)"
+    [ -n "$_notice" ] && [ "$_notice" != "-" ] || return 0
+    [ "$(printf '%s\n' "$_job" | /usr/bin/cut -f2)" != "done" ] || return 0
+    printf 'From an earlier step: %s\n' "$_notice"
 }
 
 # progress_log_text <uuid>  ->  the end of the job's log: its log events (agent-vm's own lines and
 # what programs in the guest printed) with the notices among them, where they were written,
-# except the last notice while the notice line shows it (progress_notice_text); then the lines
+# except the last notice while the job is at its step and the notice line shows it
+# (progress_notice_now); then the lines
 # that were neither an event nor the error,
 # then the error of a job that failed, as `job log` prints them; the last PROGRESS_LOG_LINES, each
 # cut to PROGRESS_LOG_WIDTH characters. jq makes the cut, since it counts characters: awk counts
@@ -284,7 +309,7 @@ progress_notice_text() {
 progress_log_text() {
     local _job="$(progress_job "$1")"
     {
-        /usr/bin/awk -F'\t' -v shown="$(progress_notice_text "$1")" '
+        /usr/bin/awk -F'\t' -v shown="$(progress_notice_now "$1")" '
             $1 == "log" || $1 == "notice" { line[++n] = $6; if ($1 == "notice") last = n }
             END { for (i = 1; i <= n; i++) if (!(i == last && shown != "")) print line[i] }' \
             "$(ui_cache "$1" events.tsv)" 2>/dev/null
@@ -336,7 +361,7 @@ progress_paint() {
         ui_enable "$_uuid" "$PROGRESS_LOG_SHOW_ID" 0
         ui_enable "$_uuid" "$PROGRESS_LOG_CONSOLE_ID" 0
     fi
-    # The last notice, while it is about the step the job is at, and under it why the job could
+    # The last notice, until the job ends well, and under it why the job could
     # not be read this time, if it could not: what is shown is then from the reading before.
     local _notice="$(progress_notice_text "$_uuid")"
     if [ -n "$_error" ]; then

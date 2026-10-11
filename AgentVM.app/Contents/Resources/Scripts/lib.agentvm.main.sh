@@ -1063,9 +1063,9 @@ main_stage_rows() {
     elif [ -n "$_broken" ]; then
         printf '4\tattention\tnone ready: %s appears not ready, and agent-vm reports a failed build. Delete... removes such an image and frees its space; New Image... builds another\t%s\n' "$(main_some_names "$_broken")" "$_button"
     elif [ -n "$_files" ]; then
-        printf '4\ttodo\tnone ready yet: New Image... builds a Linux image in a few minutes, or a macOS image in about 10. For a macOS image, %s\t%s\n' "$MAIN_LOCAL_NETWORK_TEXT" "$_button"
+        printf '4\ttodo\tnone ready yet: New Image... builds a Linux image, in a few minutes on a fast connection (its system is downloaded), or a macOS image in about 10. For a macOS image, %s\t%s\n' "$MAIN_LOCAL_NETWORK_TEXT" "$_button"
     else
-        printf '4\ttodo\tnone ready yet: New Image... builds a Linux image in a few minutes. A macOS image needs the restore file of the step above first, and about 10 minutes\t%s\n' "$_button"
+        printf '4\ttodo\tnone ready yet: New Image... builds a Linux image, in a few minutes on a fast connection (its system is downloaded). A macOS image needs the restore file of the step above first, and about 10 minutes\t%s\n' "$_button"
     fi
     # Full Disk Access is a permission of macOS: only the macOS images are asked about it.
     local _macos="$(main_rows "$_uuid" images | /usr/bin/awk -F'\t' '$2 == "ready" && $12 != "linux" { print $1 }')"
