@@ -4,7 +4,7 @@
 # CHOOSE_FOLDER_DIALOG, so the engine asks for a folder before this runs; Cancel leaves the
 # chosen folder empty. Terminal then runs avm on the box from that folder: avm
 # starts the box when it is stopped, shares the folder at the same path, snapshots it, asks which
-# agent to run (or a shell), and afterwards reports what changed. When an agent's key is missing,
+# agent to run (or a shell), and afterwards lists what changed and asks whether to stop the box. When an agent's key is missing,
 # avm offers to set it.
 
 . "$OMC_APP_BUNDLE_PATH/Contents/Resources/Scripts/lib.agentvm.main.sh"

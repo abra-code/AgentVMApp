@@ -35,7 +35,7 @@
 [ -n "${__AGENTVM_APP_LIB:-}" ] && return 0
 __AGENTVM_APP_LIB=1
 
-AGENTVM_MIN_VERSION="0.7.41"
+AGENTVM_MIN_VERSION="0.7.43"
 
 # The app's own state, and where agent-vm's installer puts the link to the newest agent-vm.
 agentvm_support_dir="$HOME/Library/Application Support/AgentVM"
@@ -660,7 +660,7 @@ agentvm_avm() {
 
 # agentvm_avm_file <box> <folder>  ->  a .command file that runs avm on the box from the folder:
 # avm starts the box when it is stopped, shares the folder into it at the same path, snapshots
-# it, asks what to run (an agent, or a shell), and afterwards reports what changed. The box goes
+# it, asks what to run (an agent, or a shell), and afterwards lists what changed and asks whether to stop the box. The box goes
 # in with --box: as a bare word, a box named like one of avm's subcommands (new, list, agents, to,
 # help) would run that subcommand instead.
 agentvm_avm_file() {

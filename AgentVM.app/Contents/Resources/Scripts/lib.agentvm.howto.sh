@@ -65,7 +65,7 @@ howto_line_rows() {
     printf '1\tavm\tChoose a box, then what to run in it: an agent, a shell or a command. Current working directory is shared into the box and any changes there can be undone afterwards.\n'
     printf '2\tavm new %s\tRun in a new temporary box from the image "%s", used once and deleted when you leave it.%s\n' "$_image" "$_image" "$_image_note"
     printf '3\tavm new %s --name work\tRun in a new box named "work" from the image "%s". The box is preserved.%s\n' "$_image" "$_image" "$_image_note"
-    printf '4\tavm %s\tRun avm in existing box "%s". It is started if needed and runs on afterwards.%s\n' "$_box" "$_box" "$_box_note"
+    printf '4\tavm %s\tRun avm in existing box "%s". It is started if needed, and afterwards avm asks whether to stop it.%s\n' "$_box" "$_box" "$_box_note"
     printf '5\t~/.local/bin/avm\tFull path to avm tool.\n'
 }
 

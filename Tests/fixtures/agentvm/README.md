@@ -169,3 +169,12 @@ What was done to the fixtures:
 - `doctor.json`: the digest of the Linux guest daemon in the check's detail, by hand.
 - `status-variety.json` and `job-log-variety.json`: the version strings, by hand.
 - The tests no longer take a second Linux system from `version.json`: the library test gives its own two-system answer, and the New Image test adds a made-up second system to the fake's answer where it needs one.
+
+## The move to agent-vm 0.7.43 (2026-10-12)
+
+agent-vm 0.7.42 and 0.7.43 change avm's terminal interface only, and nothing in the JSON the app reads:
+
+- After a session in a kept box avm asks whether to stop the box (0.7.42), and lists what changed with undo per entry (0.7.43). `connect list --json` has the remembered answer as `remembered.stop`; the app does not run `connect list`.
+- A box can so be stopped by avm while the app's window is open, as by `agent-vm box stop` in a terminal.
+
+What was done to the fixtures: `version.json` and `packs.json` captured again from the installed 0.7.43 (versions, paths and digests only), the Linux guest daemon's digest in `doctor.json` and the version strings in `status-variety.json` and `job-log-variety.json` by hand.
