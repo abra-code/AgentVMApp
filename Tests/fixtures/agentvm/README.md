@@ -178,3 +178,12 @@ agent-vm 0.7.42 and 0.7.43 change avm's terminal interface only, and nothing in 
 - A box can so be stopped by avm while the app's window is open, as by `agent-vm box stop` in a terminal.
 
 What was done to the fixtures: `version.json` and `packs.json` captured again from the installed 0.7.43 (versions, paths and digests only), the Linux guest daemon's digest in `doctor.json` and the version strings in `status-variety.json` and `job-log-variety.json` by hand.
+
+## The move to agent-vm 0.7.44 (2026-10-12)
+
+Nothing in the JSON the app reads changed. What an application sees:
+
+- The installer package's agent-vm part is named for its version (`com_abracode_pkg_agent_vm_0_7_44_choice`; the PATH part keeps `com_abracode_pkg_agent_vm_path_choice`). The fake installer (`helpers/fake_install_tools.sh`) names its default part from the version in the package's file name.
+- An image build or update whose macOS guest starts again instead of powering off says so in a `notice` event and asks it to shut down again.
+
+What was done to the fixtures: `version.json` and `packs.json` captured again from the installed 0.7.44 (versions, paths and digests only), the Linux guest daemon's digest in `doctor.json` and the version strings in `status-variety.json` and `job-log-variety.json` by hand.

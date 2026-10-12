@@ -10,7 +10,7 @@
 #
 # -- The state directory ($FAKE_INSTALL_DIR) -------------------------------------
 #   log              APPENDED to, one line per call: the tool's name and its arguments.
-#   newest           the version of the newest release (default 0.7.43): the question about it
+#   newest           the version of the newest release (default 0.7.44): the question about it
 #                    (curl with --write-out) is answered with the address GitHub redirects
 #                    to, .../releases/tag/<newest>.
 #   latest-url       when present, that answer as it is (a repository with no release
@@ -24,8 +24,8 @@
 #   pkgutil.out      pkgutil's words (default: signed by the team T9NM2ZLDTY).
 #   pkgutil-status   pkgutil's status (default 0).
 #   parts            the package's choice identifiers, one per line, that installer
-#                    -showChoiceChangesXML lists (default: agent-vm's two, the agent-vm part
-#                    and the PATH part).
+#                    -showChoiceChangesXML lists (default: agent-vm's two, the agent-vm part,
+#                    named for the version in the package's file name, and the PATH part).
 #   parts-status     when present, listing the parts fails with this status.
 #   sticky           a choice identifier that -showChoicesAfterApplyingChangesXML reports
 #                    selected whatever the changes file says, as one part tied to another.
@@ -87,7 +87,7 @@ case "$tool" in
                 /bin/cat "$dir/latest-url"
                 exit 0
             fi
-            newest=0.7.43
+            newest=0.7.44
             [ -f "$dir/newest" ] && newest="$(/bin/cat "$dir/newest")"
             printf 'https://github.com/abra-code/agent-vm/releases/tag/%s' "$newest"
             exit 0
@@ -151,7 +151,9 @@ case "$tool" in
             exit 0
         fi
         if [ "$1" = "-showChoiceChangesXML" ]; then
-            parts="$(printf 'com_abracode_pkg_agent_vm_choice\ncom_abracode_pkg_agent_vm_path_choice\n')"
+            # The agent-vm part is named for the package's version, with "_" for each ".".
+            pkg_version="$(printf '%s\n' "${package##*/}" | /usr/bin/sed -e 's/^agent-vm_//' -e 's/\.pkg$//' | /usr/bin/tr '.' '_')"
+            parts="$(printf 'com_abracode_pkg_agent_vm_%s_choice\ncom_abracode_pkg_agent_vm_path_choice\n' "$pkg_version")"
             [ -f "$dir/parts" ] && parts="$(/bin/cat "$dir/parts")"
             printf '<?xml version="1.0" encoding="UTF-8"?>\n<plist version="1.0">\n<array>\n'
             printf '%s\n' "$parts" | while read -r part; do

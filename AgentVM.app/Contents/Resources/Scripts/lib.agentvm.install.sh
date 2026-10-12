@@ -20,8 +20,9 @@
 #   verify    Gatekeeper must accept the package as notarized Developer ID software (spctl), and
 #             the first certificate of its signature must be a Developer ID Installer
 #             certificate of agent-vm's team (pkgutil). Nothing unverified is ever installed.
-#   parts     a choice changes file for installer: the agent-vm part selected, the PATH part as
-#             the checkbox says, and any part this app does not know left out. installer is
+#   parts     a choice changes file for installer: the agent-vm part (the one part named as a
+#             version's) selected, the PATH part as the checkbox says, and any part this app
+#             does not know left out. installer is
 #             asked what it would select with that file, and anything else is refused.
 #   install   installer, without its windows (-target CurrentUserHomeDirectory). Once it has
 #             begun it is left to finish, window or no window: stopping it halfway would leave
@@ -49,8 +50,10 @@ install_timeout="${AGENTVM_APP_INSTALL_TIMEOUT:-600}"
 # Where agent-vm is released, and who signs it.
 install_releases="https://github.com/abra-code/agent-vm/releases"
 install_team="T9NM2ZLDTY"
-# The package's parts, as PackageBuilder names the choices of its two components.
-install_agentvm_choice="com_abracode_pkg_agent_vm_choice"
+# The package's parts, as PackageBuilder names the choices of its two components. The agent-vm
+# part's name carries the version (com_abracode_pkg_agent_vm_0_7_44_choice): each version is a
+# component of its own, so that installing one does not empty the folder of the one before.
+install_agentvm_choice_pattern='^com_abracode_pkg_agent_vm_[0-9][0-9_]*_choice$'
 install_path_choice="com_abracode_pkg_agent_vm_path_choice"
 
 INSTALL_HEAD_ID=4201
@@ -220,12 +223,17 @@ install_parts() {
     fi
     local _parts
     _parts="$(/usr/bin/plutil -convert json -o - "$2/parts.xml" 2>/dev/null | /usr/bin/jq -r '[.[] | .choiceIdentifier | strings] | unique | .[]' 2>/dev/null)"
-    local _has="$(printf '%s\n' "$_parts" | /usr/bin/grep -c -x -F "$install_agentvm_choice")"
-    if [ "$_has" -eq 0 ]; then
+    local _agentvm="$(printf '%s\n' "$_parts" | /usr/bin/grep -E "$install_agentvm_choice_pattern")"
+    if [ -z "$_agentvm" ]; then
         printf '%s has no agent-vm part, so AgentVM cannot tell what it would install. See %s.\n' "$_name" "$install_releases"
         return 1
     fi
-    printf '%s\n' "$_parts" | /usr/bin/jq -R -n --arg agentvm "$install_agentvm_choice" --arg path "$install_path_choice" --arg with_path "$3" '
+    local _count="$(printf '%s\n' "$_agentvm" | /usr/bin/grep -c .)"
+    if [ "$_count" != "1" ]; then
+        printf '%s has more than one agent-vm part (%s), so AgentVM cannot tell what it would install. See %s.\n' "$_name" "$(printf '%s\n' "$_agentvm" | /usr/bin/paste -sd ' ' - | /usr/bin/sed 's/ /, /g')" "$install_releases"
+        return 1
+    fi
+    printf '%s\n' "$_parts" | /usr/bin/jq -R -n --arg agentvm "$_agentvm" --arg path "$install_path_choice" --arg with_path "$3" '
         [inputs | select(length > 0) | {choiceIdentifier: ., choiceAttribute: "selected",
             attributeSetting: (if . == $agentvm then 1 elif . == $path and $with_path == "1" then 1 else 0 end)}]' > "$2/choices.json"
     _status=$?
@@ -244,7 +252,7 @@ install_parts() {
     # What installer would select, against what was asked: the parts that differ. Any setting but
     # 0 or false counts as selected (a group selected in part is -1).
     local _wrong
-    _wrong="$(/usr/bin/plutil -convert json -o - "$2/confirmed.xml" 2>/dev/null | /usr/bin/jq -r --arg agentvm "$install_agentvm_choice" --arg path "$install_path_choice" --arg with_path "$3" '
+    _wrong="$(/usr/bin/plutil -convert json -o - "$2/confirmed.xml" 2>/dev/null | /usr/bin/jq -r --arg agentvm "$_agentvm" --arg path "$install_path_choice" --arg with_path "$3" '
         [.[] | select(.choiceAttribute == "selected")
              | {key: (.choiceIdentifier | tostring), value: (.attributeSetting != 0 and .attributeSetting != false)}] | from_entries as $selected
         | "read:" + ([($selected | to_entries[] | select(.value != (.key == $agentvm or (.key == $path and $with_path == "1"))) | .key),
