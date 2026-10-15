@@ -22,7 +22,17 @@
 . "$OMCTEST_TESTS/lib.test.agentvm.sh"
 
 MIN_VERSION="$(lib_value AGENTVM_MIN_VERSION)"
-STORE="$OMCTEST_WORK/empty-store"
+# The store is in a short folder of its own, not in the scratch folder: since 0.7.53 agent-vm
+# refuses every box name in a store whose control socket path,
+# <store>/Boxes/<name>/control.sock, leaves no room for a name in the 103 bytes macOS allows,
+# and the scratch folder's path is longer than that leaves. Removed at the end and on the
+# early exit.
+SHORT_DIR="$(/usr/bin/mktemp -d /tmp/avmc.XXXXXX)"
+if [ -z "$SHORT_DIR" ] || [ ! -d "$SHORT_DIR" ]; then
+    check "a short temporary folder for the store, in /tmp" "made" "none"
+    omctest_end
+fi
+STORE="$SHORT_DIR/empty-store"
 /bin/mkdir -p "$STORE"
 worktree="$(cd "$OMCTEST_TESTS/../../agent-vm" 2>/dev/null && pwd -P)"
 
@@ -48,6 +58,7 @@ for candidate in "${AGENTVM_APP_CONTRACT_AGENT_VM:-}" \
 done
 if [ -z "$real" ]; then
     check "found one (tried:$tried set AGENTVM_APP_CONTRACT_AGENT_VM, or build agent-vm)" "found" "none"
+    /bin/rm -rf "$SHORT_DIR"
     omctest_end
 fi
 printf '   using %s\n' "$real" >&2
@@ -291,4 +302,5 @@ check "image create --from with no recipe is refused for the image it does not h
     "$?|$(/usr/bin/grep -c 'no image nosuch' "$OMCTEST_WORK/copy.err")|$(/usr/bin/grep -c -i 'recipe' "$OMCTEST_WORK/copy.err")"
 check "  and it left no image behind" "" "$(real_lib agentvm_status | lib agentvm_status_image_rows)"
 
+/bin/rm -rf "$SHORT_DIR"
 omctest_end

@@ -187,3 +187,17 @@ Nothing in the JSON the app reads changed. What an application sees:
 - An image build or update whose macOS guest starts again instead of powering off says so in a `notice` event and asks it to shut down again.
 
 What was done to the fixtures: `version.json` and `packs.json` captured again from the installed 0.7.44 (versions, paths and digests only), the Linux guest daemon's digest in `doctor.json` and the version strings in `status-variety.json` and `job-log-variety.json` by hand.
+
+## The move to agent-vm 0.7.54 (2026-10-15)
+
+What an application sees of agent-vm 0.7.45 to 0.7.54:
+
+- `maxBoxNameLength` in `version --json` (0.7.53): the longest box name the store in use allows, since a box's control socket, `<store>/Boxes/<name>/control.sock`, must fit the 103 bytes macOS allows a socket's path. `box create` and `box rename` refuse a longer name; `box start` and `box recreate` refuse a box that already has one. Image names keep the limit of 63.
+- Box and image names may have capital letters (0.7.54), case kept as given. Lookups are exact ("no box work, but there is box Work"), a new name that another has in other case is refused, and a change of case only is a rename.
+- The guest daemon has the feature `flow-control` (0.7.46). The app reads features only to list them.
+- A macOS box under 3 GB of memory is refused by `box create`, `box set` and `box recreate` (0.7.51).
+
+What was done to the fixtures:
+
+- `version.json` and `packs.json` captured again from the installed 0.7.54 (`refresh_agentvm_fixtures.sh <agent-vm> version packs`). `maxBoxNameLength` is 31, the value for the capturing account's default store, not for the `/Users/you` the paths were rewritten to: the tests take the number as it is and change it with a jq edit where they need another.
+- The Linux guest daemon's digest in `doctor.json` and the version strings in `status-variety.json` and `job-log-variety.json` by hand.
