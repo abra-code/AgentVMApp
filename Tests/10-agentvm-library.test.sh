@@ -142,8 +142,9 @@ done
 
 section "agentvm_valid_name"
 long63="abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijk"
+# Capitals since agent-vm 0.7.54, kept as given.
 for pair in "work 0" "dev-agents 0" "a.b_c-1 0" "9lives 0" "$long63 0" "${long63}l 1" \
-        "Work 1" "wOrk 1" "-rf 1" ".hidden 1" "_x 1" "a/b 1" "a:b 1"; do
+        "Work 0" "wOrk 0" "MyBox 0" "Z 0" "-rf 1" ".hidden 1" "_x 1" "a/b 1" "a:b 1" "-Work 1"; do
     set -- $pair
     lib agentvm_valid_name "$1"
     check "[$1]" "$2" "$?"
@@ -152,6 +153,10 @@ lib agentvm_valid_name ""
 check "the empty name" "1" "$?"
 lib agentvm_valid_name "a b"
 check "a name with a space" "1" "$?"
+lib agentvm_valid_name "$(printf '%s\n' "$long63" | /usr/bin/tr 'abcdefghijklmnopqrstuvwxyz' 'ABCDEFGHIJKLMNOPQRSTUVWXYZ')"
+check "63 capitals" "0" "$?"
+lib agentvm_valid_name "Wörk"
+check "a letter outside A to Z" "1" "$?"
 
 # -----------------------------------------------------------------------------------------------
 section "agentvm_last_error: agent-vm's own message"
@@ -411,12 +416,15 @@ section "image info and delete: names agent-vm would refuse are refused first"
 fake_reset
 with_fake agentvm_image_info "-rf" >/dev/null
 check "image info"                   "2" "$?"
-with_fake agentvm_image_delete "Dev" >/dev/null
+with_fake agentvm_image_delete "Dev Tools" >/dev/null
 check "image delete"                 "2" "$?"
-check "  with the reason"             "yes" "$(lib agentvm_last_error 2 | /usr/bin/grep -q -F '"Dev" is not a valid image name: agent-vm accepts lower-case letters' && echo yes)"
+check "  with the reason"             "yes" "$(lib agentvm_last_error 2 | /usr/bin/grep -q -F '"Dev Tools" is not a valid image name: agent-vm accepts letters, digits' && echo yes)"
 check "  and agent-vm never ran"      "" "$(fake_log)"
 with_fake agentvm_image_delete dev-acp
 check "a valid name reaches agent-vm" "0${TAB}image delete dev-acp --json" "$?${TAB}$(fake_log)"
+fake_reset
+with_fake agentvm_image_delete Dev-ACP
+check "  one with capitals too, as it is" "image delete Dev-ACP --json" "$(fake_log)"
 
 section "box info row (box-info.json)"
 row="$(lib agentvm_box_info_row < "$FIXTURES_AGENTVM/box-info.json")"
@@ -440,7 +448,7 @@ for function in agentvm_box_info agentvm_box_view agentvm_box_recreate agentvm_b
 done
 with_fake agentvm_avm_file "-rf" "$OMCTEST_WORK" >/dev/null
 check "agentvm_avm_file"             "2" "$?"
-check "  with the reason"            "yes" "$(with_fake agentvm_box_delete "S3" 2>/dev/null; lib agentvm_last_error 2 | /usr/bin/grep -q -F '"S3" is not a valid box name' && echo yes)"
+check "  with the reason"            "yes" "$(with_fake agentvm_box_delete "S 3" 2>/dev/null; lib agentvm_last_error 2 | /usr/bin/grep -q -F '"S 3" is not a valid box name' && echo yes)"
 check "  and agent-vm never ran"     "" "$(fake_log)"
 
 section "box commands: what reaches agent-vm"
@@ -688,6 +696,18 @@ check "two rows, six fields each"    "2|6" "$(printf '%s\n' "$rows" | /usr/bin/a
 check "a size agent-vm does not say is \"-\", and one that is not a number too" "linux${TAB}2${TAB}-${TAB}-${TAB}16${TAB}-" \
     "$(printf '%s\n' '{"imageSizes": {"linux": {"cpuCount": 2, "memoryBytes": "4 GB", "minimumDiskBytes": 17179869184}, "macos": 3}}' | lib agentvm_image_size_rows)"
 check "an agent-vm that says no sizes: no rows" "" "$(printf '{"version": "0.7.13"}\n' | lib agentvm_image_size_rows)"
+
+section "the longest box name the store allows (version.json)"
+check "the fixture's number, as agent-vm says it" "$(/usr/bin/jq -r .maxBoxNameLength "$FIXTURES_AGENTVM/version.json")" \
+    "$(lib agentvm_max_box_name_length < "$FIXTURES_AGENTVM/version.json")"
+maxes=""
+for answer in '{"maxBoxNameLength": 31}' '{"maxBoxNameLength": 0}' '{"maxBoxNameLength": 63}' '{"maxBoxNameLength": 80}' \
+        '{"maxBoxNameLength": -1}' '{"maxBoxNameLength": "31"}' '{"version": "0.7.52"}'; do
+    maxes="$maxes[$(printf '%s\n' "$answer" | lib agentvm_max_box_name_length)]"
+done
+check "31 and 0 as said; never more than 63; 63, every name's limit, when agent-vm says none or no number" \
+    "[31][0][63][63][63][63][63]" "$maxes"
+check "an answer that is not JSON: nothing" "" "$(printf 'not json\n' | lib agentvm_max_box_name_length)"
 
 section "drift: every field the library reads is in the real capture"
 # The checks the fixture refresh exists for. A field agent-vm renamed or dropped comes out as

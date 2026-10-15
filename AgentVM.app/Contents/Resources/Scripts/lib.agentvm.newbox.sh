@@ -110,8 +110,9 @@ newbox_step_title() {
 # -- Reading -------------------------------------------------------------------------------------
 
 # newbox_read <uuid> [full]  ->  0 with the cache files build.tsv (agentvm_status_build_rows),
-# boxes.tsv and vm.tsv read anew; "full" first checks which agent-vm runs, and reads its agents
-# into agents.tsv and its packs into packs.tsv (on opening). An agent-vm that cannot be used is
+# boxes.tsv and vm.tsv read anew, and box-name-max (agentvm_max_box_name_length) when `version`
+# answers; "full" first checks which agent-vm runs, and reads its agents into agents.tsv and its
+# packs into packs.tsv (on opening). An agent-vm that cannot be used is
 # not run. A failed `status` keeps the previous rows and leaves its message in the cache file
 # status-error; packs that cannot be read leave their message in packs-error.
 newbox_read() {
@@ -143,6 +144,14 @@ newbox_read() {
     printf '%s\n' "$_json" | agentvm_status_box_rows | ui_store "$(ui_cache "$1" boxes.tsv)"
     printf '%s\n' "$_json" | agentvm_status_vm_row | ui_store "$(ui_cache "$1" vm.tsv)"
     : | ui_store "$_error"
+    # The longest box name this store allows: read with every reading, so that the one before
+    # Create is of the store agent-vm uses then. A reading that fails, or says no number, keeps
+    # the number read before.
+    _json="$(agentvm_version_info)"
+    _status=$?
+    local _max
+    [ "$_status" -eq 0 ] && _max="$(printf '%s\n' "$_json" | agentvm_max_box_name_length)"
+    [ -n "$_max" ] && printf '%s\n' "$_max" | ui_store "$(ui_cache "$1" box-name-max)"
     return 0
 }
 
@@ -451,9 +460,25 @@ newbox_network_text() {
 
 # -- Name and size -------------------------------------------------------------------------------
 
-# newbox_name_taken <uuid> <name>  ->  0 when a box of that name is listed.
+# newbox_taken_name <uuid> <name>  ->  the listed box that has that name, or one that differs
+# from it in case only (agent-vm refuses such a name: main_row_any_case), or nothing.
+newbox_taken_name() {
+    main_row_any_case "$1" boxes "$2" | /usr/bin/cut -f1
+}
+
+# newbox_name_taken <uuid> <name>  ->  0 when a box of that name is listed, in any case.
 newbox_name_taken() {
-    [ -n "$(main_row "$1" boxes "$2")" ]
+    [ -n "$(newbox_taken_name "$1" "$2")" ]
+}
+
+# newbox_max_name_length <uuid>  ->  the longest box name this store allows, as last read (0 to
+# 63), or nothing when agent-vm did not say it.
+newbox_max_name_length() {
+    local _file="$(ui_cache "$1" box-name-max)"
+    [ -f "$_file" ] || return 0
+    local _max="$(/usr/bin/head -n 1 "$_file")"
+    wizard_number "$_max" || [ "$_max" = "0" ] || return 0
+    printf '%s\n' "$_max"
 }
 
 # newbox_suggested_name <uuid>  ->  a free name for the box: NBOX_NAME, with a number when taken.
@@ -510,17 +535,31 @@ newbox_starts() {
 
 # newbox_sizes_blocker <uuid>  ->  why the name or a size cannot be used, or nothing.
 newbox_sizes_blocker() {
+    local _max="$(newbox_max_name_length "$1")"
+    if [ "$_max" = "0" ]; then
+        printf 'No box can be made in this store: the path of its folder leaves no room for a box name in the path of a box'"'"'s control socket, which macOS limits. Use a store in a folder with a shorter path.\n'
+        return 0
+    fi
     local _name="$(ui_get name "$1")"
     if [ -z "$_name" ]; then
         printf 'Give the box a name.\n'
         return 0
     fi
     if ! agentvm_valid_name "$_name"; then
-        printf '"%s" cannot be a name: lower-case letters, digits, ".", "_" and "-", starting with a letter or a digit, at most 63 characters.\n' "$_name"
+        printf '"%s" cannot be a name: letters, digits, ".", "_" and "-", starting with a letter or a digit, at most 63 characters.\n' "$_name"
         return 0
     fi
-    if newbox_name_taken "$1" "$_name"; then
+    if [ -n "$_max" ] && [ "${#_name}" -gt "$_max" ]; then
+        printf 'A box name can have at most %s characters in this store, and %s has %s: macOS limits the path of a box'"'"'s control socket, which is in the store'"'"'s folder.\n' "$_max" "$_name" "${#_name}"
+        return 0
+    fi
+    local _taken="$(newbox_taken_name "$1" "$_name")"
+    if [ "$_taken" = "$_name" ]; then
         printf 'A box named %s is there already.\n' "$_name"
+        return 0
+    fi
+    if [ -n "$_taken" ]; then
+        printf 'A box named %s is there already; names that differ in case only cannot both be used.\n' "$_taken"
         return 0
     fi
     local _cpus="$(ui_get cpus "$1")"

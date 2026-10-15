@@ -1,10 +1,10 @@
 #!/bin/sh
 # AgentVM.rename.apply.sh
-# Rename, in the Rename window: what cannot be a name is refused in the line under the field;
-# anything else is asked of agent-vm, at once. Then the windows opened for the old name close,
-# the main window shows the box or image under its new name, and this window closes. agent-vm's
-# refusal is shown whole, in its words, the window stays, and the main window reads its lists
-# again.
+# Rename, in the Rename window: what cannot be a name, and a box name longer than the store
+# allows, is refused in the line under the field; anything else is asked of agent-vm, at once.
+# Then the windows opened for the old name close, the main window shows the box or image under
+# its new name, and this window closes. agent-vm's refusal is shown whole, in its words, the
+# window stays, and the main window reads its lists again.
 
 . "$OMC_APP_BUNDLE_PATH/Contents/Resources/Scripts/lib.agentvm.rename.sh"
 
@@ -17,7 +17,10 @@ wizard_enter "$window_uuid" || exit 0
 kind="${target%%:*}"
 name="${target#*:}"
 eval "new=\"\${OMC_ACTIONUI_VIEW_${RENAME_NAME_ID}_VALUE:-}\""
-blocker="$(rename_blocker "$kind" "$name" "$new")"
+# The store's limit of a box name is read now: the store may have moved since the window opened.
+max=""
+[ "$kind" = "box" ] && max="$(rename_max_box_name_length)"
+blocker="$(rename_blocker "$kind" "$name" "$new" "$max")"
 "$dialog" "$window_uuid" "$RENAME_NOTE_ID" "$blocker"
 [ -z "$blocker" ] || exit 0
 ui_enable "$window_uuid" "$RENAME_APPLY_ID" 0

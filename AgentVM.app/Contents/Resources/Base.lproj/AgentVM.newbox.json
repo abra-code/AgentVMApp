@@ -640,7 +640,7 @@
                       {
                         "type": "Text",
                         "properties": {
-                          "text": "Lower-case letters, digits, \".\", \"_\" and \"-\", starting with a letter or a digit.",
+                          "text": "Letters, digits, \".\", \"_\" and \"-\", starting with a letter or a digit.",
                           "font": "caption",
                           "foregroundStyle": "secondary",
                           "padding": {

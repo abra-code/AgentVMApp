@@ -264,7 +264,7 @@ open_new
 check_status "the init handler exits cleanly" 0
 check "takes the request, and what was handed over, once" "|" "$(request)|$("$PB" agentvm_newbox_from get)"
 check "becomes the New Box window"   "$APP_PID $UUID|1" "$(registered)|$(kept newbox)"
-check "asks agent-vm which it is, reads its packs and status" "--version|box packs --json|status --json" \
+check "asks agent-vm which it is, reads its packs, status, and the longest box name it allows" "--version|box packs --json|status --json|version --json" \
     "$(fake_log | /usr/bin/paste -sd '|' -)"
 check "its title"                    "New Box" "$(ui_title)"
 check "step 1 of 4: its panel, the first mark is now" "Step 1 of 4 - Image|1|nttt" "$(step_shown)"
@@ -406,7 +406,7 @@ omc_table_cell "$NBOX_IMAGES_ID" 5 ""
 omc_table_cell "$NBOX_IMAGES_ID" 1 ""
 : > "$FAKE_AGENTVM_DIR/log"
 next
-check "Continue: status is read again, the image is kept, step 2" "status --json|dev-agents|Step 2 of 4 - Network|2|dntt|" \
+check "Continue: status and the longest box name are read again, the image is kept, step 2" "status --json|version --json|dev-agents|Step 2 of 4 - Network|2|dntt|" \
     "$(fake_log | /usr/bin/paste -sd '|' -)|$(kept image)|$(step_shown)|$(note)"
 
 # -----------------------------------------------------------------------------------------------
@@ -508,10 +508,13 @@ next
 check "no name"                      "Step 3 of 4 - Name and size|Give the box a name." "$(ui_value "$NBOX_HEADER_ID")|$(note)"
 sizes "My Box" 4 8 true
 next
-check "a name that cannot be one"    "\"My Box\" cannot be a name: lower-case letters, digits, \".\", \"_\" and \"-\", starting with a letter or a digit, at most 63 characters." "$(note)"
+check "a name that cannot be one"    "\"My Box\" cannot be a name: letters, digits, \".\", \"_\" and \"-\", starting with a letter or a digit, at most 63 characters." "$(note)"
 sizes "s3" 4 8 true
 next
 check "a name that is taken"         "A box named s3 is there already." "$(note)"
+sizes "S3" 4 8 true
+next
+check "  in other case: the box listed is named, and why" "A box named s3 is there already; names that differ in case only cannot both be used." "$(note)"
 sizes "work" 0 8 true
 next
 check "processors that are not a number" "Processors: a whole number from 1 to 256." "$(note)"
@@ -575,6 +578,15 @@ check "the image is being changed"   "Another command is changing image dev-acp.
 store '.boxes += [.boxes[0] | .box.name = "tools"]'
 omc_run AgentVM.newbox.activated
 check "the name was taken meanwhile" "A box named tools is there already.|0" "$(note)|$(enabled "$NBOX_CREATE_ID")"
+store '.boxes += [.boxes[0] | .box.name = "TOOLS"]'
+omc_run AgentVM.newbox.activated
+check "  or in other case"            "A box named TOOLS is there already; names that differ in case only cannot both be used.|0" "$(note)|$(enabled "$NBOX_CREATE_ID")"
+store '.'
+/usr/bin/jq '.maxBoxNameLength = 4' "$FIXTURES_AGENTVM/version.json" > "$FAKE_AGENTVM_DIR/version.json"
+omc_run AgentVM.newbox.activated
+check "the store allows only shorter names now: read again on activation" \
+    "A box name can have at most 4 characters in this store, and tools has 5: macOS limits the path of a box's control socket, which is in the store's folder.|0" "$(note)|$(enabled "$NBOX_CREATE_ID")"
+/bin/rm -f "$FAKE_AGENTVM_DIR/version.json"
 printf 'the store is locked\n' > "$FAKE_AGENTVM_DIR/fail-status"
 omc_run AgentVM.newbox.activated
 check "agent-vm cannot be read"      "agent-vm could not be read: the store is locked|0" "$(note)|$(enabled "$NBOX_CREATE_ID")"
@@ -604,8 +616,8 @@ in_window "$UUID"
 : > "$FAKE_AGENTVM_DIR/log"
 omc_run AgentVM.newbox.create
 check_status "the handler exits cleanly" 0
-check "status is read first, then the box is made, then its start is a job" "status --json|box create|job start" \
-    "$(fake_log | /usr/bin/sed -n '1,3p' | /usr/bin/cut -d' ' -f1-2 | /usr/bin/paste -sd '|' -)"
+check "status and the longest box name are read first, then the box is made, then its start is a job" "status --json|version --json|box create|job start" \
+    "$(fake_log | /usr/bin/sed -n '1,4p' | /usr/bin/cut -d' ' -f1-2 | /usr/bin/paste -sd '|' -)"
 check "one box, with the arguments the window listed" "1|$EXPECTED" "$(created)|$(create_args)"
 check "the command line shown is the one run" "$(ui_value "$NBOX_COMMAND_ID" | /usr/bin/sed -n '1p')" \
     "agent-vm box create $(create_args | /usr/bin/tr ' ' '\n' | lib agentvm_args_text)"
@@ -727,6 +739,58 @@ open_new dev-agents
 check "packs that cannot be read: the step says why, and the agents' rules are there all the same" \
     "The packs could not be read: the packs file is broken|pack:anthropic pack:openai opencode.ai models.opencode.ai|" \
     "$(ui_value "$NBOX_AGENTS_TEXT_ID" | /usr/bin/sed -n '2p')|$(rules)|$(ui_rows "$NBOX_PACKS_ID")"
+omc_run AgentVM.newbox.close
+
+# -----------------------------------------------------------------------------------------------
+section "the box name: capitals, other case, and the store's limit"
+# Since agent-vm 0.7.54 a name may have capitals, kept as given, and one that another box has in
+# other case is refused; since 0.7.53 a box name has to fit the store's control socket path,
+# which version --json says as maxBoxNameLength.
+fake_reset
+store '.boxes += [.boxes[0] | .box.name = "Work"]'
+/usr/bin/jq '.maxBoxNameLength = 8' "$FIXTURES_AGENTVM/version.json" > "$FAKE_AGENTVM_DIR/version.json"
+open_new dev
+next
+check "the name offered is free in any case: Work is there, so work2" "Step 3 of 4 - Name and size|work2" "$(ui_value "$NBOX_HEADER_ID")|$(ui_value "$NBOX_NAME_ID")"
+sizes "work" 4 8 false
+next
+check "work: taken as Work"           "A box named Work is there already; names that differ in case only cannot both be used." "$(note)"
+sizes "LongerName" 4 8 false
+next
+check "a name over the store's limit: what it allows, and the name's length" \
+    "Step 3 of 4 - Name and size|A box name can have at most 8 characters in this store, and LongerName has 10: macOS limits the path of a box's control socket, which is in the store's folder." \
+    "$(ui_value "$NBOX_HEADER_ID")|$(note)"
+sizes "MyBox-12" 4 8 false
+next
+check "one at the limit, with capitals: step 4, kept as typed" "Step 4 of 4 - Check|MyBox-12|agent-vm box create MyBox-12 --image dev" \
+    "$(ui_value "$NBOX_HEADER_ID")|$(kept name)|$(ui_value "$NBOX_COMMAND_ID")"
+: > "$FAKE_AGENTVM_DIR/log"
+omc_run AgentVM.newbox.create
+check "Create: the name reaches agent-vm as typed, after the limit was read again" "version --json|box create MyBox-12 --image dev --json" \
+    "$(fake_log | /usr/bin/grep -e '^version' -e '^box create' | /usr/bin/paste -sd '|' -)"
+omc_run AgentVM.newbox.close
+/usr/bin/jq '.maxBoxNameLength = 0' "$FIXTURES_AGENTVM/version.json" > "$FAKE_AGENTVM_DIR/version.json"
+open_new dev
+next
+sizes "a" 4 8 false
+next
+check "a store whose folder leaves room for no name: said for the store, whatever the name" \
+    "No box can be made in this store: the path of its folder leaves no room for a box name in the path of a box's control socket, which macOS limits. Use a store in a folder with a shorter path." "$(note)"
+sizes "" 4 8 false
+next
+check "  even before a name is typed" \
+    "No box can be made in this store: the path of its folder leaves no room for a box name in the path of a box's control socket, which macOS limits. Use a store in a folder with a shorter path." "$(note)"
+/bin/rm -f "$FAKE_AGENTVM_DIR/version.json"
+printf 'version is broken\n' > "$FAKE_AGENTVM_DIR/fail-version"
+omc_run AgentVM.newbox.activated
+sizes "a" 4 8 false
+next
+check "  a version that fails keeps the number read before" "Step 3 of 4 - Name and size|No box can be made in this store" \
+    "$(ui_value "$NBOX_HEADER_ID")|$(note | /usr/bin/cut -d: -f1)"
+/bin/rm -f "$FAKE_AGENTVM_DIR/fail-version"
+omc_run AgentVM.newbox.activated
+next
+check "  and one that answers again is followed" "Step 4 of 4 - Check|" "$(ui_value "$NBOX_HEADER_ID")|$(note)"
 omc_run AgentVM.newbox.close
 
 # -----------------------------------------------------------------------------------------------

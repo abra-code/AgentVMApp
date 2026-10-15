@@ -199,7 +199,7 @@ omc_control_defaults AgentVM.access
 omc_run AgentVM.access.init
 check "a second window for the same image: the first stays the image's, the second closes" "$APP_PID $UUID|1" \
     "$(registered dev-node)|$(ui_calls "${OTHER_UUID}${TAB}omc_window${TAB}omc_terminate_cancel")"
-for bad in "" "$APP_PID update:dev-node" "1 access:dev-node" "$APP_PID access:../x" "$APP_PID access:Dev" "$APP_PID access:--json"; do
+for bad in "" "$APP_PID update:dev-node" "1 access:dev-node" "$APP_PID access:../x" "$APP_PID access:_dev" "$APP_PID access:--json"; do
     ui_reset
     : > "$FAKE_AGENTVM_DIR/log"
     "$PB" agentvm_open_request_access set "$bad"

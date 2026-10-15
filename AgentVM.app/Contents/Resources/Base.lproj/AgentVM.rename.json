@@ -59,8 +59,9 @@
     },
     {
       "type": "Text",
+      "id": 5107,
       "properties": {
-        "text": "Lower-case letters, digits, \".\", \"_\" and \"-\", starting with a letter or a digit, at most 63 characters.",
+        "text": "Letters, digits, \".\", \"_\" and \"-\", starting with a letter or a digit, at most 63 characters.",
         "font": "callout",
         "foregroundStyle": "secondary",
         "frame": {

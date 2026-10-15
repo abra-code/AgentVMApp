@@ -556,16 +556,21 @@ size_try() {
 }
 check "no name"                      "Step 4 of 5 - Name and size|Give the new image a name." "$(size_try "" 4 8 64)"
 check "a name agent-vm would refuse" \
-    "Step 4 of 5 - Name and size|\"Dev Tools\" cannot be a name: lower-case letters, digits, \".\", \"_\" and \"-\", starting with a letter or a digit, at most 63 characters." \
+    "Step 4 of 5 - Name and size|\"Dev Tools\" cannot be a name: letters, digits, \".\", \"_\" and \"-\", starting with a letter or a digit, at most 63 characters." \
     "$(size_try "Dev Tools" 4 8 64)"
 check "an option as a name"          "Step 4 of 5 - Name and size" "$(size_try "--force" 4 8 64 | /usr/bin/cut -d'|' -f1)"
 check "a name that is taken"         "Step 4 of 5 - Name and size|An image named dev-node is there already. Give the new image another name." "$(size_try dev-node 4 8 64)"
+check "  in other case: the image listed is named, and why" \
+    "Step 4 of 5 - Name and size|An image named dev-node is there already. Give the new image another name. Names that differ in case only cannot both be used." "$(size_try Dev-Node 4 8 64)"
 check "processors that are not a number" "Step 4 of 5 - Name and size|Processors: a whole number, 1 or more." "$(size_try mine four 8 64)"
 check "no processors"                "Step 4 of 5 - Name and size|Processors: a whole number, 1 or more." "$(size_try mine 0 8 64)"
 check "memory that is not a number"  "Step 4 of 5 - Name and size|Memory: a whole number of GB." "$(size_try mine 4 8.5 64)"
 check "a disk that is not a number"  "Step 4 of 5 - Name and size|Disk: a whole number of GB." "$(size_try mine 4 8 -64)"
 check "a smaller disk"               "Step 4 of 5 - Name and size|The disk can stay at 64 GB, as in image dev, or grow to 72 GB or more. It cannot shrink." "$(size_try mine 4 8 32)"
 check "a disk that grows too little" "Step 4 of 5 - Name and size|The disk can stay at 64 GB, as in image dev, or grow to 72 GB or more. It cannot shrink." "$(size_try mine 4 8 71)"
+check "a name with capitals: kept as typed" "Step 5 of 5 - Check||Dev-Tools|agent-vm image create Dev-Tools --from dev" \
+    "$(size_try Dev-Tools 4 8 64)|$(kept name)|$(ui_value "$NEW_COMMAND_ID")"
+back
 check "spaces around a value are dropped, and the smallest growth is taken" "Step 5 of 5 - Check|" "$(size_try " mine " 6 " 16" 72)"
 check "what is kept"                 "mine|6|16|72" "$(kept name)|$(kept cpus)|$(kept memory)|$(kept disk)"
 
@@ -1059,7 +1064,7 @@ check "Continue with a ticked recipe whose file is gone: the step stays, and say
     "Step 2 of 5 - Tools|The recipe file $OWN/Extra Things.json is not there any more. Untick Extra-Things." "$(ui_value "$NEW_HEADER_ID")|$(note)"
 /bin/mv "$OWN/moved.json" "$OWN/Extra Things.json"
 next
-check "it asks for nothing: step 4, named by the recipe, in lower case" "Step 4 of 5 - Name and size|dev-extra-things" "$(ui_value "$NEW_HEADER_ID")|$(ui_value "$NEW_NAME_ID")"
+check "it asks for nothing: step 4, named by the recipe, its case kept" "Step 4 of 5 - Name and size|dev-Extra-Things" "$(ui_value "$NEW_HEADER_ID")|$(ui_value "$NEW_NAME_ID")"
 omc_run AgentVM.newimage.close
 
 section "what agent-vm says about a recipe of one's own"
@@ -1598,6 +1603,9 @@ check "the name of a ready image: another name, and no offer to delete it here" 
 check "the name of an image whose build did not finish" \
     "Step 4 of 5 - Name and size|An image named half is there already, and appears not ready. Delete it to use the name, or give the new image another name.|1|half" \
     "$(size_try half 4 8 64)|$(offered)|$(kept taken)"
+check "  the same name in other case: the image listed is named and offered, for it is the one in the way" \
+    "Step 4 of 5 - Name and size|An image named half is there already, and appears not ready. Delete it to use the name, or give the new image another name. Names that differ in case only cannot both be used.|1|half" \
+    "$(size_try Half 4 8 64)|$(offered)|$(kept taken)"
 /usr/bin/jq -n '[{id: "20260930-120000-0000d1", command: ["image", "create", "half", "--json"], targets: ["image:half"], state: "running", createdAt: "2026-09-30T12:00:00Z", startedAt: "2026-09-30T12:00:00Z"}]' > "$JOBS"
 omc_run AgentVM.newimage.activated
 check "  one a job is building: no offer" \

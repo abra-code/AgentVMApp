@@ -13,7 +13,7 @@
 . "$OMCTEST_TESTS/lib.test.agentvm.sh"
 
 import_view_ids "$APP_SCRIPTS/lib.agentvm.main.sh" "$APP_SCRIPTS/lib.agentvm.rename.sh"
-[ -n "$RENAME_HEAD_ID" ] && [ -n "$RENAME_WHAT_ID" ] && [ -n "$RENAME_NAME_ID" ] && [ -n "$RENAME_NOTE_ID" ] && [ -n "$RENAME_APPLY_ID" ] \
+[ -n "$RENAME_HEAD_ID" ] && [ -n "$RENAME_WHAT_ID" ] && [ -n "$RENAME_NAME_ID" ] && [ -n "$RENAME_NOTE_ID" ] && [ -n "$RENAME_APPLY_ID" ] && [ -n "$RENAME_RULE_ID" ] \
     && [ -n "$MAIN_BOX_RENAME_ID" ] && [ -n "$MAIN_IMAGE_RENAME_ID" ] && [ -n "$MAIN_BOXES_ID" ] && [ -n "$MAIN_IMAGES_ID" ] \
     && [ -n "$MAIN_BOX_IMAGE_ID" ] && [ -n "$MAIN_STATUS_ID" ] || {
     printf '65-rename: no view ids imported from the libraries\n' >&2
@@ -167,7 +167,9 @@ check "becomes the Rename window, for that box" "$APP_PID $UUID|box:s3" "$(regis
 check "its title, and what it says" "Rename Box|Rename box s3" "$(ui_title)|$(ui_value "$RENAME_HEAD_ID")"
 check "what a box keeps" "1" "$(ui_value "$RENAME_WHAT_ID" | /usr/bin/grep -c '^The box keeps what it holds, its network rules and its logs')"
 check "the field holds the name as it is" "s3" "$(ui_value "$RENAME_NAME_ID")"
-check "the window asked agent-vm nothing" "" "$(fake_log)"
+check "the window asks agent-vm only the longest box name the store allows" "version --json" "$(fake_log)"
+check "  and says it under the field" "Letters, digits, \".\", \"_\" and \"-\", starting with a letter or a digit, at most $(/usr/bin/jq -r .maxBoxNameLength "$FIXTURES_AGENTVM/version.json") characters." \
+    "$(ui_value "$RENAME_RULE_ID")"
 "$PB" agentvm_open_request_rename set "$APP_PID rename:window"
 "$PB" agentvm_rename_of set "$APP_PID box:try1"
 in_window "$OTHER_UUID"
@@ -215,15 +217,32 @@ apply "s3"
 check "the name it has" "s3 is its name now.|0" "$(note)|$(renames)"
 apply "My Box"
 check "what cannot be a name; the rule is in the window, under the field" "\"My Box\" cannot be a name.|0|1" \
-    "$(note)|$(renames)|$(/usr/bin/jq -r '[.. | objects | select(.properties?.text? // "" | startswith("Lower-case letters, digits"))] | length' "$APP_RESOURCES/Base.lproj/AgentVM.rename.json")"
+    "$(note)|$(renames)|$(ui_value "$RENAME_RULE_ID" | /usr/bin/grep -c '^Letters, digits')"
 apply "-x"
 check "nor one agent-vm would read as an option" "1|0" "$(note | /usr/bin/grep -c '^"-x" cannot be a name')|$(renames)"
 check "the window stays, and Rename was not turned off" "0|0" "$(closed "$UUID")|$(ui_calls "${UUID}${TAB}${RENAME_APPLY_ID}${TAB}omc_disable")"
+/usr/bin/jq '.maxBoxNameLength = 8' "$FIXTURES_AGENTVM/version.json" > "$FAKE_AGENTVM_DIR/version.json"
+: > "$FAKE_AGENTVM_DIR/log"
+apply "LongerName"
+check "a box name longer than the store allows, read at Rename: refused, with the limit" \
+    "A box name can have at most 8 characters in this store, and LongerName has 10: macOS limits the path of a box's control socket, which is in the store's folder.|version --json" \
+    "$(note)|$(fake_log | /usr/bin/paste -sd ' ' -)"
+/usr/bin/jq '.maxBoxNameLength = 0' "$FIXTURES_AGENTVM/version.json" > "$FAKE_AGENTVM_DIR/version.json"
+apply "a"
+check "  a store that leaves room for none: said so, whatever the name" \
+    "No box name fits in this store: the path of its folder leaves no room for one in the path of a box's control socket, which macOS limits.|0" "$(note)|$(renames)"
+/bin/rm -f "$FAKE_AGENTVM_DIR/version.json"
+printf 'the store is locked\n' > "$FAKE_AGENTVM_DIR/fail-box-rename"
+: > "$FAKE_AGENTVM_DIR/log"
+apply "S3"
+check "a change of case only is a rename, asked of agent-vm as typed" "box rename s3 S3 --json" "$(fake_log | /usr/bin/grep '^box rename')"
+/bin/rm -f "$FAKE_AGENTVM_DIR/fail-box-rename"
 
 section "agent-vm refuses"
+: > "$FAKE_AGENTVM_DIR/log"
 alerts_before="$(ui_calls omc_present_alert)"
 apply "try1"
-check "a name that is taken: asked of agent-vm, its words in an alert, and the main window reads its lists again" "box rename s3 try1 --json status --json|1|Box s3 was not renamed|box try1 already exists" \
+check "a name that is taken: asked of agent-vm, its words in an alert, and the main window reads its lists again" "version --json box rename s3 try1 --json status --json|1|Box s3 was not renamed|box try1 already exists" \
     "$(fake_log | /usr/bin/paste -sd ' ' -)|$(( $(ui_calls omc_present_alert) - alerts_before ))|$(ui_alert_title)|$(ui_alert_message)"
 check "  the line under the field is clear, the window stays, and Rename can be clicked again" "|0|1|" \
     "$(note)|$(closed "$UUID")|$(enabled "$RENAME_APPLY_ID")|$("$PB" "agentvm_busy_$UUID" get)"
@@ -248,8 +267,8 @@ in_window "$UUID"
 alerts_before="$(ui_calls omc_present_alert)"
 apply "work"
 check_status "the handler exits cleanly" 0
-check "agent-vm renames it, and then the lists are read" "box rename s3 work --json|status --json" \
-    "$(fake_log | /usr/bin/sed -n '1,2p' | /usr/bin/paste -sd '|' -)"
+check "agent-vm renames it, and then the lists are read" "version --json|box rename s3 work --json|status --json" \
+    "$(fake_log | /usr/bin/sed -n '1,3p' | /usr/bin/paste -sd '|' -)"
 check "the box's network window, opened under the old name, closes" "1" "$(closed "$NET_UUID")"
 check "the main window selects the box under its new name, on the Boxes tab" "work|0" \
     "$("$PB" "agentvm_box_$MAIN_UUID" get)|$(ui_value "$MAIN_STATUS_ID" "$MAIN_UUID")"
@@ -271,6 +290,14 @@ open_rename image dev-acp
 check "its title, what it says, and its name in the field" "Rename Image|Rename image dev-acp|dev-acp" \
     "$(ui_title)|$(ui_value "$RENAME_HEAD_ID")|$(ui_value "$RENAME_NAME_ID")"
 check "what follows an image" "1" "$(ui_value "$RENAME_WHAT_ID" | /usr/bin/grep -c '^The boxes made from the image and the images built from it follow at once')"
+check "  every name's rule under the field, with no box's limit" "Letters, digits, \".\", \"_\" and \"-\", starting with a letter or a digit, at most 63 characters." "$(ui_value "$RENAME_RULE_ID")"
+/usr/bin/jq '.maxBoxNameLength = 8' "$FIXTURES_AGENTVM/version.json" > "$FAKE_AGENTVM_DIR/version.json"
+printf 'stop here\n' > "$FAKE_AGENTVM_DIR/fail-image-rename"
+: > "$FAKE_AGENTVM_DIR/log"
+apply "LongerImageName"
+check "  an image name has no box's limit: asked of agent-vm, which is not asked for the limit" "image rename dev-acp LongerImageName --json" \
+    "$(fake_log | /usr/bin/grep -v '^status' | /usr/bin/paste -sd '|' -)"
+/bin/rm -f "$FAKE_AGENTVM_DIR/fail-image-rename" "$FAKE_AGENTVM_DIR/version.json"
 apply ""
 check "no name" "Give the image a name." "$(note)"
 alerts_before="$(ui_calls omc_present_alert)"

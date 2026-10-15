@@ -117,7 +117,7 @@ check "stop: the call, and a second job" "job start --json -- box stop s3|202609
 section "names agent-vm would refuse are refused first"
 fake_reset
 for function in agentvm_job_box_start agentvm_job_box_stop; do
-    for name in "-rf" "S3" "a b" "--after"; do
+    for name in "-rf" ".s3" "a b" "--after"; do
         with_fake "$function" "$name" >/dev/null
         check "$function [$name]"    "2" "$?"
     done

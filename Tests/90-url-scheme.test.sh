@@ -79,7 +79,7 @@ check "  with a trailing slash, a query or a fragment" "status|status|status" \
 check "a box"                    "box s3" "$(ui ui_url_target agentvm://box/s3)"
 check "an image"                 "image dev-acp" "$(ui ui_url_target agentvm://image/dev-acp)"
 check "the scheme and the first part in any case; the name as written" "box s3" "$(ui ui_url_target AgentVM://Box/s3)"
-check "  a name in upper case is not agent-vm's" "" "$(ui ui_url_target agentvm://box/S3)"
+check "  a name with capitals too, as written (agent-vm 0.7.54)" "box S3" "$(ui ui_url_target agentvm://box/S3)"
 check "a name agent-vm would read as an option" "" "$(ui ui_url_target agentvm://box/-rf)"
 check "  one with a path in it"  "" "$(ui ui_url_target agentvm://box/a/b)"
 check "  one percent-encoded"    "" "$(ui ui_url_target 'agentvm://box/s3%20x')"

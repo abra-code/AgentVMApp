@@ -174,18 +174,21 @@ _agentvm_refuse() {
 }
 
 # agentvm_valid_name <name>  ->  0 when agent-vm accepts it as an image or box name.
-# agent-vm's own rule (ImageStore.isValidName): lower-case letters, digits, ".", "_" and "-",
-# starting with a letter or digit, at most 63 characters. Checked here as well because a name
-# is an argv element: one that starts with "-" would be read as an option.
+# agent-vm's own rule (ImageStore.isValidName): letters of either case, digits, ".", "_" and "-",
+# starting with a letter or digit, at most 63 characters (a box's name has to be shorter still
+# in most stores: agentvm_max_box_name_length). Checked here as well because a name is an argv
+# element: one that starts with "-" would be read as an option. Case is kept as given, and
+# agent-vm matches names with their case, but refuses a new name that another one has in other
+# case: the Mac's disk would keep both in one folder.
 # The letters are spelled out because a bracket RANGE follows the locale's collation order: in
 # en_US.UTF-8, [a-z] also matches "B" through "Z".
 agentvm_valid_name() {
     case "$1" in
-        [abcdefghijklmnopqrstuvwxyz0123456789]*) ;;
+        [ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789]*) ;;
         *) return 1 ;;
     esac
     case "$1" in
-        *[!abcdefghijklmnopqrstuvwxyz0123456789._-]*) return 1 ;;
+        *[!ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789._-]*) return 1 ;;
     esac
     [ "${#1}" -le 63 ]
 }
@@ -193,7 +196,7 @@ agentvm_valid_name() {
 # _agentvm_need_name <image|box> <name>  ->  0, or 2 with the reason left for agentvm_last_error.
 _agentvm_need_name() {
     agentvm_valid_name "$2" && return 0
-    _agentvm_refuse 2 "\"$2\" is not a valid $1 name: agent-vm accepts lower-case letters, digits, \".\", \"_\" and \"-\", starting with a letter or digit, at most 63 characters."
+    _agentvm_refuse 2 "\"$2\" is not a valid $1 name: agent-vm accepts letters, digits, \".\", \"_\" and \"-\", starting with a letter or digit, at most 63 characters."
 }
 
 # agentvm_version_at_least <have> <want>  ->  0 when have >= want, compared as dotted numbers.
@@ -1039,6 +1042,17 @@ agentvm_job_forget() {
 # of the network.
 agentvm_version_info() {
     agentvm_json version
+}
+
+# agentvm_max_box_name_length  <  version JSON  ->  the longest box name the store in use allows
+# (`maxBoxNameLength`), 0 to 63. A box's control socket is <store>/Boxes/<name>/control.sock, and
+# macOS allows a socket's path 103 bytes, so the deeper the store's folder, the shorter a box's
+# name; 0 when the folder leaves no room for any. agent-vm counts the app's AGENT_VM_HOME, as
+# agentvm_version_info runs with it. 63, the limit of every name, when agent-vm does not say.
+# Image names have no such limit: an image has no socket.
+agentvm_max_box_name_length() {
+    /usr/bin/jq -r '.maxBoxNameLength
+        | if type == "number" and . >= 0 then ([floor, 63] | min) else 63 end' 2>/dev/null
 }
 
 # agentvm_valid_linux_release <id>  ->  0 when it has the form of a Linux system's id, the word

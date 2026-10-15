@@ -93,6 +93,20 @@ check "answers" "0" "$?"
 check "  with the same version" "$out" "$(/usr/bin/jq -r '.version' "$OMCTEST_WORK/version.json")"
 check "  and every field the fixture has" "" "$(missing_paths "$FIXTURES_AGENTVM/version.json" "$OMCTEST_WORK/version.json")"
 
+section "the longest box name a store allows (maxBoxNameLength)"
+# A box's control socket is <store>/Boxes/<name>/control.sock, and macOS allows a socket's path
+# 103 bytes: what is left after the store's real path, "/Boxes/" and "/control.sock", at most 63.
+real_store="$(cd "$STORE" && pwd -P)"
+expected=$((103 - ${#real_store} - 20))
+[ "$expected" -gt 63 ] && expected=63
+[ "$expected" -lt 0 ] && expected=0
+check "the short store's, from the length of its path" "$expected" "$(lib agentvm_max_box_name_length < "$OMCTEST_WORK/version.json")"
+check "  which leaves room for the names the tests below use" "yes" "$([ "$expected" -ge 6 ] && echo yes)"
+/bin/mkdir -p "$OMCTEST_WORK/deep-store"
+AGENT_VM_HOME="$OMCTEST_WORK/deep-store" "$real" version --json 2>/dev/null > "$OMCTEST_WORK/version-deep.json"
+check "a store in the scratch folder, whose path leaves no room for a name: 0" "0" \
+    "$(lib agentvm_max_box_name_length < "$OMCTEST_WORK/version-deep.json")"
+
 section "status --json on an empty store"
 real_lib agentvm_status > "$OMCTEST_WORK/status.json"
 check "answers" "0" "$?"
@@ -126,6 +140,11 @@ check "  saying there is no such box" "no box nosuch" "$(lib agentvm_last_error 
 real_lib agentvm_image_rename nosuch other
 check "image rename fails" "1" "$?"
 check "  saying there is no such image" "no image nosuch" "$(lib agentvm_last_error | /usr/bin/cut -d';' -f1)"
+# Capitals since 0.7.54: the library passes them, and agent-vm takes them as names.
+real_lib agentvm_box_rename Nosuch Other
+check "box rename of a name with capitals: no such box, by that name" "1|no box Nosuch" "$?|$(lib agentvm_last_error | /usr/bin/cut -d';' -f1)"
+real_lib agentvm_image_rename Nosuch Other
+check "image rename too" "1|no image Nosuch" "$?|$(lib agentvm_last_error | /usr/bin/cut -d';' -f1)"
 
 section "a job, its record and its log"
 # One job that can only fail: the empty store has no such box, so nothing starts.

@@ -1,7 +1,7 @@
 #!/bin/sh
 # lib.agentvm.rename.sh
 #
-# The Rename window (AgentVM.rename.json, the views 5101-5106): another name for a stopped box or
+# The Rename window (AgentVM.rename.json, the views 5101-5107): another name for a stopped box or
 # for an image, in one field. One window at a time (lib.agentvm.ui.sh, "Box windows", with the
 # kind "rename" and the name "window"), opened by the Rename button beside the name in the main window's box
 # pane or image pane.
@@ -11,7 +11,8 @@
 # what says that the window is an open Rename window.
 #
 # agent-vm is the judge of a rename (`box rename`, `image rename`): the window refuses only what
-# cannot be a name, and shows agent-vm's refusal in its words. Both commands return in a moment,
+# cannot be a name, and a box name longer than the store allows (`maxBoxNameLength` of
+# `version`), and shows agent-vm's refusal in its words. Both commands return in a moment,
 # so neither is a job.
 #
 # AFTER A RENAME nothing of the app may go on naming the old name: the windows opened for it
@@ -31,6 +32,7 @@ RENAME_WHAT_ID=5102
 RENAME_NAME_ID=5103
 RENAME_NOTE_ID=5104
 RENAME_APPLY_ID=5106
+RENAME_RULE_ID=5107
 
 # The box or image a Rename window that opens now is for, as "<app pid> <box|image>:<name>".
 AGENTVM_RENAME_OF_KEY="agentvm_rename_of"
@@ -92,6 +94,27 @@ rename_what_text() {
     printf 'The boxes made from the image and the images built from it follow at once: each names its image by the new name. So does what avm remembers per folder.\n'
 }
 
+# rename_max_box_name_length  ->  the longest box name the store agent-vm uses allows (0 to 63),
+# read now, or nothing when agent-vm did not answer: it then judges the name itself.
+rename_max_box_name_length() {
+    local _json _status
+    _json="$(agentvm_version_info)"
+    _status=$?
+    [ "$_status" -eq 0 ] || return 0
+    printf '%s\n' "$_json" | agentvm_max_box_name_length
+}
+
+# rename_rule_text <box|image> [the longest box name]  ->  the rule under the field. A box's
+# limit is the store's when it is known and leaves room for a name; a store that leaves room for
+# none keeps the line of every name, and rename_blocker says why.
+rename_rule_text() {
+    local _max="63"
+    if [ "$1" = "box" ] && [ -n "${2:-}" ] && [ "$2" != "0" ]; then
+        _max="$2"
+    fi
+    printf 'Letters, digits, ".", "_" and "-", starting with a letter or a digit, at most %s characters.\n' "$_max"
+}
+
 # rename_paint <uuid>  ->  the window's texts, and the field holding the name as it is now.
 rename_paint() {
     local _target="$(rename_target "$1")"
@@ -99,12 +122,17 @@ rename_paint() {
     local _name="${_target#*:}"
     "$dialog" "$1" "$RENAME_HEAD_ID" "Rename $_kind $_name"
     "$dialog" "$1" "$RENAME_WHAT_ID" "$(rename_what_text "$_kind")"
+    local _max=""
+    [ "$_kind" = "box" ] && _max="$(rename_max_box_name_length)"
+    "$dialog" "$1" "$RENAME_RULE_ID" "$(rename_rule_text "$_kind" "$_max")"
     "$dialog" "$1" "$RENAME_NAME_ID" "$_name"
     "$dialog" "$1" "$RENAME_NOTE_ID" ""
 }
 
-# rename_blocker <box|image> <name> <new name>  ->  why the new name cannot be asked of agent-vm,
-# or nothing. Whether the name is taken is agent-vm's to say: its lists are the ones that count.
+# rename_blocker <box|image> <name> <new name> [the longest box name]  ->  why the new name cannot
+# be asked of agent-vm, or nothing. The longest box name is rename_max_box_name_length's; with
+# none, agent-vm judges the length. Whether the name is taken is agent-vm's to say: its lists are
+# the ones that count. A change of case only is a rename like any other.
 rename_blocker() {
     if [ -z "$3" ]; then
         printf 'Give the %s a name.\n' "$1"
@@ -117,6 +145,13 @@ rename_blocker() {
     if ! agentvm_valid_name "$3"; then
         # The rule itself is the line above this one in the window.
         printf '"%s" cannot be a name.\n' "$(ui_one_line "$3")"
+        return 0
+    fi
+    [ "$1" = "box" ] && [ -n "${4:-}" ] || return 0
+    if [ "$4" = "0" ]; then
+        printf 'No box name fits in this store: the path of its folder leaves no room for one in the path of a box'"'"'s control socket, which macOS limits.\n'
+    elif [ "${#3}" -gt "$4" ]; then
+        printf 'A box name can have at most %s characters in this store, and %s has %s: macOS limits the path of a box'"'"'s control socket, which is in the store'"'"'s folder.\n' "$4" "$3" "${#3}"
     fi
     return 0
 }

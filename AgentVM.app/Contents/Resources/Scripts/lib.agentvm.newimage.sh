@@ -970,9 +970,15 @@ newimage_options_text() {
 
 # -- Name and size -------------------------------------------------------------------------------
 
-# newimage_name_taken <uuid> <name>  ->  0 when an image of that name is listed.
+# newimage_taken_name <uuid> <name>  ->  the listed image that has that name, or one that differs
+# from it in case only (agent-vm refuses such a name: main_row_any_case), or nothing.
+newimage_taken_name() {
+    main_row_any_case "$1" build "$2" | /usr/bin/cut -f1
+}
+
+# newimage_name_taken <uuid> <name>  ->  0 when an image of that name is listed, in any case.
 newimage_name_taken() {
-    [ -n "$(newimage_image_row "$1" "$2")" ]
+    [ -n "$(newimage_taken_name "$1" "$2")" ]
 }
 
 # newimage_deletable <uuid> <name>  ->  0 when the image of that name is one this window offers to
@@ -991,21 +997,24 @@ newimage_deletable() {
 # what to do about it. Nothing when no image has the name. An image that is not ready "appears"
 # so: why it is there is not known here (a build that failed, one that was interrupted, or
 # something done outside the app), and the question Delete... asks says what agent-vm reports.
+# The image named is the one listed, which may differ from the name given in case only.
 newimage_taken_text() {
-    local _row="$(newimage_image_row "$1" "$2")"
-    [ -n "$_row" ] || return 0
-    local _state="$(printf '%s\n' "$_row" | /usr/bin/cut -f2)"
+    local _taken="$(newimage_taken_name "$1" "$2")"
+    [ -n "$_taken" ] || return 0
+    local _case=""
+    [ "$_taken" = "$2" ] || _case=" Names that differ in case only cannot both be used."
+    local _state="$(newimage_image_row "$1" "$_taken" | /usr/bin/cut -f2)"
     if [ "$_state" = "ready" ]; then
-        printf 'An image named %s is there already. Give the new image another name.\n' "$2"
-    elif ! newimage_deletable "$1" "$2"; then
-        printf 'An image named %s is there already, and is being built or changed now. Give the new image another name.\n' "$2"
+        printf 'An image named %s is there already. Give the new image another name.%s\n' "$_taken" "$_case"
+    elif ! newimage_deletable "$1" "$_taken"; then
+        printf 'An image named %s is there already, and is being built or changed now. Give the new image another name.%s\n' "$_taken" "$_case"
     else
-        printf 'An image named %s is there already, and appears not ready. Delete it to use the name, or give the new image another name.\n' "$2"
+        printf 'An image named %s is there already, and appears not ready. Delete it to use the name, or give the new image another name.%s\n' "$_taken" "$_case"
     fi
 }
 
 # newimage_suggested_name <uuid>  ->  a free name for the new image: for a copy, the start's name
-# and the tool ticked ("dev-node"; in lower case, and "-tools" when that cannot be a name, as a
+# and the tool ticked ("dev-node"; its case kept, and "-tools" when that cannot be a name, as a
 # recipe of the user's own may be called anything; without the "linux-" that agent-vm's recipes
 # for Linux images begin with, so "deb-node"), "-tools" for several, "-copy" for none; for a
 # build from a Linux system its distribution ("debian"; "linux" when that cannot be a name);
@@ -1019,7 +1028,7 @@ newimage_suggested_name() {
             _count="$(printf '%s\n' "$_ticks" | /usr/bin/awk 'NF { n++ } END { print n + 0 }')"
             case "$_count" in
                 0) _base="$(newimage_start_name "$1")-copy" ;;
-                1) _base="$(newimage_start_name "$1")-$(printf '%s\n' "${_ticks#linux-}" | /usr/bin/tr 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' 'abcdefghijklmnopqrstuvwxyz')"
+                1) _base="$(newimage_start_name "$1")-${_ticks#linux-}"
                    agentvm_valid_name "$_base" || _base="$(newimage_start_name "$1")-tools" ;;
                 *) _base="$(newimage_start_name "$1")-tools" ;;
             esac ;;
@@ -1108,7 +1117,7 @@ newimage_sizes_blocker() {
         return 0
     fi
     if ! agentvm_valid_name "$_name"; then
-        printf '"%s" cannot be a name: lower-case letters, digits, ".", "_" and "-", starting with a letter or a digit, at most 63 characters.\n' "$_name"
+        printf '"%s" cannot be a name: letters, digits, ".", "_" and "-", starting with a letter or a digit, at most 63 characters.\n' "$_name"
         return 0
     fi
     if newimage_name_taken "$1" "$_name"; then
@@ -1423,9 +1432,12 @@ newimage_paint_note() {
     "$dialog" "$1" "$NEW_NOTE_ID" "$2"
     local _name="$(ui_get name "$1")"
     local _offer=""
-    if [ -n "$2" ] && agentvm_valid_name "$_name" && newimage_deletable "$1" "$_name" \
+    # The image offered is the one listed, which may differ from the name kept in case only.
+    local _taken
+    agentvm_valid_name "$_name" && _taken="$(newimage_taken_name "$1" "$_name")"
+    if [ -n "$2" ] && [ -n "$_taken" ] && newimage_deletable "$1" "$_taken" \
         && [ "$2" = "$(newimage_taken_text "$1" "$_name")" ]; then
-        _offer="$_name"
+        _offer="$_taken"
     fi
     [ -z "$_offer" ] && [ -z "$(ui_get taken "$1")" ] && return 0
     newimage_offer_delete "$1" "$_offer"

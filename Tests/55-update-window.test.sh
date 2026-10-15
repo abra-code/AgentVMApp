@@ -191,7 +191,7 @@ omc_control_defaults AgentVM.update
 omc_run AgentVM.update.init
 check "a second window for the same image: the first stays the image's, the second closes" "$APP_PID $UUID|1" \
     "$(registered dev-acp)|$(ui_calls "${OTHER_UUID}${TAB}omc_window${TAB}omc_terminate_cancel")"
-for bad in "" "$APP_PID network:dev-acp" "1 update:dev-acp" "$APP_PID update:../x" "$APP_PID update:Dev" "$APP_PID update:--guest"; do
+for bad in "" "$APP_PID network:dev-acp" "1 update:dev-acp" "$APP_PID update:../x" "$APP_PID update:_dev" "$APP_PID update:--guest"; do
     ui_reset
     : > "$FAKE_AGENTVM_DIR/log"
     "$PB" agentvm_open_request_update set "$bad"

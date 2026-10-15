@@ -249,6 +249,18 @@ main_row() {
     main_rows "$1" "$2" | /usr/bin/awk -F'\t' -v name="$3" '$1 "" == name { print; exit }'
 }
 
+# main_row_any_case <uuid> <cache file> <name>  ->  the cached row whose name is that one, or else
+# the first whose name differs from it in case only ("Work" for "work"), or nothing. For a NEW
+# name: agent-vm refuses one that another box or image has in other case, since the Mac's disk
+# would keep both in one folder. A known name is looked up with main_row, which matches the case.
+# Folded in the C locale, where tolower changes only A to Z: names are ASCII (agentvm_valid_name).
+main_row_any_case() {
+    main_rows "$1" "$2" | LC_ALL=C /usr/bin/awk -F'\t' -v name="$3" '
+        $1 "" == name { print; found = 1; exit }
+        other == "" && tolower($1) == tolower(name) { other = $0 }
+        END { if (!found && other != "") print other }'
+}
+
 # main_face <uuid>  ->  getstarted or status (see the header).
 main_face() {
     local _available="$(main_agentvm_line "$1" 1)"
