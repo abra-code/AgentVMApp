@@ -523,7 +523,14 @@ next
 check "more processors than agent-vm takes" "Processors: a whole number from 1 to 256." "$(note)"
 sizes "work" 4 "8 GB" true
 next
-check "memory that is not a number"  "Memory: a whole number of GB, from 1 to 4096." "$(note)"
+check "memory that is not a number"  "Memory: a whole number of GB, from 3 to 4096." "$(note)"
+sizes "work" 4 2 true
+next
+check "less memory than a macOS box needs" "Memory: a macOS box needs at least 3 GB. With less, macOS does not finish starting." "$(note)"
+sizes "work" 4 3 true
+next
+check "  3 GB is enough"              "Step 4 of 4 - Check|3" "$(ui_value "$NBOX_HEADER_ID")|$(kept memory)"
+back
 sizes "  tools  " 6 12 true
 next
 check "a name with spaces around it, other sizes: step 4" "Step 4 of 4 - Check|4|dddn|tools|6|12|true" \
@@ -794,6 +801,19 @@ check "  and one that answers again is followed" "Step 4 of 4 - Check|" "$(ui_va
 omc_run AgentVM.newbox.close
 
 # -----------------------------------------------------------------------------------------------
+section "a macOS image recorded with less than 3 GB"
+# Since agent-vm 0.7.51 a macOS box needs 3 GB; an image made before may say less.
+fake_reset
+store '(.images[] | select(.name == "dev")).memoryBytes = 2147483648'
+open_new dev
+next
+check "its box is offered 3 GB, the least a macOS box starts with" "Step 3 of 4 - Name and size|3" "$(ui_value "$NBOX_HEADER_ID")|$(ui_value "$NBOX_MEMORY_ID")"
+sizes work 4 3 false
+next
+check "  and agent-vm is asked for it, as it is not the image's" "agent-vm box create work --image dev --memory-gb 3" "$(ui_value "$NBOX_COMMAND_ID")"
+omc_run AgentVM.newbox.close
+
+# -----------------------------------------------------------------------------------------------
 section "a box from a Linux image"
 # The store with both kinds, with both places for a macOS virtual machine taken: a Linux box
 # needs neither.
@@ -824,6 +844,13 @@ check "what its agents need is allowed already, as for a macOS image that holds 
     "Step 2 of 4 - Network|pack:anthropic pack:openai opencode.ai models.opencode.ai pack:npm" "$(ui_value "$NBOX_HEADER_ID")|$(rules)"
 next
 check "its sizes are the Linux image's" "4|4" "$(ui_value "$NBOX_CPUS_ID")|$(ui_value "$NBOX_MEMORY_ID")"
+sizes "penguin" 4 x true
+next
+check "memory for a Linux box: from 1 GB" "Memory: a whole number of GB, from 1 to 4096." "$(note)"
+sizes "penguin" 4 1 true
+next
+check "  1 GB is enough"              "Step 4 of 4 - Check|1" "$(ui_value "$NBOX_HEADER_ID")|$(kept memory)"
+back
 sizes "penguin" 4 4 true
 next
 check "what is made, with the system in short" "Box penguin, a copy of image deb-agents (Debian 13).|4 CPUs, 4 GB of memory." \

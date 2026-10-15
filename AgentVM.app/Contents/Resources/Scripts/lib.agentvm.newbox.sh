@@ -77,6 +77,9 @@ NBOX_STEPS=4
 # What agent-vm accepts for a box.
 NBOX_MAX_CPUS=256
 NBOX_MAX_MEMORY=4096
+# The least memory, in GB, agent-vm gives a macOS box (0.7.51): with less, macOS does not finish
+# starting. A Linux box starts with 1 GB, the least --memory-gb takes.
+NBOX_MIN_MACOS_MEMORY=3
 # The name a first box is offered.
 NBOX_NAME="work"
 # Every value the window keeps on the pasteboard: emptied on opening and on closing.
@@ -503,7 +506,14 @@ newbox_prepare_sizes() {
         ui_set auto_name "$1" "$_suggestion"
     fi
     [ -n "$(ui_get cpus "$1")" ] || ui_set cpus "$1" "$(newbox_field "$1" 5)"
-    [ -n "$(ui_get memory "$1")" ] || ui_set memory "$1" "$(newbox_field "$1" 6)"
+    [ -n "$(ui_get memory "$1")" ] && return 0
+    # An image made before agent-vm refused a macOS box under 3 GB may have less: its box is
+    # offered the least it can start with.
+    local _memory="$(newbox_field "$1" 6)"
+    if ! newbox_linux "$1" && wizard_number "$_memory" && [ "$_memory" -lt "$NBOX_MIN_MACOS_MEMORY" ]; then
+        _memory="$NBOX_MIN_MACOS_MEMORY"
+    fi
+    ui_set memory "$1" "$_memory"
 }
 
 # newbox_take_sizes <uuid>  ->  keeps the name and size fields, and the start checkbox, as the
@@ -567,9 +577,13 @@ newbox_sizes_blocker() {
         printf 'Processors: a whole number from 1 to %s.\n' "$NBOX_MAX_CPUS"
         return 0
     fi
+    local _least="$NBOX_MIN_MACOS_MEMORY"
+    newbox_linux "$1" && _least=1
     local _memory="$(ui_get memory "$1")"
     if ! wizard_number "$_memory" || [ "$_memory" -gt "$NBOX_MAX_MEMORY" ]; then
-        printf 'Memory: a whole number of GB, from 1 to %s.\n' "$NBOX_MAX_MEMORY"
+        printf 'Memory: a whole number of GB, from %s to %s.\n' "$_least" "$NBOX_MAX_MEMORY"
+    elif [ "$_memory" -lt "$_least" ]; then
+        printf 'Memory: a macOS box needs at least %s GB. With less, macOS does not finish starting.\n' "$_least"
     fi
     return 0
 }
