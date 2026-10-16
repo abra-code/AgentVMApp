@@ -848,15 +848,21 @@ newimage_tools_text() {
         "$(newimage_start_text "$1")"
 }
 
-# newimage_recipe_note <uuid> <name>  ->  the note beside a recipe: that the start image has it,
-# or what it needs that is neither ticked nor in the start image.
+# newimage_recipe_note <uuid> <name>  ->  the note beside a recipe: that the start image has it
+# (and, while it is ticked, that it runs again and takes the place of the start's: agent-vm lists
+# each recipe once in an image), or what it needs that is neither ticked nor in the start image.
 newimage_recipe_note() {
     local _need="$(newimage_missing "$1" | /usr/bin/awk -F'\t' -v name="$2" '$1 "" == name { print $2; exit }')"
     if [ -n "$_need" ]; then
         printf 'needs %s\n' "$_need"
         return 0
     fi
-    newimage_listed "$2" "$(newimage_held "$1")" && printf '%s has it\n' "$(newimage_start_name "$1")"
+    newimage_listed "$2" "$(newimage_held "$1")" || return 0
+    if newimage_listed "$2" "$(newimage_ticks "$1")"; then
+        printf 'replaces the one %s has\n' "$(newimage_start_name "$1")"
+    else
+        printf '%s has it\n' "$(newimage_start_name "$1")"
+    fi
     return 0
 }
 

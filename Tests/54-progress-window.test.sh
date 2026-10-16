@@ -225,7 +225,7 @@ check "the steps, oldest first; the last shows how far it is" \
     "Cloning dev-node (macOS 26A428)=done|Booting=done|Recipe: ACP agents (3 steps, 2 checks)=done|[1/3] Homebrew=done|[2/3] Node=done|[3/3] Agents=67%" "$(steps)"
 check "the bar is shown, at the step's fraction" "1|67" "$(shown "$PROGRESS_BAR_ID")|$(ui_value "$PROGRESS_BAR_ID")"
 check "the log: agent-vm's lines and the guest's, the notice of a step that is over where it was written, then the other lines" \
-    "agent-vm-guest 0.7.54 answers over vsock|==> Downloading and installing Homebrew...|==> Installation successful!|Homebrew is already installed in the base image|==> Pouring node--24.9.0.arm64_tahoe.bottle.tar.gz|a line with a tab in it|added 212 packages in 9s|warning: a line that is neither an event nor the error" \
+    "agent-vm-guest 0.7.57 answers over vsock|==> Downloading and installing Homebrew...|==> Installation successful!|Homebrew is already installed in the base image|==> Pouring node--24.9.0.arm64_tahoe.bottle.tar.gz|a line with a tab in it|added 212 packages in 9s|warning: a line that is neither an event nor the error" \
     "$(ui_value "$PROGRESS_LOG_ID" | /usr/bin/paste -sd '|' -)"
 check "a notice of a step the job has left is on the notice line too, said to be from an earlier step" \
     "From an earlier step: Homebrew is already installed in the base image" "$(ui_value "$PROGRESS_NOTICE_ID")"

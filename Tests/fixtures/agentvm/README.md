@@ -201,3 +201,16 @@ What was done to the fixtures:
 
 - `version.json` and `packs.json` captured again from the installed 0.7.54 (`refresh_agentvm_fixtures.sh <agent-vm> version packs`). `maxBoxNameLength` is 31, the value for the capturing account's default store, not for the `/Users/you` the paths were rewritten to: the tests take the number as it is and change it with a jq edit where they need another.
 - The Linux guest daemon's digest in `doctor.json` and the version strings in `status-variety.json` and `job-log-variety.json` by hand.
+
+## The move to agent-vm 0.7.57 (2026-10-16)
+
+What an application sees of agent-vm 0.7.55 to 0.7.57:
+
+- A recipe ticked again for an image built from one that ran a recipe of that name takes the base entry's place in the new image's `recipes` (0.7.56): an image lists each recipe once, in the order a rebuild would run them. Images made before may still list a name twice; nothing rewrites them.
+- `image update --tools --input NAME=PATH` (0.7.57) gives a kept recipe's input a new file: the last kept recipe whose record has that input runs its steps and checks again with it, and the image records the new file in that entry's `inputs` (`name`, `file`, `path`, `bytes`, `sha256`), which `status` and `image info` already list. An input no kept recipe has, `--input` without the tools update, and `--input` with `--if-older-than` are refused before anything boots.
+
+What was done to the fixtures:
+
+- `version.json` and `packs.json` captured again from the installed 0.7.57 (`refresh_agentvm_fixtures.sh <agent-vm> version packs`; versions, paths and digests only).
+- The Linux guest daemon's digest in `doctor.json` and the version strings in `status-variety.json` and `job-log-variety.json` by hand.
+- No fixture has a recipe entry with `inputs`: the images of `status.json` were built before agent-vm listed their recipes (`dev-xcode` records its one recipe under `recipe`, with `inputs` there). The tests give an image `recipes` with `inputs` in JSON of their own.

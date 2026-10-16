@@ -612,6 +612,13 @@ check "the recipes it keeps say so"  "dev-node has it|dev-node has it|" "$(ui_va
 ticked agent-clis python
 omc_run AgentVM.newimage.tick
 check "what they need is in the image: nothing is missing" "python agent-clis|||" "$(kept ticks)|$(ui_value $((R_NOTE + 3)))|$(ui_value $((R_NOTE + 4)))|$(note)"
+ticked agent-clis python node
+omc_run AgentVM.newimage.tick
+check "a recipe the image has, ticked: it runs again in the place of the image's" \
+    "dev-node has it|replaces the one dev-node has" "$(ui_value $((R_NOTE + 1)))|$(ui_value $((R_NOTE + 2)))"
+ticked agent-clis python
+omc_run AgentVM.newimage.tick
+check "  and unticked, the image has it again" "dev-node has it" "$(ui_value $((R_NOTE + 2)))"
 ticked agent-clis python xcode-platforms
 omc_run AgentVM.newimage.tick
 check "a need the image lists no recipe for: a warning, since its list may be short" \

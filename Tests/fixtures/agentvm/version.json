@@ -1,7 +1,7 @@
 {
   "controlProtocol": 1,
   "guestDaemon": {
-    "digest": "d9fda680e18e88a6d5464e132f9f18c76c026a379ba83ad651e7b8f9885c21c0",
+    "digest": "e203f94d513dbcc5e7575cfffd1ada3c459fb69a5dfc5e20c3af0489d83bb836",
     "features": [
       "terminal",
       "prompt-notices",
@@ -11,10 +11,10 @@
       "terminal-pixels",
       "flow-control"
     ],
-    "path": "/Users/you/.local/share/agent-vm/versions/0.7.54/agent-vm-guest",
+    "path": "/Users/you/.local/share/agent-vm/versions/0.7.57/agent-vm-guest",
     "protocol": 1,
     "requirement": "identifier \"com.abracode.agent-vm-guest\" and anchor apple generic and certificate 1[field.1.2.840.113635.100.6.2.6] /* exists */ and certificate leaf[field.1.2.840.113635.100.6.1.13] /* exists */ and certificate leaf[subject.OU] = T9NM2ZLDTY",
-    "version": "0.7.54"
+    "version": "0.7.57"
   },
   "guestProtocol": 1,
   "imageSizes": {
@@ -34,8 +34,8 @@
     }
   },
   "linuxGuestDaemon": {
-    "digest": "055727bf1c7b8e80c8de6cc20c342c4d1b10bb53dda646ba67b79fe0dc9590af",
-    "path": "/Users/you/.local/share/agent-vm/versions/0.7.54/linux/agent-vm-guest"
+    "digest": "b3786facdc910108a1cad6ef9f24dd957d97107449b1e166854b2fce7d7f49b1",
+    "path": "/Users/you/.local/share/agent-vm/versions/0.7.57/linux/agent-vm-guest"
   },
   "linuxReleases": [
     {
@@ -46,6 +46,6 @@
     }
   ],
   "maxBoxNameLength": 31,
-  "path": "/Users/you/.local/share/agent-vm/versions/0.7.54/agent-vm",
-  "version": "0.7.54"
+  "path": "/Users/you/.local/share/agent-vm/versions/0.7.57/agent-vm",
+  "version": "0.7.57"
 }
