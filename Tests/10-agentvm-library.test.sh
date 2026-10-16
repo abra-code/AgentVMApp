@@ -367,6 +367,42 @@ check "the recipes whose files it keeps, in order; one without a name by its fol
 check "being changed"                "true" "$(printf '%s\n' "$row" | col 10)"
 check "what its guest daemon lacks"  "wallpaper,terminal-pixels" "$(printf '%s\n' "$row" | col 11)"
 
+section "input rows: the files of the recipes an image keeps"
+check "no image of the captures keeps a recipe with an input under recipes" "||" \
+    "$(lib agentvm_status_input_rows < "$FIXTURES_AGENTVM/status.json")|$(lib agentvm_status_input_rows < "$FIXTURES_AGENTVM/status-linux.json")|$(lib agentvm_status_input_rows < "$FIXTURES_AGENTVM/status-empty.json")"
+# As agent-vm 0.7.57 lists an image made before 0.7.56 that ran xcode twice: the inherited entry,
+# then its own, each with the file it ran with; and a recipe of its own with two inputs.
+json='{"images": [{"name": "tools", "recipes": [
+    {"name": "homebrew", "folder": "1-homebrew"},
+    {"name": "xcode", "folder": "2-xcode", "inheritedFrom": "base", "inputs": [{"name": "xcode", "file": "Xcode_27.xip", "path": "/Users/you/Downloads/Xcode_27.xip", "bytes": 1, "sha256": "a"}]},
+    {"name": "xcode", "folder": "3-xcode", "inputs": [{"name": "xcode", "file": "Xcode_27.1.xip", "path": "/Volumes/share/Xcode 27.1.xip", "bytes": 2, "sha256": "b"}]},
+    {"name": "mine", "folder": "4-mine", "inputs": [{"name": "kit", "file": "kit.zip"}, {"name": "bad-name", "file": "x"}, {"name": "data", "file": "d\tz.bin", "path": "/d"}]},
+    {"name": "gone", "inputs": [{"name": "old", "file": "old.zip"}]}]},
+  {"name": "plain"}]}'
+rows="$(printf '%s\n' "$json" | lib agentvm_status_input_rows)"
+check "one row per input name, in the order the recipes ran, six fields each" "xcode kit data|6" \
+    "$(printf '%s\n' "$rows" | col 2 | /usr/bin/paste -sd ' ' -)|$(printf '%s\n' "$rows" | field_count)"
+check "  an input kept twice goes to the last recipe that has it, with the file it ran with" \
+    "tools${TAB}xcode${TAB}xcode${TAB}Xcode_27.1.xip${TAB}/Volumes/share/Xcode 27.1.xip${TAB}3" "$(printf '%s\n' "$rows" | /usr/bin/sed -n 1p)"
+check "  a record that does not say where the file was: -; and the place of its recipe among those whose files are kept" "kit.zip${TAB}-${TAB}4" "$(printf '%s\n' "$rows" | /usr/bin/sed -n 2p | col 4-6)"
+check "  a tab in a file's name does not break the row" "mine${TAB}d z.bin" "$(printf '%s\n' "$rows" | /usr/bin/sed -n 3p | col 3-4)"
+check "  a name that cannot be an argument, and a recipe whose files are not kept, give no row" "" \
+    "$(printf '%s\n' "$rows" | /usr/bin/awk -F'\t' '$2 == "bad-name" || $2 == "old"')"
+
+section "recipe rows: the recipes an image keeps"
+rows="$(printf '%s\n' "$json" | lib agentvm_status_recipe_rows)"
+check "one row per recipe whose files are kept, a recipe kept twice twice, in order, five fields each" "1 2 3 4|homebrew xcode xcode mine|5" \
+    "$(printf '%s\n' "$rows" | col 2 | /usr/bin/paste -sd ' ' -)|$(printf '%s\n' "$rows" | col 3 | /usr/bin/paste -sd ' ' -)|$(printf '%s\n' "$rows" | field_count)"
+check "  the inputs each was built with, by the names an argument can take; - for none" "-|xcode|xcode|kit,data" \
+    "$(printf '%s\n' "$rows" | col 5 | /usr/bin/paste -sd '|' -)"
+check "  the places are those of the input rows" "3 4" \
+    "$(printf '%s\n' "$json" | lib agentvm_status_input_rows | col 6 | /usr/bin/sort -u | /usr/bin/paste -sd ' ' -)"
+check "a description, with a tab in it; a recipe without a name by its folder" "tools${TAB}1${TAB}2-node${TAB}Node and npm${TAB}-" \
+    "$(printf '%s\n' '{"images": [{"name": "tools", "recipes": [{"folder": "2-node", "description": "Node\tand npm"}]}]}' | lib agentvm_status_recipe_rows)"
+check "the captures: dev-acp keeps one, with its description" "dev-acp${TAB}1${TAB}dev-acp" \
+    "$(lib agentvm_status_recipe_rows < "$FIXTURES_AGENTVM/status-variety.json" | col 1-3)"
+check "an image that keeps none has no row" "" "$(lib agentvm_status_recipe_rows < "$FIXTURES_AGENTVM/status-empty.json")"
+
 section "the newest macOS row"
 check "what status --check-updates last learned" "27.0.1${TAB}26A434${TAB}2026-10-01T17:30:02Z${TAB}-" \
     "$(lib agentvm_status_newest_row < "$FIXTURES_AGENTVM/status.json")"

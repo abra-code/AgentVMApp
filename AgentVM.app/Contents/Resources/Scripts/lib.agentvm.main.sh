@@ -193,7 +193,7 @@ main_read_doctor() {
 }
 
 # main_read_status <uuid> [check]  ->  0, with the cache files boxes.tsv, images.tsv, updates.tsv,
-# newest.tsv, vm.tsv, kept.tsv, kernels.tsv and jobs.tsv holding the rows lib.agentvm.sh documents; or agent-vm's status,
+# newest.tsv, vm.tsv, kept.tsv, kernels.tsv, recipes.tsv, inputs.tsv and jobs.tsv holding the rows lib.agentvm.sh documents; or agent-vm's status,
 # with the previous rows kept and its message in the cache file "status-error" (empty after a
 # success). "check" has agent-vm ask Apple for the newest macOS first (agentvm_status_checked).
 main_read_status() {
@@ -217,12 +217,14 @@ main_read_status() {
     printf '%s\n' "$_json" | agentvm_status_vm_row | ui_store "$(ui_cache "$1" vm.tsv)"
     printf '%s\n' "$_json" | agentvm_status_kept_logs_row | ui_store "$(ui_cache "$1" kept.tsv)"
     printf '%s\n' "$_json" | agentvm_status_kernel_rows | ui_store "$(ui_cache "$1" kernels.tsv)"
+    printf '%s\n' "$_json" | agentvm_status_recipe_rows | ui_store "$(ui_cache "$1" recipes.tsv)"
+    printf '%s\n' "$_json" | agentvm_status_input_rows | ui_store "$(ui_cache "$1" inputs.tsv)"
     printf '%s\n' "$_json" | agentvm_job_rows | ui_store "$(ui_cache "$1" jobs.tsv)"
     : | ui_store "$_error"
     return 0
 }
 
-# main_rows <uuid> <boxes|images|updates|newest|doctor|vm|kept|kernels|jobs>  ->  that cache file's rows, nothing when it is missing.
+# main_rows <uuid> <boxes|images|updates|newest|doctor|vm|kept|kernels|recipes|inputs|jobs>  ->  that cache file's rows, nothing when it is missing.
 main_rows() {
     local _file="$(ui_cache "$1" "$2.tsv")"
     [ -f "$_file" ] || return 0

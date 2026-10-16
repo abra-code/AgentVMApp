@@ -28,12 +28,11 @@ if [ -z "$(update_image "$window_uuid")" ]; then
     exit 0
 fi
 [ -z "$(update_blocker "$window_uuid" "$image")" ] || exit 0
-choices="$(update_choices "$window_uuid" "$image")"
 [ -n "$(update_flags "$window_uuid" "$image")" ] || exit 0
 # Off from here: a second click while the job starts must not start a second one.
 ui_enable "$window_uuid" "$UPDATE_START_ID" 0
-# Unquoted on purpose: three words, each 0 or 1.
-job="$(agentvm_job_image_update "$image" $choices)"
+# The parts ticked and the input files chosen, as the command line shows them.
+job="$(update_run "$window_uuid" "$image" agentvm_job_image_update)"
 status=$?
 if [ "$status" -ne 0 ]; then
     "$dialog" "$window_uuid" omc_window omc_present_alert "The update of image $image was not started" \

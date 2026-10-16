@@ -261,6 +261,12 @@ check "doctor counts them too, in its running VMs check" "number number" \
 AGENT_VM_HOME="$STORE" "$real" image update nosuch --system --tools --guest --json > /dev/null 2> "$OMCTEST_WORK/update.err"
 check "image update knows --system, --tools and --guest: what it refuses is the image" "1|Error: no image nosuch" \
     "$?|$(/usr/bin/tail -1 "$OMCTEST_WORK/update.err" | /usr/bin/cut -d';' -f1)"
+# The window gives a newer file for a recipe's input as --input <name>=<path>, a path with a space
+# among them.
+: > "$OMCTEST_WORK/Xcode 27.1.xip"
+AGENT_VM_HOME="$STORE" "$real" image update nosuch --tools --input "xcode=$OMCTEST_WORK/Xcode 27.1.xip" --json > /dev/null 2> "$OMCTEST_WORK/update.err"
+check "  and --input with --tools: what it refuses is the image" "1|Error: no image nosuch" \
+    "$?|$(/usr/bin/tail -1 "$OMCTEST_WORK/update.err" | /usr/bin/cut -d';' -f1)"
 
 section "what agent-vm builds from nothing: the Linux systems, and a new image's sizes"
 # The New Image window offers these systems as starts and fills its size fields with these

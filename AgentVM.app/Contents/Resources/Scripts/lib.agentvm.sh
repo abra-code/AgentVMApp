@@ -733,6 +733,40 @@ agentvm_status_update_rows() {
         (.guest // "macos") ] | row'
 }
 
+# agentvm_status_input_rows  <  status JSON  ->  one row per input file of the recipes an image
+# keeps, each input name once, in the order the recipes ran:
+#    1 image   2 the input's name (what `image update --input <name>=<path>` names)
+#    3 the recipe that takes a new file for it: the last kept one whose record has the input (an
+#      image made before agent-vm 0.7.56 may keep a recipe twice, and agent-vm gives the file to
+#      the last)   4 the file it was built with ("Xcode_27.xip")   5 where that file was ("-" when
+#      the record does not say)   6 that recipe's place in the image's list (column 2 of
+#      agentvm_status_recipe_rows)
+# A name that is not letters, digits and "_" is left out: it becomes part of an argument.
+agentvm_status_input_rows() {
+    /usr/bin/jq -r "$agentvm_jq_defs"' .images[] | .name as $image
+        | [(.recipes // []) | map(select(.folder != null)) | to_entries[] | (.key + 1) as $at
+            | .value | (.name // .folder) as $recipe
+            | (.inputs // [])[] | select((.name | type) == "string" and (.name | test("^[A-Za-z_][A-Za-z0-9_]*$")))
+            | {input: .name, recipe: $recipe, file, path, at: $at}]
+        | reduce .[] as $e ({order: [], last: {}};
+            (if .last[$e.input] == null then .order += [$e.input] else . end) | .last[$e.input] = $e)
+        | .last as $last | .order[] | $last[.] | [$image, .input, .recipe, .file, .path, .at] | row'
+}
+
+# agentvm_status_recipe_rows  <  status JSON  ->  one row per recipe an image keeps, in the order
+# they ran (the recipes of column 9 of agentvm_status_update_rows):
+#    1 image   2 its place in that list, from 1   3 its name (its folder's when the record has
+#    none)   4 its description   5 the inputs it was built with (names, comma-joined, as
+#    agentvm_status_input_rows takes them; "-" for none)
+# A recipe kept twice has a row each time.
+agentvm_status_recipe_rows() {
+    /usr/bin/jq -r "$agentvm_jq_defs"' .images[] | .name as $image
+        | (.recipes // []) | map(select(.folder != null)) | to_entries[]
+        | [$image, .key + 1, (.value.name // .value.folder), .value.description,
+            ([(.value.inputs // [])[] | .name | strings | select(test("^[A-Za-z_][A-Za-z0-9_]*$"))]
+                | if length == 0 then null else join(",") end)] | row'
+}
+
 # agentvm_status_kernel_rows  <  status JSON  ->  one row per Linux image and Linux box whose
 # record says what it runs, none for macOS ones:
 #    1 image or box   2 name   3 its kernel ("6.12.111+deb13-arm64-16k"; "-" when its record
@@ -925,21 +959,83 @@ agentvm_image_update_flags() {
     printf '%s\n' "$_flags"
 }
 
-# agentvm_job_image_update <name> <system: 1 or 0> <tools> <guest>  ->  the id of a job that updates
-# the ready image in place: its system (the macOS update Apple offers within its major version,
-# or the package updates of a Linux image's distribution), the update steps of the recipes it
-# keeps, and this agent-vm's guest daemon, each when asked for. The update
-# works on a copy and takes the image's place only when everything succeeded. With no part asked
-# for, nothing is started: agent-vm would take that for all three.
-agentvm_job_image_update() {
+# agentvm_image_update_args <name> <system: 1 or 0> <tools> <guest> [<input>=<path> ...]
+#   ->  the arguments of `image update`, one per line: the name, the options of the parts asked
+# for, and `--input <input>=<path>` for each new input file. One list for the job and for the
+# command line a window shows (agentvm_args_text), so the two cannot differ. 2, with the reason
+# left for agentvm_last_error, when no part is asked for (agent-vm would take that for all three),
+# or an input file is given without the tools update (agent-vm refuses that) or is not a name
+# agent-vm takes followed by an absolute path.
+agentvm_image_update_args() {
     _agentvm_need_name image "$1" || return $?
     local _flags="$(agentvm_image_update_flags "${2:-}" "${3:-}" "${4:-}")"
     if [ -z "$_flags" ]; then
         _agentvm_refuse 2 "Nothing was chosen to update in image $1."
         return 2
     fi
+    local _name="$1" _tools="${3:-}"
+    if [ "$#" -gt 4 ]; then
+        shift 4
+    else
+        set --
+    fi
+    local _input _ok
+    for _input; do
+        _ok=1
+        case "$_input" in
+            [ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz_]*=*) ;;
+            *) _ok=0 ;;
+        esac
+        # agent-vm splits at the first "=": the path is what follows it.
+        case "${_input#*=}" in
+            /*) ;;
+            *) _ok=0 ;;
+        esac
+        case "${_input%%=*}" in
+            *[!ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_]*) _ok=0 ;;
+        esac
+        # Each argument is one line of the list.
+        case "$_input" in
+            *'
+'*) _ok=0 ;;
+        esac
+        if [ "$_ok" -ne 1 ]; then
+            _agentvm_refuse 2 "\"$_input\" is not an input file this app passes to image update."
+            return 2
+        fi
+        if [ "$_tools" != "1" ]; then
+            _agentvm_refuse 2 "A new file for the input ${_input%%=*} is used by the tools update, which is not chosen."
+            return 2
+        fi
+    done
+    printf '%s\n' "$_name"
     # Unquoted on purpose: the flags are this library's own words, one option each.
-    _agentvm_job_start - image update "$1" $_flags
+    printf '%s\n' $_flags
+    for _input; do
+        printf -- '--input\n%s\n' "$_input"
+    done
+}
+
+# agentvm_job_image_update <name> <system: 1 or 0> <tools> <guest> [<input>=<path> ...]  ->  the id
+# of a job that updates the ready image in place: its system (the macOS update Apple offers within
+# its major version, or the package updates of a Linux image's distribution), the update steps of
+# the recipes it keeps, and this agent-vm's guest daemon, each when asked for; with an input file,
+# the recipe that has that input runs its steps and checks again with the new file instead (Xcode
+# from a newer .xip), within the tools update. The update works on a copy and takes the image's
+# place only when everything succeeded. Nothing is started when agentvm_image_update_args refuses.
+agentvm_job_image_update() {
+    local _args _status
+    _args="$(agentvm_image_update_args "$@")"
+    _status=$?
+    [ "$_status" -eq 0 ] || return "$_status"
+    local _line
+    set --
+    while IFS= read -r _line; do
+        set -- "$@" "$_line"
+    done <<EOF
+$_args
+EOF
+    _agentvm_job_start - image update "$@"
 }
 
 # agentvm_job_image_setup <name>  ->  the id of a job that boots the ready image and shows its screen

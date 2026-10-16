@@ -225,6 +225,17 @@
     },
     {
       "NAME": "AgentVM",
+      "COMMAND_ID": "AgentVM.update.input",
+      "EXECUTION_MODE": "exe_script_file",
+      "ACTIVATION_MODE": "act_always",
+      "CHOOSE_FILE_DIALOG": {
+        "MESSAGE": "Choose the new file for the recipe",
+        "BUTTON_PROMPT": "Choose",
+        "DIALOG_IDENTIFIER": "com.abracode.AgentVM.recipeInput"
+      }
+    },
+    {
+      "NAME": "AgentVM",
       "COMMAND_ID": "AgentVM.newimage.recipe",
       "EXECUTION_MODE": "exe_script_file",
       "ACTIVATION_MODE": "act_always",

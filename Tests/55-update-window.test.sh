@@ -21,6 +21,21 @@ import_view_ids "$APP_SCRIPTS/lib.agentvm.main.sh" "$APP_SCRIPTS/lib.agentvm.upd
     printf '55-update-window: no view ids imported from the libraries\n' >&2
     exit 1
 }
+# The views of the recipe slots are a base each plus their slot.
+update_base() {
+    /usr/bin/sed -n "s/^$1=\\([0-9][0-9]*\\)\$/\\1/p" "$APP_SCRIPTS/lib.agentvm.update.sh"
+}
+UPDATE_SLOT_BASE="$(update_base UPDATE_SLOT_BASE)"
+UPDATE_SLOT_NAME_BASE="$(update_base UPDATE_SLOT_NAME_BASE)"
+UPDATE_SLOT_TEXT_BASE="$(update_base UPDATE_SLOT_TEXT_BASE)"
+UPDATE_CHOOSE_BASE="$(update_base UPDATE_CHOOSE_BASE)"
+UPDATE_CLEAR_BASE="$(update_base UPDATE_CLEAR_BASE)"
+[ -n "$UPDATE_SLOT_BASE" ] && [ -n "$UPDATE_SLOT_NAME_BASE" ] && [ -n "$UPDATE_SLOT_TEXT_BASE" ] && [ -n "$UPDATE_CHOOSE_BASE" ] \
+    && [ -n "$UPDATE_CLEAR_BASE" ] && [ -n "$UPDATE_PARTS_ID" ] && [ -n "$UPDATE_RECIPES_ID" ] && [ -n "$UPDATE_NEXT_ID" ] \
+    && [ -n "$UPDATE_BACK_ID" ] && [ -n "$UPDATE_RECIPES_TEXT_ID" ] || {
+    printf '55-update-window: no recipe slot bases or step ids in lib.agentvm.update.sh\n' >&2
+    exit 1
+}
 
 AGENTVM_APP_AGENT_VM="$FAKE_AGENTVM"
 AGENTVM_APP_PS="$TEST_HELPERS/fake_ps.sh"
@@ -166,7 +181,7 @@ check "macOS: what is available, when that was learned, and what it costs" \
     "macOS 27.0.1 (26A434) is available, as Apple said on Sep 29, 2026. Installing it takes about 15 minutes, and about 15 GB of disk that the image then no longer shares with its older boxes. Newer Command Line Tools are installed with it." \
     "$(ui_value "$UPDATE_SYSTEM_TEXT_ID")"
 check "the tools: the recipes it keeps" \
-    "Runs the update steps of the recipes this image keeps (dev-acp), then every recipe's checks. A recipe that came with agent-vm is first replaced by the installed version, when that is newer. Not run since the image was built." \
+    "Runs the update steps of the recipes this image keeps (dev-acp), then every recipe's checks. Not run since the image was built. Continue lists them." \
     "$(ui_value "$UPDATE_TOOLS_TEXT_ID")"
 check "the guest daemon: another version, replaced by this agent-vm's" \
     "The image's agent-vm-guest 0.2.18 is replaced by this agent-vm's, $VERSION. Its Full Disk Access may have to be granted again afterwards; the image's pane says so then. With another part ticked too, the daemon is replaced first, and stays even if that part fails." \
@@ -281,7 +296,7 @@ store "$BEHIND"' | (.images[] | select(.name == "dev")).recipes = [{name: "homeb
 open_update dev
 check "when it was last updated"     "macOS 27.0 (26A428). Last updated on Sep 30, 2026." "$(ui_value "$UPDATE_STATE_ID")"
 check "the recipes in order, and when their update steps last ran" \
-    "Runs the update steps of the recipes this image keeps (homebrew, node), then every recipe's checks. A recipe that came with agent-vm is first replaced by the installed version, when that is newer. Last run on Sep 30, 2026." \
+    "Runs the update steps of the recipes this image keeps (homebrew, node), then every recipe's checks. Last run on Sep 30, 2026. Continue lists them." \
     "$(ui_value "$UPDATE_TOOLS_TEXT_ID")"
 omc_run AgentVM.update.close
 
@@ -618,6 +633,188 @@ check "  three machines run, one of them Linux: both places are taken" \
     "$(ui_value "$UPDATE_NOTE_ID")"
 "$PB" agentvm_window_update_dev-acp set ""
 
+section "two steps: the recipes, and a new file for a recipe's input (agent-vm 0.7.57)"
+# dev-acp keeps an xcode recipe built with Xcode_27.xip, as agent-vm 0.7.57 lists one.
+XCODE='| (.images[] | select(.name == "dev-acp")).recipes += [{name: "xcode", folder: "2-xcode", description: "Xcode from a .xip",
+    inputs: [{name: "xcode", file: "Xcode_27.xip", path: "/Users/you/Downloads/Xcode_27.xip", bytes: 1, sha256: "a"}]}]'
+NEW_XIP="$OMCTEST_WORK/Xcode 27.1.xip"
+: > "$NEW_XIP"
+# choose_input <slot> <path>  ->  the file dialog answered, and that recipe slot's Choose... clicked.
+choose_input() {
+    omc_dialog_answer choose_file "$2"
+    omc_trigger "$((UPDATE_CHOOSE_BASE + $1))"
+    omc_run AgentVM.update.input
+}
+# clear_input <slot>  ->  that recipe slot's Clear clicked.
+clear_input() {
+    omc_trigger "$((UPDATE_CLEAR_BASE + $1))"
+    omc_run AgentVM.update.clear
+}
+# step  ->  what shows the step: the first panel, the second, Continue, Update, and Back on.
+step() {
+    printf '%s|%s|%s|%s|%s\n' "$(ui_visible "$UPDATE_PARTS_ID")" "$(ui_visible "$UPDATE_RECIPES_ID")" \
+        "$(ui_visible "$UPDATE_NEXT_ID")" "$(ui_visible "$UPDATE_START_ID")" "$(enabled "$UPDATE_BACK_ID")"
+}
+# slot <n>  ->  a recipe slot: shown, its name, Choose... shown, Clear shown.
+slot() {
+    printf '%s|%s|%s|%s\n' "$(ui_visible $((UPDATE_SLOT_BASE + $1)))" "$(ui_value $((UPDATE_SLOT_NAME_BASE + $1)))" \
+        "$(ui_visible $((UPDATE_CHOOSE_BASE + $1)))" "$(ui_visible $((UPDATE_CLEAR_BASE + $1)))"
+}
+slot_text() {
+    ui_value $((UPDATE_SLOT_TEXT_BASE + $1)) | /usr/bin/paste -sd '|' -
+}
+chosen_kept() {
+    [ -f "$TMPDIR/AgentVM/$UUID/chosen.tsv" ] && echo yes || echo no
+}
+store "$BEHIND$XCODE"
+open_update dev-acp
+tick true false false
+check "without the tools: one step, with Update" "1|0|0|1|0" "$(step)"
+check "  the tools part names what ticking it adds" \
+    "Runs the update steps of the recipes this image keeps (dev-acp, xcode), then every recipe's checks. Not run since the image was built. Ticking it adds a step that lists them, and takes a newer file for xcode." \
+    "$(ui_value "$UPDATE_TOOLS_TEXT_ID")"
+omc_run AgentVM.update.next
+check "  Continue, however it came to run, has no second step to show" "1|0|0|1|0" "$(step)"
+tick true true false
+check "with the tools: Continue in Update's place" "1|0|1|0|0" "$(step)"
+choose_input 2 "$NEW_XIP"
+check "  a Choose... click that reaches the first step keeps nothing" "no" "$(chosen_kept)"
+omc_run AgentVM.update.next
+check_status "Continue exits cleanly" 0
+check "Continue: the second step, with Back and Update" "0|1|0|1|1" "$(step)"
+check "  the recipes in the order they run, each with its name; the slots past them hidden" "1|dev-acp|0|0 1|xcode|1|0 0" \
+    "$(slot 1) $(slot 2) $(ui_visible $((UPDATE_SLOT_BASE + 3)))"
+check "  a recipe without inputs: its description" \
+    "ACP agents: Claude Agent ACP, Codex ACP and opencode (needs Node: build from an image with Recipes/homebrew-node)" "$(slot_text 1)"
+check "  the recipe with an input: the file it was built with, and its button" \
+    "Xcode from a .xip|Built with Xcode_27.xip. Choose xcode... gives it a newer file, and the recipe then runs again with it.|Choose xcode..." \
+    "$(slot_text 2)|$(ui_prop $((UPDATE_CHOOSE_BASE + 2)) title)"
+check "  which input each slot's button is for" "- xcode - - - - - - - - - -" "$("$PB" "agentvm_inputs_$UUID" get)"
+check "  what the tools update does with them" \
+    "The tools update runs the update steps of these recipes, in this order, then every recipe's checks. A recipe that came with agent-vm is first replaced by the installed version, when that is newer. Not run since the image was built." \
+    "$(ui_value "$UPDATE_RECIPES_TEXT_ID")"
+check "  Update is on, and the command is the step's" "1|agent-vm image update dev-acp --system --tools" "$(enabled "$UPDATE_START_ID")|$(ui_value "$UPDATE_COMMAND_ID")"
+choose_input 2 ""
+check "the dialog canceled: nothing changes" "no|agent-vm image update dev-acp --system --tools" "$(chosen_kept)|$(ui_value "$UPDATE_COMMAND_ID")"
+choose_input 2 "$NEW_XIP"
+check_status "exits cleanly" 0
+check "a file chosen: the command gives it, and Clear is shown" \
+    "agent-vm image update dev-acp --system --tools --input 'xcode=$NEW_XIP'|1|xcode|1|1" "$(ui_value "$UPDATE_COMMAND_ID")|$(slot 2)"
+check "  the slot says the recipe runs again with it" \
+    "Xcode from a .xip|Runs again with Xcode 27.1.xip in place of Xcode_27.xip: what it installs is installed from the new file, instead of by its update steps." \
+    "$(slot_text 2)"
+check "  and the step says what that takes" "Running a recipe again needs about 10 GB free, as a build does." \
+    "$(ui_value "$UPDATE_RECIPES_TEXT_ID" | /usr/bin/tail -1)"
+check "  Update is on"                "1" "$(enabled "$UPDATE_START_ID")"
+choose_input 1 "$NEW_XIP"
+check "a click on a slot without a button keeps nothing more" "1" "$(/usr/bin/awk 'END { print NR }' "$TMPDIR/AgentVM/$UUID/chosen.tsv")"
+clear_input 2
+check "Clear forgets the file: the command, the slot and the button follow" \
+    "agent-vm image update dev-acp --system --tools|1|xcode|1|0|no" "$(ui_value "$UPDATE_COMMAND_ID")|$(slot 2)|$(chosen_kept)"
+choose_input 2 "$NEW_XIP"
+clear_input 1
+check "  a Clear of a slot without an input changes nothing" "yes" "$(chosen_kept)"
+omc_run AgentVM.update.back
+check "Back: the first step, with Continue" "1|0|1|0|0" "$(step)"
+check "  the file stays, and the tools part names it" \
+    "agent-vm image update dev-acp --system --tools --input 'xcode=$NEW_XIP'|Runs the update steps of the recipes this image keeps (dev-acp, xcode), then every recipe's checks. Not run since the image was built. Continue lists them, with the new file for xcode." \
+    "$(ui_value "$UPDATE_COMMAND_ID")|$(ui_value "$UPDATE_TOOLS_TEXT_ID")"
+tick true false false
+check "unticking the tools forgets the file" "agent-vm image update dev-acp --system|no|1|0|0|1|0" \
+    "$(ui_value "$UPDATE_COMMAND_ID")|$(chosen_kept)|$(step)"
+tick true true false
+check "  ticking them again does not bring it back, and stays on the first step" "agent-vm image update dev-acp --system --tools|1|0|1|0|0" \
+    "$(ui_value "$UPDATE_COMMAND_ID")|$(step)"
+omc_run AgentVM.update.next
+choose_input 2 "$NEW_XIP"
+/bin/rm -f "$NEW_XIP"
+omc_run AgentVM.update.activated
+check "a file chosen that is gone: said, and Update is off, on the second step still" "The file chosen for xcode cannot be read any more: $NEW_XIP|0|0|1|0|1|1" \
+    "$(ui_value "$UPDATE_NOTE_ID")|$(enabled "$UPDATE_START_ID")|$(step)"
+: > "$NEW_XIP"
+omc_run AgentVM.update.activated
+: > "$FAKE_AGENTVM_DIR/log"
+chains_reset
+shown_command="$(ui_value "$UPDATE_COMMAND_ID")"
+omc_run AgentVM.update.start
+check "Update: the job gets the file as one argument" \
+    "job start --json -- image update dev-acp --system --tools --input xcode=$NEW_XIP" "$(started)"
+check "  the command line shown is the one run" "agent-vm image update dev-acp --system --tools --input 'xcode=$NEW_XIP'" "$shown_command"
+check "  its progress window is asked for" "1" "$(chain_asked AgentVM.progress)"
+omc_run AgentVM.update.close
+check "closing keeps nothing of the window" "||" "$("$PB" "agentvm_inputs_$UUID" get)|$("$PB" "agentvm_step_$UUID" get)|$(/bin/ls "$TMPDIR/AgentVM/$UUID" 2>/dev/null)"
+/bin/rm -f "$JOBS" "$FAKE_AGENTVM_DIR/job-count"
+"$PB" agentvm_window_update_dev-acp set ""
+"$PB" agentvm_open_request_progress set ""
+open_update dev-acp
+check "opened again: the first step" "1|0" "$(step | /usr/bin/cut -d'|' -f1-2)"
+omc_run AgentVM.update.close
+
+# A recipe kept twice (an image made before agent-vm 0.7.56), and one with two inputs: the slot's
+# button is for its first input, and the second is given in Terminal.
+store "$BEHIND"' | (.images[] | select(.name == "dev-acp")).recipes += [
+    {name: "xcode", folder: "2-xcode", inputs: [{name: "xcode", file: "Xcode_27.xip", path: "/Users/you/Downloads/Xcode_27.xip"}]},
+    {name: "xcode", folder: "3-xcode", inputs: [{name: "xcode", file: "Xcode_27.1.xip", path: "/Users/you/Downloads/Xcode_27.1.xip"}]},
+    {name: "mine", folder: "4-mine", inputs: [{name: "kit", file: "kit.zip"}, {name: "data", file: "data.bin"}]}]'
+open_update dev-acp
+tick false true false
+check "the tools part names only the inputs the next step has a button for" "Continue lists them, and takes a newer file for xcode and kit." \
+    "$(ui_value "$UPDATE_TOOLS_TEXT_ID" | /usr/bin/sed 's/^.*built. //')"
+omc_run AgentVM.update.next
+check "a recipe kept twice: the later one takes the file, and the earlier one says so" \
+    "1|xcode|0|0 1|xcode|1|0|A newer file for xcode goes to the xcode recipe listed after this one.|Built with Xcode_27.1.xip. Choose xcode... gives it a newer file, and the recipe then runs again with it." \
+    "$(slot 2) $(slot 3)|$(slot_text 2)|$(slot_text 3)"
+check "two inputs: the button is for the first, and the second is given in Terminal" \
+    "Choose kit...|Built with kit.zip. Choose kit... gives it a newer file, and the recipe then runs again with it.|Built with data.bin for data. A newer one is given in Terminal: agent-vm image update dev-acp --tools --input data=<path>." \
+    "$(ui_prop $((UPDATE_CHOOSE_BASE + 4)) title)|$(slot_text 4)"
+check "  the inputs of the slots" "- - xcode kit - - - - - - - -" "$("$PB" "agentvm_inputs_$UUID" get)"
+choose_input 3 "$NEW_XIP"
+choose_input 4 "/Users/you/kit.zip"
+check "  each button gives its own input" "--input 'xcode=$NEW_XIP' --input kit=/Users/you/kit.zip" \
+    "$(ui_value "$UPDATE_COMMAND_ID" | /usr/bin/sed "s/^.* --tools //")"
+: > "$OMCTEST_WORK/kit2.zip"
+choose_input 4 "$OMCTEST_WORK/kit2.zip"
+check "  choosing again replaces the file" "--input 'xcode=$NEW_XIP' --input kit=$OMCTEST_WORK/kit2.zip" \
+    "$(ui_value "$UPDATE_COMMAND_ID" | /usr/bin/sed "s/^.* --tools //")"
+check "  the recipe's other input has no file on record: said, and Update is off" \
+    "The recipe mine runs again with its other files too, and the one for data (data.bin) is not where it was. Give all of its files in Terminal: agent-vm image update dev-acp --tools, with --input <name>=<path> for each.|0" \
+    "$(ui_value "$UPDATE_NOTE_ID")|$(enabled "$UPDATE_START_ID")"
+clear_input 4
+check "  Clear of that input: nothing stands in the way" "|1" "$(ui_value "$UPDATE_NOTE_ID")|$(enabled "$UPDATE_START_ID")"
+omc_run AgentVM.update.close
+/bin/rm -f "$OMCTEST_WORK/kit2.zip"
+# The same, with the other input's file still where the record says.
+: > "$OMCTEST_WORK/kit.zip"
+: > "$OMCTEST_WORK/data.bin"
+store "$BEHIND"' | (.images[] | select(.name == "dev-acp")).recipes += [{name: "mine", folder: "2-mine",
+    inputs: [{name: "kit", file: "kit.zip"}, {name: "data", file: "data.bin", path: "'"$OMCTEST_WORK/data.bin"'"}]}]'
+open_update dev-acp
+tick false true false
+omc_run AgentVM.update.next
+choose_input 2 "$OMCTEST_WORK/kit.zip"
+check "the other input's file is where it was: nothing stands in the way" "1" "$(enabled "$UPDATE_START_ID")"
+/bin/rm -f "$OMCTEST_WORK/data.bin"
+omc_run AgentVM.update.activated
+check "  and once it is gone, the note names it" \
+    "The recipe mine runs again with its other files too, and the one for data (data.bin) is not where it was. Give all of its files in Terminal: agent-vm image update dev-acp --tools, with --input <name>=<path> for each.|0" \
+    "$(ui_value "$UPDATE_NOTE_ID")|$(enabled "$UPDATE_START_ID")"
+omc_run AgentVM.update.back
+tick false false false
+check "  unticking the tools clears it" "|0" "$(ui_value "$UPDATE_NOTE_ID")|$(enabled "$UPDATE_START_ID")"
+/bin/rm -f "$OMCTEST_WORK/kit.zip"
+omc_run AgentVM.update.close
+# More recipes than slots: the last ones are named in the step's line.
+store "$BEHIND"' | (.images[] | select(.name == "dev-acp")).recipes += [range(2; 15) | {name: "r\(.)", folder: "\(.)-r\(.)"}]'
+open_update dev-acp
+tick false true false
+omc_run AgentVM.update.next
+check "fourteen recipes: twelve slots, and the last two named in the step's line" \
+    "1|r12|0|0|The image keeps 14 recipes, and the last 2 are not listed: a newer file for one of them is given in Terminal." \
+    "$(slot 12)|$(ui_value "$UPDATE_RECIPES_TEXT_ID" | /usr/bin/tail -1)"
+omc_run AgentVM.update.close
+/bin/rm -f "$NEW_XIP"
+store "$BEHIND"
+
 section "the library: the parts as options, and the job"
 check "all three, in agent-vm's order" "--system --tools --guest" "$(lib agentvm_image_update_flags 1 1 1)"
 check "one"                          "--tools" "$(lib agentvm_image_update_flags 0 1 0)"
@@ -630,6 +827,25 @@ with_fake agentvm_job_image_update dev-acp 0 0 0 >/dev/null
 check "no part asked for: refused, since agent-vm would take that for all three" "2|" "$?|$(fake_log)"
 with_fake agentvm_job_image_update "--macos" 1 1 1 >/dev/null
 check "a name agent-vm would refuse is refused first" "2|" "$?|$(fake_log)"
+check "the arguments with input files, one per line" "dev-acp|--tools|--input|xcode=/a b.xip|--input|kit=/k" \
+    "$(lib agentvm_image_update_args dev-acp 0 1 0 "xcode=/a b.xip" kit=/k | /usr/bin/paste -sd '|' -)"
+check "  as typed in Terminal"       "dev-acp --tools --input 'xcode=/a b.xip'" \
+    "$(lib agentvm_image_update_args dev-acp 0 1 0 "xcode=/a b.xip" | lib agentvm_args_text)"
+id="$(with_fake agentvm_job_image_update dev-acp 1 1 0 "xcode=/a b.xip")"
+check "the job gets each input file as one argument" "0|$FIRST|job start --json -- image update dev-acp --system --tools --input xcode=/a b.xip" \
+    "$?|$id|$(fake_log | /usr/bin/tail -1)"
+for bad in "xcode=a.xip" "xcode=a=/b" "-x=/a" "bad-name=/a" "xcode" "=/a" "x=/a
+b"; do
+    fake_reset
+    with_fake agentvm_job_image_update dev-acp 0 1 0 "$bad" >/dev/null
+    refused=$?
+    check "an input file that is not a name and an absolute path is refused: $(printf "%s" "$bad" | /usr/bin/tr "\n" " ")" "2|" "$refused|$(fake_log)"
+done
+fake_reset
+with_fake agentvm_job_image_update dev-acp 1 0 0 "xcode=/a.xip" >/dev/null
+check "an input file without the tools update is refused, as agent-vm would" "2|" "$?|$(fake_log)"
+check "  with the reason"            "A new file for the input xcode is used by the tools update, which is not chosen." \
+    "$(lib eval 'agentvm_image_update_args dev-acp 1 0 0 xcode=/a.xip >/dev/null; agentvm_last_error 2')"
 with_fake agentvm_status_checked >/dev/null
 check "asking Apple is one status call" "0|status --check-updates --json" "$?|$(fake_log)"
 

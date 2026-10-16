@@ -12,7 +12,10 @@ window_uuid="$OMC_ACTIONUI_WINDOW_UUID"
 [ -n "$window_uuid" ] || exit 0
 ui_set image "$window_uuid" ""
 ui_set choices "$window_uuid" ""
+ui_set inputs "$window_uuid" ""
+ui_set step "$window_uuid" ""
 ui_set busy "$window_uuid" ""
+update_unchoose "$window_uuid"
 image="$(ui_item_request update)"
 if [ -z "$image" ]; then
     "$dialog" "$window_uuid" "$UPDATE_NOTE_ID" "No image was named for this window."

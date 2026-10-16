@@ -25,6 +25,25 @@
 # begins: the job then boots and puts a disk in place twice, and a failure in the rest leaves the
 # image with the new daemon. The window says both, and computes neither.
 #
+# TWO STEPS. The first has the three parts and what an update means afterwards. With the tools
+# ticked its button is Continue, to the second step, which lists the recipes the image keeps
+# (agentvm_status_recipe_rows), in the order they run, each in a slot with its description and
+# its input files; Update is the second step's button then. Without the tools the first step is
+# the only one, and its button is Update. The command line, the note line and the buttons are
+# below both steps. The step shown is the pasteboard value "step" (1 or 2); the second step is
+# shown only while the tools are ticked.
+#
+# A NEW FILE FOR A RECIPE'S INPUT (agent-vm 0.7.57) is part of the tools update: a newer Xcode
+# .xip for the xcode recipe. In the second step, the slot of the recipe that takes a new file for
+# an input (agentvm_status_input_rows: the last kept one that has it) has a Choose <input>...
+# button, and Clear while a file is chosen; the file is kept in the window's cache file
+# chosen.tsv ("<input> TAB <path>"), and the input each slot's button was last laid out for in
+# the pasteboard value "inputs". Unticking the tools forgets every file chosen, so the command
+# shown is always the one Update runs: `image update <name> --tools --input <input>=<path>`. The
+# recipe's steps and checks then run again with the new file instead of its update steps. One
+# button per slot: a recipe with a second input, or a recipe past the slots, is told to give its
+# file in Terminal.
+#
 # THE WINDOW STARTS ONE JOB AND CLOSES. Update starts `image update <name>` with the parts ticked
 # as an agent-vm job, opens that job's progress window (lib.agentvm.progress.sh), has the main
 # window read the jobs again, and closes. The update goes on whether or not the app is open.
@@ -43,6 +62,9 @@ __AGENTVM_APP_UPDATE_LIB=1
 
 UPDATE_TITLE_ID=801
 UPDATE_STATE_ID=802
+# The panels of the two steps.
+UPDATE_PARTS_ID=803
+UPDATE_RECIPES_ID=804
 UPDATE_SYSTEM_ID=811
 UPDATE_SYSTEM_TEXT_ID=812
 UPDATE_CHECK_ID=813
@@ -55,6 +77,16 @@ UPDATE_COMMAND_ID=851
 UPDATE_NOTE_ID=861
 UPDATE_CANCEL_ID=871
 UPDATE_START_ID=872
+UPDATE_BACK_ID=873
+UPDATE_NEXT_ID=874
+UPDATE_RECIPES_TEXT_ID=881
+# Recipe slot n: its rows 900 + n, name 920 + n, text 940 + n, Choose... 960 + n, Clear 980 + n.
+UPDATE_SLOT_BASE=900
+UPDATE_SLOT_NAME_BASE=920
+UPDATE_SLOT_TEXT_BASE=940
+UPDATE_CHOOSE_BASE=960
+UPDATE_CLEAR_BASE=980
+UPDATE_SLOTS=12
 
 # update_image <uuid>  ->  the window's image, or nothing when it has none or the value is not a
 # name (it comes back from a pasteboard).
@@ -152,9 +184,150 @@ update_flags() {
     agentvm_image_update_flags $(update_choices "$1" "$2")
 }
 
+# update_step <uuid> <name>  ->  the step shown: 2 while the window keeps it and the tools are
+# ticked, 1 otherwise.
+update_step() {
+    [ "$(ui_get step "$1")" = "2" ] || { printf '1\n'; return 0; }
+    case "$(update_choices "$1" "$2")" in
+        [01]" 1 "[01]) printf '2\n' ;;
+        *) printf '1\n' ;;
+    esac
+}
+
+# update_recipe_rows <uuid> <name>  ->  the recipes the image keeps, from the cache: place, name,
+# description, inputs (agentvm_status_recipe_rows without the image's name).
+update_recipe_rows() {
+    main_rows "$1" recipes | /usr/bin/awk -F'\t' -v name="$2" '$1 "" == name' | /usr/bin/cut -f2-
+}
+
+# update_input_rows <uuid> <name>  ->  the input files of the recipes the image keeps, from the
+# cache: input, recipe, the file it was built with, where that was, the place of the recipe that
+# takes a new file for it (agentvm_status_input_rows without the image's name).
+update_input_rows() {
+    main_rows "$1" inputs | /usr/bin/awk -F'\t' -v name="$2" '$1 "" == name' | /usr/bin/cut -f2-
+}
+
+# update_chosen <uuid> <input>  ->  the file chosen for that input, or nothing.
+update_chosen() {
+    local _file="$(ui_cache "$1" chosen.tsv)"
+    [ -f "$_file" ] || return 0
+    /usr/bin/awk -F'\t' -v input="$2" '$1 "" == input { print $2; exit }' "$_file"
+}
+
+# update_choose <uuid> <input> <path>  ->  that file is kept for the input, in place of one chosen
+# before.
+update_choose() {
+    local _file="$(ui_cache "$1" chosen.tsv)"
+    local _others=""
+    if [ -f "$_file" ]; then
+        _others="$(/usr/bin/awk -F'\t' -v input="$2" '$1 "" != input' "$_file")"
+    fi
+    { [ -n "$_others" ] && printf '%s\n' "$_others"; printf '%s\t%s\n' "$2" "$3"; } | ui_store "$_file"
+}
+
+# update_unchoose <uuid> [input]  ->  the file chosen for that input is forgotten; without one,
+# every file chosen.
+update_unchoose() {
+    local _file="${TMPDIR:-/tmp}/AgentVM/$1/chosen.tsv"
+    if [ -z "${2:-}" ]; then
+        /bin/rm -f "$_file"
+        return 0
+    fi
+    [ -f "$_file" ] || return 0
+    local _others="$(/usr/bin/awk -F'\t' -v input="$2" '$1 "" != input' "$_file")"
+    if [ -z "$_others" ]; then
+        /bin/rm -f "$_file"
+        return 0
+    fi
+    printf '%s\n' "$_others" | ui_store "$(ui_cache "$1" chosen.tsv)"
+}
+
+# update_inputs_given <uuid> <name>  ->  "<input>=<path>", one per line, for each input of the image
+# a file was chosen for, while the tools are ticked: what Update passes. A file chosen for an
+# input the image no longer has is not passed.
+update_inputs_given() {
+    case "$(update_choices "$1" "$2")" in
+        [01]" 1 "[01]) ;;
+        *) return 0 ;;
+    esac
+    local _input _path
+    # Unquoted on purpose: input names are letters, digits and "_" (agentvm_status_input_rows).
+    for _input in $(update_input_rows "$1" "$2" | /usr/bin/cut -f1); do
+        _path="$(update_chosen "$1" "$_input")"
+        [ -n "$_path" ] && printf '%s=%s\n' "$_input" "$_path"
+    done
+    return 0
+}
+
+# update_run <uuid> <name> <function>  ->  what that function prints, given the image's name, the
+# parts ticked and the input files given: agentvm_image_update_args for the command shown, and
+# agentvm_job_image_update for Update, so the two cannot differ.
+update_run() {
+    local _uuid="$1" _name="$2" _function="$3"
+    local _choices="$(update_choices "$_uuid" "$_name")"
+    local _given="$(update_inputs_given "$_uuid" "$_name")"
+    local _line
+    set --
+    while IFS= read -r _line; do
+        [ -n "$_line" ] && set -- "$@" "$_line"
+    done <<EOF
+$_given
+EOF
+    # Unquoted on purpose: three words, each 0 or 1.
+    "$_function" "$_name" $_choices "$@"
+}
+
+# update_slot_input <uuid> <slot>  ->  the input whose Choose... button that recipe slot showed at
+# the last painting, or nothing.
+update_slot_input() {
+    local _input="$(ui_get inputs "$1" | /usr/bin/awk -v n="$2" '{ print $n }')"
+    case "$_input" in
+        ''|-|*[!ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_]*) return 0 ;;
+    esac
+    printf '%s\n' "$_input"
+}
+
+# update_input_problem <uuid> <name>  ->  why a file chosen cannot be given to agent-vm now, or
+# nothing: it is no longer a file that can be read.
+update_input_problem() {
+    local _given="$(update_inputs_given "$1" "$2")"
+    [ -n "$_given" ] || return 0
+    local _line _path
+    while IFS= read -r _line; do
+        _path="${_line#*=}"
+        if [ ! -f "$_path" ] || [ ! -r "$_path" ]; then
+            printf 'The file chosen for %s cannot be read any more: %s\n' "${_line%%=*}" "$_path"
+            return 0
+        fi
+    done <<EOF
+$_given
+EOF
+    # A recipe run again reads its other inputs from where they were (agent-vm fails the job,
+    # after the image has booted, when one is gone): each must still be there. A second input of a
+    # recipe has no button, so its file is given in Terminal.
+    # Input names are letters, digits and "_", so a list of them on one line is safe for awk -v.
+    local _names="$(printf '%s\n' "$_given" | /usr/bin/sed 's/=.*//' | /usr/bin/tr '\n' ' ')"
+    local _places="$(update_input_rows "$1" "$2" | /usr/bin/awk -F'\t' -v names=" $_names" 'index(names, " " $1 " ") > 0 { print $5 }' | /usr/bin/sort -u)"
+    local _input _recipe _was _where _at
+    while IFS="$ui_tab" read -r _input _recipe _was _where _at; do
+        [ -n "$_input" ] || continue
+        printf '%s\n' "$_places" | /usr/bin/grep -qxF -- "$_at"
+        [ $? -eq 0 ] || continue
+        [ -n "$(update_chosen "$1" "$_input")" ] && continue
+        if [ "$_where" = "-" ] || [ ! -f "$_where" ] || [ ! -r "$_where" ]; then
+            printf 'The recipe %s runs again with its other files too, and the one for %s (%s) is not where it was. Give all of its files in Terminal: agent-vm image update %s --tools, with --input <name>=<path> for each.\n' \
+                "$_recipe" "$_input" "$_was" "$2"
+            return 0
+        fi
+    done <<EOF
+$(update_input_rows "$1" "$2")
+EOF
+    return 0
+}
+
 # update_blocker <uuid> <name>  ->  why the image cannot be updated now, or nothing: agent-vm
-# cannot be used or read, the image is gone or not ready, a job holds it, or another agent-vm
-# command is changing it.
+# cannot be used or read, the image is gone or not ready, a job holds it, another agent-vm
+# command is changing it, or a file chosen for an input cannot be read.
 update_blocker() {
     if [ "$(main_agentvm_line "$1" 1)" != "0" ]; then
         main_agentvm_line "$1" 2
@@ -183,8 +356,9 @@ update_blocker() {
     fi
     if main_image_busy "$1" "$2"; then
         printf 'Another agent-vm command is changing this image now. It can be updated when that ends.\n'
+        return 0
     fi
-    return 0
+    update_input_problem "$1" "$2"
 }
 
 # update_warning <uuid> <name>  ->  what may make an update fail at once, or nothing: the image is
@@ -259,20 +433,93 @@ update_system_text() {
         "$_newest" "$(update_newest "$1" 2)" "${_asked:+, as of $_asked}"
 }
 
-# update_tools_text <uuid> <name>  ->  what a tools update runs in the image. Which kept recipes
-# agent-vm would replace by newer ones of its own is not known beforehand: the job's log names
-# them.
+# update_tools_when <uuid> <name>  ->  when the recipes' update steps last ran.
+update_tools_when() {
+    local _ran="$(ui_date_text "$(update_field "$1" updates "$2" 5)")"
+    if [ -n "$_ran" ]; then
+        printf 'Last run on %s.\n' "$_ran"
+    else
+        printf 'Not run since the image was built.\n'
+    fi
+}
+
+# update_tools_text <uuid> <name>  ->  what a tools update runs in the image, and what the second
+# step adds: the list, and a newer file for an input of one of the recipes.
 update_tools_text() {
     local _recipes="$(update_field "$1" updates "$2" 9)"
     if [ "$_recipes" = "-" ]; then
         printf 'This image keeps no recipes, so it has no tools an update can refresh.\n'
         return 0
     fi
-    local _ran="$(ui_date_text "$(update_field "$1" updates "$2" 5)")"
-    local _when="Not run since the image was built."
-    [ -n "$_ran" ] && _when="Last run on $_ran."
-    printf "Runs the update steps of the recipes this image keeps (%s), then every recipe's checks. A recipe that came with agent-vm is first replaced by the installed version, when that is newer. %s\n" \
-        "$(printf '%s' "$_recipes" | /usr/bin/sed 's/,/, /g')" "$_when"
+    # The inputs the second step has a button for: the first of each recipe in a slot.
+    local _inputs="$(update_input_rows "$1" "$2" | /usr/bin/awk -F'\t' -v slots="$UPDATE_SLOTS" '$5 + 0 <= slots + 0 && !seen[$5]++ { print $1 }')"
+    local _given="$(update_inputs_given "$1" "$2" | /usr/bin/sed 's/=.*//')"
+    local _lists="Ticking it adds a step that lists them"
+    [ "$(update_choices "$1" "$2" | /usr/bin/cut -d' ' -f2)" = "1" ] && _lists="Continue lists them"
+    local _next="$_lists."
+    [ -n "$_inputs" ] && _next="$_lists, and takes a newer file for $(ui_lines_text "$_inputs")."
+    if [ -n "$_given" ]; then
+        _next="$_lists, with the new file for $(ui_lines_text "$_given")."
+        [ "$(printf '%s\n' "$_given" | /usr/bin/awk 'END { print NR }')" -gt 1 ] \
+            && _next="$_lists, with the new files for $(ui_lines_text "$_given")."
+    fi
+    printf "Runs the update steps of the recipes this image keeps (%s), then every recipe's checks. %s %s\n" \
+        "$(printf '%s' "$_recipes" | /usr/bin/sed 's/,/, /g')" "$(update_tools_when "$1" "$2")" "$_next"
+}
+
+# update_recipes_text <uuid> <name>  ->  the second step's line above the recipes: what the tools
+# update does with them and when it last ran, the recipes past the slots, and what running a
+# recipe again takes. Which kept recipes agent-vm would replace by newer ones of its own is not
+# known beforehand: the job's log names them.
+update_recipes_text() {
+    printf "The tools update runs the update steps of these recipes, in this order, then every recipe's checks. A recipe that came with agent-vm is first replaced by the installed version, when that is newer. %s\n" \
+        "$(update_tools_when "$1" "$2")"
+    local _count="$(update_recipe_rows "$1" "$2" | /usr/bin/awk 'END { print NR }')"
+    if [ "$_count" -gt "$UPDATE_SLOTS" ]; then
+        printf 'The image keeps %s recipes, and the last %s are not listed: a newer file for one of them is given in Terminal.\n' \
+            "$_count" "$((_count - UPDATE_SLOTS))"
+    fi
+    [ -n "$(update_inputs_given "$1" "$2")" ] && printf 'Running a recipe again needs about 10 GB free, as a build does.\n'
+    return 0
+}
+
+# update_recipe_text <uuid> <name> <place> <description> <inputs>  ->  a recipe slot's text: the
+# recipe's description, then a line for each input it was built with: the file, and the button
+# that gives it a newer one, or the file chosen, which the recipe runs again with. The slot's
+# button is for its first input (update_paint_recipes), so a second one's file is given in
+# Terminal; an input a later recipe of the image takes the new file for says so.
+update_recipe_text() {
+    [ "$4" != "-" ] && printf '%s\n' "$4"
+    [ "$5" != "-" ] || return 0
+    local _names="$(printf '%s\n' "$5" | /usr/bin/tr ',' '\n')"
+    local _rows="$(update_input_rows "$1" "$2")"
+    local _first=1 _input _recipe _was _where _at _built _chosen
+    while IFS="$ui_tab" read -r _input _recipe _was _where _at; do
+        [ -n "$_input" ] || continue
+        wizard_listed "$_input" "$_names" || continue
+        if [ "$_at" != "$3" ]; then
+            printf 'A newer file for %s goes to the %s recipe listed after this one.\n' "$_input" "$_recipe"
+            continue
+        fi
+        _built="$_was"
+        [ "$_was" = "-" ] && _built="a file not on record"
+        if [ "$_first" -eq 0 ]; then
+            printf 'Built with %s for %s. A newer one is given in Terminal: agent-vm image update %s --tools --input %s=<path>.\n' \
+                "$_built" "$_input" "$2" "$_input"
+            continue
+        fi
+        _first=0
+        _chosen="$(update_chosen "$1" "$_input")"
+        if [ -n "$_chosen" ]; then
+            printf 'Runs again with %s in place of %s: what it installs is installed from the new file, instead of by its update steps.\n' \
+                "${_chosen##*/}" "$_built"
+        else
+            printf 'Built with %s. Choose %s... gives it a newer file, and the recipe then runs again with it.\n' "$_built" "$_input"
+        fi
+    done <<EOF
+$_rows
+EOF
+    return 0
 }
 
 # update_guest_text <uuid> <name>  ->  what replacing the guest daemon would do, and that it is
@@ -322,7 +569,67 @@ update_command_text() {
         printf 'Tick what to update.\n'
         return 0
     fi
-    printf 'agent-vm image update %s %s\n' "$2" "$_flags"
+    printf 'agent-vm image update %s\n' "$(update_run "$1" "$2" agentvm_image_update_args | agentvm_args_text)"
+}
+
+# update_paint_recipes <uuid> <name>  ->  the second step's slots: the recipes the image keeps, one
+# per slot in the order they run, the slots past them hidden. A slot's Choose... button is for the
+# first input its recipe takes a new file for, and Clear is shown while a file is chosen for it;
+# which input each slot's buttons are for is the pasteboard value "inputs", for their handlers.
+update_paint_recipes() {
+    local _rows="$(update_recipe_rows "$1" "$2")"
+    local _inputs="$(update_input_rows "$1" "$2")"
+    local _slots="" _slot=0 _row _place _recipe _text _names _input _chosen
+    while [ "$_slot" -lt "$UPDATE_SLOTS" ]; do
+        _slot=$((_slot + 1))
+        _row="$(printf '%s\n' "$_rows" | /usr/bin/sed -n "${_slot}p")"
+        if [ -z "$_row" ]; then
+            ui_show "$1" "$((UPDATE_SLOT_BASE + _slot))" 0
+            _slots="${_slots:+$_slots }-"
+            continue
+        fi
+        IFS="$ui_tab" read -r _place _recipe _text _names <<ROW
+$_row
+ROW
+        _input="$(printf '%s\n' "$_inputs" | /usr/bin/awk -F'\t' -v at="$_place" '$5 "" == at { print $1; exit }')"
+        "$dialog" "$1" "$((UPDATE_SLOT_NAME_BASE + _slot))" "$_recipe"
+        "$dialog" "$1" "$((UPDATE_SLOT_TEXT_BASE + _slot))" "$(update_recipe_text "$1" "$2" "$_place" "$_text" "$_names")"
+        if [ -n "$_input" ]; then
+            "$dialog" "$1" "$((UPDATE_CHOOSE_BASE + _slot))" omc_set_property title "Choose $_input..."
+            ui_show "$1" "$((UPDATE_CHOOSE_BASE + _slot))" 1
+            _chosen=0
+            [ -n "$(update_chosen "$1" "$_input")" ] && _chosen=1
+            ui_show "$1" "$((UPDATE_CLEAR_BASE + _slot))" "$_chosen"
+        else
+            _input="-"
+            ui_show "$1" "$((UPDATE_CHOOSE_BASE + _slot))" 0
+            ui_show "$1" "$((UPDATE_CLEAR_BASE + _slot))" 0
+        fi
+        ui_show "$1" "$((UPDATE_SLOT_BASE + _slot))" 1
+        _slots="${_slots:+$_slots }$_input"
+    done
+    ui_set inputs "$1" "$_slots"
+}
+
+# update_paint_step <uuid> <step> <tools>  ->  the panel of the step shown, and its buttons: Back
+# on the second step; Continue on the first with the tools ticked (1), Update otherwise.
+update_paint_step() {
+    local _first=0 _second=0
+    if [ "$2" = "2" ]; then
+        _second=1
+    else
+        _first=1
+    fi
+    ui_show "$1" "$UPDATE_PARTS_ID" "$_first"
+    ui_show "$1" "$UPDATE_RECIPES_ID" "$_second"
+    ui_enable "$1" "$UPDATE_BACK_ID" "$_second"
+    if [ "$_first" -eq 1 ] && [ "$3" = "1" ]; then
+        ui_show "$1" "$UPDATE_START_ID" 0
+        ui_show "$1" "$UPDATE_NEXT_ID" 1
+    else
+        ui_show "$1" "$UPDATE_NEXT_ID" 0
+        ui_show "$1" "$UPDATE_START_ID" 1
+    fi
 }
 
 # update_paint <uuid> [toggles]  ->  the window from its cache. "toggles" also sets the three
@@ -335,11 +642,13 @@ update_paint() {
     "$dialog" "$_uuid" "$UPDATE_TITLE_ID" "Update image $_name"
     local _blocker="$(update_blocker "$_uuid" "$_name")"
     if [ -z "$(main_row "$_uuid" images "$_name")" ]; then
-        # Nothing is known of the image: only why.
+        # Nothing is known of the image: only why, on the first step.
+        update_paint_step "$_uuid" 1 0
         "$dialog" "$_uuid" "$UPDATE_NOTE_ID" "$_blocker"
         ui_enable "$_uuid" "$UPDATE_START_ID" 0
         return 0
     fi
+    local _tools="$(update_choices "$_uuid" "$_name" | /usr/bin/cut -d' ' -f2)"
     "$dialog" "$_uuid" "$UPDATE_STATE_ID" "$(update_state_text "$_uuid" "$_name")"
     "$dialog" "$_uuid" "$UPDATE_SYSTEM_TEXT_ID" "$(update_system_text "$_uuid" "$_name")"
     "$dialog" "$_uuid" "$UPDATE_TOOLS_TEXT_ID" "$(update_tools_text "$_uuid" "$_name")"
@@ -351,6 +660,16 @@ update_paint() {
     else
         ui_enable "$_uuid" "$UPDATE_TOOLS_ID" 1
     fi
+    # The second step's slots are filled before it is shown, and only for it. The step is read as
+    # late as can be, and again after the slots: a Back clicked while a repaint (an activation's)
+    # filled them has painted the first step already, and must not be undone by this one.
+    local _step="$(update_step "$_uuid" "$_name")"
+    if [ "$_step" = "2" ]; then
+        "$dialog" "$_uuid" "$UPDATE_RECIPES_TEXT_ID" "$(update_recipes_text "$_uuid" "$_name")"
+        update_paint_recipes "$_uuid" "$_name"
+        _step="$(update_step "$_uuid" "$_name")"
+    fi
+    update_paint_step "$_uuid" "$_step" "$_tools"
     if [ "${2:-}" = "toggles" ]; then
         local _choices="$(update_choices "$_uuid" "$_name")"
         local _id _on

@@ -4,76 +4,1204 @@
     "alignment": "leading",
     "spacing": 14.0,
     "padding": 20.0,
-    "frame": { "minWidth": 600.0, "minHeight": 540.0, "idealWidth": 640.0, "idealHeight": 580.0 }
+    "frame": {
+      "minWidth": 600.0,
+      "minHeight": 540.0,
+      "idealWidth": 640.0,
+      "idealHeight": 580.0
+    }
   },
   "children": [
     {
       "type": "VStack",
-      "properties": { "alignment": "leading", "spacing": 4.0 },
-      "children": [
-        { "type": "Text", "id": 801, "properties": { "text": "", "font": "title2", "textSelection": "enabled" } },
-        { "type": "Text", "id": 802, "properties": { "text": "", "foregroundStyle": "secondary", "textSelection": "enabled" } }
-      ]
-    },
-    { "type": "Divider" },
-    {
-      "type": "VStack",
-      "properties": { "alignment": "leading", "spacing": 4.0 },
+      "properties": {
+        "alignment": "leading",
+        "spacing": 4.0
+      },
       "children": [
         {
-          "type": "HStack",
-          "properties": { "spacing": 8.0 },
+          "type": "Text",
+          "id": 801,
+          "properties": {
+            "text": "",
+            "font": "title2",
+            "textSelection": "enabled"
+          }
+        },
+        {
+          "type": "Text",
+          "id": 802,
+          "properties": {
+            "text": "",
+            "foregroundStyle": "secondary",
+            "textSelection": "enabled"
+          }
+        }
+      ]
+    },
+    {
+      "type": "Divider"
+    },
+    {
+      "type": "ZStack",
+      "properties": {
+        "alignment": "topLeading",
+        "frame": {
+          "maxWidth": "infinity",
+          "maxHeight": "infinity",
+          "alignment": "topLeading"
+        }
+      },
+      "children": [
+        {
+          "type": "VStack",
+          "id": 803,
+          "properties": {
+            "alignment": "leading",
+            "spacing": 14.0,
+            "frame": {
+              "maxWidth": "infinity",
+              "maxHeight": "infinity",
+              "alignment": "topLeading"
+            }
+          },
           "children": [
-            { "type": "Toggle", "id": 811, "properties": { "title": "System", "style": "checkbox", "actionID": "AgentVM.update.choice" } },
-            { "type": "Spacer" },
-            { "type": "Button", "id": 813, "properties": { "title": "Check Now", "controlSize": "small", "actionID": "AgentVM.update.check", "help": "Ask Apple which macOS is the newest. Needs the internet; nothing is installed." } }
+            {
+              "type": "VStack",
+              "properties": {
+                "alignment": "leading",
+                "spacing": 4.0
+              },
+              "children": [
+                {
+                  "type": "HStack",
+                  "properties": {
+                    "spacing": 8.0
+                  },
+                  "children": [
+                    {
+                      "type": "Toggle",
+                      "id": 811,
+                      "properties": {
+                        "title": "System",
+                        "style": "checkbox",
+                        "actionID": "AgentVM.update.choice"
+                      }
+                    },
+                    {
+                      "type": "Spacer"
+                    },
+                    {
+                      "type": "Button",
+                      "id": 813,
+                      "properties": {
+                        "title": "Check Now",
+                        "controlSize": "small",
+                        "actionID": "AgentVM.update.check",
+                        "help": "Ask Apple which macOS is the newest. Needs the internet; nothing is installed."
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "Text",
+                  "id": 812,
+                  "properties": {
+                    "text": "",
+                    "foregroundStyle": "secondary",
+                    "textSelection": "enabled",
+                    "padding": {
+                      "leading": 20
+                    },
+                    "frame": {
+                      "maxWidth": "infinity",
+                      "alignment": "leading"
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "type": "VStack",
+              "properties": {
+                "alignment": "leading",
+                "spacing": 4.0
+              },
+              "children": [
+                {
+                  "type": "Toggle",
+                  "id": 821,
+                  "properties": {
+                    "title": "Tools",
+                    "style": "checkbox",
+                    "actionID": "AgentVM.update.choice"
+                  }
+                },
+                {
+                  "type": "Text",
+                  "id": 822,
+                  "properties": {
+                    "text": "",
+                    "foregroundStyle": "secondary",
+                    "textSelection": "enabled",
+                    "padding": {
+                      "leading": 20
+                    },
+                    "frame": {
+                      "maxWidth": "infinity",
+                      "alignment": "leading"
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "type": "VStack",
+              "properties": {
+                "alignment": "leading",
+                "spacing": 4.0
+              },
+              "children": [
+                {
+                  "type": "Toggle",
+                  "id": 831,
+                  "properties": {
+                    "title": "Guest daemon",
+                    "style": "checkbox",
+                    "actionID": "AgentVM.update.choice"
+                  }
+                },
+                {
+                  "type": "Text",
+                  "id": 832,
+                  "properties": {
+                    "text": "",
+                    "foregroundStyle": "secondary",
+                    "textSelection": "enabled",
+                    "padding": {
+                      "leading": 20
+                    },
+                    "frame": {
+                      "maxWidth": "infinity",
+                      "alignment": "leading"
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "type": "Divider"
+            },
+            {
+              "type": "VStack",
+              "properties": {
+                "alignment": "leading",
+                "spacing": 4.0
+              },
+              "children": [
+                {
+                  "type": "Text",
+                  "properties": {
+                    "text": "Afterwards",
+                    "font": "headline"
+                  }
+                },
+                {
+                  "type": "Text",
+                  "id": 841,
+                  "properties": {
+                    "text": "",
+                    "textSelection": "enabled",
+                    "frame": {
+                      "maxWidth": "infinity",
+                      "alignment": "leading"
+                    }
+                  }
+                }
+              ]
+            }
           ]
         },
-        { "type": "Text", "id": 812, "properties": { "text": "", "foregroundStyle": "secondary", "textSelection": "enabled", "padding": { "leading": 20 }, "frame": { "maxWidth": "infinity", "alignment": "leading" } } }
+        {
+          "type": "VStack",
+          "id": 804,
+          "properties": {
+            "alignment": "leading",
+            "spacing": 8.0,
+            "hidden": true,
+            "frame": {
+              "maxWidth": "infinity",
+              "maxHeight": "infinity",
+              "alignment": "topLeading"
+            }
+          },
+          "children": [
+            {
+              "type": "Text",
+              "properties": {
+                "text": "Recipes",
+                "font": "headline"
+              }
+            },
+            {
+              "type": "Text",
+              "id": 881,
+              "properties": {
+                "text": "",
+                "foregroundStyle": "secondary",
+                "textSelection": "enabled",
+                "frame": {
+                  "maxWidth": "infinity",
+                  "alignment": "leading"
+                }
+              }
+            },
+            {
+              "type": "ScrollView",
+              "properties": {
+                "frame": {
+                  "maxWidth": "infinity",
+                  "maxHeight": "infinity"
+                }
+              },
+              "content": {
+                "type": "VStack",
+                "properties": {
+                  "alignment": "leading",
+                  "spacing": 10,
+                  "padding": {
+                    "top": 4,
+                    "bottom": 4,
+                    "trailing": 4
+                  },
+                  "frame": {
+                    "maxWidth": "infinity",
+                    "alignment": "topLeading"
+                  }
+                },
+                "children": [
+                  {
+                    "type": "VStack",
+                    "id": 901,
+                    "properties": {
+                      "alignment": "leading",
+                      "spacing": 2,
+                      "hidden": true,
+                      "frame": {
+                        "maxWidth": "infinity",
+                        "alignment": "leading"
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "HStack",
+                        "properties": {
+                          "spacing": 8
+                        },
+                        "children": [
+                          {
+                            "type": "Text",
+                            "id": 921,
+                            "properties": {
+                              "text": "",
+                              "font": "headline"
+                            }
+                          },
+                          {
+                            "type": "Spacer"
+                          },
+                          {
+                            "type": "Button",
+                            "id": 981,
+                            "properties": {
+                              "title": "Clear",
+                              "controlSize": "small",
+                              "hidden": true,
+                              "actionID": "AgentVM.update.clear",
+                              "help": "Forget the file chosen: the recipe runs its update steps instead."
+                            }
+                          },
+                          {
+                            "type": "Button",
+                            "id": 961,
+                            "properties": {
+                              "title": "Choose...",
+                              "controlSize": "small",
+                              "hidden": true,
+                              "actionID": "AgentVM.update.input"
+                            }
+                          }
+                        ]
+                      },
+                      {
+                        "type": "Text",
+                        "id": 941,
+                        "properties": {
+                          "text": "",
+                          "foregroundStyle": "secondary",
+                          "textSelection": "enabled",
+                          "frame": {
+                            "maxWidth": "infinity",
+                            "alignment": "leading"
+                          }
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "type": "VStack",
+                    "id": 902,
+                    "properties": {
+                      "alignment": "leading",
+                      "spacing": 2,
+                      "hidden": true,
+                      "frame": {
+                        "maxWidth": "infinity",
+                        "alignment": "leading"
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "HStack",
+                        "properties": {
+                          "spacing": 8
+                        },
+                        "children": [
+                          {
+                            "type": "Text",
+                            "id": 922,
+                            "properties": {
+                              "text": "",
+                              "font": "headline"
+                            }
+                          },
+                          {
+                            "type": "Spacer"
+                          },
+                          {
+                            "type": "Button",
+                            "id": 982,
+                            "properties": {
+                              "title": "Clear",
+                              "controlSize": "small",
+                              "hidden": true,
+                              "actionID": "AgentVM.update.clear",
+                              "help": "Forget the file chosen: the recipe runs its update steps instead."
+                            }
+                          },
+                          {
+                            "type": "Button",
+                            "id": 962,
+                            "properties": {
+                              "title": "Choose...",
+                              "controlSize": "small",
+                              "hidden": true,
+                              "actionID": "AgentVM.update.input"
+                            }
+                          }
+                        ]
+                      },
+                      {
+                        "type": "Text",
+                        "id": 942,
+                        "properties": {
+                          "text": "",
+                          "foregroundStyle": "secondary",
+                          "textSelection": "enabled",
+                          "frame": {
+                            "maxWidth": "infinity",
+                            "alignment": "leading"
+                          }
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "type": "VStack",
+                    "id": 903,
+                    "properties": {
+                      "alignment": "leading",
+                      "spacing": 2,
+                      "hidden": true,
+                      "frame": {
+                        "maxWidth": "infinity",
+                        "alignment": "leading"
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "HStack",
+                        "properties": {
+                          "spacing": 8
+                        },
+                        "children": [
+                          {
+                            "type": "Text",
+                            "id": 923,
+                            "properties": {
+                              "text": "",
+                              "font": "headline"
+                            }
+                          },
+                          {
+                            "type": "Spacer"
+                          },
+                          {
+                            "type": "Button",
+                            "id": 983,
+                            "properties": {
+                              "title": "Clear",
+                              "controlSize": "small",
+                              "hidden": true,
+                              "actionID": "AgentVM.update.clear",
+                              "help": "Forget the file chosen: the recipe runs its update steps instead."
+                            }
+                          },
+                          {
+                            "type": "Button",
+                            "id": 963,
+                            "properties": {
+                              "title": "Choose...",
+                              "controlSize": "small",
+                              "hidden": true,
+                              "actionID": "AgentVM.update.input"
+                            }
+                          }
+                        ]
+                      },
+                      {
+                        "type": "Text",
+                        "id": 943,
+                        "properties": {
+                          "text": "",
+                          "foregroundStyle": "secondary",
+                          "textSelection": "enabled",
+                          "frame": {
+                            "maxWidth": "infinity",
+                            "alignment": "leading"
+                          }
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "type": "VStack",
+                    "id": 904,
+                    "properties": {
+                      "alignment": "leading",
+                      "spacing": 2,
+                      "hidden": true,
+                      "frame": {
+                        "maxWidth": "infinity",
+                        "alignment": "leading"
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "HStack",
+                        "properties": {
+                          "spacing": 8
+                        },
+                        "children": [
+                          {
+                            "type": "Text",
+                            "id": 924,
+                            "properties": {
+                              "text": "",
+                              "font": "headline"
+                            }
+                          },
+                          {
+                            "type": "Spacer"
+                          },
+                          {
+                            "type": "Button",
+                            "id": 984,
+                            "properties": {
+                              "title": "Clear",
+                              "controlSize": "small",
+                              "hidden": true,
+                              "actionID": "AgentVM.update.clear",
+                              "help": "Forget the file chosen: the recipe runs its update steps instead."
+                            }
+                          },
+                          {
+                            "type": "Button",
+                            "id": 964,
+                            "properties": {
+                              "title": "Choose...",
+                              "controlSize": "small",
+                              "hidden": true,
+                              "actionID": "AgentVM.update.input"
+                            }
+                          }
+                        ]
+                      },
+                      {
+                        "type": "Text",
+                        "id": 944,
+                        "properties": {
+                          "text": "",
+                          "foregroundStyle": "secondary",
+                          "textSelection": "enabled",
+                          "frame": {
+                            "maxWidth": "infinity",
+                            "alignment": "leading"
+                          }
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "type": "VStack",
+                    "id": 905,
+                    "properties": {
+                      "alignment": "leading",
+                      "spacing": 2,
+                      "hidden": true,
+                      "frame": {
+                        "maxWidth": "infinity",
+                        "alignment": "leading"
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "HStack",
+                        "properties": {
+                          "spacing": 8
+                        },
+                        "children": [
+                          {
+                            "type": "Text",
+                            "id": 925,
+                            "properties": {
+                              "text": "",
+                              "font": "headline"
+                            }
+                          },
+                          {
+                            "type": "Spacer"
+                          },
+                          {
+                            "type": "Button",
+                            "id": 985,
+                            "properties": {
+                              "title": "Clear",
+                              "controlSize": "small",
+                              "hidden": true,
+                              "actionID": "AgentVM.update.clear",
+                              "help": "Forget the file chosen: the recipe runs its update steps instead."
+                            }
+                          },
+                          {
+                            "type": "Button",
+                            "id": 965,
+                            "properties": {
+                              "title": "Choose...",
+                              "controlSize": "small",
+                              "hidden": true,
+                              "actionID": "AgentVM.update.input"
+                            }
+                          }
+                        ]
+                      },
+                      {
+                        "type": "Text",
+                        "id": 945,
+                        "properties": {
+                          "text": "",
+                          "foregroundStyle": "secondary",
+                          "textSelection": "enabled",
+                          "frame": {
+                            "maxWidth": "infinity",
+                            "alignment": "leading"
+                          }
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "type": "VStack",
+                    "id": 906,
+                    "properties": {
+                      "alignment": "leading",
+                      "spacing": 2,
+                      "hidden": true,
+                      "frame": {
+                        "maxWidth": "infinity",
+                        "alignment": "leading"
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "HStack",
+                        "properties": {
+                          "spacing": 8
+                        },
+                        "children": [
+                          {
+                            "type": "Text",
+                            "id": 926,
+                            "properties": {
+                              "text": "",
+                              "font": "headline"
+                            }
+                          },
+                          {
+                            "type": "Spacer"
+                          },
+                          {
+                            "type": "Button",
+                            "id": 986,
+                            "properties": {
+                              "title": "Clear",
+                              "controlSize": "small",
+                              "hidden": true,
+                              "actionID": "AgentVM.update.clear",
+                              "help": "Forget the file chosen: the recipe runs its update steps instead."
+                            }
+                          },
+                          {
+                            "type": "Button",
+                            "id": 966,
+                            "properties": {
+                              "title": "Choose...",
+                              "controlSize": "small",
+                              "hidden": true,
+                              "actionID": "AgentVM.update.input"
+                            }
+                          }
+                        ]
+                      },
+                      {
+                        "type": "Text",
+                        "id": 946,
+                        "properties": {
+                          "text": "",
+                          "foregroundStyle": "secondary",
+                          "textSelection": "enabled",
+                          "frame": {
+                            "maxWidth": "infinity",
+                            "alignment": "leading"
+                          }
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "type": "VStack",
+                    "id": 907,
+                    "properties": {
+                      "alignment": "leading",
+                      "spacing": 2,
+                      "hidden": true,
+                      "frame": {
+                        "maxWidth": "infinity",
+                        "alignment": "leading"
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "HStack",
+                        "properties": {
+                          "spacing": 8
+                        },
+                        "children": [
+                          {
+                            "type": "Text",
+                            "id": 927,
+                            "properties": {
+                              "text": "",
+                              "font": "headline"
+                            }
+                          },
+                          {
+                            "type": "Spacer"
+                          },
+                          {
+                            "type": "Button",
+                            "id": 987,
+                            "properties": {
+                              "title": "Clear",
+                              "controlSize": "small",
+                              "hidden": true,
+                              "actionID": "AgentVM.update.clear",
+                              "help": "Forget the file chosen: the recipe runs its update steps instead."
+                            }
+                          },
+                          {
+                            "type": "Button",
+                            "id": 967,
+                            "properties": {
+                              "title": "Choose...",
+                              "controlSize": "small",
+                              "hidden": true,
+                              "actionID": "AgentVM.update.input"
+                            }
+                          }
+                        ]
+                      },
+                      {
+                        "type": "Text",
+                        "id": 947,
+                        "properties": {
+                          "text": "",
+                          "foregroundStyle": "secondary",
+                          "textSelection": "enabled",
+                          "frame": {
+                            "maxWidth": "infinity",
+                            "alignment": "leading"
+                          }
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "type": "VStack",
+                    "id": 908,
+                    "properties": {
+                      "alignment": "leading",
+                      "spacing": 2,
+                      "hidden": true,
+                      "frame": {
+                        "maxWidth": "infinity",
+                        "alignment": "leading"
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "HStack",
+                        "properties": {
+                          "spacing": 8
+                        },
+                        "children": [
+                          {
+                            "type": "Text",
+                            "id": 928,
+                            "properties": {
+                              "text": "",
+                              "font": "headline"
+                            }
+                          },
+                          {
+                            "type": "Spacer"
+                          },
+                          {
+                            "type": "Button",
+                            "id": 988,
+                            "properties": {
+                              "title": "Clear",
+                              "controlSize": "small",
+                              "hidden": true,
+                              "actionID": "AgentVM.update.clear",
+                              "help": "Forget the file chosen: the recipe runs its update steps instead."
+                            }
+                          },
+                          {
+                            "type": "Button",
+                            "id": 968,
+                            "properties": {
+                              "title": "Choose...",
+                              "controlSize": "small",
+                              "hidden": true,
+                              "actionID": "AgentVM.update.input"
+                            }
+                          }
+                        ]
+                      },
+                      {
+                        "type": "Text",
+                        "id": 948,
+                        "properties": {
+                          "text": "",
+                          "foregroundStyle": "secondary",
+                          "textSelection": "enabled",
+                          "frame": {
+                            "maxWidth": "infinity",
+                            "alignment": "leading"
+                          }
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "type": "VStack",
+                    "id": 909,
+                    "properties": {
+                      "alignment": "leading",
+                      "spacing": 2,
+                      "hidden": true,
+                      "frame": {
+                        "maxWidth": "infinity",
+                        "alignment": "leading"
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "HStack",
+                        "properties": {
+                          "spacing": 8
+                        },
+                        "children": [
+                          {
+                            "type": "Text",
+                            "id": 929,
+                            "properties": {
+                              "text": "",
+                              "font": "headline"
+                            }
+                          },
+                          {
+                            "type": "Spacer"
+                          },
+                          {
+                            "type": "Button",
+                            "id": 989,
+                            "properties": {
+                              "title": "Clear",
+                              "controlSize": "small",
+                              "hidden": true,
+                              "actionID": "AgentVM.update.clear",
+                              "help": "Forget the file chosen: the recipe runs its update steps instead."
+                            }
+                          },
+                          {
+                            "type": "Button",
+                            "id": 969,
+                            "properties": {
+                              "title": "Choose...",
+                              "controlSize": "small",
+                              "hidden": true,
+                              "actionID": "AgentVM.update.input"
+                            }
+                          }
+                        ]
+                      },
+                      {
+                        "type": "Text",
+                        "id": 949,
+                        "properties": {
+                          "text": "",
+                          "foregroundStyle": "secondary",
+                          "textSelection": "enabled",
+                          "frame": {
+                            "maxWidth": "infinity",
+                            "alignment": "leading"
+                          }
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "type": "VStack",
+                    "id": 910,
+                    "properties": {
+                      "alignment": "leading",
+                      "spacing": 2,
+                      "hidden": true,
+                      "frame": {
+                        "maxWidth": "infinity",
+                        "alignment": "leading"
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "HStack",
+                        "properties": {
+                          "spacing": 8
+                        },
+                        "children": [
+                          {
+                            "type": "Text",
+                            "id": 930,
+                            "properties": {
+                              "text": "",
+                              "font": "headline"
+                            }
+                          },
+                          {
+                            "type": "Spacer"
+                          },
+                          {
+                            "type": "Button",
+                            "id": 990,
+                            "properties": {
+                              "title": "Clear",
+                              "controlSize": "small",
+                              "hidden": true,
+                              "actionID": "AgentVM.update.clear",
+                              "help": "Forget the file chosen: the recipe runs its update steps instead."
+                            }
+                          },
+                          {
+                            "type": "Button",
+                            "id": 970,
+                            "properties": {
+                              "title": "Choose...",
+                              "controlSize": "small",
+                              "hidden": true,
+                              "actionID": "AgentVM.update.input"
+                            }
+                          }
+                        ]
+                      },
+                      {
+                        "type": "Text",
+                        "id": 950,
+                        "properties": {
+                          "text": "",
+                          "foregroundStyle": "secondary",
+                          "textSelection": "enabled",
+                          "frame": {
+                            "maxWidth": "infinity",
+                            "alignment": "leading"
+                          }
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "type": "VStack",
+                    "id": 911,
+                    "properties": {
+                      "alignment": "leading",
+                      "spacing": 2,
+                      "hidden": true,
+                      "frame": {
+                        "maxWidth": "infinity",
+                        "alignment": "leading"
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "HStack",
+                        "properties": {
+                          "spacing": 8
+                        },
+                        "children": [
+                          {
+                            "type": "Text",
+                            "id": 931,
+                            "properties": {
+                              "text": "",
+                              "font": "headline"
+                            }
+                          },
+                          {
+                            "type": "Spacer"
+                          },
+                          {
+                            "type": "Button",
+                            "id": 991,
+                            "properties": {
+                              "title": "Clear",
+                              "controlSize": "small",
+                              "hidden": true,
+                              "actionID": "AgentVM.update.clear",
+                              "help": "Forget the file chosen: the recipe runs its update steps instead."
+                            }
+                          },
+                          {
+                            "type": "Button",
+                            "id": 971,
+                            "properties": {
+                              "title": "Choose...",
+                              "controlSize": "small",
+                              "hidden": true,
+                              "actionID": "AgentVM.update.input"
+                            }
+                          }
+                        ]
+                      },
+                      {
+                        "type": "Text",
+                        "id": 951,
+                        "properties": {
+                          "text": "",
+                          "foregroundStyle": "secondary",
+                          "textSelection": "enabled",
+                          "frame": {
+                            "maxWidth": "infinity",
+                            "alignment": "leading"
+                          }
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "type": "VStack",
+                    "id": 912,
+                    "properties": {
+                      "alignment": "leading",
+                      "spacing": 2,
+                      "hidden": true,
+                      "frame": {
+                        "maxWidth": "infinity",
+                        "alignment": "leading"
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "HStack",
+                        "properties": {
+                          "spacing": 8
+                        },
+                        "children": [
+                          {
+                            "type": "Text",
+                            "id": 932,
+                            "properties": {
+                              "text": "",
+                              "font": "headline"
+                            }
+                          },
+                          {
+                            "type": "Spacer"
+                          },
+                          {
+                            "type": "Button",
+                            "id": 992,
+                            "properties": {
+                              "title": "Clear",
+                              "controlSize": "small",
+                              "hidden": true,
+                              "actionID": "AgentVM.update.clear",
+                              "help": "Forget the file chosen: the recipe runs its update steps instead."
+                            }
+                          },
+                          {
+                            "type": "Button",
+                            "id": 972,
+                            "properties": {
+                              "title": "Choose...",
+                              "controlSize": "small",
+                              "hidden": true,
+                              "actionID": "AgentVM.update.input"
+                            }
+                          }
+                        ]
+                      },
+                      {
+                        "type": "Text",
+                        "id": 952,
+                        "properties": {
+                          "text": "",
+                          "foregroundStyle": "secondary",
+                          "textSelection": "enabled",
+                          "frame": {
+                            "maxWidth": "infinity",
+                            "alignment": "leading"
+                          }
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          ]
+        }
       ]
     },
     {
       "type": "VStack",
-      "properties": { "alignment": "leading", "spacing": 4.0 },
+      "properties": {
+        "alignment": "leading",
+        "spacing": 4.0
+      },
       "children": [
-        { "type": "Toggle", "id": 821, "properties": { "title": "Tools", "style": "checkbox", "actionID": "AgentVM.update.choice" } },
-        { "type": "Text", "id": 822, "properties": { "text": "", "foregroundStyle": "secondary", "textSelection": "enabled", "padding": { "leading": 20 }, "frame": { "maxWidth": "infinity", "alignment": "leading" } } }
+        {
+          "type": "Text",
+          "properties": {
+            "text": "The command",
+            "font": "headline"
+          }
+        },
+        {
+          "type": "Text",
+          "id": 851,
+          "properties": {
+            "text": "",
+            "font": {
+              "size": 12,
+              "design": "monospaced"
+            },
+            "textSelection": "enabled",
+            "frame": {
+              "maxWidth": "infinity",
+              "alignment": "leading"
+            }
+          }
+        }
       ]
     },
     {
-      "type": "VStack",
-      "properties": { "alignment": "leading", "spacing": 4.0 },
-      "children": [
-        { "type": "Toggle", "id": 831, "properties": { "title": "Guest daemon", "style": "checkbox", "actionID": "AgentVM.update.choice" } },
-        { "type": "Text", "id": 832, "properties": { "text": "", "foregroundStyle": "secondary", "textSelection": "enabled", "padding": { "leading": 20 }, "frame": { "maxWidth": "infinity", "alignment": "leading" } } }
-      ]
+      "type": "Text",
+      "id": 861,
+      "properties": {
+        "text": "",
+        "foregroundStyle": "orange",
+        "textSelection": "enabled",
+        "frame": {
+          "maxWidth": "infinity",
+          "alignment": "leading"
+        }
+      }
     },
-    { "type": "Divider" },
-    {
-      "type": "VStack",
-      "properties": { "alignment": "leading", "spacing": 4.0 },
-      "children": [
-        { "type": "Text", "properties": { "text": "Afterwards", "font": "headline" } },
-        { "type": "Text", "id": 841, "properties": { "text": "", "textSelection": "enabled", "frame": { "maxWidth": "infinity", "alignment": "leading" } } }
-      ]
-    },
-    {
-      "type": "VStack",
-      "properties": { "alignment": "leading", "spacing": 4.0 },
-      "children": [
-        { "type": "Text", "properties": { "text": "The command", "font": "headline" } },
-        { "type": "Text", "id": 851, "properties": { "text": "", "font": { "size": 12, "design": "monospaced" }, "textSelection": "enabled", "frame": { "maxWidth": "infinity", "alignment": "leading" } } }
-      ]
-    },
-    { "type": "Text", "id": 861, "properties": { "text": "", "foregroundStyle": "orange", "textSelection": "enabled", "frame": { "maxWidth": "infinity", "alignment": "leading" } } },
-    { "type": "Spacer" },
     {
       "type": "HStack",
-      "properties": { "spacing": 8.0 },
+      "properties": {
+        "spacing": 8.0
+      },
       "children": [
-        { "type": "Spacer" },
-        { "type": "Button", "id": 871, "properties": { "title": "Cancel", "role": "cancel", "actionID": "AgentVM.update.cancel" } },
-        { "type": "Button", "id": 872, "properties": { "title": "Update", "disabled": true, "buttonStyle": "borderedProminent", "actionID": "AgentVM.update.start", "help": "Start the update as a job, and open its progress window. The job goes on when this app is closed." } }
+        {
+          "type": "Spacer"
+        },
+        {
+          "type": "Button",
+          "id": 871,
+          "properties": {
+            "title": "Cancel",
+            "role": "cancel",
+            "actionID": "AgentVM.update.cancel"
+          }
+        },
+        {
+          "type": "Button",
+          "id": 873,
+          "properties": {
+            "title": "Back",
+            "disabled": true,
+            "actionID": "AgentVM.update.back"
+          }
+        },
+        {
+          "type": "ZStack",
+          "children": [
+            {
+              "type": "Button",
+              "id": 874,
+              "properties": {
+                "title": "Continue",
+                "hidden": true,
+                "buttonStyle": "borderedProminent",
+                "actionID": "AgentVM.update.next",
+                "help": "List the recipes the tools update runs, and give a recipe a newer file."
+              }
+            },
+            {
+              "type": "Button",
+              "id": 872,
+              "properties": {
+                "title": "Update",
+                "disabled": true,
+                "buttonStyle": "borderedProminent",
+                "actionID": "AgentVM.update.start",
+                "help": "Start the update as a job, and open its progress window. The job goes on when this app is closed."
+              }
+            }
+          ]
+        }
       ]
     }
   ]
