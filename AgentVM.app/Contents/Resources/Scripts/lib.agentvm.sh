@@ -35,7 +35,7 @@
 [ -n "${__AGENTVM_APP_LIB:-}" ] && return 0
 __AGENTVM_APP_LIB=1
 
-AGENTVM_MIN_VERSION="0.7.57"
+AGENTVM_MIN_VERSION="0.7.59"
 
 # The app's own state, and where agent-vm's installer puts the link to the newest agent-vm.
 agentvm_support_dir="$HOME/Library/Application Support/AgentVM"
@@ -691,7 +691,7 @@ agentvm_avm_file() {
 #    4 macOS (its version)   5 macOSBuild (both "-" for a Linux image)   6 basedOn (the image it
 #    was built from; "-" for one built from a restore file or a Linux cloud image)
 #    7 recipe (the recipe's description)   8 needs (kinds, comma-joined: guest-update,
-#    full-disk-access)   9 guestVersion   10 createdAt   11 path
+#    full-disk-access, rebuild)   9 guestVersion   10 createdAt   11 path
 #   12 guest (macos or linux)   13 system (agent-vm's words for what the image runs)
 #   14 the system in short ("macOS 27.0.1", "Debian 13"), as agentvm_jq_guest_defs forms it
 agentvm_status_image_rows() {
@@ -765,6 +765,19 @@ agentvm_status_recipe_rows() {
         | [$image, .key + 1, (.value.name // .value.folder), .value.description,
             ([(.value.inputs // [])[] | .name | strings | select(test("^[A-Za-z_][A-Za-z0-9_]*$"))]
                 | if length == 0 then null else join(",") end)] | row'
+}
+
+# agentvm_status_rebuild_rows  <  status JSON  ->  one row per image whose base changed since it
+# was made from it (agent-vm 0.7.59, a `rebuild` need):
+#    1 image   2 reason: base-rebuilt (the base was built again, or made again under its name) or
+#      base-recipes-changed (other recipes, another input file or other parameter values than
+#      when the image was made from it); "-" when agent-vm gives none   3 the base image
+# `image rebuild <image>` makes the image again from that base. An image made before 0.7.59 has
+# nothing recorded to compare, and no row.
+agentvm_status_rebuild_rows() {
+    /usr/bin/jq -r "$agentvm_jq_defs"' .images[] | .name as $image
+        | [(.needs // [])[] | select(.kind == "rebuild")] | first // empty
+        | [$image, .reason, .base] | row'
 }
 
 # agentvm_status_kernel_rows  <  status JSON  ->  one row per Linux image and Linux box whose
@@ -1036,6 +1049,16 @@ agentvm_job_image_update() {
 $_args
 EOF
     _agentvm_job_start - image update "$@"
+}
+
+# agentvm_job_image_rebuild <name>  ->  the id of a job that builds the image again from the image it
+# was built from, under the same name: a fresh copy of that base, and the image's own recipes run
+# on it again, with the parameters and input files it recorded. The new image is built beside the
+# old one and takes its place only when it is ready; until then the old one stays ready, and a
+# failure or a stop leaves it as it was. Boxes made from it before keep what they have.
+agentvm_job_image_rebuild() {
+    _agentvm_need_name image "$1" || return $?
+    _agentvm_job_start - image rebuild "$1"
 }
 
 # agentvm_job_image_setup <name>  ->  the id of a job that boots the ready image and shows its screen

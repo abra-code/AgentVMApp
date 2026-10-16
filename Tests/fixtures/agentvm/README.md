@@ -214,3 +214,16 @@ What was done to the fixtures:
 - `version.json` and `packs.json` captured again from the installed 0.7.57 (`refresh_agentvm_fixtures.sh <agent-vm> version packs`; versions, paths and digests only).
 - The Linux guest daemon's digest in `doctor.json` and the version strings in `status-variety.json` and `job-log-variety.json` by hand.
 - No fixture has a recipe entry with `inputs`: the images of `status.json` were built before agent-vm listed their recipes (`dev-xcode` records its one recipe under `recipe`, with `inputs` there). The tests give an image `recipes` with `inputs` in JSON of their own.
+
+## The move to agent-vm 0.7.59 (2026-10-16)
+
+What an application sees of agent-vm 0.7.58 and 0.7.59:
+
+- An image made with `--from` records in `derivedFrom` when its base was built (`baseCreatedAt`) and what the base's recipes installed (`baseRecipes`). When the base was built again since, or has other recipes, input files or parameter values, `needs` has `{"kind": "rebuild", "reason": "base-rebuilt" | "base-recipes-changed", "base": "<name>"}` in `status`, `image list` and `image info`; `image rebuild <image>` clears it. Not for a plain system or tools update of the base, a newer built-in recipe, or a parameter a newer recipe added. An image made before 0.7.59, and one whose base is gone, not ready or itself, has no such need.
+- A rebuild no longer runs a recipe the image inherited when the start has a recipe of that name (0.7.58). Nothing the app reads changed for it.
+
+What was done to the fixtures:
+
+- `version.json` and `packs.json` captured again from the installed 0.7.59 (`refresh_agentvm_fixtures.sh <agent-vm> version packs`; versions, paths and digests only).
+- The Linux guest daemon's digest in `doctor.json` and the version strings in `status-variety.json`, `job-log-variety.json`, the fake installer and the tests by hand.
+- No fixture has a `rebuild` need, `baseCreatedAt` or `baseRecipes`: the images of the captures were made before 0.7.59. The tests add the need with a jq edit. The fake starts `image rebuild` as a job, as agent-vm does.

@@ -117,6 +117,7 @@ MAIN_IMAGE_DERIVE_ID=432
 MAIN_IMAGE_BOX_ID=431
 MAIN_IMAGE_UPDATE_ID=435
 MAIN_IMAGE_VIEW_ID=436
+MAIN_IMAGE_REBUILD_ID=438
 MAIN_IMAGE_ACCESS_ID=462
 MAIN_IMAGE_SYSTEM_ID=451
 MAIN_IMAGE_BASE_ID=452
@@ -193,7 +194,7 @@ main_read_doctor() {
 }
 
 # main_read_status <uuid> [check]  ->  0, with the cache files boxes.tsv, images.tsv, updates.tsv,
-# newest.tsv, vm.tsv, kept.tsv, kernels.tsv, recipes.tsv, inputs.tsv and jobs.tsv holding the rows lib.agentvm.sh documents; or agent-vm's status,
+# newest.tsv, vm.tsv, kept.tsv, kernels.tsv, recipes.tsv, inputs.tsv, rebuilds.tsv and jobs.tsv holding the rows lib.agentvm.sh documents; or agent-vm's status,
 # with the previous rows kept and its message in the cache file "status-error" (empty after a
 # success). "check" has agent-vm ask Apple for the newest macOS first (agentvm_status_checked).
 main_read_status() {
@@ -219,12 +220,13 @@ main_read_status() {
     printf '%s\n' "$_json" | agentvm_status_kernel_rows | ui_store "$(ui_cache "$1" kernels.tsv)"
     printf '%s\n' "$_json" | agentvm_status_recipe_rows | ui_store "$(ui_cache "$1" recipes.tsv)"
     printf '%s\n' "$_json" | agentvm_status_input_rows | ui_store "$(ui_cache "$1" inputs.tsv)"
+    printf '%s\n' "$_json" | agentvm_status_rebuild_rows | ui_store "$(ui_cache "$1" rebuilds.tsv)"
     printf '%s\n' "$_json" | agentvm_job_rows | ui_store "$(ui_cache "$1" jobs.tsv)"
     : | ui_store "$_error"
     return 0
 }
 
-# main_rows <uuid> <boxes|images|updates|newest|doctor|vm|kept|kernels|recipes|inputs|jobs>  ->  that cache file's rows, nothing when it is missing.
+# main_rows <uuid> <boxes|images|updates|newest|doctor|vm|kept|kernels|recipes|inputs|rebuilds|jobs>  ->  that cache file's rows, nothing when it is missing.
 main_rows() {
     local _file="$(ui_cache "$1" "$2.tsv")"
     [ -f "$_file" ] || return 0
@@ -1200,7 +1202,9 @@ EOF
 #     a folder of its own, so a box keeps the version it started with until it is stopped;
 #   - an image that needs a guest update (after an agent-vm update), or for which a newer macOS
 #     is known (agent-vm learned it when it last asked Apple). An image without Full Disk Access
-#     is not marked: its boxes work, and its pane and Get started say that it has none.
+#     is not marked: its boxes work, and its pane and Get started say that it has none;
+#   - an image whose base was built again, or has other tools, since it was made from it (agent-vm's
+#     rebuild need, main_rebuild_lines): Build Again... in its pane makes it again from the base.
 # A failed image is not maintenance: its card is red and says Failed.
 main_maintenance() {
     local _version="$(main_agentvm_line "$1" 2)"
@@ -1221,8 +1225,35 @@ main_maintenance() {
                 (","$8",") ~ /,guest-update,/ {
                     printf "%s\tNeeds a guest update for agent-vm %s.\n", $1, current }'
             main_rows "$1" updates | /usr/bin/awk -F'\t' '
-                $6 != "-" { printf "%s\tmacOS %s is available. Update... installs it, in about 15 minutes.\n", $1, $6 }' ;;
+                $6 != "-" { printf "%s\tmacOS %s is available. Update... installs it, in about 15 minutes.\n", $1, $6 }'
+            main_rebuild_lines "$1" ;;
     esac
+}
+
+# main_rebuild_lines <uuid>  ->  "name<TAB>what to do" for each image whose base changed since it was
+# made from it (agentvm_status_rebuild_rows): the image keeps what it was made with until it is
+# built again from the base, which Build Again... in its pane does. A failed image is left out.
+main_rebuild_lines() {
+    local _name _reason _base
+    main_rows "$1" rebuilds | while IFS="$ui_tab" read -r _name _reason _base; do
+        [ -n "$_name" ] || continue
+        case "$(main_row "$1" images "$_name" | /usr/bin/cut -f2)" in
+            ''|failed) continue ;;
+        esac
+        case "$_reason" in
+            base-rebuilt)
+                printf '%s\tIts base image %s was built again since it was made from it. Build Again... makes it again from it.\n' "$_name" "$_base" ;;
+            base-recipes-changed)
+                printf '%s\tIts base image %s has other tools than when it was made from it. Build Again... makes it again from it.\n' "$_name" "$_base" ;;
+            *)
+                printf '%s\tIts base image %s changed since it was made from it. Build Again... makes it again from it.\n' "$_name" "$_base" ;;
+        esac
+    done
+}
+
+# main_rebuild_needed <uuid> <name>  ->  0 when the image's base changed since it was made from it.
+main_rebuild_needed() {
+    [ -n "$(main_rows "$1" rebuilds | /usr/bin/awk -F'\t' -v name="$2" '$1 "" == name { print "yes"; exit }')" ]
 }
 
 # main_maintenance_text <uuid> <boxes|images> <name>  ->  "Needs maintenance" and one line per
@@ -1983,6 +2014,11 @@ main_paint_image_detail() {
     fi
     ui_show "$_uuid" "$MAIN_IMAGE_ACCESS_ID" "$_mac"
     ui_show "$_uuid" "$MAIN_IMAGE_VIEW_ID" "$_mac"
+    # Build Again, last in the row, is shown only for an image whose base changed since it was made
+    # from it (main_rebuild_lines says why), and is on as Update... is.
+    local _rebuild=0
+    main_rebuild_needed "$_uuid" "$_name" && _rebuild=1
+    ui_show "$_uuid" "$MAIN_IMAGE_REBUILD_ID" "$_rebuild"
     if [ "$(printf '%s\n' "$_row" | /usr/bin/cut -f2)" = "ready" ]; then
         ui_enable "$_uuid" "$MAIN_IMAGE_ACCESS_ID" "$_mac"
         ui_enable "$_uuid" "$MAIN_IMAGE_DERIVE_ID" 1
@@ -2000,6 +2036,7 @@ main_paint_image_detail() {
         ui_enable "$_uuid" "$MAIN_IMAGE_RENAME_ID" 0
         ui_enable "$_uuid" "$MAIN_IMAGE_UPDATE_ID" 0
         ui_enable "$_uuid" "$MAIN_IMAGE_VIEW_ID" 0
+        ui_enable "$_uuid" "$MAIN_IMAGE_REBUILD_ID" 0
         return 0
     fi
     ui_enable "$_uuid" "$MAIN_IMAGE_DELETE_ID" 1
@@ -2010,9 +2047,11 @@ main_paint_image_detail() {
     if [ "$(printf '%s\n' "$_row" | /usr/bin/cut -f2)" = "ready" ]; then
         ui_enable "$_uuid" "$MAIN_IMAGE_UPDATE_ID" 1
         ui_enable "$_uuid" "$MAIN_IMAGE_VIEW_ID" "$_mac"
+        ui_enable "$_uuid" "$MAIN_IMAGE_REBUILD_ID" "$_rebuild"
     else
         ui_enable "$_uuid" "$MAIN_IMAGE_UPDATE_ID" 0
         ui_enable "$_uuid" "$MAIN_IMAGE_VIEW_ID" 0
+        ui_enable "$_uuid" "$MAIN_IMAGE_REBUILD_ID" 0
     fi
 }
 
@@ -2038,6 +2077,53 @@ main_image_view() {
     _status=$?
     if [ "$_status" -ne 0 ]; then
         main_alert "$1" "Image $2 was not opened" "$(agentvm_last_error "$_status")"
+        main_refresh "$1" status
+        return "$_status"
+    fi
+    printf '%s\n' "$_id" >> "$(ui_cache "$1" jobs-watched)"
+    main_refresh "$1" status
+    "$next_command" "$3" "AgentVM.main.poll"
+    return 0
+}
+
+# main_image_rebuildable <uuid> <name>  ->  0 when the image can be built again now, from the rows
+# just read: its base changed since it was made from it, it is ready, no job holds it and no other
+# command changes it (the rule main_paint_image_detail enables Build Again... by).
+main_image_rebuildable() {
+    main_rebuild_needed "$1" "$2" || return 1
+    [ "$(main_row "$1" images "$2" | /usr/bin/cut -f2)" = "ready" ] || return 1
+    [ -z "$(main_job "$1" image "$2")" ] || return 1
+    main_image_busy "$1" "$2" && return 1
+    return 0
+}
+
+# main_image_rebuild_question <uuid> <name>  ->  the confirmation's message: why, what a rebuild
+# does, and what it means for the image's boxes and for the images built from it.
+main_image_rebuild_question() {
+    local _base="$(main_rows "$1" rebuilds | /usr/bin/awk -F'\t' -v name="$2" '$1 "" == name { print $3; exit }')"
+    local _text="A fresh copy of image $_base is made, and the recipes $2 added run on it again, as when it was built. $2 stays as it is, and can be used, until the new one is ready; a failure or Stop leaves it as it was."
+    local _boxes="$(main_rows "$1" boxes | /usr/bin/awk -F'\t' -v name="$2" '$3 "" == name && $13 != "true" { print $1 }')"
+    [ -n "$_boxes" ] && _text="$_text Boxes made from it ($(ui_lines_text "$_boxes")) keep what they have until they are recreated."
+    local _derived="$(main_rows "$1" images | /usr/bin/awk -F'\t' -v name="$2" '$6 "" == name { print $1 }')"
+    [ -n "$_derived" ] && _text="$_text Images built from it ($(ui_lines_text "$_derived")) are not built again with it."
+    # A macOS rebuild boots the new image, and agent-vm waits for no place: said, not refused, as
+    # the update window does, since a place may be free by the click.
+    if [ "$(main_guest "$1" images "$2")" != "linux" ]; then
+        _text="$_text$(main_macos_vms "$1" | /usr/bin/awk -F'\t' '$1 >= $2 {
+            printf " No virtual machine slot is free now (%s of %s macOS virtual machines running), and the rebuild needs one: it fails at once until a macOS box or build stops.", $1, $2 }')"
+    fi
+    printf '%s\n' "$_text"
+}
+
+# main_image_rebuild <uuid> <name> <command guid>  ->  `image rebuild` started as a job, the lists
+# read again, and the poll loop begun anew, as main_image_view does. The card and the pane follow
+# the job ("Building again"), and its end is said. agent-vm's refusal is shown in its words.
+main_image_rebuild() {
+    local _id _status
+    _id="$(agentvm_job_image_rebuild "$2")"
+    _status=$?
+    if [ "$_status" -ne 0 ]; then
+        main_alert "$1" "Image $2 was not built again" "$(agentvm_last_error "$_status")"
         main_refresh "$1" status
         return "$_status"
     fi

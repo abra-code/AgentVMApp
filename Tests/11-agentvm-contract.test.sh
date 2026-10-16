@@ -326,6 +326,11 @@ AGENT_VM_HOME="$STORE" "$real" image create copy-of-nosuch --from nosuch --json 
 check "image create --from with no recipe is refused for the image it does not have, not for the missing recipe" "1|1|0" \
     "$?|$(/usr/bin/grep -c 'no image nosuch' "$OMCTEST_WORK/copy.err")|$(/usr/bin/grep -c -i 'recipe' "$OMCTEST_WORK/copy.err")"
 check "  and it left no image behind" "" "$(real_lib agentvm_status | lib agentvm_status_image_rows)"
+# Build Again... starts `image rebuild <name>` as a job (0.7.59): agent-vm takes that command for
+# a job. Of an image the store does not have, it can only fail.
+id="$(real_lib agentvm_job_image_rebuild nosuch)"
+check "job start takes image rebuild, and answers with a job id" "0|0" "$?|$(lib agentvm_valid_job_id "$id"; echo $?)"
+check "an empty store has no image that needs a rebuild" "" "$(real_lib agentvm_status | lib agentvm_status_rebuild_rows)"
 
 /bin/rm -rf "$SHORT_DIR"
 omctest_end

@@ -101,6 +101,24 @@ check "the newer macOS, and nothing about Full Disk Access" \
     "Needs maintenance|macOS 27.0.1 is available. Update... installs it, in about 15 minutes." \
     "$(image_lines dev-node)"
 
+section "an image whose base changed since it was made from it (agent-vm 0.7.59)"
+open_with "$QUIET"' | (.images[] | select(.name == "dev-acp")).needs = [{kind: "rebuild", reason: "base-rebuilt", base: "dev-node"}]
+    | (.images[] | select(.name == "dev-agents")).needs = [{kind: "rebuild", reason: "base-recipes-changed", base: "dev-node"}]
+    | (.images[] | select(.name == "dev-xcode-ios")).needs = [{kind: "rebuild", reason: "something-new", base: "dev-xcode"}]
+    | (.images[] | select(.name == "latest-test")).needs = [{kind: "rebuild", reason: "base-rebuilt", base: "dev"}]
+    | (.images[] | select(.name == "latest-test")) |= (.state = "failed" | .failure = "the build was canceled")'
+check "marked"                       "$MARK|$MARK" "$(image_mark dev-acp)|$(image_mark dev-agents)"
+check "  its base was built again"   \
+    "Needs maintenance|Its base image dev-node was built again since it was made from it. Build Again... makes it again from it." \
+    "$(image_lines dev-acp)"
+check "  its base has other tools"   \
+    "Needs maintenance|Its base image dev-node has other tools than when it was made from it. Build Again... makes it again from it." \
+    "$(image_lines dev-agents)"
+check "  a reason this app has no words for" \
+    "Needs maintenance|Its base image dev-xcode changed since it was made from it. Build Again... makes it again from it." \
+    "$(image_lines dev-xcode-ios)"
+check "a failed image is still not marked" "$TAB|" "$(image_mark latest-test)|$(image_lines latest-test)"
+
 section "nothing needs doing"
 open_with "$QUIET"
 check "no card is marked" "" "$( { ui_rows "$MAIN_IMAGES_ID"; ui_rows "$MAIN_BOXES_ID"; } | col 4-5 | /usr/bin/tr -d "$TAB\n")"
@@ -112,7 +130,7 @@ check "marked" "$MARK" "$(box_mark s3)"
 check "which image, and what recreating costs" \
     "Needs maintenance|Made before image dev-acp was updated. Recreate it to get the update; what was changed inside it is lost." \
     "$(box_lines s3)"
-open_with "$QUIET"' | (.boxes[] | select(.box.name == "s3")).needs = [{kind: "recreate", reason: "guest-update", guestVersion: "0.7.57"}]'
+open_with "$QUIET"' | (.boxes[] | select(.box.name == "s3")).needs = [{kind: "recreate", reason: "guest-update", guestVersion: "0.7.59"}]'
 check "the image's guest daemon was replaced" \
     "Needs maintenance|Made before image dev-acp had its guest daemon replaced. Recreate it to get the new one; what was changed inside it is lost." \
     "$(box_lines s3)"

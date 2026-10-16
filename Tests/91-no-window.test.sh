@@ -98,8 +98,8 @@ state() {
     printf 'jobs: %s\n' "$(/usr/bin/jq -r 'map(.id + " " + .state) | join(",")' "$FAKE_AGENTVM_DIR/jobs.json" 2>/dev/null)"
     printf 'no-window job keys: %s|%s|%s|%s\n' "$("$PB" agentvm_job_ get)" "$("$PB" agentvm_job_stop_ get)" "$("$PB" agentvm_choices_ get)" \
         "$("$PB" agentvm_access_offer_ get)"
-    printf 'no-window keys: %s|%s|%s|%s|%s|%s|%s\n' "$("$PB" agentvm_poll_ get)" "$("$PB" agentvm_box_ get)" "$("$PB" agentvm_image_ get)" \
-        "$("$PB" agentvm_box_delete_ get)" "$("$PB" agentvm_box_recreate_ get)" "$("$PB" agentvm_image_delete_ get)" "$("$PB" agentvm_net_allow_ get)"
+    printf 'no-window keys: %s|%s|%s|%s|%s|%s|%s|%s\n' "$("$PB" agentvm_poll_ get)" "$("$PB" agentvm_box_ get)" "$("$PB" agentvm_image_ get)" \
+        "$("$PB" agentvm_box_delete_ get)" "$("$PB" agentvm_box_recreate_ get)" "$("$PB" agentvm_image_delete_ get)" "$("$PB" agentvm_image_rebuild_ get)" "$("$PB" agentvm_net_allow_ get)"
     printf 'pasteboards: %s\n' "$(/usr/bin/find "$OMCTEST_UI/pb" -type f -exec /usr/bin/cksum {} + | /usr/bin/sort | /usr/bin/cksum)"
     printf 'cache files: %s\n' "$(/usr/bin/find "$TMPDIR/AgentVM" -type f -exec /usr/bin/cksum {} + | /usr/bin/sort | /usr/bin/cksum)"
 }
@@ -138,8 +138,10 @@ without_window() {
 }
 
 fake_reset
-# The stopped box is made a kept one, so that Recreate can be asked about it too.
-/usr/bin/jq '(.boxes[] | select(.box.name == "cadabra-spike")).box.disposable = false' \
+# The stopped box is made a kept one, so that Recreate can be asked about it too, and dev-agents's
+# base changed, so that it can be built again (Build Again...).
+/usr/bin/jq '(.boxes[] | select(.box.name == "cadabra-spike")).box.disposable = false
+    | (.images[] | select(.name == "dev-agents")).needs += [{kind: "rebuild", reason: "base-rebuilt", base: "dev-node"}]' \
     "$FIXTURES_AGENTVM/status-variety.json" > "$FAKE_AGENTVM_DIR/status.json"
 : > "$FAKE_OPEN_LOG"
 : > "$FAKE_SLEEP_LOG"
@@ -172,6 +174,7 @@ in_window "$MAIN_UUID"
 "$PB" agentvm_box_delete_ set "$BOX"
 "$PB" agentvm_box_recreate_ set "$BOX"
 "$PB" agentvm_image_delete_ set dev-xcode
+"$PB" agentvm_image_rebuild_ set dev-agents
 "$PB" agentvm_net_allow_ set "$BOX registry.yarnpkg.com"
 /bin/cp "$TMPDIR/AgentVM/$MAIN_UUID"/* "$TMPDIR/AgentVM/$NET_UUID"/* "$TMPDIR/AgentVM/"
 # With folders that exist, so that Show in Finder would have something to show (the fixture's
@@ -252,6 +255,9 @@ check "a box could be made under the empty uuid: a New Box window, a ready image
 check "Delete was asked about the box"   "$BOX" "$("$PB" "agentvm_box_delete_$MAIN_UUID" get)"
 check "Recreate too"                     "$BOX" "$("$PB" "agentvm_box_recreate_$MAIN_UUID" get)"
 check "an image's Delete was asked"      "dev-xcode" "$("$PB" "agentvm_image_delete_$MAIN_UUID" get)"
+check "a rebuild could start under the empty uuid: an image whose base changed, ready, asked about" \
+    "dev-agents${TAB}base-rebuilt${TAB}dev-node|ready|dev-agents" \
+    "$(/bin/cat "$TMPDIR/AgentVM/rebuilds.tsv")|$(/usr/bin/awk -F'\t' '$1 == "dev-agents"' "$TMPDIR/AgentVM/images.tsv" | /usr/bin/cut -f2)|$("$PB" agentvm_image_rebuild_ get)"
 check "the network window has an edit waiting" "yes" \
     "$([ -n "$(/usr/bin/diff "$TMPDIR/AgentVM/$NET_UUID/net-$BOX.current" "$TMPDIR/AgentVM/$NET_UUID/net-$BOX.desired")" ] && echo yes)"
 check "the same state is planted under the empty uuid" "$BOX|yes|yes" \
