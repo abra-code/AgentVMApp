@@ -400,7 +400,17 @@ check "  a box with the Mac's page size says that, whatever its image has" \
 poll 1
 check "its space, and its own"  "2.0 GB; 160 MB its own (what Delete frees)" "$(ui_value "$MAIN_BOX_SPACE_ID")"
 check "it runs: Stop and Connect are on" "1 1" "$(enabled "$MAIN_BOX_STOP_ID") $(enabled "$MAIN_BOX_SHELL_ID")"
-check "  and View is not shown: a Linux box has no screen" "0" "$(ui_visible "$MAIN_BOX_VIEW_ID")"
+check "  and View is shown and on: the box has a screen, from its image's desktop" "1 1" "$(visible "$MAIN_BOX_VIEW_ID") $(enabled "$MAIN_BOX_VIEW_ID")"
+alerts_reset
+: > "$FAKE_AGENTVM_DIR/log"
+omc_run AgentVM.main.box.view
+check "  View asks for its screen, with keys and clicks reaching the box" "box view lb --interactive --json|" "$(fake_log)|$(ui_alert_title)"
+# The box's own screen counts, not its image's: a box made before its image got the desktop has
+# none until it is recreated.
+/usr/bin/jq '(.boxes[] | select(.box.name == "lb")).box |= del(.screen) | (.images[] | select(.name == "deb")).screen = true' \
+    "$FAKE_AGENTVM_DIR/status.json" > "$FAKE_AGENTVM_DIR/status.new" && /bin/mv "$FAKE_AGENTVM_DIR/status.new" "$FAKE_AGENTVM_DIR/status.json"
+poll 1
+check "a Linux box with no screen of its own, whose image has one now: View is not shown" "0" "$(ui_visible "$MAIN_BOX_VIEW_ID")"
 # The handler behind View, run as a URL naming it would run it: the button is not shown.
 alerts_reset
 : > "$FAKE_AGENTVM_DIR/log"

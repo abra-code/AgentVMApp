@@ -358,14 +358,18 @@ agentvm_status_checked() {
 #      was built under the name)
 #   23 guest (macos or linux)   24 system (agent-vm's words for what the box runs)
 #   25 the system in short ("macOS 27.0.1", "Debian 13"), as agentvm_jq_guest_defs forms it
+#   26 screen: true for a Linux box that has one (its image's recipes gave it a desktop), "-"
+#      for any other. A macOS box has none recorded, and always has a screen. The box's own,
+#      copied from its image when it was made or recreated: a box made before its image got a
+#      desktop has none until it is recreated.
 # The running fields (6-12) are "-" for a stopped box.
 agentvm_status_box_rows() {
     /usr/bin/jq -r "$agentvm_jq_defs$agentvm_jq_guest_defs$agentvm_jq_box_defs"' .boxes[] | box_cells | row'
 }
 
-# The 25 cells of a box, as agentvm_status_box_rows documents them: `status` gives each box's
+# The 26 cells of a box, as agentvm_status_box_rows documents them: `status` gives each box's
 # entry, and `box info` the same entry with its sizes. The guest is said beside the box's record
-# for every box, and inside it for a Linux box only.
+# for every box, and inside it for a Linux box only. agent-vm writes screen as true or not at all.
 agentvm_jq_box_defs='
 def box_cells: [
     .box.name, .state, .box.image,
@@ -377,7 +381,8 @@ def box_cells: [
     (.needs // [] | map(.kind) | if length == 0 then null else join(",") end),
     .box.macOSVersion, .box.macOSBuild, .box.createdAt,
     ([.needs // [] | .[] | select(.kind == "recreate") | .reason][0]) ]
-    + guest_cells(.guest // .box.guest; .system; .box.macOSVersion; .box.linux);'
+    + guest_cells(.guest // .box.guest; .system; .box.macOSVersion; .box.linux)
+    + [if .box.screen == true then true else null end];'
 
 # agentvm_box_info <name>  ->  `agent-vm box info <name> --json`: the box's status entry and what
 # its disk takes, which agent-vm measures (about 0.1 s), so it is read for the selected box only
@@ -388,8 +393,8 @@ agentvm_box_info() {
     agentvm_json box info "$1"
 }
 
-# agentvm_box_info_row  <  box info JSON  ->  one row: fields 1-25 as agentvm_status_box_rows,
-# then 26 bytes (the space the box takes)   27 unsharedBytes (what deleting it frees).
+# agentvm_box_info_row  <  box info JSON  ->  one row: fields 1-26 as agentvm_status_box_rows,
+# then 27 bytes (the space the box takes)   28 unsharedBytes (what deleting it frees).
 agentvm_box_info_row() {
     /usr/bin/jq -r "$agentvm_jq_defs$agentvm_jq_guest_defs$agentvm_jq_box_defs"' box_cells + [.diskUsage.bytes, .diskUsage.unsharedBytes] | row'
 }
@@ -397,7 +402,8 @@ agentvm_box_info_row() {
 # agentvm_box_view <name> [interactive]  ->  0 once the box's supervisor shows its screen in a
 # window, or brought that window to the front. The supervisor owns the window, so the command
 # returns at once and closing the window leaves the box running. "interactive" lets keys and
-# clicks reach the box. agent-vm refuses a box that does not run.
+# clicks reach the box. agent-vm refuses a box that does not run, and a Linux box that has no
+# screen (column 26 of agentvm_status_box_rows).
 agentvm_box_view() {
     _agentvm_need_name box "$1" || return $?
     if [ "${2:-}" = "interactive" ]; then
@@ -694,19 +700,24 @@ agentvm_avm_file() {
 #    full-disk-access, rebuild)   9 guestVersion   10 createdAt   11 path
 #   12 guest (macos or linux)   13 system (agent-vm's words for what the image runs)
 #   14 the system in short ("macOS 27.0.1", "Debian 13"), as agentvm_jq_guest_defs forms it
+#   15 screen: true for a Linux image that has one (a recipe gave it a desktop, and the images
+#      made from it have it too), "-" for any other. A macOS image has none recorded, and always
+#      has a screen.
 agentvm_status_image_rows() {
     /usr/bin/jq -r "$agentvm_jq_defs$agentvm_jq_guest_defs$agentvm_jq_image_defs"' .images[] | image_cells | row'
 }
 
-# The first fourteen cells of an image, as agentvm_status_image_rows documents them: `status`
-# gives each image's record, and `image info` the same record with its sizes.
+# The first fifteen cells of an image, as agentvm_status_image_rows documents them: `status`
+# gives each image's record, and `image info` the same record with its sizes. agent-vm writes
+# screen as true or not at all.
 agentvm_jq_image_defs='
 def image_cells: [
     .name, .state, .failure, .macOSVersion, .macOSBuild, .derivedFrom.image,
     .recipe.description,
     (.needs // [] | map(.kind) | if length == 0 then null else join(",") end),
     .guestVersion, .createdAt, .path ]
-    + guest_cells(.guest; .system; .macOSVersion; .linux);'
+    + guest_cells(.guest; .system; .macOSVersion; .linux)
+    + [if .screen == true then true else null end];'
 
 # agentvm_status_update_rows  <  status JSON  ->  one row per image, with what an update of it
 # would find and what the last one did:
@@ -813,18 +824,18 @@ agentvm_image_info() {
     agentvm_json image info "$1"
 }
 
-# agentvm_image_info_row  <  image info JSON  ->  one row: fields 1-14 as agentvm_status_image_rows,
+# agentvm_image_info_row  <  image info JSON  ->  one row: fields 1-15 as agentvm_status_image_rows,
 # then
-#   15 guestFeatures (comma-joined)   16 missing (the features a guest update would add,
-#      comma-joined)   17 provisionSeconds (how long the build took, whole seconds)
-#   18 fullDiskAccess (granted, not-granted, or "-" when it was never checked, and for a Linux
-#      image, which has none to grant)   19 its checkedAt
-#   20 commandLineTools   21 cpus   22 memoryGB   23 bytes (the space the image takes)
-#   24 unsharedBytes (what deleting it frees)   25 addedBytes (what it added over the image it
+#   16 guestFeatures (comma-joined)   17 missing (the features a guest update would add,
+#      comma-joined)   18 provisionSeconds (how long the build took, whole seconds)
+#   19 fullDiskAccess (granted, not-granted, or "-" when it was never checked, and for a Linux
+#      image, which has none to grant)   20 its checkedAt
+#   21 commandLineTools   22 cpus   23 memoryGB   24 bytes (the space the image takes)
+#   25 unsharedBytes (what deleting it frees)   26 addedBytes (what it added over the image it
 #      was built from)
-#   26 the Linux release it was first built from ("debian-13"; "-" for a macOS image, and for a
-#      cloud image file of the user's own)   27 that cloud image's build, when the distribution
-#      names one   28 its file's name
+#   27 the Linux release it was first built from ("debian-13"; "-" for a macOS image, and for a
+#      cloud image file of the user's own)   28 that cloud image's build, when the distribution
+#      names one   29 its file's name
 agentvm_image_info_row() {
     /usr/bin/jq -r "$agentvm_jq_defs$agentvm_jq_guest_defs$agentvm_jq_image_defs"' image_cells + [
         (.guestFeatures // [] | if length == 0 then null else join(",") end),
@@ -1073,9 +1084,12 @@ agentvm_job_image_setup() {
 
 # agentvm_job_image_view <name>  ->  the id of a job that boots the ready image and shows its screen
 # in a window of agent-vm's, with nothing opened in it, for whatever a person wants to set up there
-# by hand. Closing that window shuts the image down, keeps what was done, and ends the job;
-# agent-vm then records whether the guest daemon has Full Disk Access, as after a setup. The job
-# needs a login session on this Mac and one virtual machine slot.
+# by hand. Closing that window shuts the image down, keeps what was done, and ends the job. The
+# job needs a login session on this Mac. For a macOS image, it takes one virtual machine slot,
+# and agent-vm then records whether the guest daemon has Full Disk Access, as after a setup. A
+# Linux image is shown only when it has a screen (column 15 of agentvm_status_image_rows); before
+# it shuts down, agent-vm checks it again as its build sealed it, and marks an image that no
+# longer passes failed, with a notice, and the job fails then.
 agentvm_job_image_view() {
     _agentvm_need_name image "$1" || return $?
     _agentvm_job_start - image view "$1"
@@ -1221,6 +1235,8 @@ agentvm_image_size_rows() {
 #   12 the descriptions of the recipes it keeps, joined with "; " ("-" for none)
 #   13 guest (macos or linux)   14 the system in short ("macOS 27.0.1", "Debian 13"), as
 #      agentvm_jq_guest_defs forms it
+#   15 screen: true for a Linux image that has one, which the boxes made from it get, "-" for
+#      any other (column 15 of agentvm_status_image_rows)
 # Field 4 is "-" for a Linux image.
 agentvm_status_build_rows() {
     /usr/bin/jq -r "$agentvm_jq_defs$agentvm_jq_guest_defs"' .images[] | [
@@ -1231,7 +1247,8 @@ agentvm_status_build_rows() {
         .recipe.description, .commandLineTools,
         (.needs // [] | map(.kind) | if length == 0 then null else join(",") end),
         ([.recipes // [] | .[] | .description // empty] | if length == 0 then null else join("; ") end) ]
-        + (guest_cells(.guest; .system; .macOSVersion; .linux) | [.[0], .[2]]) | row'
+        + (guest_cells(.guest; .system; .macOSVersion; .linux) | [.[0], .[2]])
+        + [if .screen == true then true else null end] | row'
 }
 
 # agentvm_ipsw_list  ->  `agent-vm image fetch-ipsw --list --json`: the macOS restore files

@@ -357,7 +357,7 @@ check "its tools: its recipes and the compiler" \
 check "the guest daemon and its three features" "0.7.9: terminal, time-sync, terminal-pixels" "$(ui_value "$MAIN_IMAGE_GUEST_ID")"
 check "Full Disk Access is not needed, and the row says so" "not needed: a Linux image has no such permission" "$(ui_value "$MAIN_IMAGE_FDA_ID")"
 check "  with no Set Up..., shown or on" "0 0" "$(ui_visible "$MAIN_IMAGE_ACCESS_ID") $(enabled "$MAIN_IMAGE_ACCESS_ID")"
-check "no View either: a Linux image has no screen" "0 0" "$(ui_visible "$MAIN_IMAGE_VIEW_ID") $(enabled "$MAIN_IMAGE_VIEW_ID")"
+check "View is shown and on: a recipe gave this one a desktop" "1 1" "$(visible "$MAIN_IMAGE_VIEW_ID") $(enabled "$MAIN_IMAGE_VIEW_ID")"
 check "Update, New Image and New Box are on" "1 1 1" \
     "$(enabled "$MAIN_IMAGE_UPDATE_ID") $(enabled "$MAIN_IMAGE_DERIVE_ID") $(enabled "$MAIN_IMAGE_BOX_ID")"
 check "processors and memory"   "4 CPUs, 4 GB" "$(ui_value "$MAIN_IMAGE_HARDWARE_ID")"
@@ -371,6 +371,7 @@ check "  Full Disk Access is not needed whether it was measured or not" \
     "not needed: a Linux image has no such permission" "$(ui_value "$MAIN_IMAGE_FDA_ID")"
 check "  the box made from it, and the image built from it" "lb (stopped)|deb-agents" \
     "$(ui_value "$MAIN_IMAGE_BOXES_ID")|$(ui_value "$MAIN_IMAGE_DERIVED_ID")"
+check "  no View: it has no desktop, so no screen" "0 0" "$(ui_visible "$MAIN_IMAGE_VIEW_ID") $(enabled "$MAIN_IMAGE_VIEW_ID")"
 /usr/bin/jq '.name = "deb" | del(.derivedFrom) | del(.recipe) | del(.recipes) | del(.addedOverBase) | .base.build = "20261001-2618"' \
     "$FIXTURES_AGENTVM/image-info-linux.json" > "$FAKE_AGENTVM_DIR/image-info-deb.json"
 select_image deb-agents

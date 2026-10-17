@@ -661,8 +661,11 @@ newbox_advice_text() {
     if newbox_needs_access "$1" "$_image"; then
         printf "Image %s has no Full Disk Access, so the box has none either. It works without it: only a program that opens the box account's Desktop, Documents or Downloads waits, on a question macOS asks on the box's screen. Set Up... on the first step grants it; a box made before that gets it when it is recreated.\n" "$_image"
     fi
-    if newbox_linux "$1"; then
-        printf 'A Linux box has no screen: it is used through Connect, which opens a shell in it, and Run an Agent.\n'
+    # A Linux box has a screen when its image has a desktop (column 15 of the image's row).
+    if newbox_linux "$1" && [ "$(newbox_field "$1" 15)" = "true" ]; then
+        printf 'The box has the desktop of image %s: View shows it while the box runs. Connect opens a shell in it, and Run an Agent starts an agent in it.\n' "$_image"
+    elif newbox_linux "$1"; then
+        printf 'Image %s has no desktop, so the box has no screen: it is used through Connect, which opens a shell in it, and Run an Agent.\n' "$_image"
     fi
     printf 'The box is kept until it is deleted. What is installed or written in it stays in the box, and its network can be changed later in its Network window.\n'
 }

@@ -2,8 +2,9 @@
 # AgentVM.main.image.view.sh
 # View, in the image detail pane: starts `image view` for the selected image as an agent-vm job,
 # which boots the image and shows its screen in a window of agent-vm's, for setup done by hand.
-# Status is read first: an image that is no longer ready, or that a job or another command holds,
-# is not opened. The card and the pane then follow the job, which ends when that window is closed.
+# Status is read first: an image that is no longer ready, that has no screen (a Linux image
+# without a desktop), or that a job or another command holds, is not opened. The card and the
+# pane then follow the job, which ends when that window is closed.
 
 . "$OMC_APP_BUNDLE_PATH/Contents/Resources/Scripts/lib.agentvm.main.sh"
 # For the one-click-at-a-time mark (wizard_enter).

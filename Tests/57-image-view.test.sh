@@ -112,7 +112,8 @@ check "an image another command is changing cannot" "0" "$(enabled "$MAIN_IMAGE_
 : > "$FAKE_AGENTVM_DIR/log"
 omc_run AgentVM.main.image.view
 check "  and the handler, which reads status itself, starts nothing" "" "$(started)"
-# A Linux image has no screen, and agent-vm refuses to show one: the store with both kinds.
+# A Linux image without a desktop has no screen, and agent-vm refuses to show one: the store with
+# both kinds, where deb has none.
 /bin/cp "$FIXTURES_AGENTVM/status-mixed.json" "$FAKE_AGENTVM_DIR/status.json"
 omc_run AgentVM.main.activated
 select_image deb
@@ -205,6 +206,65 @@ check "the refusal is shown in agent-vm's words" "Image dev-acp was not opened|y
     "$(ui_alert_title)|$(ui_alert_message | /usr/bin/grep -q 'in use by another agent-vm process' && echo yes)"
 check "  and View is back on"    "1" "$(enabled "$MAIN_IMAGE_VIEW_ID")"
 /bin/rm -f "$FAKE_AGENTVM_DIR/fail-job-start"
+
+# -----------------------------------------------------------------------------------------------
+section "a Linux image with a desktop"
+# deb-agents, in the store with both kinds: a recipe gave it a desktop. agent-vm's job has the
+# steps boot, window and shutdown.
+/bin/cp "$FIXTURES_AGENTVM/status-mixed.json" "$FAKE_AGENTVM_DIR/status.json"
+clear_alerts
+omc_run AgentVM.main.activated
+select_image deb-agents
+check "View is shown and on" "1 1" \
+    "$([ "$(ui_visible "$MAIN_IMAGE_VIEW_ID")" = "1" ] && echo 1 || echo 0) $(enabled "$MAIN_IMAGE_VIEW_ID")"
+: > "$FAKE_AGENTVM_DIR/log"
+omc_run AgentVM.main.image.view
+check "the job is image view, as for a macOS image" "job start --json -- image view deb-agents" "$(started)"
+job_step boot "Booting deb-agents"
+poll 1
+check "booting: starting, with agent-vm's words" "Starting, elapsed 12 s: Booting deb-agents" "$(ui_value "$MAIN_IMAGE_STATE_ID")"
+job_step window "The window is open; close it when done"
+poll 1
+check "  the window is there, on the pane and the card" "Open in its window, elapsed 12 s: The window is open; close it when done|yes" \
+    "$(ui_value "$MAIN_IMAGE_STATE_ID")|$(ui_rows "$MAIN_IMAGES_ID" | row_named deb-agents | /usr/bin/grep -q "Open" && echo yes)"
+job_step shutdown "Shutting down"
+job_end done
+clear_alerts
+poll 1
+check "closed: the toast says the image is shut down and what was done is kept" "1|" \
+    "$(ui_calls 'omc_present_toast.*Image deb-agents is shut down; what was done in its window is kept\.')|$(ui_alert_title)"
+
+section "a Linux image's view that fails after its window opened"
+# Before the shutdown agent-vm checks the image again as its build sealed it; one that no longer
+# passes is marked failed, with a notice, and the job fails.
+SEAL='`seal check "no ssh server"` failed in the guest (status 1): /usr/sbin/sshd is still there'
+NOTICE='Image deb-agents is marked failed, so no box is made of it; `agent-vm image rebuild deb-agents` makes it again'
+omc_run AgentVM.main.image.view
+job_step window "The window is open; close it when done"
+job_step shutdown "Shutting down"
+/usr/bin/jq --arg error "$SEAL" --arg notice "$NOTICE" \
+    '(.[-1]) |= (. + {state: "failed", status: 1, endedAt: "2026-09-30T12:00:20Z", error: $error, notice: $notice})' \
+    "$JOBS" > "$JOBS.new" && /bin/mv "$JOBS.new" "$JOBS"
+/usr/bin/jq --arg failure "after image view: $SEAL" '(.images[] | select(.name == "deb-agents")) |= (.state = "failed" | .failure = $failure)' \
+    "$FIXTURES_AGENTVM/status-mixed.json" > "$FAKE_AGENTVM_DIR/status.json"
+clear_alerts
+poll 1
+check "the alert says the image was opened, and gives agent-vm's error and its notice" \
+    "The view of image deb-agents failed after its window opened|$SEAL. $NOTICE" "$(ui_alert_title)|$(ui_alert_message)"
+check "  the pane says the image failed, and why; View is off" "Failed: after image view: $SEAL.|0" \
+    "$(ui_value "$MAIN_IMAGE_STATE_ID")|$(enabled "$MAIN_IMAGE_VIEW_ID")"
+
+section "a Linux image's view that fails before its window opened"
+/bin/cp "$FIXTURES_AGENTVM/status-mixed.json" "$FAKE_AGENTVM_DIR/status.json"
+clear_alerts
+omc_run AgentVM.main.activated
+omc_run AgentVM.main.image.view
+job_step boot "Booting deb-agents"
+job_end failed "the guest did not answer"
+clear_alerts
+poll 1
+check "  is said as before: the image was not opened" "Image deb-agents was not opened|the guest did not answer" \
+    "$(ui_alert_title)|$(ui_alert_message)"
 
 check "no harness errors" "" "$(ui_errors)"
 

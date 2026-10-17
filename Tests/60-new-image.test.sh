@@ -195,7 +195,7 @@ store '.'
 # -----------------------------------------------------------------------------------------------
 section "the library: what a build from an image needs to know"
 rows="$(lib agentvm_status_build_rows < "$FIXTURES_AGENTVM/status-variety.json")"
-check "fourteen fields"              "14" "$(printf '%s\n' "$rows" | field_count)"
+check "fifteen fields"               "15" "$(printf '%s\n' "$rows" | field_count)"
 check "a plain image: ready, not being changed, its macOS, 4 CPUs, 8 GB, a 64 GB disk, the Command Line Tools" \
     "dev${TAB}ready${TAB}false${TAB}27.0${TAB}4${TAB}8${TAB}64${TAB}-${TAB}-${TAB}Command Line Tools for Xcode 27.0-27.0" \
     "$(printf '%s\n' "$rows" | row_named dev | col 1-10)"
@@ -209,12 +209,13 @@ check "  and their descriptions"     "Homebrew; Node" \
 check "an image another command is changing" "true" \
     "$(/usr/bin/jq '(.images[] | select(.name == "dev")).updating = true' "$FIXTURES_AGENTVM/status-variety.json" | lib agentvm_status_build_rows | row_named dev | col 3)"
 check "an empty store: no rows"      "" "$(lib agentvm_status_build_rows < "$FIXTURES_AGENTVM/status-empty.json")"
-check "a macOS image: its guest, and its system in short" "macos${TAB}macOS 27.0" "$(printf '%s\n' "$rows" | row_named dev | col 13-14)"
+check "a macOS image: its guest, its system in short, and no screen recorded" "macos${TAB}macOS 27.0${TAB}-" "$(printf '%s\n' "$rows" | row_named dev | col 13-15)"
 rows="$(lib agentvm_status_build_rows < "$FIXTURES_AGENTVM/status-mixed.json")"
 check "a Linux image: no macOS, 4 CPUs, 4 GB, a 32 GB disk, the compiler" \
     "deb${TAB}ready${TAB}false${TAB}-${TAB}4${TAB}4${TAB}32${TAB}-${TAB}-${TAB}build-essential 12.12" "$(printf '%s\n' "$rows" | row_named deb | col 1-10)"
 check "  its guest, and its system in short" "linux${TAB}Debian 13" "$(printf '%s\n' "$rows" | row_named deb | col 13-14)"
 check "  the recipes one built from it keeps" "linux-node,agent-clis" "$(printf '%s\n' "$rows" | row_named deb-agents | col 8)"
+check "  a screen for the one with a desktop only" "-|true" "$(printf '%s\n' "$rows" | row_named deb | col 15)|$(printf '%s\n' "$rows" | row_named deb-agents | col 15)"
 
 section "the library: the restore files"
 check "one row: name, macOS, build, bytes, newest, path" \

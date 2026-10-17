@@ -29,6 +29,7 @@
           ],
           "mode": "allowlist"
         },
+        "screen": true,
         "userName": "agent"
       },
       "guest": "linux",
@@ -141,6 +142,7 @@
           "name": "agent-clis"
         }
       ],
+      "screen": true,
       "state": "ready",
       "system": "Debian GNU/Linux 13 (trixie)",
       "systemCheckedAt": "2026-10-07T19:49:09Z",

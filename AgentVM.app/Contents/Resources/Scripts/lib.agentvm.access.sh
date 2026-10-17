@@ -95,7 +95,8 @@ access_followed() {
 
 # access_phase <uuid> <name>  ->  where the image is, in a word:
 #   gone      no image of that name      unready   it is not a ready image
-#   linux     it runs Linux, which has no Full Disk Access to grant and no screen to open
+#   linux     it runs Linux, which has no Full Disk Access to grant (agent-vm sets up no Linux
+#             image; one with a desktop is opened with View)
 #   queued    its setup job waits for another job
 #   boot      the setup job is starting the image
 #   window    the image's window is open, and agent-vm waits for the person

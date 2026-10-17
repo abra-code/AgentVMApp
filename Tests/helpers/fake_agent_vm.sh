@@ -314,7 +314,8 @@ case "$*" in
         /usr/bin/jq -R . "$state/box-allow.tmp" | /usr/bin/jq -s . > "$state/box-allow.json"
         # A box runs what its image runs: agent-vm says the guest and the system beside the record
         # of every box, and puts the guest and the Linux system inside the record of a Linux box
-        # only, which in turn has no macOS version or build.
+        # only, which in turn has no macOS version or build. It copies the image's screen (a
+        # Linux image with a desktop), which a macOS image never records.
         /usr/bin/jq --arg name "$box" --arg image "$image" --arg cpus "$cpus" --arg memory "$memory" --arg mode "$mode" \
             --slurpfile allow "$state/box-allow.json" '
             (.images[] | select(.name == $image)) as $from
@@ -323,6 +324,7 @@ case "$*" in
                                    createdAt: "2026-09-30T12:00:00Z", disposable: false, image: $image,
                                    macOSBuild: $from.macOSBuild, macOSVersion: $from.macOSVersion,
                                    guest: (if $guest == "linux" then $guest else null end), linux: $from.linux,
+                                   screen: $from.screen,
                                    memoryBytes: (if $memory == "" then $from.memoryBytes else ($memory | tonumber) * 1073741824 end),
                                    name: $name, network: { allow: $allow[0], mode: $mode } }
                                  | with_entries(select(.value != null))),
@@ -425,10 +427,11 @@ case "$*" in
         printf '%s\n' "$4" > "$state/hold-days"
         /usr/bin/jq -n --arg days "$4" '{bytes: 0, directory: "/Users/you/Library/Application Support/agent-vm/Logs", holdDays: ($days | tonumber), logs: []}' ;;
     "box view "*" --json"|"box view "*" --interactive --json")
-        # A Linux box has no screen, and agent-vm says so.
-        guest="$(answer status | /usr/bin/jq -r --arg name "$3" '.boxes[] | select(.box.name == $name) | .guest // "macos"')"
-        if [ "$guest" = "linux" ]; then
-            printf 'Error: box %s runs Linux, which has no screen to show; open a shell with `agent-vm box shell <box>`\n' "$3" >&2
+        # A Linux box without a desktop has no screen, and agent-vm says so.
+        screen="$(answer status | /usr/bin/jq -r --arg name "$3" '.boxes[] | select(.box.name == $name)
+            | if (.guest // "macos") == "linux" and .box.screen != true then "none" else "yes" end')"
+        if [ "$screen" = "none" ]; then
+            printf 'Error: box %s runs Linux without a desktop, so it has no screen to show (an image built with the linux-desktop recipe has one); open a shell with `agent-vm box shell <box>`\n' "$3" >&2
             exit 1
         fi ;;
     "job start "*)

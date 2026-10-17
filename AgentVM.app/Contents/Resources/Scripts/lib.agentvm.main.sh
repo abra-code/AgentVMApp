@@ -418,23 +418,48 @@ main_job_outcome() {
                               printf 'Image %s was not updated\n' "$_name" ;;
         "image rebuild")      printf 'Image %s was not built again, and is as it was\n' "$_name" ;;
         "image setup")        printf 'The setup of image %s did not finish\n' "$_name" ;;
-        "image view")         printf 'Image %s was not opened\n' "$_name" ;;
+        "image view")
+            # A view that ended at its window or after it did open the image: what failed came
+            # later (agent-vm's checks of a Linux image before its shutdown, the shutdown).
+            case "$(printf '%s\n' "$1" | /usr/bin/cut -f9)" in
+                window|shutdown) printf 'The view of image %s failed after its window opened\n' "$_name" ;;
+                *)               printf 'Image %s was not opened\n' "$_name" ;;
+            esac ;;
         "image fetch-ipsw")   printf 'The macOS restore file was not downloaded\n' ;;
         *)                    printf '%s failed (%s)\n' "$_what" "$_target" ;;
     esac
 }
 
+# main_job_reason <job row>  ->  why a job that failed or was lost did: agent-vm's error, or that it
+# gave none. For a view that failed after its window opened, agent-vm's last notice follows: it
+# says what became of the image (a Linux image that no longer passes the checks its build sealed
+# it with is marked failed, and the notice says how to make it again).
+main_job_reason() {
+    local _error="$(printf '%s\n' "$1" | /usr/bin/cut -f15)"
+    [ "$_error" = "-" ] && _error="agent-vm gave no reason."
+    local _notice="$(printf '%s\n' "$1" | /usr/bin/cut -f14)"
+    case "$(printf '%s\n' "$1" | /usr/bin/cut -f4,9)" in
+        "image view${ui_tab}window"|"image view${ui_tab}shutdown")
+            if [ -n "$_notice" ] && [ "$_notice" != "-" ]; then
+                # agent-vm's error may or may not end its sentence.
+                case "$_error" in
+                    *[.!?]) ;;
+                    *) _error="$_error." ;;
+                esac
+                _error="$_error $_notice"
+            fi ;;
+    esac
+    printf '%s\n' "$_error"
+}
+
 # main_job_lines <job rows>  ->  one line per job: its outcome, and for one that failed, why.
 main_job_lines() {
-    local _row _error
+    local _row
     while IFS= read -r _row; do
         [ -n "$_row" ] || continue
         case "$(printf '%s\n' "$_row" | /usr/bin/cut -f2)" in
             done) printf '%s.\n' "$(main_job_outcome "$_row")" ;;
-            *)
-                _error="$(printf '%s\n' "$_row" | /usr/bin/cut -f15)"
-                [ "$_error" = "-" ] && _error="agent-vm gave no reason."
-                printf '%s: %s\n' "$(main_job_outcome "$_row")" "$_error" ;;
+            *)    printf '%s: %s\n' "$(main_job_outcome "$_row")" "$(main_job_reason "$_row")" ;;
         esac
     done <<ROWS
 $1
@@ -462,9 +487,7 @@ main_report_jobs() {
     [ -n "$_failed" ] || return 0
     local _count="$(printf '%s\n' "$_failed" | /usr/bin/awk 'END { print NR }')"
     if [ "$_count" -eq 1 ]; then
-        local _error="$(printf '%s\n' "$_failed" | /usr/bin/cut -f15)"
-        [ "$_error" = "-" ] && _error="agent-vm gave no reason."
-        main_alert "$1" "$(main_job_outcome "$_failed")" "$_error"
+        main_alert "$1" "$(main_job_outcome "$_failed")" "$(main_job_reason "$_failed")"
         return 0
     fi
     main_alert "$1" "$_count jobs failed" "$(main_job_lines "$_failed")"
@@ -984,6 +1007,22 @@ main_guest() {
     local _cell=12
     [ "$2" = "boxes" ] && _cell=23
     main_row "$1" "$2" "$3" | /usr/bin/cut -f"$_cell"
+}
+
+# main_has_screen <uuid> <boxes|images> <name>  ->  0 when that box or image has a screen to show,
+# from the cached rows: a macOS one always, a Linux one when a recipe gave its image a desktop
+# (agent-vm's `screen`); 1 when it has none, or is not listed. agent-vm's own rule, and the one
+# rule View is shown, enabled and run by. A box's own is read, not its image's: a box copies it
+# when it is made or recreated.
+main_has_screen() {
+    local _guest=12 _screen=15
+    if [ "$2" = "boxes" ]; then
+        _guest=23
+        _screen=26
+    fi
+    main_row "$1" "$2" "$3" | /usr/bin/awk -F'\t' -v guest="$_guest" -v screen="$_screen" '
+        { found = 1; has = ($guest != "linux" || $screen == "true") }
+        END { exit (found && has) ? 0 : 1 }'
 }
 
 # main_disk_text <uuid>  ->  doctor's free space ("67 GB free"), or nothing.
@@ -1573,7 +1612,7 @@ main_paint_box_detail() {
         # The cached `box info` adds the space, as of when it was last read, and only for this box.
         local _info="$(main_info "$_uuid" box "$_name")"
         "$dialog" "$_uuid" "$MAIN_BOX_SPACE_ID" \
-            "$(main_space_text "$(printf '%s\n' "$_info" | /usr/bin/cut -f26)" "$(printf '%s\n' "$_info" | /usr/bin/cut -f27)" \
+            "$(main_space_text "$(printf '%s\n' "$_info" | /usr/bin/cut -f27)" "$(printf '%s\n' "$_info" | /usr/bin/cut -f28)" \
                 "$(main_info_error "$_uuid" box "$_name")")"
 
         # The enable rules Cadabra's box window tested. The screen and a shell need a running box
@@ -1594,12 +1633,12 @@ main_paint_box_detail() {
         [ "$(main_row "$_uuid" images "$_image" | /usr/bin/cut -f2)" = "ready" ] && _image_ready=1
         ui_enable "$_uuid" "$MAIN_BOX_STOP_ID" "$(( _stoppable * _free ))"
         ui_enable "$_uuid" "$MAIN_BOX_START_ID" "$(( _stopped * _free ))"
-        # A Linux box has no screen: View, last among the buttons of a running box, is not shown
-        # for one.
-        if [ "$_kind" = "linux" ]; then
-            ui_show "$_uuid" "$MAIN_BOX_VIEW_ID" 0
-        else
+        # View, last among the buttons of a running box, is shown for a box that has a screen
+        # (main_has_screen): every macOS box, and a Linux box whose image has a desktop.
+        if main_has_screen "$_uuid" boxes "$_name"; then
             ui_show "$_uuid" "$MAIN_BOX_VIEW_ID" 1
+        else
+            ui_show "$_uuid" "$MAIN_BOX_VIEW_ID" 0
         fi
         ui_enable "$_uuid" "$MAIN_BOX_VIEW_ID" "$(( _running * _free ))"
         ui_enable "$_uuid" "$MAIN_BOX_SHELL_ID" "$(( _running * _free ))"
@@ -1617,7 +1656,7 @@ main_paint_box_detail() {
 # the image it was made from stays, and that agent-vm keeps the box's logs for some days.
 main_box_delete_question() {
     local _text="The box's folder and disk are deleted, with everything installed or saved in it"
-    local _size="$(ui_size_text "$(main_info "$1" box "$2" | /usr/bin/cut -f27)")"
+    local _size="$(ui_size_text "$(main_info "$1" box "$2" | /usr/bin/cut -f28)")"
     [ -n "$_size" ] && _text="$_text, which frees about $_size"
     _text="$_text."
     local _image="$(main_row "$1" boxes "$2" | /usr/bin/cut -f3)"
@@ -1829,8 +1868,8 @@ main_space_text() {
 }
 
 # main_paint_image_detail <uuid>  ->  the selected image's detail pane, or the placeholder.
-# `status` gives the image's state and record (fields 1-14), always current; the cached `image
-# info` adds what only it has (fields 15-28: the guest daemon's features, Full Disk Access, the
+# `status` gives the image's state and record (fields 1-15), always current; the cached `image
+# info` adds what only it has (fields 16-29: the guest daemon's features, Full Disk Access, the
 # tools, processors and memory, the build's length, the space, and the cloud image a Linux image
 # was first built from), as of when it was last read.
 main_paint_image_detail() {
@@ -1856,16 +1895,16 @@ main_paint_image_detail() {
     local _info="$(main_info "$_uuid" image "$_name")"
     local _info_error="$(main_info_error "$_uuid" image "$_name")"
     local _maintenance="$(main_maintenance_text "$_uuid" images "$_name")"
-    # The status row's fourteen fields, then image info's fourteen, or fourteen "-" without it.
+    # The status row's fifteen fields, then image info's fourteen, or fourteen "-" without it.
     local _extra="-${ui_tab}-${ui_tab}-${ui_tab}-${ui_tab}-${ui_tab}-${ui_tab}-${ui_tab}-${ui_tab}-${ui_tab}-${ui_tab}-${ui_tab}-${ui_tab}-${ui_tab}-"
-    [ -n "$_info" ] && _extra="$(printf '%s\n' "$_info" | /usr/bin/cut -f15-28)"
+    [ -n "$_info" ] && _extra="$(printf '%s\n' "$_info" | /usr/bin/cut -f16-29)"
     printf '%s\t%s\n' "$_row" "$_extra" | {
         local _n _state _failure _macos _build _based _recipe _needs _guest _created _path
-        local _kind _system _short
+        local _kind _system _short _screen
         local _features _missing _seconds _fda _checked _clt _cpus _memory _bytes _unshared _added
         local _release _base_build _base_file _rest
         IFS="$ui_tab" read -r _n _state _failure _macos _build _based _recipe _needs _guest _created _path \
-            _kind _system _short \
+            _kind _system _short _screen \
             _features _missing _seconds _fda _checked _clt _cpus _memory _bytes _unshared _added \
             _release _base_build _base_file _rest
         # A job that holds the image says what it does and where it is, in place of the state.
@@ -2006,14 +2045,17 @@ main_paint_image_detail() {
     # as the start: for a ready image, and the window says when something is changing it.
     # New Box from It... opens the New Box window (lib.agentvm.newbox.sh) with the image chosen,
     # under the same rule.
-    # A Linux image has no Full Disk Access to grant and no screen to show: Set Up... and View,
-    # each the last thing in its row, are not shown for one, and stay off.
+    # A Linux image has no Full Disk Access to grant: Set Up..., the last thing in its row, is not
+    # shown for one, and stays off. View, the last in its own row, is shown for an image that has
+    # a screen (main_has_screen): every macOS image, and a Linux image with a desktop.
     local _mac=1
     if [ "$(printf '%s\n' "$_row" | /usr/bin/cut -f12)" = "linux" ]; then
         _mac=0
     fi
+    local _screen=0
+    main_has_screen "$_uuid" images "$_name" && _screen=1
     ui_show "$_uuid" "$MAIN_IMAGE_ACCESS_ID" "$_mac"
-    ui_show "$_uuid" "$MAIN_IMAGE_VIEW_ID" "$_mac"
+    ui_show "$_uuid" "$MAIN_IMAGE_VIEW_ID" "$_screen"
     # Build Again, last in the row, is shown only for an image whose base changed since it was made
     # from it (main_rebuild_lines says why), and is on as Update... is.
     local _rebuild=0
@@ -2042,11 +2084,11 @@ main_paint_image_detail() {
     ui_enable "$_uuid" "$MAIN_IMAGE_DELETE_ID" 1
     ui_enable "$_uuid" "$MAIN_IMAGE_RENAME_ID" 1
     # Update... opens the image's update window (lib.agentvm.update.sh), and View starts the job
-    # that shows the image's screen (main_image_view): for a ready image only, and View for a
-    # macOS one only.
+    # that shows the image's screen (main_image_view): for a ready image only, and View for one
+    # that has a screen only.
     if [ "$(printf '%s\n' "$_row" | /usr/bin/cut -f2)" = "ready" ]; then
         ui_enable "$_uuid" "$MAIN_IMAGE_UPDATE_ID" 1
-        ui_enable "$_uuid" "$MAIN_IMAGE_VIEW_ID" "$_mac"
+        ui_enable "$_uuid" "$MAIN_IMAGE_VIEW_ID" "$_screen"
         ui_enable "$_uuid" "$MAIN_IMAGE_REBUILD_ID" "$_rebuild"
     else
         ui_enable "$_uuid" "$MAIN_IMAGE_UPDATE_ID" 0
@@ -2056,12 +2098,12 @@ main_paint_image_detail() {
 }
 
 # main_image_viewable <uuid> <name>  ->  0 when the image's screen can be opened now, from the rows
-# just read: it is a macOS image (a Linux one has no screen, and agent-vm refuses to show one), it
-# is ready, no job holds it and no other command changes it (the rule main_paint_image_detail
+# just read: it has a screen (main_has_screen: agent-vm refuses a Linux image without a desktop),
+# it is ready, no job holds it and no other command changes it (the rule main_paint_image_detail
 # enables View by).
 main_image_viewable() {
     [ "$(main_row "$1" images "$2" | /usr/bin/cut -f2)" = "ready" ] || return 1
-    [ "$(main_guest "$1" images "$2")" != "linux" ] || return 1
+    main_has_screen "$1" images "$2" || return 1
     [ -z "$(main_job "$1" image "$2")" ] || return 1
     main_image_busy "$1" "$2" && return 1
     return 0
@@ -2138,7 +2180,7 @@ main_image_rebuild() {
 # can no longer be recreated, since recreating makes it again from its image).
 main_image_delete_question() {
     local _text="The image's folder and disk are deleted"
-    local _size="$(ui_size_text "$(main_info "$1" image "$2" | /usr/bin/cut -f24)")"
+    local _size="$(ui_size_text "$(main_info "$1" image "$2" | /usr/bin/cut -f25)")"
     [ -n "$_size" ] && _text="$_text, which frees about $_size"
     _text="$_text."
     local _boxes="$(main_rows "$1" boxes | /usr/bin/awk -F'\t' -v name="$2" '$3 "" == name { print $1 }')"

@@ -855,8 +855,8 @@ sizes "penguin" 4 4 true
 next
 check "what is made, with the system in short" "Box penguin, a copy of image deb-agents (Debian 13).|4 CPUs, 4 GB of memory." \
     "$(ui_value "$NBOX_SUMMARY_ID" | /usr/bin/sed -n '1,2p' | /usr/bin/paste -sd '|' -)"
-check "the advice says how a box with no screen is used" \
-    "A Linux box has no screen: it is used through Connect, which opens a shell in it, and Run an Agent.|The box is kept until it is deleted. What is installed or written in it stays in the box, and its network can be changed later in its Network window." \
+check "the advice says the box has its image's desktop, and how it is used" \
+    "The box has the desktop of image deb-agents: View shows it while the box runs. Connect opens a shell in it, and Run an Agent starts an agent in it.|The box is kept until it is deleted. What is installed or written in it stays in the box, and its network can be changed later in its Network window." \
     "$(ui_value "$NBOX_ADVICE_ID" | /usr/bin/paste -sd '|' -)"
 check "both macOS places are taken and the box is to be started: nothing stands in the way of a Linux box" "|1" \
     "$(note)|$(enabled "$NBOX_CREATE_ID")"
@@ -865,8 +865,20 @@ omc_run AgentVM.newbox.create
 check "the box is made from the Linux image, and its start is a job" \
     "1|penguin --image deb-agents --allow pack:anthropic --allow pack:openai --allow opencode.ai --allow models.opencode.ai --allow pack:npm|1" \
     "$(created)|$(create_args)|$(started)"
-check "  and it runs what its image runs" "linux|Debian GNU/Linux 13 (trixie)" \
-    "$(/usr/bin/jq -r '.boxes[] | select(.box.name == "penguin") | "\(.guest)|\(.system)"' "$FAKE_AGENTVM_DIR/status.json")"
+check "  and it runs what its image runs, with its screen" "linux|Debian GNU/Linux 13 (trixie)|true" \
+    "$(/usr/bin/jq -r '.boxes[] | select(.box.name == "penguin") | "\(.guest)|\(.system)|\(.box.screen)"' "$FAKE_AGENTVM_DIR/status.json")"
+omc_run AgentVM.newbox.close
+# A Linux image without a desktop: the box has no screen.
+"$PB" agentvm_window_newbox_window set ""
+open_new
+pick deb
+next
+next
+sizes "plain" 4 4 false
+next
+check "a Linux image with no desktop: the advice says the box has no screen, and how it is used" \
+    "Image deb has no desktop, so the box has no screen: it is used through Connect, which opens a shell in it, and Run an Agent.|The box is kept until it is deleted. What is installed or written in it stays in the box, and its network can be changed later in its Network window." \
+    "$(ui_value "$NBOX_ADVICE_ID" | /usr/bin/paste -sd '|' -)"
 omc_run AgentVM.newbox.close
 # The same counts, and a macOS image: the box cannot be started.
 "$PB" agentvm_window_newbox_window set ""

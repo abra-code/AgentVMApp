@@ -239,4 +239,13 @@ What was done to the fixtures:
 
 - `version.json` and `packs.json` captured again from the installed 0.8.1 (`refresh_agentvm_fixtures.sh <agent-vm> version packs`; versions, paths and digests only).
 - The Linux guest daemon's digest in `doctor.json` and the version strings in `status-variety.json`, `job-log-variety.json`, the fake installer and the tests by hand. The install test's newer release moved from 0.8.0 to 0.8.2, so that it is still newer than the minimum.
-- No capture has a `screen` key: their images and boxes were made before 0.8.0, and none has a desktop.
+- No capture has a `screen` key: their images and boxes were made before 0.8.0, and none has a desktop. One Linux image and one Linux box were given it by hand, so that both kinds of Linux record are tested: the image `deb-agents` in `status-linux.json` and `image-info-linux.json`, and the box `lb` in `status-linux.json` and `box-info-linux.json`; `deb`, `ub` and `ub-agents` keep none. `status-mixed.json` was made again from `status.json` and `status-linux.json`. `lb` was made from `deb`, which has no screen here. A real box has the screen its image had when the box was made or recreated, so this pair needs an image built again without the desktop under the same name; the app reads the box's own, which is what the pair tests. Run in this folder:
+
+```sh
+/usr/bin/jq -S '(.images[] | select(.name == "deb-agents")).screen = true | (.boxes[] | select(.box.name == "lb")).box.screen = true' status-linux.json > status-linux.new && /bin/mv status-linux.new status-linux.json
+/usr/bin/jq -S '.screen = true' image-info-linux.json > image-info-linux.new && /bin/mv image-info-linux.new image-info-linux.json
+/usr/bin/jq -S '.box.screen = true' box-info-linux.json > box-info-linux.new && /bin/mv box-info-linux.new box-info-linux.json
+/usr/bin/jq -S -s '.[1] as $linux | .[0] | .images += $linux.images | .boxes += $linux.boxes' status.json status-linux.json > status-mixed.new && /bin/mv status-mixed.new status-mixed.json
+```
+
+A capture of `linux` (`refresh_agentvm_fixtures.sh`) replaces these files, and the edit is to be made again unless the store captured has a desktop image and box of its own.
