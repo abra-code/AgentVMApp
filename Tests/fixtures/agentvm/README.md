@@ -227,3 +227,16 @@ What was done to the fixtures:
 - `version.json` and `packs.json` captured again from the installed 0.7.59 (`refresh_agentvm_fixtures.sh <agent-vm> version packs`; versions, paths and digests only).
 - The Linux guest daemon's digest in `doctor.json` and the version strings in `status-variety.json`, `job-log-variety.json`, the fake installer and the tests by hand.
 - No fixture has a `rebuild` need, `baseCreatedAt` or `baseRecipes`: the images of the captures were made before 0.7.59. The tests add the need with a jq edit. The fake starts `image rebuild` as a job, as agent-vm does.
+
+## The move to agent-vm 0.8.1 (2026-10-17)
+
+What an application sees of agent-vm 0.8.0 and 0.8.1:
+
+- A Linux image or box can have a screen: a recipe with `"screen": true` (today only `linux-desktop`, the XFCE desktop) gives it one. The image records `screen: true` in `status`, `image list` and `image info`, and a box copies it when it is made or recreated, as `box.screen` in `status`, `box list` and `box info`. The key is `true` or absent, never `false`, and a macOS image or box never has it, yet always has a screen. `recipe check` says `screen: true` of such a recipe.
+- `box view` shows a running Linux box that has a screen (0.8.0), with no Type Password button; `image view` boots a Linux image that has one and shows it (0.8.1). Its job's steps are `boot`, `window` and `shutdown`. Before the shutdown the image's seal checks run again, and an image that no longer passes them, or that powered itself off during the view, is marked failed (`failure` "after image view: ..."), with a notice, and the job fails.
+
+What was done to the fixtures:
+
+- `version.json` and `packs.json` captured again from the installed 0.8.1 (`refresh_agentvm_fixtures.sh <agent-vm> version packs`; versions, paths and digests only).
+- The Linux guest daemon's digest in `doctor.json` and the version strings in `status-variety.json`, `job-log-variety.json`, the fake installer and the tests by hand. The install test's newer release moved from 0.8.0 to 0.8.2, so that it is still newer than the minimum.
+- No capture has a `screen` key: their images and boxes were made before 0.8.0, and none has a desktop.
