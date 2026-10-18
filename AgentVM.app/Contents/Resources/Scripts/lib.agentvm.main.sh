@@ -1634,7 +1634,8 @@ main_paint_box_detail() {
         ui_enable "$_uuid" "$MAIN_BOX_STOP_ID" "$(( _stoppable * _free ))"
         ui_enable "$_uuid" "$MAIN_BOX_START_ID" "$(( _stopped * _free ))"
         # View, last among the buttons of a running box, is shown for a box that has a screen
-        # (main_has_screen): every macOS box, and a Linux box whose image has a desktop.
+        # (main_has_screen): every macOS box, and a Linux box with a screen of its own (its
+        # image's desktop when the box was made or recreated).
         if main_has_screen "$_uuid" boxes "$_name"; then
             ui_show "$_uuid" "$MAIN_BOX_VIEW_ID" 1
         else

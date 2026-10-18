@@ -249,16 +249,16 @@ check "  and Build Again... is back on" "1 1" "$(button)"
 /bin/rm -f "$FAKE_AGENTVM_DIR/fail-job-start"
 
 section "a Linux image"
-/usr/bin/jq '(.images[] | select(.name == "deb-agents")).needs = [{kind: "rebuild", reason: "base-rebuilt", base: "deb"}]' \
+/usr/bin/jq '(.images[] | select(.name == "ub-agents")).needs = [{kind: "rebuild", reason: "base-rebuilt", base: "ub"}]' \
     "$FIXTURES_AGENTVM/status-mixed.json" > "$FAKE_AGENTVM_DIR/status.json"
 omc_run AgentVM.main.activated
-select_image deb-agents
-check "Build Again... is shown and on, where View is not shown" "1 1|0" "$(button)|$(shown "$MAIN_IMAGE_VIEW_ID")"
+select_image ub-agents
+check "Build Again... is shown and on, where View is not shown (no desktop)" "1 1|0" "$(button)|$(shown "$MAIN_IMAGE_VIEW_ID")"
 clear_alerts
 omc_run AgentVM.main.image.rebuild
 : > "$FAKE_AGENTVM_DIR/log"
 omc_run AgentVM.main.image.rebuild.confirmed
-check "  the same job"                "job start --json -- image rebuild deb-agents" "$(started)"
+check "  the same job"                "job start --json -- image rebuild ub-agents" "$(started)"
 /bin/rm -f "$JOBS" "$FAKE_AGENTVM_DIR/job-count"
 
 section "no writes to views the window does not have"
