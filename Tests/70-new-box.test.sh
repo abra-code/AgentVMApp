@@ -850,6 +850,9 @@ check "memory for a Linux box: from 1 GB" "Memory: a whole number of GB, from 1 
 sizes "penguin" 4 1 true
 next
 check "  1 GB is enough"              "Step 4 of 4 - Check|1" "$(ui_value "$NBOX_HEADER_ID")|$(kept memory)"
+check "  but with a desktop the advice says what suits it, which agent-vm notes in words the window does not show" \
+    "With 1 GB of memory, the desktop leaves little free, and a box has no swap: 4 GB or more suits a desktop and an agent." \
+    "$(ui_value "$NBOX_ADVICE_ID" | /usr/bin/sed -n 2p)"
 back
 sizes "penguin" 4 4 true
 next

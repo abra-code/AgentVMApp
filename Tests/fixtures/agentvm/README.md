@@ -249,3 +249,16 @@ What was done to the fixtures:
 ```
 
 A capture of `linux` (`refresh_agentvm_fixtures.sh`) replaces these files, and the edit is to be made again unless the store captured has a desktop image and box of its own.
+
+## Desktop recipes of agent-vm 0.8.2 and 0.8.3 (2026-10-17)
+
+Written before 0.8.2 and 0.8.3 were installed, so the minimum is still 0.8.1 and nothing was captured again. What an application sees of them:
+
+- 0.8.2 renames `linux-desktop` to `linux-xfce` and `linux-desktop-extras` to `linux-xfce-extras`, and the refusal of a Linux image or box without a screen names "a desktop recipe, such as linux-xfce".
+- 0.8.3 adds `linux-gnome` and `linux-kde`, both with `"screen": true` and a parameter `polkit` (`deny`, the default, or `debian`), so no JSON key is new. A Linux start is offered 11 shipped recipes, a macOS start 9.
+- `box create`, `box set` and `box recreate` note a Linux box with a screen under 4 GB as small.
+
+What was done to the tests:
+
+- The fake's refusal of `box view` for a Linux box without a screen is in 0.8.2's words.
+- `fixtures/recipes` has no desktop recipe: its lists of recipes stay as the tests count them. A test that needs a desktop recipe writes one of its own with `"screen": true` and adds it with the window's Add a Recipe File... button.

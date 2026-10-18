@@ -80,14 +80,14 @@ NEW_NEXT_ID=1094
 NEW_BUILD_ID=1095
 # Beside the note line, while the note is about a name taken by an image that is not ready.
 NEW_DELETE_ID=1096
-# Recipe slot n: its row 1100 + n, checkbox 1110 + n, name 1120 + n, description 1130 + n, note
-# 1140 + n. Option slot n: its rows 1200 + n, label 1210 + n, field 1220 + n, Choose... 1230 + n,
-# description 1240 + n.
+# Recipe slot n: its row 1100 + n, checkbox 1120 + n, name 1140 + n, description 1160 + n, note
+# 1180 + n (room for 19 slots). Option slot n: its rows 1200 + n, label 1210 + n, field 1220 + n,
+# Choose... 1230 + n, description 1240 + n.
 NEW_RECIPE_ROW_BASE=1100
-NEW_RECIPE_TICK_BASE=1110
-NEW_RECIPE_NAME_BASE=1120
-NEW_RECIPE_TEXT_BASE=1130
-NEW_RECIPE_NOTE_BASE=1140
+NEW_RECIPE_TICK_BASE=1120
+NEW_RECIPE_NAME_BASE=1140
+NEW_RECIPE_TEXT_BASE=1160
+NEW_RECIPE_NOTE_BASE=1180
 NEW_OPTION_ROW_BASE=1200
 NEW_OPTION_LABEL_BASE=1210
 NEW_OPTION_FIELD_BASE=1220
@@ -95,14 +95,16 @@ NEW_OPTION_CHOOSE_BASE=1230
 NEW_OPTION_TEXT_BASE=1240
 
 NEW_STEPS=5
-NEW_RECIPE_SLOTS=10
+# agent-vm ships 11 recipes a Linux start is offered and 9 for a macOS start; the rest of the
+# slots are for recipes of the user's own.
+NEW_RECIPE_SLOTS=16
 NEW_OPTION_SLOTS=8
 # The disk an image with Xcode is given when the start allows it, in GB.
 NEW_XCODE_DISK=128
 # The recipes agent-vm ships, for macOS images and for Linux images, in an order that satisfies
 # what each needs whichever of the two the start is. Any other recipe in its folder comes after
 # them, by name.
-NEW_RECIPE_ORDER="homebrew node python linux-node linux-python agent-clis acp-agents xcode xcode-platforms linux-sudo"
+NEW_RECIPE_ORDER="homebrew node python linux-node linux-python agent-clis acp-agents xcode xcode-platforms linux-sudo linux-xfce linux-xfce-extras linux-gnome linux-kde"
 # The program that lists the recipes from the window's cache files (newimage_recipes).
 NEW_RECIPES_AWK="$OMC_APP_BUNDLE_PATH/Contents/Resources/Scripts/lib.agentvm.newimage.recipes.awk"
 
@@ -747,8 +749,44 @@ newimage_recipe_need() {
         macos:node|macos:python)           echo "homebrew" ;;
         macos:agent-clis|macos:acp-agents) echo "node" ;;
         linux:agent-clis|linux:acp-agents) echo "linux-node" ;;
+        linux:linux-xfce-extras)           echo "linux-xfce" ;;
         macos:xcode-platforms)             echo "xcode" ;;
     esac
+}
+
+# newimage_recipe_desktop <uuid> <name>  ->  0 when that recipe gives an image a desktop: its file
+# says "screen", as linux-xfce, linux-gnome and linux-kde do.
+newimage_recipe_desktop() {
+    local _path="$(newimage_recipe_field "$1" "$2" 5)"
+    [ -f "$_path" ] || return 1
+    local _screen="$(/usr/bin/jq -r '.screen == true' "$_path" 2>/dev/null)"
+    [ "$_screen" = "true" ]
+}
+
+# newimage_one_desktop <uuid> <the recipes ticked before the click>  ->  when the click ticked a
+# desktop, any other desktop that is ticked is unticked: an image starts one desktop, the one
+# installed last, so a second would only take up its disk. agent-vm does not refuse two.
+newimage_one_desktop() {
+    local _now="$(newimage_ticks "$1")"
+    local _before=" $2 " _name _picked=""
+    for _name in $_now; do
+        case "$_before" in
+            *" $_name "*) continue ;;
+        esac
+        newimage_recipe_desktop "$1" "$_name" && _picked="$_name"
+    done
+    [ -n "$_picked" ] || return 0
+    local _ticks="" _slot=0
+    for _name in $(newimage_slots "$1"); do
+        _slot=$((_slot + 1))
+        newimage_listed "$_name" "$_now" || continue
+        if [ "$_name" != "$_picked" ] && newimage_recipe_desktop "$1" "$_name"; then
+            "$dialog" "$1" "$((NEW_RECIPE_TICK_BASE + _slot))" "false"
+            continue
+        fi
+        _ticks="${_ticks:+$_ticks }$_name"
+    done
+    ui_set ticks "$1" "$_ticks"
 }
 
 # newimage_ticks <uuid>  ->  the recipes ticked, one per line, in the order they are applied: what
@@ -851,17 +889,25 @@ newimage_tools_text() {
 # newimage_recipe_note <uuid> <name>  ->  the note beside a recipe: that the start image has it
 # (and, while it is ticked, that it runs again and takes the place of the start's: agent-vm lists
 # each recipe once in an image), or what it needs that is neither ticked nor in the start image.
+# A desktop ticked on an image that has one (column 15 of its row) is the one that starts.
 newimage_recipe_note() {
     local _need="$(newimage_missing "$1" | /usr/bin/awk -F'\t' -v name="$2" '$1 "" == name { print $2; exit }')"
     if [ -n "$_need" ]; then
         printf 'needs %s\n' "$_need"
         return 0
     fi
-    newimage_listed "$2" "$(newimage_held "$1")" || return 0
-    if newimage_listed "$2" "$(newimage_ticks "$1")"; then
-        printf 'replaces the one %s has\n' "$(newimage_start_name "$1")"
-    else
-        printf '%s has it\n' "$(newimage_start_name "$1")"
+    local _ticked=0
+    newimage_listed "$2" "$(newimage_ticks "$1")" && _ticked=1
+    if newimage_listed "$2" "$(newimage_held "$1")"; then
+        if [ "$_ticked" -eq 1 ]; then
+            printf 'replaces the one %s has\n' "$(newimage_start_name "$1")"
+        else
+            printf '%s has it\n' "$(newimage_start_name "$1")"
+        fi
+        return 0
+    fi
+    if [ "$_ticked" -eq 1 ] && [ "$(newimage_base "$1" 15)" = "true" ] && newimage_recipe_desktop "$1" "$2"; then
+        printf 'starts in place of the desktop %s has\n' "$(newimage_start_name "$1")"
     fi
     return 0
 }

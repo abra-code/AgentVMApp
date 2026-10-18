@@ -1,9 +1,9 @@
 # lib.agentvm.newimage.recipes.awk - the recipes of the New Image window (lib.agentvm.newimage.sh):
 # the ones the user added, every one the window knows, or the ones a start is offered.
 #
-#     NEW_START="image deb" /usr/bin/awk -F'\t' -v want=listed -v slots=10 -f lib.agentvm.newimage.recipes.awk \
+#     NEW_START="image deb" /usr/bin/awk -F'\t' -v want=listed -v slots=16 -f lib.agentvm.newimage.recipes.awk \
 #         role=build build.tsv role=shipped recipes.tsv role=own own.tsv
-#     ... | /usr/bin/awk -F'\t' -v want=listed -v guest=linux -v slots=10 -v role=shipped -f lib.agentvm.newimage.recipes.awk
+#     ... | /usr/bin/awk -F'\t' -v want=listed -v guest=linux -v slots=16 -v role=shipped -f lib.agentvm.newimage.recipes.awk
 #
 # The input is the window's cache files, each after the role it is read in (a file that does not
 # exist is left out by the caller), in the order above: the start's system is then known before

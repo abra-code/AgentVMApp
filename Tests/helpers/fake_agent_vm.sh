@@ -427,11 +427,11 @@ case "$*" in
         printf '%s\n' "$4" > "$state/hold-days"
         /usr/bin/jq -n --arg days "$4" '{bytes: 0, directory: "/Users/you/Library/Application Support/agent-vm/Logs", holdDays: ($days | tonumber), logs: []}' ;;
     "box view "*" --json"|"box view "*" --interactive --json")
-        # A Linux box without a desktop has no screen, and agent-vm says so.
+        # A Linux box without a desktop has no screen, and agent-vm says so, in 0.8.2's words.
         screen="$(answer status | /usr/bin/jq -r --arg name "$3" '.boxes[] | select(.box.name == $name)
             | if (.guest // "macos") == "linux" and .box.screen != true then "none" else "yes" end')"
         if [ "$screen" = "none" ]; then
-            printf 'Error: box %s runs Linux without a desktop, so it has no screen to show (an image built with the linux-desktop recipe has one); open a shell with `agent-vm box shell <box>`\n' "$3" >&2
+            printf 'Error: box %s runs Linux without a desktop, so it has no screen to show (an image built with a desktop recipe, such as linux-xfce, has one); open a shell with `agent-vm box shell <box>`\n' "$3" >&2
             exit 1
         fi ;;
     "job start "*)

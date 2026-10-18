@@ -80,6 +80,9 @@ NBOX_MAX_MEMORY=4096
 # The least memory, in GB, agent-vm gives a macOS box (0.7.51): with less, macOS does not finish
 # starting. A Linux box starts with 1 GB, the least --memory-gb takes.
 NBOX_MIN_MACOS_MEMORY=3
+# The memory, in GB, from which agent-vm (0.8.3) no longer notes a Linux box with a desktop as
+# small.
+NBOX_DESKTOP_MEMORY=4
 # The name a first box is offered.
 NBOX_NAME="work"
 # Every value the window keeps on the pasteboard: emptied on opening and on closing.
@@ -664,6 +667,11 @@ newbox_advice_text() {
     # A Linux box has a screen when its image has a desktop (column 15 of the image's row).
     if newbox_linux "$1" && [ "$(newbox_field "$1" 15)" = "true" ]; then
         printf 'The box has the desktop of image %s: View shows it while the box runs. Connect opens a shell in it, and Run an Agent starts an agent in it.\n' "$_image"
+        # agent-vm notes such a box as small when it is made, in words the window does not show.
+        local _memory="$(ui_get memory "$1")"
+        if wizard_number "$_memory" && [ "$_memory" -lt "$NBOX_DESKTOP_MEMORY" ]; then
+            printf 'With %s GB of memory, the desktop leaves little free, and a box has no swap: %s GB or more suits a desktop and an agent.\n' "$_memory" "$NBOX_DESKTOP_MEMORY"
+        fi
     elif newbox_linux "$1"; then
         printf 'Image %s has no desktop, so the box has no screen: it is used through Connect, which opens a shell in it, and Run an Agent.\n' "$_image"
     fi

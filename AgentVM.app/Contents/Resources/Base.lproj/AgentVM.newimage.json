@@ -450,7 +450,7 @@
                         "children": [
                           {
                             "type": "Toggle",
-                            "id": 1111,
+                            "id": 1121,
                             "properties": {
                               "title": "",
                               "style": "checkbox",
@@ -473,7 +473,7 @@
                                 "children": [
                                   {
                                     "type": "Text",
-                                    "id": 1121,
+                                    "id": 1141,
                                     "properties": {
                                       "text": "",
                                       "font": "headline"
@@ -481,7 +481,7 @@
                                   },
                                   {
                                     "type": "Text",
-                                    "id": 1141,
+                                    "id": 1181,
                                     "properties": {
                                       "text": "",
                                       "foregroundStyle": "orange"
@@ -491,7 +491,7 @@
                               },
                               {
                                 "type": "Text",
-                                "id": 1131,
+                                "id": 1161,
                                 "properties": {
                                   "text": "",
                                   "foregroundStyle": "secondary",
@@ -516,7 +516,7 @@
                         "children": [
                           {
                             "type": "Toggle",
-                            "id": 1112,
+                            "id": 1122,
                             "properties": {
                               "title": "",
                               "style": "checkbox",
@@ -539,7 +539,7 @@
                                 "children": [
                                   {
                                     "type": "Text",
-                                    "id": 1122,
+                                    "id": 1142,
                                     "properties": {
                                       "text": "",
                                       "font": "headline"
@@ -547,7 +547,7 @@
                                   },
                                   {
                                     "type": "Text",
-                                    "id": 1142,
+                                    "id": 1182,
                                     "properties": {
                                       "text": "",
                                       "foregroundStyle": "orange"
@@ -557,7 +557,7 @@
                               },
                               {
                                 "type": "Text",
-                                "id": 1132,
+                                "id": 1162,
                                 "properties": {
                                   "text": "",
                                   "foregroundStyle": "secondary",
@@ -582,7 +582,7 @@
                         "children": [
                           {
                             "type": "Toggle",
-                            "id": 1113,
+                            "id": 1123,
                             "properties": {
                               "title": "",
                               "style": "checkbox",
@@ -605,7 +605,7 @@
                                 "children": [
                                   {
                                     "type": "Text",
-                                    "id": 1123,
+                                    "id": 1143,
                                     "properties": {
                                       "text": "",
                                       "font": "headline"
@@ -613,7 +613,7 @@
                                   },
                                   {
                                     "type": "Text",
-                                    "id": 1143,
+                                    "id": 1183,
                                     "properties": {
                                       "text": "",
                                       "foregroundStyle": "orange"
@@ -623,7 +623,7 @@
                               },
                               {
                                 "type": "Text",
-                                "id": 1133,
+                                "id": 1163,
                                 "properties": {
                                   "text": "",
                                   "foregroundStyle": "secondary",
@@ -648,7 +648,7 @@
                         "children": [
                           {
                             "type": "Toggle",
-                            "id": 1114,
+                            "id": 1124,
                             "properties": {
                               "title": "",
                               "style": "checkbox",
@@ -671,7 +671,7 @@
                                 "children": [
                                   {
                                     "type": "Text",
-                                    "id": 1124,
+                                    "id": 1144,
                                     "properties": {
                                       "text": "",
                                       "font": "headline"
@@ -679,7 +679,7 @@
                                   },
                                   {
                                     "type": "Text",
-                                    "id": 1144,
+                                    "id": 1184,
                                     "properties": {
                                       "text": "",
                                       "foregroundStyle": "orange"
@@ -689,7 +689,7 @@
                               },
                               {
                                 "type": "Text",
-                                "id": 1134,
+                                "id": 1164,
                                 "properties": {
                                   "text": "",
                                   "foregroundStyle": "secondary",
@@ -714,7 +714,7 @@
                         "children": [
                           {
                             "type": "Toggle",
-                            "id": 1115,
+                            "id": 1125,
                             "properties": {
                               "title": "",
                               "style": "checkbox",
@@ -737,7 +737,7 @@
                                 "children": [
                                   {
                                     "type": "Text",
-                                    "id": 1125,
+                                    "id": 1145,
                                     "properties": {
                                       "text": "",
                                       "font": "headline"
@@ -745,7 +745,7 @@
                                   },
                                   {
                                     "type": "Text",
-                                    "id": 1145,
+                                    "id": 1185,
                                     "properties": {
                                       "text": "",
                                       "foregroundStyle": "orange"
@@ -755,7 +755,7 @@
                               },
                               {
                                 "type": "Text",
-                                "id": 1135,
+                                "id": 1165,
                                 "properties": {
                                   "text": "",
                                   "foregroundStyle": "secondary",
@@ -780,7 +780,7 @@
                         "children": [
                           {
                             "type": "Toggle",
-                            "id": 1116,
+                            "id": 1126,
                             "properties": {
                               "title": "",
                               "style": "checkbox",
@@ -803,7 +803,7 @@
                                 "children": [
                                   {
                                     "type": "Text",
-                                    "id": 1126,
+                                    "id": 1146,
                                     "properties": {
                                       "text": "",
                                       "font": "headline"
@@ -811,7 +811,7 @@
                                   },
                                   {
                                     "type": "Text",
-                                    "id": 1146,
+                                    "id": 1186,
                                     "properties": {
                                       "text": "",
                                       "foregroundStyle": "orange"
@@ -821,7 +821,7 @@
                               },
                               {
                                 "type": "Text",
-                                "id": 1136,
+                                "id": 1166,
                                 "properties": {
                                   "text": "",
                                   "foregroundStyle": "secondary",
@@ -846,7 +846,7 @@
                         "children": [
                           {
                             "type": "Toggle",
-                            "id": 1117,
+                            "id": 1127,
                             "properties": {
                               "title": "",
                               "style": "checkbox",
@@ -869,7 +869,7 @@
                                 "children": [
                                   {
                                     "type": "Text",
-                                    "id": 1127,
+                                    "id": 1147,
                                     "properties": {
                                       "text": "",
                                       "font": "headline"
@@ -877,7 +877,7 @@
                                   },
                                   {
                                     "type": "Text",
-                                    "id": 1147,
+                                    "id": 1187,
                                     "properties": {
                                       "text": "",
                                       "foregroundStyle": "orange"
@@ -887,7 +887,7 @@
                               },
                               {
                                 "type": "Text",
-                                "id": 1137,
+                                "id": 1167,
                                 "properties": {
                                   "text": "",
                                   "foregroundStyle": "secondary",
@@ -912,7 +912,7 @@
                         "children": [
                           {
                             "type": "Toggle",
-                            "id": 1118,
+                            "id": 1128,
                             "properties": {
                               "title": "",
                               "style": "checkbox",
@@ -935,7 +935,7 @@
                                 "children": [
                                   {
                                     "type": "Text",
-                                    "id": 1128,
+                                    "id": 1148,
                                     "properties": {
                                       "text": "",
                                       "font": "headline"
@@ -943,7 +943,7 @@
                                   },
                                   {
                                     "type": "Text",
-                                    "id": 1148,
+                                    "id": 1188,
                                     "properties": {
                                       "text": "",
                                       "foregroundStyle": "orange"
@@ -953,7 +953,7 @@
                               },
                               {
                                 "type": "Text",
-                                "id": 1138,
+                                "id": 1168,
                                 "properties": {
                                   "text": "",
                                   "foregroundStyle": "secondary",
@@ -978,7 +978,7 @@
                         "children": [
                           {
                             "type": "Toggle",
-                            "id": 1119,
+                            "id": 1129,
                             "properties": {
                               "title": "",
                               "style": "checkbox",
@@ -1001,7 +1001,7 @@
                                 "children": [
                                   {
                                     "type": "Text",
-                                    "id": 1129,
+                                    "id": 1149,
                                     "properties": {
                                       "text": "",
                                       "font": "headline"
@@ -1009,7 +1009,7 @@
                                   },
                                   {
                                     "type": "Text",
-                                    "id": 1149,
+                                    "id": 1189,
                                     "properties": {
                                       "text": "",
                                       "foregroundStyle": "orange"
@@ -1019,7 +1019,7 @@
                               },
                               {
                                 "type": "Text",
-                                "id": 1139,
+                                "id": 1169,
                                 "properties": {
                                   "text": "",
                                   "foregroundStyle": "secondary",
@@ -1044,7 +1044,7 @@
                         "children": [
                           {
                             "type": "Toggle",
-                            "id": 1120,
+                            "id": 1130,
                             "properties": {
                               "title": "",
                               "style": "checkbox",
@@ -1067,7 +1067,7 @@
                                 "children": [
                                   {
                                     "type": "Text",
-                                    "id": 1130,
+                                    "id": 1150,
                                     "properties": {
                                       "text": "",
                                       "font": "headline"
@@ -1075,7 +1075,7 @@
                                   },
                                   {
                                     "type": "Text",
-                                    "id": 1150,
+                                    "id": 1190,
                                     "properties": {
                                       "text": "",
                                       "foregroundStyle": "orange"
@@ -1085,7 +1085,403 @@
                               },
                               {
                                 "type": "Text",
-                                "id": 1140,
+                                "id": 1170,
+                                "properties": {
+                                  "text": "",
+                                  "foregroundStyle": "secondary",
+                                  "frame": {
+                                    "maxWidth": "infinity",
+                                    "alignment": "leading"
+                                  }
+                                }
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "type": "HStack",
+                        "id": 1111,
+                        "properties": {
+                          "alignment": "top",
+                          "spacing": 8,
+                          "hidden": true
+                        },
+                        "children": [
+                          {
+                            "type": "Toggle",
+                            "id": 1131,
+                            "properties": {
+                              "title": "",
+                              "style": "checkbox",
+                              "labelsHidden": true,
+                              "actionID": "AgentVM.newimage.tick"
+                            }
+                          },
+                          {
+                            "type": "VStack",
+                            "properties": {
+                              "alignment": "leading",
+                              "spacing": 2
+                            },
+                            "children": [
+                              {
+                                "type": "HStack",
+                                "properties": {
+                                  "spacing": 8
+                                },
+                                "children": [
+                                  {
+                                    "type": "Text",
+                                    "id": 1151,
+                                    "properties": {
+                                      "text": "",
+                                      "font": "headline"
+                                    }
+                                  },
+                                  {
+                                    "type": "Text",
+                                    "id": 1191,
+                                    "properties": {
+                                      "text": "",
+                                      "foregroundStyle": "orange"
+                                    }
+                                  }
+                                ]
+                              },
+                              {
+                                "type": "Text",
+                                "id": 1171,
+                                "properties": {
+                                  "text": "",
+                                  "foregroundStyle": "secondary",
+                                  "frame": {
+                                    "maxWidth": "infinity",
+                                    "alignment": "leading"
+                                  }
+                                }
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "type": "HStack",
+                        "id": 1112,
+                        "properties": {
+                          "alignment": "top",
+                          "spacing": 8,
+                          "hidden": true
+                        },
+                        "children": [
+                          {
+                            "type": "Toggle",
+                            "id": 1132,
+                            "properties": {
+                              "title": "",
+                              "style": "checkbox",
+                              "labelsHidden": true,
+                              "actionID": "AgentVM.newimage.tick"
+                            }
+                          },
+                          {
+                            "type": "VStack",
+                            "properties": {
+                              "alignment": "leading",
+                              "spacing": 2
+                            },
+                            "children": [
+                              {
+                                "type": "HStack",
+                                "properties": {
+                                  "spacing": 8
+                                },
+                                "children": [
+                                  {
+                                    "type": "Text",
+                                    "id": 1152,
+                                    "properties": {
+                                      "text": "",
+                                      "font": "headline"
+                                    }
+                                  },
+                                  {
+                                    "type": "Text",
+                                    "id": 1192,
+                                    "properties": {
+                                      "text": "",
+                                      "foregroundStyle": "orange"
+                                    }
+                                  }
+                                ]
+                              },
+                              {
+                                "type": "Text",
+                                "id": 1172,
+                                "properties": {
+                                  "text": "",
+                                  "foregroundStyle": "secondary",
+                                  "frame": {
+                                    "maxWidth": "infinity",
+                                    "alignment": "leading"
+                                  }
+                                }
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "type": "HStack",
+                        "id": 1113,
+                        "properties": {
+                          "alignment": "top",
+                          "spacing": 8,
+                          "hidden": true
+                        },
+                        "children": [
+                          {
+                            "type": "Toggle",
+                            "id": 1133,
+                            "properties": {
+                              "title": "",
+                              "style": "checkbox",
+                              "labelsHidden": true,
+                              "actionID": "AgentVM.newimage.tick"
+                            }
+                          },
+                          {
+                            "type": "VStack",
+                            "properties": {
+                              "alignment": "leading",
+                              "spacing": 2
+                            },
+                            "children": [
+                              {
+                                "type": "HStack",
+                                "properties": {
+                                  "spacing": 8
+                                },
+                                "children": [
+                                  {
+                                    "type": "Text",
+                                    "id": 1153,
+                                    "properties": {
+                                      "text": "",
+                                      "font": "headline"
+                                    }
+                                  },
+                                  {
+                                    "type": "Text",
+                                    "id": 1193,
+                                    "properties": {
+                                      "text": "",
+                                      "foregroundStyle": "orange"
+                                    }
+                                  }
+                                ]
+                              },
+                              {
+                                "type": "Text",
+                                "id": 1173,
+                                "properties": {
+                                  "text": "",
+                                  "foregroundStyle": "secondary",
+                                  "frame": {
+                                    "maxWidth": "infinity",
+                                    "alignment": "leading"
+                                  }
+                                }
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "type": "HStack",
+                        "id": 1114,
+                        "properties": {
+                          "alignment": "top",
+                          "spacing": 8,
+                          "hidden": true
+                        },
+                        "children": [
+                          {
+                            "type": "Toggle",
+                            "id": 1134,
+                            "properties": {
+                              "title": "",
+                              "style": "checkbox",
+                              "labelsHidden": true,
+                              "actionID": "AgentVM.newimage.tick"
+                            }
+                          },
+                          {
+                            "type": "VStack",
+                            "properties": {
+                              "alignment": "leading",
+                              "spacing": 2
+                            },
+                            "children": [
+                              {
+                                "type": "HStack",
+                                "properties": {
+                                  "spacing": 8
+                                },
+                                "children": [
+                                  {
+                                    "type": "Text",
+                                    "id": 1154,
+                                    "properties": {
+                                      "text": "",
+                                      "font": "headline"
+                                    }
+                                  },
+                                  {
+                                    "type": "Text",
+                                    "id": 1194,
+                                    "properties": {
+                                      "text": "",
+                                      "foregroundStyle": "orange"
+                                    }
+                                  }
+                                ]
+                              },
+                              {
+                                "type": "Text",
+                                "id": 1174,
+                                "properties": {
+                                  "text": "",
+                                  "foregroundStyle": "secondary",
+                                  "frame": {
+                                    "maxWidth": "infinity",
+                                    "alignment": "leading"
+                                  }
+                                }
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "type": "HStack",
+                        "id": 1115,
+                        "properties": {
+                          "alignment": "top",
+                          "spacing": 8,
+                          "hidden": true
+                        },
+                        "children": [
+                          {
+                            "type": "Toggle",
+                            "id": 1135,
+                            "properties": {
+                              "title": "",
+                              "style": "checkbox",
+                              "labelsHidden": true,
+                              "actionID": "AgentVM.newimage.tick"
+                            }
+                          },
+                          {
+                            "type": "VStack",
+                            "properties": {
+                              "alignment": "leading",
+                              "spacing": 2
+                            },
+                            "children": [
+                              {
+                                "type": "HStack",
+                                "properties": {
+                                  "spacing": 8
+                                },
+                                "children": [
+                                  {
+                                    "type": "Text",
+                                    "id": 1155,
+                                    "properties": {
+                                      "text": "",
+                                      "font": "headline"
+                                    }
+                                  },
+                                  {
+                                    "type": "Text",
+                                    "id": 1195,
+                                    "properties": {
+                                      "text": "",
+                                      "foregroundStyle": "orange"
+                                    }
+                                  }
+                                ]
+                              },
+                              {
+                                "type": "Text",
+                                "id": 1175,
+                                "properties": {
+                                  "text": "",
+                                  "foregroundStyle": "secondary",
+                                  "frame": {
+                                    "maxWidth": "infinity",
+                                    "alignment": "leading"
+                                  }
+                                }
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "type": "HStack",
+                        "id": 1116,
+                        "properties": {
+                          "alignment": "top",
+                          "spacing": 8,
+                          "hidden": true
+                        },
+                        "children": [
+                          {
+                            "type": "Toggle",
+                            "id": 1136,
+                            "properties": {
+                              "title": "",
+                              "style": "checkbox",
+                              "labelsHidden": true,
+                              "actionID": "AgentVM.newimage.tick"
+                            }
+                          },
+                          {
+                            "type": "VStack",
+                            "properties": {
+                              "alignment": "leading",
+                              "spacing": 2
+                            },
+                            "children": [
+                              {
+                                "type": "HStack",
+                                "properties": {
+                                  "spacing": 8
+                                },
+                                "children": [
+                                  {
+                                    "type": "Text",
+                                    "id": 1156,
+                                    "properties": {
+                                      "text": "",
+                                      "font": "headline"
+                                    }
+                                  },
+                                  {
+                                    "type": "Text",
+                                    "id": 1196,
+                                    "properties": {
+                                      "text": "",
+                                      "foregroundStyle": "orange"
+                                    }
+                                  }
+                                ]
+                              },
+                              {
+                                "type": "Text",
+                                "id": 1176,
                                 "properties": {
                                   "text": "",
                                   "foregroundStyle": "secondary",

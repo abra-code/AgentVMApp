@@ -44,10 +44,23 @@ O_LABEL="$(base NEW_OPTION_LABEL_BASE)"
 O_FIELD="$(base NEW_OPTION_FIELD_BASE)"
 O_CHOOSE="$(base NEW_OPTION_CHOOSE_BASE)"
 O_TEXT="$(base NEW_OPTION_TEXT_BASE)"
+# How many recipe slots the window has: more than the 10 recipes the fixtures offer a start.
+SLOTS="$(base NEW_RECIPE_SLOTS)"
 [ -n "$FRAME" ] && [ -n "$R_ROW" ] && [ -n "$R_TICK" ] && [ -n "$R_NAME" ] && [ -n "$R_TEXT" ] && [ -n "$R_NOTE" ] \
-    && [ -n "$O_ROW" ] && [ -n "$O_LABEL" ] && [ -n "$O_FIELD" ] && [ -n "$O_CHOOSE" ] && [ -n "$O_TEXT" ] || {
+    && [ -n "$O_ROW" ] && [ -n "$O_LABEL" ] && [ -n "$O_FIELD" ] && [ -n "$O_CHOOSE" ] && [ -n "$O_TEXT" ] \
+    && [ "${SLOTS:-0}" -gt 10 ] || {
     printf '60-new-image: the slot bases were not found in the library\n' >&2
     exit 1
+}
+# unused <n>  ->  "/ " for each slot after the first n: one that never showed a recipe, as a list
+# of the slots gives it.
+unused() {
+    local _slot="$1" _all=""
+    while [ "$_slot" -lt "$SLOTS" ]; do
+        _slot=$((_slot + 1))
+        _all="$_all/ "
+    done
+    printf '%s' "$_all"
 }
 
 AGENTVM_APP_AGENT_VM="$FAKE_AGENTVM"
@@ -300,12 +313,15 @@ check "an agent-vm that cannot say: every recipe is there, for no system known" 
     "$(printf '%s\n' "$unknown" | /usr/bin/awk 'END { print NR }')|$(printf '%s\n' "$unknown" | col 6 | /usr/bin/sort -u)"
 check "  and is offered whatever the start" "10|10" \
     "$(printf '%s\n' "$unknown" | offered macos | /usr/bin/awk '{ print NF }')|$(printf '%s\n' "$unknown" | offered linux | /usr/bin/awk '{ print NF }')"
-check "no more are offered than the window has slots" "10" \
-    "$( { printf '%s\n' "$unknown"; printf 'eleventh\tOne more\t0\t0\t/x/eleventh.json\tany\n'; } | offered macos | /usr/bin/awk '{ print NF }')"
+more="$(n=10; while [ "$n" -le "$SLOTS" ]; do printf 'more%s\tOne more\t0\t0\t/x/more%s.json\tany\n' "$n" "$n"; n=$((n + 1)); done)"
+check "no more are offered than the window has slots" "$SLOTS" \
+    "$( { printf '%s\n' "$unknown"; printf '%s\n' "$more"; } | offered macos | /usr/bin/awk '{ print NF }')"
 check "what a recipe needs before it, in a macOS image" "homebrew|homebrew|node|node|xcode||" \
     "$(newlib newimage_recipe_need node macos)|$(newlib newimage_recipe_need python macos)|$(newlib newimage_recipe_need agent-clis macos)|$(newlib newimage_recipe_need acp-agents macos)|$(newlib newimage_recipe_need xcode-platforms macos)|$(newlib newimage_recipe_need homebrew macos)|$(newlib newimage_recipe_need xcode macos)"
 check "  and in a Linux image: the agents need the Node for Linux images, the others nothing" "linux-node|linux-node|||" \
     "$(newlib newimage_recipe_need agent-clis linux)|$(newlib newimage_recipe_need acp-agents linux)|$(newlib newimage_recipe_need linux-node linux)|$(newlib newimage_recipe_need linux-python linux)|$(newlib newimage_recipe_need linux-sudo linux)"
+check "  but XFCE's extras need XFCE, which needs nothing, nor do the other desktops" "linux-xfce|||" \
+    "$(newlib newimage_recipe_need linux-xfce-extras linux)|$(newlib newimage_recipe_need linux-xfce linux)|$(newlib newimage_recipe_need linux-gnome linux)|$(newlib newimage_recipe_need linux-kde linux)"
 
 section "the library: a command line as it would be typed"
 check "plain arguments are not quoted, others are" \
@@ -502,12 +518,12 @@ check "the line above them names the start" \
     "$(ui_value "$NEW_TOOLS_TEXT_ID")"
 names=""
 slot=0
-while [ "$slot" -lt 10 ]; do
+while [ "$slot" -lt "$SLOTS" ]; do
     slot=$((slot + 1))
     names="$names$(ui_value $((R_NAME + slot)))/$(ui_visible $((R_ROW + slot))) "
 done
 check "the recipes in the order they are applied, each in a slot shown; the other slots stay hidden" \
-    "homebrew/1 node/1 python/1 agent-clis/1 acp-agents/1 xcode/1 xcode-platforms/1 / / / " "$names"
+    "homebrew/1 node/1 python/1 agent-clis/1 acp-agents/1 xcode/1 xcode-platforms/1 $(unused 7)" "$names"
 check "a description without its advice for the command line" "Node and npm, from Homebrew|Xcode from a .xip you downloaded" \
     "$(ui_value $((R_TEXT + 2)))|$(ui_value $((R_TEXT + 6)))"
 check "no checkbox is set by the window" "0" "$(ui_calls "${UUID}${TAB}$((R_TICK + 1))${TAB}")"
@@ -963,7 +979,7 @@ add_own() {
 # listed  ->  the names in the slots shown, and whether Add a Recipe File... is on.
 listed() {
     local _slot=0 _names=""
-    while [ "$_slot" -lt 10 ]; do
+    while [ "$_slot" -lt "$SLOTS" ]; do
         _slot=$((_slot + 1))
         [ "$(ui_visible $((R_ROW + _slot)))" = "1" ] && _names="$_names$(ui_value $((R_NAME + _slot))) "
     done
@@ -998,18 +1014,28 @@ add_own "relative/recipe.json"
 check "a path that is not a full one" "Choose a recipe file." "$(note)"
 add_own "$OWN/Extra Things.json"
 check "a second, without a description" "$SHIPPED team-tools Extra-Things|1|Your recipe, from $OWN/Extra Things.json" "$(listed)|$(ui_value $((R_TEXT + 9)))"
+# Recipes of one's own until one slot is left: the slots the fixtures' recipes leave over.
+FILL=""
+n=1
+while [ "$n" -le $((SLOTS - 10)) ]; do
+    printf '{ "version": 1, "description": "Filler %s" }\n' "$n" > "$OWN/fill-$n.json"
+    add_own "$OWN/fill-$n.json"
+    FILL="$FILL fill-$n"
+    n=$((n + 1))
+done
+check "  more, until one slot is left" "$SHIPPED team-tools Extra-Things$FILL|1" "$(listed)"
 "$PB" "agentvm_busy_$UUID" set "click-$$"
 add_own "$OWN/third.json"
-check "a click while another one is worked on adds nothing" "$SHIPPED team-tools Extra-Things|1" "$(listed)"
+check "a click while another one is worked on adds nothing" "$SHIPPED team-tools Extra-Things$FILL|1" "$(listed)"
 # Rows that are not a recipe's, should the file of the recipes added ever hold one: not listed,
 # and gone when the file is next written.
 printf 'junk\nfifth\tThe fifth\t0\t0\trelative/fifth.json\tmacos\nsixth\tThe sixth\t0\t0\t/x/sixth.json\twindows\nold\tA row of five fields\t0\t0\t/x/old.json\n' >> "$TMPDIR/AgentVM/$UUID/own.tsv"
 "$PB" "agentvm_busy_$UUID" set ""
 add_own "$OWN/third.json"
-check "a third: every slot is taken, and Add a Recipe File... is off" "$SHIPPED team-tools Extra-Things third|0" "$(listed)"
-check "  a row without its fields, without a full path, or for no system agent-vm has, was not taken for a recipe" "3" "$(/usr/bin/awk 'END { print NR }' "$TMPDIR/AgentVM/$UUID/own.tsv")"
+check "a last one: every slot is taken, and Add a Recipe File... is off" "$SHIPPED team-tools Extra-Things$FILL third|0" "$(listed)"
+check "  a row without its fields, without a full path, or for no system agent-vm has, was not taken for a recipe" "$((SLOTS - 7))" "$(/usr/bin/awk 'END { print NR }' "$TMPDIR/AgentVM/$UUID/own.tsv")"
 add_own "$OWN/fourth.json"
-check "one more is refused"          "This window lists 10 recipes. With more, build the image with agent-vm image create in Terminal.|$SHIPPED team-tools Extra-Things third|0" "$(note)|$(listed)"
+check "one more is refused"          "This window lists $SLOTS recipes. With more, build the image with agent-vm image create in Terminal.|$SHIPPED team-tools Extra-Things$FILL third|0" "$(note)|$(listed)"
 
 printf '%s\n' '{ "version": 1, "steps": [] }' > "$OWN/omc_hide.json"
 before="$(listed)"
@@ -1182,7 +1208,7 @@ add_own "$OWN/1.0.json"
 check "two names that are the same number are two recipes" "$SHIPPED 1 1.0|1|The 1, from $OWN/1.json|The 1.0, from $OWN/1.0.json" \
     "$(listed)|$(ui_value $((R_TEXT + 8)))|$(ui_value $((R_TEXT + 9)))"
 add_own "$OWN/back\\tslash.json"
-check "a path with a backslash in it" "$SHIPPED 1 1.0 back-tslash|0|The back_tslash, from $OWN/back\\tslash.json" "$(listed)|$(ui_value $((R_TEXT + 10)))"
+check "a path with a backslash in it" "$SHIPPED 1 1.0 back-tslash|1|The back_tslash, from $OWN/back\\tslash.json" "$(listed)|$(ui_value $((R_TEXT + 10)))"
 add_own "$OWN/back\\tslash.json"
 check "  the same file again is known by its path" "That is the recipe back-tslash, which is in the list already." "$(note)"
 omc_run AgentVM.newimage.close
@@ -1211,7 +1237,7 @@ ticked_linux() {
 # was never either.
 slots() {
     local _slot=0 _all=""
-    while [ "$_slot" -lt 10 ]; do
+    while [ "$_slot" -lt "$SLOTS" ]; do
         _slot=$((_slot + 1))
         _all="$_all$(ui_value $((R_NAME + _slot)))/$(ui_visible $((R_ROW + _slot))) "
     done
@@ -1230,7 +1256,7 @@ boxes() {
 # tick_calls  ->  how many times the window set a checkbox.
 tick_calls() {
     local _slot=0 _n=0
-    while [ "$_slot" -lt 10 ]; do
+    while [ "$_slot" -lt "$SLOTS" ]; do
         _slot=$((_slot + 1))
         _n=$((_n + $(ui_calls "${UUID}${TAB}$((R_TICK + _slot))${TAB}")))
     done
@@ -1250,7 +1276,7 @@ check "step 2, and the line above the tools names the start with its system" \
     "Step 2 of 5 - Tools|Tick the tools to install on top of image deb (Debian 13). They are installed in the order listed. With nothing ticked, the new image is the start as it is." \
     "$(ui_value "$NEW_HEADER_ID")|$(ui_value "$NEW_TOOLS_TEXT_ID")"
 check "the recipes for Linux images and for both, in the order they are applied; no recipe for macOS images" \
-    "linux-node/1 linux-python/1 agent-clis/1 acp-agents/1 linux-sudo/1 / / / / / " "$(slots)"
+    "linux-node/1 linux-python/1 agent-clis/1 acp-agents/1 linux-sudo/1 $(unused 5)" "$(slots)"
 check "  a description as agent-vm has it" "Node and npm from nodejs.org, for Linux images|sudo without a password for the box user: any program in a box can then become root" \
     "$(ui_value $((R_TEXT + 1)))|$(ui_value $((R_TEXT + 5)))"
 check "no checkbox is set by the window: none is ticked for the user, the one for sudo least of all" "- - - - - - -" "$(boxes 7)"
@@ -1328,7 +1354,7 @@ next
 check "it is the start, and the line above the tools names it" \
     "linux debian-13|Step 2 of 5 - Tools|Tick the tools to install on top of a new Debian 13 system. They are installed in the order listed. With nothing ticked, the new image is the start as it is." \
     "$(kept start)|$(ui_value "$NEW_HEADER_ID")|$(ui_value "$NEW_TOOLS_TEXT_ID")"
-check "the recipes for Linux images and for both; no recipe for macOS images" "linux-node/1 linux-python/1 agent-clis/1 acp-agents/1 linux-sudo/1 / / / / / " "$(slots)"
+check "the recipes for Linux images and for both; no recipe for macOS images" "linux-node/1 linux-python/1 agent-clis/1 acp-agents/1 linux-sudo/1 $(unused 5)" "$(slots)"
 ticked_linux agent-clis
 omc_run AgentVM.newimage.tick
 check "a new system holds nothing: a need that is not ticked is refused" "agent-clis needs linux-node: tick linux-node too." "$(note)"
@@ -1468,7 +1494,7 @@ mixed '.'
 open_new
 pick "image dev" dev
 next
-check "a macOS start: the seven recipes for it" "homebrew/1 node/1 python/1 agent-clis/1 acp-agents/1 xcode/1 xcode-platforms/1 / / / " "$(slots)"
+check "a macOS start: the seven recipes for it" "homebrew/1 node/1 python/1 agent-clis/1 acp-agents/1 xcode/1 xcode-platforms/1 $(unused 7)" "$(slots)"
 ticked homebrew agent-clis xcode-platforms
 omc_run AgentVM.newimage.tick
 check "three ticked"                 "homebrew agent-clis xcode-platforms" "$(kept ticks)"
@@ -1477,7 +1503,7 @@ check "Back to the start; no checkbox was set so far" "Step 1 of 5 - Start from|
 pick "image deb" deb
 next
 check "a Linux start: its five recipes, and the two slots left over are hidden" \
-    "linux-node/1 linux-python/1 agent-clis/1 acp-agents/1 linux-sudo/1 xcode/0 xcode-platforms/0 / / / " "$(slots)"
+    "linux-node/1 linux-python/1 agent-clis/1 acp-agents/1 linux-sudo/1 xcode/0 xcode-platforms/0 $(unused 7)" "$(slots)"
 check "every checkbox whose recipe changed is set: the agents keep their tick in their new slot, and no other recipe inherits one" \
     "false false true false false false false|7" "$(boxes 7)|$(tick_calls)"
 check "the slots kept are the ones shown" "$LINUX" "$(kept slots)"
@@ -1491,7 +1517,7 @@ calls_before="$(tick_calls)"
 back
 pick "image dev" dev
 next
-check "back to a macOS start: seven recipes again, the two slots shown again" "homebrew/1 node/1 python/1 agent-clis/1 acp-agents/1 xcode/1 xcode-platforms/1 / / / " "$(slots)"
+check "back to a macOS start: seven recipes again, the two slots shown again" "homebrew/1 node/1 python/1 agent-clis/1 acp-agents/1 xcode/1 xcode-platforms/1 $(unused 7)" "$(slots)"
 check "  the agents' tick moved back with them, and the one for sudo passed to nothing" "false false false true false false false" "$(boxes 7)"
 check "  the five whose recipe changed were set; a slot that showed no recipe is not ticked, and was left alone" "$((calls_before + 5))" "$(tick_calls)"
 seen $((R_TICK + 1)) $((R_TICK + 2)) $((R_TICK + 3)) $((R_TICK + 4)) $((R_TICK + 5)) $((R_TICK + 6)) $((R_TICK + 7))
@@ -1557,31 +1583,84 @@ check "a recipe for macOS images, with a Linux start" \
 add_own "$RECIPES/homebrew/recipe.json"
 check "one of agent-vm's own recipes for macOS images" "That is the recipe homebrew, which is for macOS images: it is listed when the start is a macOS image or a restore file." "$(note)"
 omc_run AgentVM.newimage.close
-# Room in the other system's list: a macOS start lists seven recipes of ten, a Linux start five.
-for n in 1 2 3 4 5 6; do
-    printf '{ "version": 1, "guest": "linux", "description": "Linux tool %s" }\n' "$n" > "$OWN/lt$n.json"
+# Room in the other system's list: a macOS start lists seven recipes, a Linux start five, and
+# the Linux list has room for this many more.
+ROOM=$((SLOTS - 5))
+LT=""
+n=1
+while [ "$n" -le "$ROOM" ]; do
+    LT="${LT:+$LT }lt$n"
+    n=$((n + 1))
+done
+for n in $LT "lt$((ROOM + 1))"; do
+    printf '{ "version": 1, "guest": "linux", "description": "Linux tool %s" }\n' "${n#lt}" > "$OWN/$n.json"
 done
 open_new dev
 ticked
-for n in 1 2 3 4 5; do
-    add_own "$OWN/lt$n.json"
+for n in $LT; do
+    add_own "$OWN/$n.json"
 done
-check "five recipes for Linux images, added with a macOS start: all kept, none listed" \
-    "lt5 is a recipe for Linux images, and the new image starts from image dev (macOS 27.0.1). It is kept, and listed when the start is a Linux image or a new Linux system.|$SHIPPED|1|5" \
+check "recipes for Linux images, added with a macOS start: all kept, none listed" \
+    "lt$ROOM is a recipe for Linux images, and the new image starts from image dev (macOS 27.0.1). It is kept, and listed when the start is a Linux image or a new Linux system.|$SHIPPED|1|$ROOM" \
     "$(note)|$(listed)|$(/usr/bin/awk 'END { print NR }' "$TMPDIR/AgentVM/$UUID/own.tsv")"
-add_own "$OWN/lt6.json"
-check "a sixth has no slot when the start is a Linux image, and is refused" \
-    "This window lists 10 recipes for Linux images already. With more, build the image with agent-vm image create in Terminal.|5" \
+add_own "$OWN/lt$((ROOM + 1)).json"
+check "one more has no slot when the start is a Linux image, and is refused" \
+    "This window lists $SLOTS recipes for Linux images already. With more, build the image with agent-vm image create in Terminal.|$ROOM" \
     "$(note)|$(/usr/bin/awk 'END { print NR }' "$TMPDIR/AgentVM/$UUID/own.tsv")"
 add_own "$OWN/for-both/recipe.json"
 check "  so is a recipe for both systems, which would be listed there too" \
-    "This window lists 10 recipes for Linux images already. With more, build the image with agent-vm image create in Terminal.|$SHIPPED|1" "$(note)|$(listed)"
+    "This window lists $SLOTS recipes for Linux images already. With more, build the image with agent-vm image create in Terminal.|$SHIPPED|1" "$(note)|$(listed)"
 add_own "$OWN/third.json"
 check "  a recipe for macOS images still has its slot" "third is in the list now. Tick it to install it.|$SHIPPED third|1" "$(note)|$(listed)"
 back
 pick "image deb" deb
 next
-check "the Linux start lists all ten, and Add a Recipe File... is off" "$LINUX lt1 lt2 lt3 lt4 lt5|0" "$(listed)"
+check "the Linux start lists them all, and Add a Recipe File... is off" "$LINUX $LT|0" "$(listed)"
+omc_run AgentVM.newimage.close
+
+section "one desktop to an image"
+# Two recipes that give an image a desktop, as linux-xfce, linux-gnome and linux-kde do, in
+# slots 6 and 7 after the five recipes of a Linux start.
+for n in desk-a desk-b; do
+    printf '{ "version": 1, "guest": "linux", "screen": true, "description": "The desktop %s" }\n' "$n" > "$OWN/$n.json"
+done
+DESK_A=$((R_TICK + 6))
+DESK_B=$((R_TICK + 7))
+fake_reset
+mixed '.'
+open_new deb
+ticked_linux
+add_own "$OWN/desk-a.json"
+add_own "$OWN/desk-b.json"
+check "two desktops of one's own, listed after agent-vm's recipes" "$LINUX desk-a desk-b|1" "$(listed)"
+ticked_linux linux-sudo
+omc_control "$DESK_A" "true"
+omc_control "$DESK_B" "false"
+omc_run AgentVM.newimage.tick
+check "one desktop ticked: kept, and no checkbox set by the window" "linux-sudo desk-a|0|0" \
+    "$(kept ticks)|$(ui_calls "${UUID}${TAB}${DESK_A}${TAB}")|$(ui_calls "${UUID}${TAB}${DESK_B}${TAB}")"
+check "  no note beside it: image deb has no desktop" "" "$(ui_value $((R_NOTE + 6)))"
+omc_control "$DESK_B" "true"
+omc_run AgentVM.newimage.tick
+check "the other ticked as well: the first is unticked, and the recipe that is no desktop keeps its tick" "false|linux-sudo desk-b" \
+    "$(ui_value "$DESK_A")|$(kept ticks)"
+omc_control "$DESK_A" "true"
+omc_control "$DESK_B" "true"
+omc_run AgentVM.newimage.tick
+check "  and back: the one clicked last stays ticked" "false|linux-sudo desk-a" "$(ui_value "$DESK_B")|$(kept ticks)"
+calls_before="$(tick_calls)"
+omc_control "$DESK_A" "false"
+omc_control "$DESK_B" "false"
+omc_run AgentVM.newimage.tick
+check "a desktop unticked sets no other checkbox" "linux-sudo|$calls_before" "$(kept ticks)|$(tick_calls)"
+back
+pick "image deb-agents" deb-agents
+next
+ticked_linux
+omc_control "$DESK_A" "true"
+omc_run AgentVM.newimage.tick
+check "a desktop ticked on an image that has one: the note says which starts" "desk-a|starts in place of the desktop deb-agents has" \
+    "$(kept ticks)|$(ui_value $((R_NOTE + 6)))"
 omc_run AgentVM.newimage.close
 
 section "a name that an image which is not ready has"
