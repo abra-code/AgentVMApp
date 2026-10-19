@@ -262,3 +262,14 @@ What was done to the tests:
 
 - The fake's refusal of `box view` for a Linux box without a screen is in 0.8.2's words.
 - `fixtures/recipes` has no desktop recipe: its lists of recipes stay as the tests count them. A test that needs a desktop recipe writes one of its own with `"screen": true` and adds it with the window's Add a Recipe File... button.
+
+## The move to agent-vm 0.8.4 (2026-10-19)
+
+0.8.2 and 0.8.3 are as described just above. 0.8.4 changes the window of `box view`, `image view` and an image setup, and nothing in the JSON the app reads:
+
+- The window can be resized and go full screen, and the picture follows it. A view-only window scales the picture; an interactive one gives the guest's display the window's size in points (macOS, GNOME and KDE take it, XFCE stays scaled), and sets it back to 1280 by 800 when it closes.
+
+What was done to the fixtures:
+
+- `version.json` and `packs.json` captured again from the installed 0.8.4 (`refresh_agentvm_fixtures.sh <agent-vm> version packs recipe-check`; versions, paths and digests only; `recipe-check.json` came out as it was). Captured from the installed agent-vm, not from the build in `../agent-vm/.build/signed/release`: that one writes its build paths, and a guest daemon requirement that is a code hash instead of the Developer ID one, into `version.json`.
+- The Linux guest daemon's digest in `doctor.json` and the version strings in `status-variety.json`, `job-log-variety.json` and the tests by hand. The install test needs nothing: it takes its releases from `AGENTVM_MIN_VERSION`.

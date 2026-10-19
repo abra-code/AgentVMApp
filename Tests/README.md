@@ -64,3 +64,5 @@ Tests/helpers/refresh_agentvm_fixtures.sh ../agent-vm/.build/signed/release/agen
 ```
 
 Then remake `status-variety.json` as `fixtures/agentvm/README.md` shows, and fix the tests that name what changed in the store. When the update changed nothing in a store's entries, name the parts that did change after the path (`version packs recipe-check`, say) and the others stay as they are: the tests name the images and boxes of `status.json`. The part `linux` takes the Linux fixtures from the store `AGENTVM_FIXTURE_LINUX_HOME` names, which must hold a ready Linux image built from another and a Linux box, with nothing running or being changed in it. The contract test takes the first build in `../agent-vm/.build/signed/release` or `.../work` that is new enough, or `AGENTVM_APP_CONTRACT_AGENT_VM`.
+
+`81-install.test.sh` needs nothing after an update: its fake GitHub names `AGENTVM_MIN_VERSION` as the newest release, so it passes before that version is released.

@@ -23,6 +23,14 @@ STAGE_SYMBOL="$(/usr/bin/sed -n 's/^MAIN_STAGE_SYMBOL_BASE=\([0-9]*\)$/\1/p' "$A
     exit 1
 }
 MIN_VERSION="$(lib_value AGENTVM_MIN_VERSION)"
+# The fake GitHub names the version the app needs as its newest release, and the one after it as
+# a newer one: the test follows the library when AGENTVM_MIN_VERSION moves, released or not.
+NEWEST="$MIN_VERSION"
+NEWER="$(printf '%s\n' "$NEWEST" | /usr/bin/awk -F. '{ printf "%s.%s.%d\n", $1, $2, $3 + 1 }')"
+[ -n "$NEWEST" ] && [ -n "$NEWER" ] || {
+    printf '81-install: no AGENTVM_MIN_VERSION in the library\n' >&2
+    exit 1
+}
 
 TOOLS="$OMCTEST_WORK/tools"
 /bin/mkdir -p "$TOOLS"
@@ -30,6 +38,7 @@ for tool in curl spctl pkgutil installer; do
     /bin/ln -s "$TEST_HELPERS/fake_install_tools.sh" "$TOOLS/$tool"
 done
 FAKE_INSTALL_DIR="$OMCTEST_WORK/fakeinstall"
+FAKE_INSTALL_NEWEST="$NEWEST"
 AGENTVM_APP_CURL="$TOOLS/curl"
 AGENTVM_APP_SPCTL="$TOOLS/spctl"
 AGENTVM_APP_PKGUTIL="$TOOLS/pkgutil"
@@ -39,7 +48,7 @@ AGENTVM_APP_SLEEP="$TEST_HELPERS/fake_sleep.sh"
 AGENTVM_APP_OPEN="$TEST_HELPERS/fake_open.sh"
 FAKE_SLEEP_LOG="$OMCTEST_WORK/sleeps"
 FAKE_OPEN_LOG="$OMCTEST_WORK/opened"
-export FAKE_INSTALL_DIR AGENTVM_APP_CURL AGENTVM_APP_SPCTL AGENTVM_APP_PKGUTIL AGENTVM_APP_INSTALLER
+export FAKE_INSTALL_DIR FAKE_INSTALL_NEWEST AGENTVM_APP_CURL AGENTVM_APP_SPCTL AGENTVM_APP_PKGUTIL AGENTVM_APP_INSTALLER
 export AGENTVM_APP_PS AGENTVM_APP_SLEEP AGENTVM_APP_OPEN FAKE_SLEEP_LOG FAKE_OPEN_LOG FAKE_AGENTVM
 PB="$OMC_OMC_SUPPORT_PATH/pasteboard"
 MAIN_UUID="$OMC_ACTIONUI_WINDOW_UUID"
@@ -49,7 +58,9 @@ OTHER_UUID="OMCTEST-other-install-$$"
 LINK="$HOME/.local/bin/agent-vm"
 RELEASES="https://github.com/abra-code/agent-vm/releases"
 # The agent-vm part is named for the package's version; the PATH part has one name.
-AGENTVM_CHOICE="com_abracode_pkg_agent_vm_0_8_1_choice"
+AGENTVM_CHOICE="com_abracode_pkg_agent_vm_$(printf '%s' "$NEWEST" | /usr/bin/tr . _)_choice"
+NEWER_CHOICE="com_abracode_pkg_agent_vm_$(printf '%s' "$NEWER" | /usr/bin/tr . _)_choice"
+OLD_CHOICE="com_abracode_pkg_agent_vm_0_7_43_choice"
 PATH_CHOICE="com_abracode_pkg_agent_vm_path_choice"
 
 in_window() {
@@ -158,14 +169,14 @@ check_status "the init handler exits cleanly" 0
 check "takes the request, once, and is the one such window" "|$UUID" "$(request)|$("$PB" agentvm_window_install_window get | /usr/bin/cut -d' ' -f2)"
 check "GitHub is asked once where its newest release is, and nothing else runs" "1|1" \
     "$(tools_log | /usr/bin/grep -c "^curl .*--head .*$RELEASES/latest\$")|$(tools_log | /usr/bin/awk 'END { print NR }')"
-check "what would be installed, and that nothing is" "agent-vm 0.8.1 is the newest. agent-vm is not installed.||" "$(head)|$(status)|$(note)"
+check "what would be installed, and that nothing is" "agent-vm $NEWEST is the newest. agent-vm is not installed.||" "$(head)|$(status)|$(note)"
 check "Download and Install is on, the checkbox ticked and on, the bar hidden" "1|true|1|0" \
     "$(button)|$(ui_value "$INSTALL_PATH_ID")|$(ui_enabled "$INSTALL_PATH_ID")|$(ui_visible "$INSTALL_BAR_ID")"
 check "the title"                    "Install agent-vm" "$(command_value '.COMMAND_LIST[] | select(.COMMAND_ID == "AgentVM.install") | .ACTIONUI_WINDOW.WINDOW_TITLE')"
 
 section "Download and Install"
 tools_reset
-printf '0.8.1\n' > "$FAKE_INSTALL_DIR/installs"
+printf '%s\n' "$NEWEST" > "$FAKE_INSTALL_DIR/installs"
 omc_control "$INSTALL_PATH_ID" "true"
 start
 check_status "the handler exits cleanly" 0
@@ -173,14 +184,14 @@ check "the steps, in order: the newest release, the download, the signature, the
     "curl|curl|spctl|pkgutil|installer -showChoiceChangesXML|installer -showChoicesAfterApplyingChangesXML|installer -pkg" \
     "$(tools_log | /usr/bin/grep -v '^choice \|^package-present ' | /usr/bin/awk '{ printf "%s%s", (NR > 1 ? "|" : ""), ($1 == "installer" ? $1 " " $2 : $1) }')"
 check "the package comes from the release of that version, over https only" "1" \
-    "$(tools_log | /usr/bin/grep -c "^curl .*--proto =https --proto-redir =https .*--output .*/agent-vm_0.8.1.pkg $RELEASES/download/0.8.1/agent-vm_0.8.1.pkg\$")"
+    "$(tools_log | /usr/bin/grep -c "^curl .*--proto =https --proto-redir =https .*--output .*/agent-vm_$NEWEST.pkg $RELEASES/download/$NEWEST/agent-vm_$NEWEST.pkg\$")"
 check "it is installed for this user only, with the parts chosen, and was there while installed" \
     "1|package-present yes|choice $AGENTVM_CHOICE 1|choice $PATH_CHOICE 1" \
     "$(tools_log | /usr/bin/grep -c '^installer -pkg .* -target CurrentUserHomeDirectory -applyChoiceChangesXML .*/choices.plist -verboseR$')|$(tools_log | /usr/bin/grep '^package-present \|^choice ' | /usr/bin/paste -sd '|' -)"
 check "the window says so, and there is nothing more to install" \
-    "agent-vm 0.8.1 is installed, and it is the newest.|Installed. Open a new Terminal window for avm and agent-vm to be found there.|0|0" \
+    "agent-vm $NEWEST is installed, and it is the newest.|Installed. Open a new Terminal window for avm and agent-vm to be found there.|0|0" \
     "$(head)|$(status)|$(button)|$(ui_visible "$INSTALL_BAR_ID")"
-check "the installed agent-vm is the release" "0.8.1" "$("$LINK" --version)"
+check "the installed agent-vm is the release" "$NEWEST" "$("$LINK" --version)"
 check "the download is gone"         "0" "$(leftovers)"
 # The first question is the check after installing; the next three are the main window's.
 check "the main window read the new agent-vm at once: its version, doctor and the lists" "--version|--version|doctor --json|status --json" \
@@ -193,22 +204,22 @@ close_window
 section "an agent-vm that is installed"
 tools_reset
 open_window
-check "the newest: nothing to install" "agent-vm 0.8.1 is installed, and it is the newest.|0|Boxes that are running keep the agent-vm they were started with until they are stopped." "$(head)|$(button)|$(note)"
+check "the newest: nothing to install" "agent-vm $NEWEST is installed, and it is the newest.|0|Boxes that are running keep the agent-vm they were started with until they are stopped." "$(head)|$(button)|$(note)"
 close_window
-printf '0.8.2\n' > "$FAKE_INSTALL_DIR/newest"
+printf '%s\n' "$NEWER" > "$FAKE_INSTALL_DIR/newest"
 open_window
-check "a newer release: it is offered" "agent-vm 0.8.2 is available. agent-vm 0.8.1 is installed.|1" "$(head)|$(button)"
-printf '0.8.2\n' > "$FAKE_INSTALL_DIR/installs"
+check "a newer release: it is offered" "agent-vm $NEWER is available. agent-vm $NEWEST is installed.|1" "$(head)|$(button)"
+printf '%s\n' "$NEWER" > "$FAKE_INSTALL_DIR/installs"
 omc_control "$INSTALL_PATH_ID" "false"
 start
-check "updated, with the PATH part left out as the checkbox says" "agent-vm 0.8.2 is installed, and it is the newest.|Installed.|choice com_abracode_pkg_agent_vm_0_8_2_choice 1|choice $PATH_CHOICE 0|0.8.2" \
+check "updated, with the PATH part left out as the checkbox says" "agent-vm $NEWER is installed, and it is the newest.|Installed.|choice $NEWER_CHOICE 1|choice $PATH_CHOICE 0|$NEWER" \
     "$(head)|$(status)|$(tools_log | /usr/bin/grep '^choice ' | /usr/bin/paste -sd '|' -)|$("$LINK" --version)"
 close_window
 tools_reset
 printf '0.5.0\n' > "$FAKE_INSTALL_DIR/newest"
 open_window
 check "a newest release older than the app needs is not offered" \
-    "agent-vm 0.8.2 is installed.|The newest agent-vm release is 0.5.0, and this AgentVM needs $MIN_VERSION or newer. It is not released yet: see $RELEASES.|0" "$(head)|$(status)|$(button)"
+    "agent-vm $NEWER is installed.|The newest agent-vm release is 0.5.0, and this AgentVM needs $MIN_VERSION or newer. It is not released yet: see $RELEASES.|0" "$(head)|$(status)|$(button)"
 close_window
 
 # -----------------------------------------------------------------------------------------------
@@ -245,83 +256,83 @@ check "a newest release older than the app needs" \
     "The newest agent-vm release is 0.5.0, and this AgentVM needs $MIN_VERSION or newer, so it was not installed.|1|0|0" "$(refused)"
 tools_reset
 printf 'curl: (22) The requested URL returned error: 404\n' > "$FAKE_INSTALL_DIR/download-fail"
-check "a download that fails" "Could not download agent-vm_0.8.1.pkg: curl: (22) The requested URL returned error: 404|1|0|0" "$(refused)"
+check "a download that fails" "Could not download agent-vm_$NEWEST.pkg: curl: (22) The requested URL returned error: 404|1|0|0" "$(refused)"
 tools_reset
 printf '0\n' > "$FAKE_INSTALL_DIR/package-bytes"
-check "a download that leaves nothing" "The download of agent-vm_0.8.1.pkg left no file.|1|0|0" "$(refused)"
+check "a download that leaves nothing" "The download of agent-vm_$NEWEST.pkg left no file.|1|0|0" "$(refused)"
 tools_reset
-printf 'agent-vm_0.8.1.pkg: rejected\nsource=no usable signature\n' > "$FAKE_INSTALL_DIR/spctl.out"
+printf 'agent-vm_%s.pkg: rejected\nsource=no usable signature\n' "$NEWEST" > "$FAKE_INSTALL_DIR/spctl.out"
 printf '3\n' > "$FAKE_INSTALL_DIR/spctl-status"
 check "a package Gatekeeper rejects" \
-    "agent-vm_0.8.1.pkg is not notarized Developer ID software, so it was not installed (agent-vm_0.8.1.pkg: rejected source=no usable signature).|1|0|0" "$(refused)"
+    "agent-vm_$NEWEST.pkg is not notarized Developer ID software, so it was not installed (agent-vm_$NEWEST.pkg: rejected source=no usable signature).|1|0|0" "$(refused)"
 tools_reset
-printf 'agent-vm_0.8.1.pkg: accepted\nsource=Developer ID\n' > "$FAKE_INSTALL_DIR/spctl.out"
+printf 'agent-vm_%s.pkg: accepted\nsource=Developer ID\n' "$NEWEST" > "$FAKE_INSTALL_DIR/spctl.out"
 check "a package that is signed and not notarized" \
-    "agent-vm_0.8.1.pkg is not notarized Developer ID software, so it was not installed (agent-vm_0.8.1.pkg: accepted source=Developer ID).|1|0|0" "$(refused)"
+    "agent-vm_$NEWEST.pkg is not notarized Developer ID software, so it was not installed (agent-vm_$NEWEST.pkg: accepted source=Developer ID).|1|0|0" "$(refused)"
 tools_reset
 printf '   Certificate Chain:\n    1. Developer ID Installer: Somebody Else (ABCDE12345)\n    2. Developer ID Certification Authority\n' > "$FAKE_INSTALL_DIR/pkgutil.out"
 check "a notarized package of another team" \
-    "agent-vm_0.8.1.pkg is signed by the Developer ID team ABCDE12345, not agent-vm's (T9NM2ZLDTY), so it was not installed.|1|0|0" "$(refused)"
+    "agent-vm_$NEWEST.pkg is signed by the Developer ID team ABCDE12345, not agent-vm's (T9NM2ZLDTY), so it was not installed.|1|0|0" "$(refused)"
 tools_reset
 printf '   Certificate Chain:\n    1. Apple Development: Somebody (T9NM2ZLDTY)\n    2. Developer ID Installer: Tomasz Kukielka (T9NM2ZLDTY)\n' > "$FAKE_INSTALL_DIR/pkgutil.out"
 check "the team is read from the first certificate only, and that must be a Developer ID Installer one" \
-    "agent-vm_0.8.1.pkg is not signed with a Developer ID Installer certificate, so it was not installed.|1|0|0" "$(refused)"
+    "agent-vm_$NEWEST.pkg is not signed with a Developer ID Installer certificate, so it was not installed.|1|0|0" "$(refused)"
 tools_reset
 printf '5\n' > "$FAKE_INSTALL_DIR/parts-status"
 check "a package whose parts installer cannot list" \
-    "installer could not list the parts of agent-vm_0.8.1.pkg: installer: Error trying to locate CurrentUserHomeDirectory domain|1|0|0" "$(refused)"
+    "installer could not list the parts of agent-vm_$NEWEST.pkg: installer: Error trying to locate CurrentUserHomeDirectory domain|1|0|0" "$(refused)"
 tools_reset
 printf '%s\n' "$PATH_CHOICE" > "$FAKE_INSTALL_DIR/parts"
 check "a package with no agent-vm part" \
-    "agent-vm_0.8.1.pkg has no agent-vm part, so AgentVM cannot tell what it would install. See $RELEASES.|1|0|0" "$(refused)"
+    "agent-vm_$NEWEST.pkg has no agent-vm part, so AgentVM cannot tell what it would install. See $RELEASES.|1|0|0" "$(refused)"
 tools_reset
 printf 'com_abracode_pkg_agent_vm_choice\n%s\n' "$PATH_CHOICE" > "$FAKE_INSTALL_DIR/parts"
 check "  nor is a part without a version in its name one (the packages before 0.7.44)" \
-    "agent-vm_0.8.1.pkg has no agent-vm part, so AgentVM cannot tell what it would install. See $RELEASES.|1|0|0" "$(refused)"
+    "agent-vm_$NEWEST.pkg has no agent-vm part, so AgentVM cannot tell what it would install. See $RELEASES.|1|0|0" "$(refused)"
 tools_reset
-printf '%s\ncom_abracode_pkg_agent_vm_0_7_43_choice\n%s\n' "$AGENTVM_CHOICE" "$PATH_CHOICE" > "$FAKE_INSTALL_DIR/parts"
+printf '%s\n%s\n%s\n' "$AGENTVM_CHOICE" "$OLD_CHOICE" "$PATH_CHOICE" > "$FAKE_INSTALL_DIR/parts"
 check "a package with the agent-vm parts of two versions" \
-    "agent-vm_0.8.1.pkg has more than one agent-vm part (com_abracode_pkg_agent_vm_0_7_43_choice, com_abracode_pkg_agent_vm_0_8_1_choice), so AgentVM cannot tell what it would install. See $RELEASES.|1|0|0" "$(refused)"
+    "agent-vm_$NEWEST.pkg has more than one agent-vm part ($(printf '%s\n%s\n' "$OLD_CHOICE" "$AGENTVM_CHOICE" | LC_ALL=C /usr/bin/sort | /usr/bin/paste -sd , - | /usr/bin/sed 's/,/, /g')), so AgentVM cannot tell what it would install. See $RELEASES.|1|0|0" "$(refused)"
 tools_reset
 printf '%s\n%s\ncom_example_extra_choice\n' "$AGENTVM_CHOICE" "$PATH_CHOICE" > "$FAKE_INSTALL_DIR/parts"
 printf 'com_example_extra_choice\n' > "$FAKE_INSTALL_DIR/sticky"
 check "a part the app does not know that cannot be left out" \
-    "agent-vm_0.8.1.pkg does not let AgentVM install only the parts chosen (com_example_extra_choice), so nothing was installed. See $RELEASES.|1|0|0" "$(refused)"
+    "agent-vm_$NEWEST.pkg does not let AgentVM install only the parts chosen (com_example_extra_choice), so nothing was installed. See $RELEASES.|1|0|0" "$(refused)"
 tools_reset
 printf '%s\n' "$PATH_CHOICE" > "$FAKE_INSTALL_DIR/sticky"
 omc_control "$INSTALL_PATH_ID" "false"
 check "the PATH part selected though the checkbox is not ticked" \
-    "agent-vm_0.8.1.pkg does not let AgentVM install only the parts chosen ($PATH_CHOICE), so nothing was installed. See $RELEASES.|1|0|0" "$(refused)"
+    "agent-vm_$NEWEST.pkg does not let AgentVM install only the parts chosen ($PATH_CHOICE), so nothing was installed. See $RELEASES.|1|0|0" "$(refused)"
 tools_reset
 printf '3\n' > "$FAKE_INSTALL_DIR/spctl-status"
 check "a package spctl ends badly on, whatever it prints" \
-    "agent-vm_0.8.1.pkg is not notarized Developer ID software, so it was not installed|1|0|0" "$(refused | /usr/bin/sed 's/ (.*source=Notarized Developer ID)\.|1|0|0$/|1|0|0/')"
+    "agent-vm_$NEWEST.pkg is not notarized Developer ID software, so it was not installed|1|0|0" "$(refused | /usr/bin/sed 's/ (.*source=Notarized Developer ID)\.|1|0|0$/|1|0|0/')"
 tools_reset
 printf '1\n' > "$FAKE_INSTALL_DIR/pkgutil-status"
 check "a package whose signature pkgutil cannot check, whatever it prints" \
-    "The signature of agent-vm_0.8.1.pkg could not be checked, so it was not installed|1|0|0" "$(refused | /usr/bin/sed 's/: Package .*|1|0|0$/|1|0|0/')"
+    "The signature of agent-vm_$NEWEST.pkg could not be checked, so it was not installed|1|0|0" "$(refused | /usr/bin/sed 's/: Package .*|1|0|0$/|1|0|0/')"
 tools_reset
 printf 'installer: a line that is no property list\n' > "$FAKE_INSTALL_DIR/confirm-banner"
 check "an answer about the parts that cannot be read confirms nothing" \
-    "installer's answer about the parts of agent-vm_0.8.1.pkg could not be read, so nothing was installed.|1|0|0" "$(refused)"
+    "installer's answer about the parts of agent-vm_$NEWEST.pkg could not be read, so nothing was installed.|1|0|0" "$(refused)"
 tools_reset
 printf '%s\n%s\ncom_example_extra_choice\n' "$AGENTVM_CHOICE" "$PATH_CHOICE" > "$FAKE_INSTALL_DIR/parts"
 printf 'com_example_extra_choice\n' > "$FAKE_INSTALL_DIR/sticky"
 printf '%s\n' -1 > "$FAKE_INSTALL_DIR/sticky-setting"
 check "a part selected in part (-1) counts as selected" \
-    "agent-vm_0.8.1.pkg does not let AgentVM install only the parts chosen (com_example_extra_choice), so nothing was installed. See $RELEASES.|1|0|0" "$(refused)"
+    "agent-vm_$NEWEST.pkg does not let AgentVM install only the parts chosen (com_example_extra_choice), so nothing was installed. See $RELEASES.|1|0|0" "$(refused)"
 check "nothing was installed by any of these" "no" "$([ -e "$LINK" ] && echo yes || echo no)"
 
 section "a part the app does not know is left out"
 tools_reset
 printf '%s\n%s\ncom_example_extra_choice\n' "$AGENTVM_CHOICE" "$PATH_CHOICE" > "$FAKE_INSTALL_DIR/parts"
-printf '0.8.1\n' > "$FAKE_INSTALL_DIR/installs"
+printf '%s\n' "$NEWEST" > "$FAKE_INSTALL_DIR/installs"
 start
 check "installed, with that part and the unticked PATH part off" "Installed.|choice $AGENTVM_CHOICE 1|choice $PATH_CHOICE 0|choice com_example_extra_choice 0" \
     "$(status)|$(tools_log | /usr/bin/grep '^choice ' | /usr/bin/sort | /usr/bin/paste -sd '|' -)"
 tools_reset
 printf '%s\n%s\n%s_extra\nx_%s\n' "$AGENTVM_CHOICE" "$PATH_CHOICE" "$AGENTVM_CHOICE" "$AGENTVM_CHOICE" > "$FAKE_INSTALL_DIR/parts"
-printf '0.8.1\n' > "$FAKE_INSTALL_DIR/installs"
+printf '%s\n' "$NEWEST" > "$FAKE_INSTALL_DIR/installs"
 start
 check "  so is a part whose name only holds the agent-vm part's: the whole name counts" \
     "Installed.|choice $AGENTVM_CHOICE 1|choice ${AGENTVM_CHOICE}_extra 0|choice $PATH_CHOICE 0|choice x_$AGENTVM_CHOICE 0" \
@@ -335,17 +346,17 @@ open_window
 printf '1\n' > "$FAKE_INSTALL_DIR/installer-status"
 start
 check "installer's own words, where to look, and the button on again" \
-    "Could not install agent-vm_0.8.1.pkg: installer: Error - The Installer encountered an error that caused the installation to fail. (/var/log/install.log has the details).|1|0|0" \
+    "Could not install agent-vm_$NEWEST.pkg: installer: Error - The Installer encountered an error that caused the installation to fail. (/var/log/install.log has the details).|1|0|0" \
     "$(status)|$(button)|$(ui_visible "$INSTALL_BAR_ID")|$(leftovers)"
 tools_reset
 start
 check "an installation that reports success and installs nothing" \
-    "The installation ended, and agent-vm 0.8.1 is not installed: there is no agent-vm at ~/.local/bin/agent-vm (/var/log/install.log has the details).|1" "$(status)|$(button)"
+    "The installation ended, and agent-vm $NEWEST is not installed: there is no agent-vm at ~/.local/bin/agent-vm (/var/log/install.log has the details).|1" "$(status)|$(button)"
 installed_old 0.6.1
 tools_reset
 start
 check "one that leaves the old agent-vm in place" \
-    "The installation ended, and agent-vm 0.8.1 is not installed: ~/.local/bin/agent-vm reports 0.6.1 (/var/log/install.log has the details).|1" "$(status)|$(button)"
+    "The installation ended, and agent-vm $NEWEST is not installed: ~/.local/bin/agent-vm reports 0.6.1 (/var/log/install.log has the details).|1" "$(status)|$(button)"
 nothing_installed
 tools_reset
 printf '30\n' > "$FAKE_INSTALL_DIR/installer-sleep"
@@ -353,7 +364,7 @@ AGENTVM_APP_INSTALL_TIMEOUT=1
 export AGENTVM_APP_INSTALL_TIMEOUT
 start
 check "one that does not finish is stopped" \
-    "Installing agent-vm_0.8.1.pkg did not finish within 0 minutes, and AgentVM stopped waiting for it. /var/log/install.log shows what installer was waiting for; try again once that has ended.|1|0" "$(status)|$(button)|$(leftovers)"
+    "Installing agent-vm_$NEWEST.pkg did not finish within 0 minutes, and AgentVM stopped waiting for it. /var/log/install.log shows what installer was waiting for; try again once that has ended.|1|0" "$(status)|$(button)|$(leftovers)"
 unset AGENTVM_APP_INSTALL_TIMEOUT
 close_window
 
@@ -367,7 +378,7 @@ tools_reset
 start
 check "a click while another one is worked on does nothing" "" "$(tools_log)"
 "$PB" "agentvm_busy_$UUID" set "click-999999"
-printf '0.8.1\n' > "$FAKE_INSTALL_DIR/installs"
+printf '%s\n' "$NEWEST" > "$FAKE_INSTALL_DIR/installs"
 start
 check "a click whose holder is gone is taken" "1|" "$(installs)|$("$PB" "agentvm_busy_$UUID" get)"
 close_window
@@ -375,7 +386,7 @@ nothing_installed
 open_window
 tools_reset
 printf '3\n' > "$FAKE_INSTALL_DIR/download-sleep"
-printf '0.8.1\n' > "$FAKE_INSTALL_DIR/installs"
+printf '%s\n' "$NEWEST" > "$FAKE_INSTALL_DIR/installs"
 start &
 start_pid=$!
 /bin/sleep 1
@@ -400,15 +411,15 @@ start
 check "while another handler installs, a click says so and does nothing" \
     "agent-vm is being installed already. Wait for that to end, then look again.|1|" "$(status)|$(button)|$(tools_log)"
 "$PB" agentvm_install_running set "999999"
-printf '0.8.2\n' > "$FAKE_INSTALL_DIR/installs"
-printf '0.8.2\n' > "$FAKE_INSTALL_DIR/newest"
+printf '%s\n' "$NEWER" > "$FAKE_INSTALL_DIR/installs"
+printf '%s\n' "$NEWER" > "$FAKE_INSTALL_DIR/newest"
 start
 check "an installing handler that is gone holds nothing, and the mark goes when installing ends" "Installed.|" "$(status | /usr/bin/cut -c1-10)|$("$PB" agentvm_install_running get)"
 /bin/rm -f "$FAKE_INSTALL_DIR/newest"
 close_window
 open_window
 check "an installed agent-vm newer than the newest release: said, and nothing to install" \
-    "agent-vm 0.8.2 is installed, which is newer than the newest release, 0.8.1.|0" "$(head)|$(button)"
+    "agent-vm $NEWER is installed, which is newer than the newest release, $NEWEST.|0" "$(head)|$(button)"
 close_window
 
 section "only one window, and only when this run asked"
