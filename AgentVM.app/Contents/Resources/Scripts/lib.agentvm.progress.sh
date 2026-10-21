@@ -281,10 +281,11 @@ progress_notice_now() {
 # well. A notice says what the user may need to act on. Some are of the step they were written
 # in ("this Mac is not letting agent-vm reach the guest... The build keeps trying"), and would
 # read as something still wrong once the job has gone on; others are said before the steps they
-# are about ("this Mac has about 3 GB of memory to spare... If it fails, quit programs that use
-# much memory"), and must not be gone when the next step begins. The window cannot tell them
-# apart, and agent-vm's words are not matched on, so a notice of a step the job has left stays,
-# and is said to be from an earlier step. It is in the log as well then (progress_log_text).
+# are about (a box's start: "this box has 14 GB of this Mac's 16 GB of memory; the Mac and the
+# boxes may get slow"), and must not be gone when the next step begins. The window cannot tell
+# them apart, and agent-vm's words are not matched on, so a notice of a step the job has left
+# stays, and is said to be from an earlier step. It is in the log as well then
+# (progress_log_text).
 progress_notice_text() {
     local _now="$(progress_notice_now "$1")"
     if [ -n "$_now" ]; then

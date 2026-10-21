@@ -225,7 +225,7 @@ check "the steps, oldest first; the last shows how far it is" \
     "Cloning dev-node (macOS 26A428)=done|Booting=done|Recipe: ACP agents (3 steps, 2 checks)=done|[1/3] Homebrew=done|[2/3] Node=done|[3/3] Agents=67%" "$(steps)"
 check "the bar is shown, at the step's fraction" "1|67" "$(shown "$PROGRESS_BAR_ID")|$(ui_value "$PROGRESS_BAR_ID")"
 check "the log: agent-vm's lines and the guest's, the notice of a step that is over where it was written, then the other lines" \
-    "agent-vm-guest 0.8.4 answers over vsock|==> Downloading and installing Homebrew...|==> Installation successful!|Homebrew is already installed in the base image|==> Pouring node--24.9.0.arm64_tahoe.bottle.tar.gz|a line with a tab in it|added 212 packages in 9s|warning: a line that is neither an event nor the error" \
+    "agent-vm-guest 0.8.6 answers over vsock|==> Downloading and installing Homebrew...|==> Installation successful!|Homebrew is already installed in the base image|==> Pouring node--24.9.0.arm64_tahoe.bottle.tar.gz|a line with a tab in it|added 212 packages in 9s|warning: a line that is neither an event nor the error" \
     "$(ui_value "$PROGRESS_LOG_ID" | /usr/bin/paste -sd '|' -)"
 check "a notice of a step the job has left is on the notice line too, said to be from an earlier step" \
     "From an earlier step: Homebrew is already installed in the base image" "$(ui_value "$PROGRESS_NOTICE_ID")"
@@ -263,10 +263,11 @@ check "a later step of the same name: from an earlier step, and in the log" "Fro
     "$(ui_value "$PROGRESS_NOTICE_ID")|$(ui_value "$PROGRESS_LOG_ID" | /usr/bin/paste -sd '|' -)"
 
 section "a notice said before the step it is about"
-# agent-vm looks at the Mac's memory before it boots a Linux guest on a kernel with 4 KiB pages,
-# and says what it found before the boot's step, and a box's start says its note before its first
-# step. The texts are examples: the window matches on nothing in them.
-MEMORY_TEXT="note: this Mac has about 3.0 GB of memory to spare for a guest of 4 GB. If it fails, quit programs that use much memory and try again"
+# A box's start says its memory warning ("this box has ...") before its first step, and the
+# warning is about the boot that follows. The window is the same for every kind of job, so the
+# build's window stands in for a box's. The texts are examples, in agent-vm's words: the window
+# matches on nothing in them.
+MEMORY_TEXT="this box has 14 GB of this Mac's 16 GB of memory; the Mac and the boxes may get slow. \`agent-vm box set <box> --memory-gb N\` changes a stopped box's memory."
 job_log "$BUILD" "{events: [{event: \"notice\", message: \"$MEMORY_TEXT\"}], lines: []}"
 poll 1
 check "before any step: on the notice line" "$MEMORY_TEXT|Started; no step reported yet." "$(ui_value "$PROGRESS_NOTICE_ID")|$(ui_value "$PROGRESS_STATUS_ID")"
@@ -280,22 +281,23 @@ job_log "$BUILD" "{events: [{event: \"notice\", message: \"$MEMORY_TEXT\"},
     {event: \"progress\", step: \"system-update\", message: \"Installing Debian 13's package updates\"}], lines: []}"
 poll 1
 check "a later step: it stays, as one from an earlier step, and the log has it" "From an earlier step: $MEMORY_TEXT|1" \
-    "$(ui_value "$PROGRESS_NOTICE_ID")|$(ui_value "$PROGRESS_LOG_ID" | /usr/bin/grep -c '^note: this Mac has about 3.0 GB of memory to spare')"
-# In a build the notice follows the download's step and comes before the unpacking and the boot.
+    "$(ui_value "$PROGRESS_NOTICE_ID")|$(ui_value "$PROGRESS_LOG_ID" | /usr/bin/grep -c "^this box has 14 GB of this Mac's 16 GB of memory")"
+# A notice followed by two steps, the second of them the one it is about.
 job_log "$BUILD" "{events: [{event: \"progress\", step: \"base-check\", message: \"Asking cloud.debian.org for the checksum\"},
     {event: \"notice\", message: \"$MEMORY_TEXT\"},
     {event: \"progress\", step: \"unpack\", message: \"Unpacking the disk\"},
     {event: \"progress\", step: \"first-boot\", message: \"First boot: the system installs the guest daemon\"}], lines: []}"
 poll 1
-check "a build at its first boot still shows what was said of the Mac's memory" "From an earlier step: $MEMORY_TEXT" "$(ui_value "$PROGRESS_NOTICE_ID")"
+check "two steps on, the notice still shows" "From an earlier step: $MEMORY_TEXT" "$(ui_value "$PROGRESS_NOTICE_ID")"
 job_state "$BUILD" '{state: "failed", status: 1, endedAt: "2026-09-30T12:04:00Z", error: "the guest stopped"}'
 omc_run AgentVM.progress.activated
-check "  and after the build failed" "From an earlier step: $MEMORY_TEXT" "$(ui_value "$PROGRESS_NOTICE_ID")"
+check "  and after the job failed" "From an earlier step: $MEMORY_TEXT" "$(ui_value "$PROGRESS_NOTICE_ID")"
 job_state "$BUILD" '{state: "done", status: 0, error: null}'
 omc_run AgentVM.progress.activated
 check "  and not after one that ended well" "" "$(ui_value "$PROGRESS_NOTICE_ID")"
-# A build agent-vm refused for the Mac's memory: no step, and the reason whole, since it says what to do.
-REFUSAL="this Mac has about 512 MB of memory to spare, and macOS reports memory pressure (warning); the first boot of the build runs on a kernel with 4 KiB memory pages, which can lose kernel memory and fail when the Mac runs short of memory (macOS 27). Quit programs that use much memory or stop running boxes, and try again"
+# A build agent-vm refused for the Mac's free disk space: no step, and the reason whole, since it
+# says what to do.
+REFUSAL="cannot build here: 31 GB free on the volume of /Users/you/Library/Application Support/agent-vm; 40 GB free leaves room for the image and for the guest to work"
 job_log "$BUILD" '{events: [], lines: []}'
 job_state "$BUILD" "{state: \"failed\", status: 1, error: \"$REFUSAL\"}"
 omc_run AgentVM.progress.activated

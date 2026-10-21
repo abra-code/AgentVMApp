@@ -273,3 +273,17 @@ What was done to the fixtures:
 
 - `version.json` and `packs.json` captured again from the installed 0.8.4 (`refresh_agentvm_fixtures.sh <agent-vm> version packs recipe-check`; versions, paths and digests only; `recipe-check.json` came out as it was). Captured from the installed agent-vm, not from the build in `../agent-vm/.build/signed/release`: that one writes its build paths, and a guest daemon requirement that is a code hash instead of the Developer ID one, into `version.json`.
 - The Linux guest daemon's digest in `doctor.json` and the version strings in `status-variety.json`, `job-log-variety.json` and the tests by hand. The install test needs nothing: it takes its releases from `AGENTVM_MIN_VERSION`.
+
+## The move to agent-vm 0.8.6 (2026-10-20)
+
+0.8.5 attaches a Linux guest's disk through the Mac's file cache (the caching mode `cached`): a kernel with 4 KiB pages no longer loses memory after the guest reads its disk through the raw device. 0.8.6 offers Ubuntu 26.04 again, second in `linuxReleases`, and drops what went with holding it back: doctor's "linux kernels" check (never in a capture here), the 4 KiB note at `box start` and before `image create`, and the memory notice and refusal before an image job boots a 4 KiB kernel. Nothing the app reads changed shape.
+
+What was done to the fixtures:
+
+- `version.json`, `doctor.json` and `packs.json` captured again from the installed 0.8.6 (`refresh_agentvm_fixtures.sh <agent-vm> version doctor packs recipe-check`; `recipe-check.json` came out as it was). `version.json` lists Ubuntu 26.04 after Debian 13. In `doctor.json` only the Linux guest daemon's digest moved; the free space on the store's volume is kept at the earlier capture's 134 GB, which a test names.
+- The version strings in `status-variety.json`, `job-log-variety.json` and the tests by hand.
+
+What was done to the tests:
+
+- New Image (file 60) checks that Ubuntu 26.04 is a start, with its key and the command it builds; the case with a system the app has not seen adds it to every listed system instead of to the first only.
+- The progress window's notice said before its step (file 54) uses the box start's memory warning and a refusal for free disk space as its examples, in place of the memory notice and refusal agent-vm no longer has.

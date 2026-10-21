@@ -1390,9 +1390,25 @@ omc_run AgentVM.newimage.close
 "$PB" agentvm_open_request_progress set ""
 
 fake_reset
+mixed '.'
+open_new
+check "Ubuntu is a start too: its row, and its key" \
+    "Ubuntu 26.04${TAB}Linux${TAB}a new system, from its cloud image${TAB}downloaded when needed${TAB}linux ubuntu-26.04" "$(ui_rows "$NEW_SOURCES_ID" | row_named "Ubuntu 26.04")"
+pick "linux ubuntu-26.04" "Ubuntu 26.04"
+next
+ticked_linux
+next
+check "  the name is the distribution's" "Step 4 of 5 - Name and size|ubuntu" "$(ui_value "$NEW_HEADER_ID")|$(ui_value "$NEW_NAME_ID")"
+seen "$NEW_NAME_ID" "$NEW_CPUS_ID" "$NEW_MEMORY_ID" "$NEW_DISK_ID"
+next
+check "  and the command builds the system by its id" "agent-vm image create ubuntu --linux ubuntu-26.04 --cpus 4 --memory-gb 4 --disk-gb 32" "$(ui_value "$NEW_COMMAND_ID")"
+omc_run AgentVM.newimage.close
+
+fake_reset
 mixed '.images += [.images[0] | .name = "debian"]'
-# A second system beside the first: the window lists and builds whatever agent-vm says it builds.
-/usr/bin/jq '.linuxReleases = [.linuxReleases[0], {distribution: "alpine", id: "alpine-3.22", name: "Alpine 3.22", version: "3.22"}]' \
+# A system the app has not seen, beside the others: the window lists and builds whatever agent-vm
+# says it builds.
+/usr/bin/jq '.linuxReleases += [{distribution: "alpine", id: "alpine-3.22", name: "Alpine 3.22", version: "3.22"}]' \
     "$FIXTURES_AGENTVM/version.json" > "$FAKE_AGENTVM_DIR/version.json"
 open_new
 pick "linux debian-13" "Debian 13"
