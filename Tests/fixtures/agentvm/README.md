@@ -287,3 +287,12 @@ What was done to the tests:
 
 - New Image (file 60) checks that Ubuntu 26.04 is a start, with its key and the command it builds; the case with a system the app has not seen adds it to every listed system instead of to the first only.
 - The progress window's notice said before its step (file 54) uses the box start's memory warning and a refusal for free disk space as its examples, in place of the memory notice and refusal agent-vm no longer has.
+
+## The move to agent-vm 0.8.7 (2026-10-20)
+
+0.8.7 lets `linux-gnome` and `linux-kde` build on Ubuntu 26.04 images as well as Debian 13. Their descriptions say "Debian and Ubuntu images", and the `polkit` value `debian` keeps its name but now means the system's own rules (Debian's, or Ubuntu's in an Ubuntu image). Commands, JSON output and events are unchanged.
+
+What was done to the fixtures:
+
+- `version.json`, `doctor.json` and `packs.json` captured again from the installed 0.8.7 (`refresh_agentvm_fixtures.sh <agent-vm> version doctor packs recipe-check`; versions, paths and digests only; `recipe-check.json` came out as it was). In `doctor.json` only the Linux guest daemon's digest moved; the free space stays at 134 GB, which a test names.
+- The version strings in `status-variety.json`, `job-log-variety.json` and the tests by hand. No fixture holds the desktop recipes' descriptions: `fixtures/recipes` has no desktop recipe.

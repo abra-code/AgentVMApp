@@ -45,7 +45,7 @@
       "status": "ok"
     },
     {
-      "detail": "next to agent-vm (SHA-256 ae7e2c863339...)",
+      "detail": "next to agent-vm (SHA-256 e817e64cacfe...)",
       "name": "linux guest daemon",
       "status": "info"
     }
