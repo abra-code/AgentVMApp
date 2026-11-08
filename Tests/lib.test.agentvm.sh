@@ -62,6 +62,9 @@ command_value() {
 # the library at the fake, which answers from Tests/fixtures/agentvm/.
 FAKE_AGENTVM="$TEST_HELPERS/fake_agent_vm.sh"
 FIXTURES_AGENTVM="$OMCTEST_FIXTURES/agentvm"
+# The agent-vm the fixtures come from. The hand-made fixtures name it too (refresh_agentvm_fixtures.sh
+# follow), so a test that checks a version they show takes it from here, not from a literal.
+FIXTURES_AGENTVM_VERSION="$(/usr/bin/jq -r '.version' "$FIXTURES_AGENTVM/version.json")"
 # Named for the fake, which otherwise finds them beside itself: a copy installed as
 # ~/.local/bin/agent-vm would look in the wrong place.
 FAKE_AGENTVM_FIXTURES="$FIXTURES_AGENTVM"

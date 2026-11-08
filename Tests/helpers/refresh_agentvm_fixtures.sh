@@ -15,8 +15,10 @@
 # With parts named, only those are captured, and every other fixture is left as it is: version,
 # doctor, status (with the image info, box info and rules that follow from it), packs,
 # recipe-check, ipsw (the list and what Apple offers), empty (the empty store's status and the
-# job), linux. The tests name the images and boxes of status.json, so after an agent-vm update
-# that changed nothing in a store's entries the parts that did change are enough.
+# job), linux, follow (below). The tests name the images and boxes of status.json, so after an
+# agent-vm update that changed nothing in a store's entries the parts that did change are enough.
+# update-agentvmapp.sh runs `version packs recipe-check follow` when the app's
+# AGENTVM_MIN_VERSION is not the agent-vm of version.json.
 #
 # The part linux needs AGENTVM_FIXTURE_LINUX_HOME: a store with a ready Linux image built from
 # another and a Linux box, which the store agent-vm finds by itself need not have. Its `status`
@@ -26,8 +28,9 @@
 # refused while something in that store runs or is being changed: a capture holds what was
 # there at that moment.
 #
-# status-variety.json is not captured: it is made by hand (see the README beside the fixtures)
-# and this script leaves it alone.
+# status-variety.json and job-log-variety.json are not captured: they are made by hand (see the
+# README beside the fixtures). The part follow changes only the agent-vm version they name, and
+# the Linux guest daemon's digest in doctor.json, to those of version.json.
 #
 # After a refresh, run the suite: the drift checks in Tests/10-agentvm-library.test.sh fail
 # when a field the library reads is gone, and the version check fails until the library's
@@ -46,8 +49,8 @@ shift
 parts=" $* "
 for part in "$@"; do
     case "$part" in
-        version|doctor|status|packs|recipe-check|ipsw|empty|linux) ;;
-        *) fail "\"$part\" is not a part: version, doctor, status, packs, recipe-check, ipsw, empty, linux" ;;
+        version|doctor|status|packs|recipe-check|ipsw|empty|linux|follow) ;;
+        *) fail "\"$part\" is not a part: version, doctor, status, packs, recipe-check, ipsw, empty, linux, follow" ;;
     esac
 done
 
@@ -122,9 +125,6 @@ elif wanted linux; then
 fi
 
 printf 'Capturing from %s (%s)\n' "$agentvm" "$("$agentvm" --version 2>&1)"
-if wanted version; then
-    capture version version --json
-fi
 if wanted doctor; then
     capture doctor doctor --json
 fi
@@ -267,6 +267,40 @@ if wanted status || wanted linux; then
         [ "$status" -eq 0 ] || fail "cannot write $fixtures/status-mixed.json"
         printf '  status-mixed.json  <-  status.json with the images and boxes of status-linux.json\n'
     fi
+fi
+
+# version.json is captured last, just before follow: update-agentvmapp.sh reads its version to
+# tell whether the fixtures need a refresh, so a capture that failed part way must leave it old.
+if wanted version; then
+    capture version version --json
+fi
+
+# -- follow ----------------------------------------------------------------------------------------
+# The fixtures made or kept by hand name the agent-vm they stand beside: the running box of
+# status-variety.json runs it and has its guest daemon, the build of job-log-variety.json logs
+# that guest daemon's answer, and doctor.json (kept from an earlier capture, whose free space a
+# test names) shows the Linux guest daemon's digest. This part makes them name the agent-vm of
+# version.json, and changes nothing else in them.
+# follow_fixture <fixture name> <jq filter> - the filter applied with $v (the version) and
+# $digest (the Linux guest daemon's digest, first 12 digits), written only when jq succeeded.
+follow_fixture() {
+    /usr/bin/jq -S --arg v "$follow_version" --arg digest "$follow_digest" "$2" "$fixtures/$1.json" > "$work/$1.follow.json"
+    local status=$?
+    [ "$status" -eq 0 ] || fail "cannot make $1.json follow version.json"
+    /bin/mv -f "$work/$1.follow.json" "$fixtures/$1.json"
+    status=$?
+    [ "$status" -eq 0 ] || fail "cannot write $fixtures/$1.json"
+    printf '  %s.json  <-  agent-vm %s of version.json\n' "$1" "$follow_version"
+}
+
+if wanted follow; then
+    follow_version="$(/usr/bin/jq -r '.version // empty' "$fixtures/version.json")"
+    [ -n "$follow_version" ] || fail "version.json names no version"
+    follow_digest="$(/usr/bin/jq -r '.linuxGuestDaemon.digest // empty | .[0:12]' "$fixtures/version.json")"
+    [ -n "$follow_digest" ] || fail "version.json names no Linux guest daemon digest"
+    follow_fixture status-variety '(.boxes[] | select(.supervisorVersion != null)) |= (.guestVersion = $v | .supervisorVersion = $v | .supervisorPath |= sub("/versions/[^/]+/"; "/versions/\($v)/"))'
+    follow_fixture job-log-variety '(.events[] | select(.event == "log") | .message) |= sub("^agent-vm-guest [0-9.]+ "; "agent-vm-guest \($v) ")'
+    follow_fixture doctor '(.checks[] | select(.name == "linux guest daemon") | .detail) |= sub("SHA-256 [0-9a-f]+[.][.][.]"; "SHA-256 \($digest)...")'
 fi
 
 printf 'Done. Run the suite; update the README beside the fixtures with the date and version.\n'

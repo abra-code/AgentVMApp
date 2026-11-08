@@ -5,6 +5,10 @@
 # executable in Contents/MacOS) is not committed: AppletBuilder installs it. This script:
 #   1. sets AGENTVM_MIN_VERSION in lib.agentvm.sh to the version of the agent-vm working tree
 #      beside this repository: the app requires the agent-vm it is built and tested with;
+#   1b. when the test fixtures come from another agent-vm than that version, captures them again
+#      from the installed agent-vm (which must be that version), with
+#      Tests/helpers/refresh_agentvm_fixtures.sh: the parts version, packs and recipe-check, and
+#      follow, which makes the hand-made fixtures name the new version;
 #   2. removes tool residue from the bundle (a .claude folder left by a coding agent whose
 #      working directory was inside it makes codesign refuse the whole bundle);
 #   3. runs `appletbuilder build`, which validates the bundle, installs or refreshes the engine,
@@ -76,8 +80,7 @@ done
 # -- 1. The agent-vm version the app requires -------------------------------------------------
 # One development stream: the app is tested against the newest agent-vm only, so it requires
 # exactly that version or newer. The number lives on one line of the library, and the tests
-# compare it with the fixtures' agent-vm, so after an agent-vm update they fail until the
-# fixtures are refreshed from it (Tests/helpers/refresh_agentvm_fixtures.sh).
+# compare it with the fixtures' agent-vm, so step 1b refreshes the fixtures after an update.
 printf '==== agent-vm version\n'
 library="$app/Contents/Resources/Scripts/lib.agentvm.sh"
 current="$(/usr/bin/sed -n 's/^AGENTVM_MIN_VERSION="\(.*\)"$/\1/p' "$library")"
@@ -96,12 +99,45 @@ if [ "$set_min_version" = "yes" ]; then
         status=$?
         [ "$status" -eq 0 ] || fail "cannot rewrite AGENTVM_MIN_VERSION in $library"
         printf '  AGENTVM_MIN_VERSION changed from %s to %s, the version in %s\n' "$current" "$wanted" "$agentvm_repo"
-        printf '  the tests fail until Tests/fixtures/agentvm is refreshed from agent-vm %s\n' "$wanted"
+        current="$wanted"
     else
         printf '  AGENTVM_MIN_VERSION is %s, the version in %s\n' "$current" "$agentvm_repo"
     fi
 else
     printf '  AGENTVM_MIN_VERSION kept at %s\n' "$current"
+fi
+
+# -- 1b. The test fixtures ---------------------------------------------------------------------
+# The fixtures are captured from the installed agent-vm, not from a build in the agent-vm working
+# tree: a build writes its build paths, and a guest daemon requirement that is a code hash instead
+# of the Developer ID one, into version.json. Only the parts an agent-vm update changes are
+# captured; doctor.json is kept (a test names its free space) and follow updates its digest. When
+# the installed agent-vm is not the version the app requires, the tests cannot pass, so the
+# script stops before the build; with --skip-tests it only warns.
+printf '==== Test fixtures\n'
+fixtures="$script_dir/Tests/fixtures/agentvm"
+refresh="$script_dir/Tests/helpers/refresh_agentvm_fixtures.sh"
+fixture_version="$(/usr/bin/jq -r '.version // empty' "$fixtures/version.json")"
+[ -n "$fixture_version" ] || fail "cannot read the agent-vm version of $fixtures/version.json"
+if [ "$fixture_version" = "$current" ]; then
+    printf '  Tests/fixtures/agentvm come from agent-vm %s\n' "$fixture_version"
+else
+    installed="$HOME/.local/bin/agent-vm"
+    installed_version=""
+    if [ -x "$installed" ]; then
+        installed_version="$("$installed" --version 2>/dev/null)"
+    fi
+    if [ "$installed_version" = "$current" ]; then
+        printf '  Tests/fixtures/agentvm come from agent-vm %s; capturing them from the installed %s\n' "$fixture_version" "$installed_version"
+        "$refresh" "$installed" version packs recipe-check follow
+        status=$?
+        [ "$status" -eq 0 ] || fail "refreshing the fixtures failed (status $status); its output above says why"
+        printf '  add a section on the move to agent-vm %s to Tests/fixtures/agentvm/README.md\n' "$current"
+    elif [ "$run_tests" = "yes" ]; then
+        fail "the test fixtures come from agent-vm $fixture_version and the app requires $current, but the installed agent-vm (~/.local/bin/agent-vm) is ${installed_version:-missing}: install agent-vm $current and run this again, or pass --skip-tests"
+    else
+        printf '  warning: Tests/fixtures/agentvm come from agent-vm %s, not %s (installed: %s); the tests will fail until they are refreshed\n' "$fixture_version" "$current" "${installed_version:-none}"
+    fi
 fi
 
 # -- 2. Tool residue ---------------------------------------------------------------------------

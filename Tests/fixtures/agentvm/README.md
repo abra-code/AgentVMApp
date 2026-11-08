@@ -296,3 +296,12 @@ What was done to the fixtures:
 
 - `version.json`, `doctor.json` and `packs.json` captured again from the installed 0.8.7 (`refresh_agentvm_fixtures.sh <agent-vm> version doctor packs recipe-check`; versions, paths and digests only; `recipe-check.json` came out as it was). In `doctor.json` only the Linux guest daemon's digest moved; the free space stays at 134 GB, which a test names.
 - The version strings in `status-variety.json`, `job-log-variety.json` and the tests by hand. No fixture holds the desktop recipes' descriptions: `fixtures/recipes` has no desktop recipe.
+
+## The move to agent-vm 0.8.9 (2026-11-08)
+
+The app skipped 0.8.8 and follows 0.8.9. 0.8.8 put Send Clipboard and Get Clipboard in agent-vm's box window, which the app's View opens, and the Linux desktop recipes install a clipboard tool. 0.8.9 lets the xcode recipe take an Xcode `.aea` as well as a `.xip`, installs Homebrew from git in the homebrew recipe, and updates the Command Line Tools of an image built from another when Apple offers a newer package (under the progress step `command-line-tools`, which agent-vm already sent while installing them, and which the progress window shows in agent-vm's words like every step). Commands, JSON output and events are unchanged.
+
+What was done to the fixtures, for the first time by `update-agentvmapp.sh`:
+
+- `version.json` and `packs.json` captured again from the installed 0.8.9 (`refresh_agentvm_fixtures.sh ~/.local/bin/agent-vm version packs recipe-check follow`; versions, paths and digests only; `recipe-check.json` came out as it was).
+- The new part `follow` did what was done by hand before: the version strings in `status-variety.json` and `job-log-variety.json`, and the Linux guest daemon's digest in `doctor.json`, whose free space stays at 134 GB. The tests read the version from `version.json` instead of naming it.

@@ -57,12 +57,12 @@ AB=../OMC/Distribution/AppletBuilder.app/Contents/Resources/Agents/appletbuilder
 
 ## After an agent-vm update
 
-`update-agentvmapp.sh` sets the library's `AGENTVM_MIN_VERSION` to the version of the agent-vm working tree beside this repository, and the library test then fails until the fixtures come from that version:
+`update-agentvmapp.sh` sets the library's `AGENTVM_MIN_VERSION` to the version of the agent-vm working tree beside this repository. When the fixtures come from another agent-vm, it captures them again from the installed one, which must be that version (install its package first; with `--skip-tests` it only warns):
 
 ```sh
-Tests/helpers/refresh_agentvm_fixtures.sh ../agent-vm/.build/signed/release/agent-vm
+Tests/helpers/refresh_agentvm_fixtures.sh ~/.local/bin/agent-vm version packs recipe-check follow
 ```
 
-Then remake `status-variety.json` as `fixtures/agentvm/README.md` shows, and fix the tests that name what changed in the store. When the update changed nothing in a store's entries, name the parts that did change after the path (`version packs recipe-check`, say) and the others stay as they are: the tests name the images and boxes of `status.json`. The part `linux` takes the Linux fixtures from the store `AGENTVM_FIXTURE_LINUX_HOME` names, which must hold a ready Linux image built from another and a Linux box, with nothing running or being changed in it. The contract test takes the first build in `../agent-vm/.build/signed/release` or `.../work` that is new enough, or `AGENTVM_APP_CONTRACT_AGENT_VM`.
+The part `follow` makes the hand-made `status-variety.json` and `job-log-variety.json` name the new version, and the kept `doctor.json` the new Linux guest daemon's digest; the tests take the version from `version.json` (`FIXTURES_AGENTVM_VERSION`). That covers an update that changed only versions, paths and digests. When it changed what the app reads, run the parts that changed by hand, remake `status-variety.json` as `fixtures/agentvm/README.md` shows, and fix the tests that name what changed in the store. Either way, add a section on the move to `fixtures/agentvm/README.md`. A full capture (no parts named) also takes `status` and `doctor`, and the tests name the images and boxes of `status.json` and the free space of `doctor.json`. The part `linux` takes the Linux fixtures from the store `AGENTVM_FIXTURE_LINUX_HOME` names, which must hold a ready Linux image built from another and a Linux box, with nothing running or being changed in it. The contract test takes the first build in `../agent-vm/.build/signed/release` or `.../work` that is new enough, or `AGENTVM_APP_CONTRACT_AGENT_VM`.
 
 `81-install.test.sh` needs nothing after an update: its fake GitHub names `AGENTVM_MIN_VERSION` as the newest release, so it passes before that version is released.
