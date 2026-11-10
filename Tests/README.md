@@ -12,6 +12,18 @@ AB=../OMC/Distribution/AppletBuilder.app/Contents/Resources/Agents/appletbuilder
 - A coding agent must run the suite with its sandbox off.
 - `update-agentvmapp.sh` runs the same suite before it signs.
 
+One integration test, `agentvm.itest.sh`, launches the app itself through the real engine (omcitest) and walks its windows over the ActionUI bridge:
+
+```sh
+"$AB" itest AgentVM.app       # about a minute; its windows open on screen
+```
+
+- The app must be signed to run locally (ad hoc), and AgentVM must not be running. A coding agent runs it with its sandbox off.
+- No agent-vm runs. The harness gives the app a private home, where it finds none and shows Get started; the test then points the app's `developerAgentVM` setting at a wrapper that runs `helpers/fake_agent_vm.sh`, with the fixture recipes and agents beside it.
+- It goes through New Image and New Box up to Build and Create, never clicks them, and checks that only reads reached agent-vm: every call in the fake's log must be one of the reads the test lists, so nothing made, started, changed or deleted anything.
+- The other seams (`AGENTVM_APP_OPEN`, `_PBCOPY`, `_PS`, `_CURL`) are environment variables, which a test cannot give an app that already runs: nothing in it clicks what would reach Finder, Terminal, the clipboard or the network.
+- The main window's poll loop runs as a command while the window is open, so the app is never idle: the test waits for the commands to settle to the poll loops instead of `itest_wait_idle`.
+
 ## Files
 
 | File | What it covers |
@@ -48,6 +60,7 @@ AB=../OMC/Distribution/AppletBuilder.app/Contents/Resources/Agents/appletbuilder
 | `90-url-scheme.test.sh` | the `agentvm://` URL scheme: which URLs are routed (status, the logs, a box, an image), what they show in an open main window, how a main window is opened for one, what another run of the app left, and that a URL changes nothing |
 | `91-no-window.test.sh` | every handler run without its window, as a URL naming a command would run it, does nothing: no agent-vm call, nothing opened or written, no pending question touched |
 | `98-command-wiring.test.sh` | every command has the exact script the engine looks for, every reference resolves, every script is reachable |
+| `agentvm.itest.sh` | the app itself (omcitest): a first launch with no agent-vm (Get started), a main window on the fake's store (Status, the version, the images and boxes), New Image through its steps to Build with the command line it shows, New Box through its steps to Create with its command line, and that only reads reached agent-vm |
 | `helpers/fake_agent_vm.sh` | agent-vm, answered from `fixtures/agentvm/` |
 | `helpers/fake_install_tools.sh` | curl, spctl, pkgutil and installer, by the name it is started as, answered from files: nothing reaches the network, Gatekeeper or the real installer |
 | `helpers/fake_ps.sh`, `helpers/fake_sleep.sh`, `helpers/fake_open.sh` | the process list (a box's owner), the poll loop's wait, and Finder, Console and Terminal (Show in Finder, Open in Console, the `.command` files), answered and recorded |
