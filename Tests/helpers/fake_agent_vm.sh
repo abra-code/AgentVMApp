@@ -53,7 +53,8 @@
 #   image info <name> --json,
 #   image delete <name> --json, box delete <name> --json and box recreate <name> --json (which
 #   change nothing: the test changes status.json to match; box delete answers as agent-vm does,
-#   see kept-logs above), box rename <name> <new-name> --json and image rename <name> <new-name>
+#   see kept-logs above), box recreate <name> --image <image> --json (the box names that image in
+#   what `status` answers, nothing else changes), box rename <name> <new-name> --json and image rename <name> <new-name>
 #   --json (the name is changed in what `status` answers, with the boxes of a renamed image and
 #   the images built from it following; a name that is not listed or is taken, and a box that is
 #   not stopped, are refused; a renamed box's record gets `formerNames`), box info <name> --json, and
@@ -372,6 +373,12 @@ case "$*" in
         [ -f "$state/kept-logs-problem" ] && problem="$(/bin/cat "$state/kept-logs-problem")"
         /usr/bin/jq -n --arg name "$3" --arg kept "$kept" --arg problem "$problem" '{deleted: $name}
             + (if $kept == "" then {} else {keptLogs: $kept} end) + (if $problem == "" then {} else {logsProblem: $problem} end)' ;;
+    "box recreate "*" --image "*" --json")
+        [ "$#" -eq 6 ] || exit 64
+        answer status > "$state/status-was.json"
+        /usr/bin/jq --arg name "$3" --arg image "$5" '(.boxes[] | select(.box.name == $name)).box.image = $image' \
+            "$state/status-was.json" > "$state/status.json.new" && /bin/mv "$state/status.json.new" "$state/status.json"
+        /bin/rm -f "$state/status-was.json" ;;
     "box recreate "*" --json")
         ;;
     "box rename "*" "*" --json")

@@ -1,7 +1,8 @@
 #!/bin/sh
 # Tests/31-box-detail.test.sh - the box detail pane and the bar under the list: the space (`box info`)
 # and when it is read, which buttons each state enables, View, Open Shell and Run an Agent in
-# Terminal... (their .command files), and Recreate and Delete with their questions.
+# Terminal... (their .command files), Recreate (which opens the Recreate window, Tests/66) and
+# Delete with its question.
 #
 # agent-vm is the fake: status from fixtures/agentvm/status-variety.json (s3 running, try1
 # unresponsive, cadabra-spike stopped and disposable), and `box info` from
@@ -29,6 +30,7 @@ TZ=UTC
 export AGENTVM_APP_AGENT_VM AGENTVM_APP_PS AGENTVM_APP_SLEEP AGENTVM_APP_OPEN FAKE_SLEEP_LOG FAKE_OPEN_LOG TZ
 PB="$OMC_OMC_SUPPORT_PATH/pasteboard"
 UUID="$OMC_ACTIONUI_WINDOW_UUID"
+APP_PID="${OMC_APP_PROCESS_ID:?31-box-detail: OMC_APP_PROCESS_ID is not set}"
 KEPT='(.boxes[] | select(.box.name == "cadabra-spike")).box.disposable = false'
 
 # store <jq edit of status-variety.json>  ->  the fake answers status with that.
@@ -152,10 +154,10 @@ poll 1
 check "stopped and kept: avm, Recreate and Delete" "0 0 1 1 1" "$(buttons)"
 store "$KEPT"' | (.images[] | select(.name == "dev-agents")).state = "provisioning"'
 poll 1
-check "  its image not ready: no Recreate" "0 0 1 0 1" "$(buttons)"
+check "  its image not ready: Recreate all the same, since its window chooses the image" "0 0 1 1 1" "$(buttons)"
 store "$KEPT"' | del(.images[] | select(.name == "dev-agents"))'
 poll 1
-check "  its image deleted: no Recreate" "0 0 1 0 1" "$(buttons)"
+check "  its image deleted: Recreate all the same" "0 0 1 1 1" "$(buttons)"
 store '(.boxes[] | select(.box.name == "s3")).box.disposable = true'
 poll 1
 select_box s3
@@ -230,68 +232,54 @@ check "  an alert says why"     "Could not open Terminal for box s3|There is no 
     "$(ui_alert_title)|$(ui_alert_message)"
 
 # -----------------------------------------------------------------------------------------------
-section "Recreate: the question"
+section "Recreate: the button opens the Recreate window"
+# opened_for  ->  whether the handler asked for the Recreate window, the request, and the box handed over.
+opened_for() {
+    printf '%s|%s|%s\n' "$(chain_asked AgentVM.recreate)" "$("$PB" agentvm_open_request_recreate get)" "$("$PB" agentvm_recreate_of get)"
+}
+forget_request() {
+    "$PB" agentvm_open_request_recreate set ""
+    "$PB" agentvm_recreate_of set ""
+}
 store "$KEPT"
 poll 1
 select_box cadabra-spike
-alerts_reset
+clear_alerts
+chains_reset
+forget_request
 : > "$FAKE_AGENTVM_DIR/log"
 omc_run AgentVM.main.box.recreate
 check_status "exits cleanly" 0
-check "reads status again first, and recreates nothing yet" "status --json" "$(fake_log | /usr/bin/paste -sd '|' -)"
-check "asks"                    "Recreate box cadabra-spike?" "$(ui_alert_title)"
-check "  what stays and what goes" \
-    "It is made again from image dev-agents as the image is now, with the same name, processors, memory and network rules. Everything installed or saved in the box, logins included, is deleted. This cannot be undone." \
-    "$(ui_alert_message)"
-check "  Recreate confirms"     "AgentVM.main.box.recreate.confirmed" "$(ui_alert_action Recreate)"
-check "  Cancel does nothing"   "" "$(ui_alert_action Cancel)"
-check "  the box asked about is kept" "cadabra-spike" "$(pending recreate)"
-
-section "Recreate: the box asked about is the one recreated"
-select_box s3
-: > "$FAKE_AGENTVM_DIR/log"
-omc_run AgentVM.main.box.recreate.confirmed
-check "a selection changed after the question does not change what is recreated" \
-    "box recreate cadabra-spike --json|status --json" "$(fake_log | /usr/bin/paste -sd '|' -)"
-check "  the other box stays selected, and is not measured for it" "s3" "$("$PB" "agentvm_box_$UUID" get)"
-: > "$FAKE_AGENTVM_DIR/log"
-omc_run AgentVM.main.box.recreate.confirmed
-check "a second confirmation recreates nothing" "" "$(fake_log)"
-select_box cadabra-spike
+check "reads status again first, and recreates nothing" "status --json" "$(fake_log | /usr/bin/paste -sd '|' -)"
+check "  asks no question: the window asks for the image" "" "$(ui_alert_title)"
+check "  asks for the window, with a request of this run and the box" "1|$APP_PID recreate:window|$APP_PID cadabra-spike" "$(opened_for)"
+forget_request
+store "$KEPT"' | del(.images[] | select(.name == "dev-agents"))'
+poll 1
+chains_reset
 omc_run AgentVM.main.box.recreate
-: > "$FAKE_AGENTVM_DIR/log"
-omc_run AgentVM.main.box.recreate.confirmed
-check "the selected box, recreated: the lists, then its space, are read again" \
-    "box recreate cadabra-spike --json|status --json|box info cadabra-spike --json" "$(fake_log | /usr/bin/paste -sd '|' -)"
+check "a box whose image was deleted: the window all the same" "1|$APP_PID recreate:window|$APP_PID cadabra-spike" "$(opened_for)"
+forget_request
 
-section "Recreate: agent-vm fails"
-omc_run AgentVM.main.box.recreate
-printf 'deleted the old box but could not make the new one; run agent-vm box create cadabra-spike --image dev-agents\n' \
-    > "$FAKE_AGENTVM_DIR/fail-box-recreate"
-store "$KEPT"' | del(.boxes[] | select(.box.name == "cadabra-spike"))'
-alerts_reset
-: > "$FAKE_AGENTVM_DIR/log"
-omc_run AgentVM.main.box.recreate.confirmed
-check_status "exits cleanly" 0
-check "the failure is shown"    "Box cadabra-spike was not recreated" "$(ui_alert_title)"
-check "  in agent-vm's words"   "deleted the old box but could not make the new one; run agent-vm box create cadabra-spike --image dev-agents" \
-    "$(ui_alert_message)"
-check "  the lists are read again, so a box that is gone goes" "" "$(ui_rows "$MAIN_BOXES_ID" | row_named cadabra-spike)"
-check "  and the pane shows it is gone" "1" "$(ui_visible "$MAIN_BOX_NONE_ID")"
-/bin/rm -f "$FAKE_AGENTVM_DIR/fail-box-recreate"
-
-section "Recreate: nothing to ask about"
-for edit in "." "$KEPT"' | (.boxes[] | select(.box.name == "cadabra-spike")).state = "running"' \
-        "$KEPT"' | del(.images[] | select(.name == "dev-agents"))'; do
+section "Recreate: no window"
+for edit in "." "$KEPT"' | (.boxes[] | select(.box.name == "cadabra-spike")).state = "running"'; do
     store "$KEPT"
     poll 1
     select_box cadabra-spike
     store "$edit"
-    clear_alerts
+    chains_reset
     omc_run AgentVM.main.box.recreate
-    check "no question ($edit)" "|" "$(ui_alert_title)|$(pending recreate)"
+    check "for what was read now ($edit)" "0||" "$(opened_for)"
 done
 check "  the pane follows what was read: Recreate disabled" "0" "$(enabled "$MAIN_BOX_RECREATE_ID")"
+store "$KEPT"
+poll 1
+select_box cadabra-spike
+printf 'the store is locked\n' > "$FAKE_AGENTVM_DIR/fail-status"
+chains_reset
+omc_run AgentVM.main.box.recreate
+check "status fails: no window for rows that may be old" "0||" "$(opened_for)"
+/bin/rm -f "$FAKE_AGENTVM_DIR/fail-status"
 
 # -----------------------------------------------------------------------------------------------
 section "Delete: the question"
@@ -365,21 +353,18 @@ check "status fails: no question about rows that may be old" "" "$(ui_alert_titl
 check "  the note says why"     "the store is locked" "$(ui_value "$MAIN_BOXES_NOTE_ID")"
 /bin/rm -f "$FAKE_AGENTVM_DIR/fail-status"
 "$PB" "agentvm_box_delete_$UUID" set "-rf"
-"$PB" "agentvm_box_recreate_$UUID" set "-rf"
 : > "$FAKE_AGENTVM_DIR/log"
 omc_run AgentVM.main.box.delete.confirmed
-omc_run AgentVM.main.box.recreate.confirmed
 check "a pending name agent-vm would refuse is not passed on" "" "$(fake_log)"
 
-section "closing the window forgets the pending questions"
+section "closing the window forgets the pending question"
 store "$KEPT"
 poll 1
 select_box cadabra-spike
-omc_run AgentVM.main.box.recreate
 omc_run AgentVM.main.box.delete
-check "two questions were asked" "cadabra-spike cadabra-spike" "$(pending recreate) $(pending delete)"
+check "a question was asked" "cadabra-spike" "$(pending delete)"
 omc_run AgentVM.main.close
-check "  closing forgets both" " " "$(pending recreate) $(pending delete)"
+check "  closing forgets it" "" "$(pending delete)"
 
 # -----------------------------------------------------------------------------------------------
 section "a Linux box"
@@ -521,7 +506,6 @@ asked() {
 }
 KEPT_FOLDER="$OMCTEST_WORK/logs store/Logs"
 DELETE_TEXT="The box's folder and disk are deleted, with everything installed or saved in it. The image it was made from, dev-acp, is kept."
-RECREATE_TEXT="It is made again from image dev-acp as the image is now, with the same name, processors, memory and network rules. Everything installed or saved in the box, logins included, is deleted."
 fake_reset
 /bin/rm -rf "$mac_folder/exec.jsonl"
 : > "$mac_folder/supervisor.log"
@@ -530,18 +514,15 @@ open_window
 select_box s3
 check "a box that has logs: the Delete question says they are kept, and for how long" "$DELETE_TEXT Its logs are kept for 30 days. This cannot be undone." \
     "$(asked AgentVM.main.box.delete)"
-check "  and so does the Recreate question" "$RECREATE_TEXT Its logs are kept for 30 days. This cannot be undone." "$(asked AgentVM.main.box.recreate)"
 kept_store '{count: 0, bytes: 0, holdDays: 1, directory: "/x/Logs"}'
 check "a store that keeps them for one day" "$DELETE_TEXT Its logs are kept for 1 day. This cannot be undone." "$(asked AgentVM.main.box.delete)"
 kept_store '{count: 3, bytes: 4096, holdDays: 0, directory: "/x/Logs"}'
-check "a store that keeps none: neither question says they are kept" "$DELETE_TEXT This cannot be undone.|$RECREATE_TEXT This cannot be undone." \
-    "$(asked AgentVM.main.box.delete)|$(asked AgentVM.main.box.recreate)"
+check "a store that keeps none: the question does not say they are kept" "$DELETE_TEXT This cannot be undone." "$(asked AgentVM.main.box.delete)"
 kept_store 'null'
 check "an agent-vm that says nothing of kept logs: nothing is promised" "$DELETE_TEXT This cannot be undone." "$(asked AgentVM.main.box.delete)"
 kept_store "{count: 0, bytes: 0, holdDays: 30, directory: \"$KEPT_FOLDER\"}"
 /bin/rm -f "$mac_folder/supervisor.log"
-check "a box that has logged nothing leaves none: nothing is promised" "$DELETE_TEXT This cannot be undone.|$RECREATE_TEXT This cannot be undone." \
-    "$(asked AgentVM.main.box.delete)|$(asked AgentVM.main.box.recreate)"
+check "a box that has logged nothing leaves none: nothing is promised" "$DELETE_TEXT This cannot be undone." "$(asked AgentVM.main.box.delete)"
 check "nothing is kept yet: Show in Finder, in Settings, is off" "0" "$(enabled "$MAIN_KEPT_SHOW_ID")"
 # The delete: agent-vm moves the logs and says where; the store then holds one box's logs.
 : > "$mac_folder/supervisor.log"

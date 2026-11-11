@@ -226,7 +226,7 @@ check "reads status and measures the image again first" "status --json|image inf
     "$(fake_log | /usr/bin/paste -sd '|' -)"
 check "asks" "Delete image dev-acp?" "$(ui_alert_title)"
 check "  what it frees, the box made from it, and that it is final" \
-    "The image's folder and disk are deleted, which frees about 1.7 GB. Boxes made from it (s3) keep working, but cannot be recreated. This cannot be undone." \
+    "The image's folder and disk are deleted, which frees about 1.7 GB. Boxes made from it (s3) keep working; they can be recreated from another image only. This cannot be undone." \
     "$(ui_alert_message)"
 check "  Delete confirms" "AgentVM.main.image.delete.confirmed" "$(ui_alert_action Delete)"
 check "  Cancel does nothing" "" "$(ui_alert_action Cancel)"

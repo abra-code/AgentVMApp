@@ -1,0 +1,115 @@
+{
+  "type": "VStack",
+  "properties": {
+    "alignment": "leading",
+    "spacing": 12,
+    "padding": 20,
+    "frame": {
+      "minWidth": 620,
+      "idealWidth": 640,
+      "minHeight": 400,
+      "idealHeight": 420
+    }
+  },
+  "children": [
+    {
+      "type": "Text",
+      "id": 5201,
+      "properties": {
+        "text": "",
+        "font": "headline"
+      }
+    },
+    {
+      "type": "Text",
+      "id": 5202,
+      "properties": {
+        "text": "",
+        "frame": {
+          "maxWidth": "infinity",
+          "alignment": "leading"
+        }
+      }
+    },
+    {
+      "type": "Text",
+      "properties": {
+        "text": "Image"
+      }
+    },
+    {
+      "type": "Table",
+      "id": 5203,
+      "properties": {
+        "columns": [
+          "Name",
+          "System",
+          "Holds",
+          "State"
+        ],
+        "widths": [
+          150,
+          100,
+          200,
+          130
+        ],
+        "minWidths": [
+          100,
+          50,
+          100,
+          100
+        ],
+        "actionID": "AgentVM.recreate.image",
+        "frame": {
+          "maxWidth": "infinity",
+          "minHeight": 140,
+          "maxHeight": "infinity"
+        }
+      }
+    },
+    {
+      "type": "Text",
+      "id": 5204,
+      "properties": {
+        "text": "",
+        "foregroundStyle": "secondary",
+        "frame": {
+          "maxWidth": "infinity",
+          "alignment": "leading"
+        }
+      }
+    },
+    {
+      "type": "HStack",
+      "properties": {
+        "spacing": 8
+      },
+      "children": [
+        {
+          "type": "Spacer"
+        },
+        {
+          "type": "Button",
+          "id": 5205,
+          "properties": {
+            "title": "Cancel",
+            "role": "cancel",
+            "actionID": "AgentVM.recreate.cancel"
+          }
+        },
+        {
+          "type": "Button",
+          "id": 5206,
+          "properties": {
+            "title": "Recreate",
+            "role": "destructive",
+            "buttonStyle": "borderedProminent",
+            "disabled": true,
+            "actionID": "AgentVM.recreate.apply",
+            "help": "Delete the box and make it again from the image chosen, at once."
+          }
+        }
+      ]
+    }
+  ]
+}

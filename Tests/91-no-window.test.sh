@@ -5,8 +5,8 @@
 # and offers no way to turn that off. A command started that way gets no window: not even the key
 # window's. So the rule for every handler is that it needs its window's uuid before it reads,
 # changes, asks or opens anything, and this file runs each one without a window, in the state
-# where it would do the most harm: the main window open on a stopped box with Delete and Recreate
-# already asked, a network window with edits waiting and an Allow already asked, a job that
+# where it would do the most harm: the main window open on a stopped box with Delete already
+# asked and a Recreate window asked for (and one planted, with an image chosen), a network window with edits waiting and an Allow already asked, a job that
 # runs, whose Stop was already asked, an image's update with its parts ticked, an image that
 # Open the Image would start, a guide already offered, and a New Image and a New Box window
 # each on its last step. The same state is
@@ -88,8 +88,10 @@ state() {
     printf 'new image: %s|%s|%s|%s|%s\n' "$("$PB" agentvm_open_request_newimage get)" "$("$PB" agentvm_newimage_from get)" \
         "$("$PB" agentvm_newimage_ get)" "$("$PB" agentvm_step_ get)" "$("$PB" agentvm_ticks_ get)"
     printf 'alert: %s\n' "$(ui_alert_title)"
-    printf 'pending: %s|%s|%s|%s\n' "$("$PB" "agentvm_box_delete_$MAIN_UUID" get)" "$("$PB" "agentvm_box_recreate_$MAIN_UUID" get)" \
+    printf 'pending: %s|%s|%s\n' "$("$PB" "agentvm_box_delete_$MAIN_UUID" get)" \
         "$("$PB" "agentvm_image_delete_$MAIN_UUID" get)" "$("$PB" "agentvm_net_allow_$NET_UUID" get)"
+    printf 'recreate: %s|%s|%s|%s\n' "$(chain_asked AgentVM.recreate)" "$("$PB" agentvm_open_request_recreate get)" \
+        "$("$PB" agentvm_recreate_of get)" "$("$PB" agentvm_recreate_ get)"
     printf 'selected: %s|%s|%s\n' "$("$PB" "agentvm_box_$MAIN_UUID" get)" "$("$PB" "agentvm_image_$MAIN_UUID" get)" "$("$PB" "agentvm_box_$NET_UUID" get)"
     printf 'edits: %s\n' "$(/bin/cat "$TMPDIR/AgentVM/$NET_UUID/net-$BOX.desired" 2>/dev/null | /usr/bin/paste -sd ' ' -)"
     printf 'requests: %s|%s|%s|%s|%s|%s\n' "$("$PB" agentvm_open_request_network get)" "$("$PB" agentvm_open_request_programs get)" \
@@ -98,8 +100,8 @@ state() {
     printf 'jobs: %s\n' "$(/usr/bin/jq -r 'map(.id + " " + .state) | join(",")' "$FAKE_AGENTVM_DIR/jobs.json" 2>/dev/null)"
     printf 'no-window job keys: %s|%s|%s|%s\n' "$("$PB" agentvm_job_ get)" "$("$PB" agentvm_job_stop_ get)" "$("$PB" agentvm_choices_ get)" \
         "$("$PB" agentvm_access_offer_ get)"
-    printf 'no-window keys: %s|%s|%s|%s|%s|%s|%s|%s\n' "$("$PB" agentvm_poll_ get)" "$("$PB" agentvm_box_ get)" "$("$PB" agentvm_image_ get)" \
-        "$("$PB" agentvm_box_delete_ get)" "$("$PB" agentvm_box_recreate_ get)" "$("$PB" agentvm_image_delete_ get)" "$("$PB" agentvm_image_rebuild_ get)" "$("$PB" agentvm_net_allow_ get)"
+    printf 'no-window keys: %s|%s|%s|%s|%s|%s|%s\n' "$("$PB" agentvm_poll_ get)" "$("$PB" agentvm_box_ get)" "$("$PB" agentvm_image_ get)" \
+        "$("$PB" agentvm_box_delete_ get)" "$("$PB" agentvm_image_delete_ get)" "$("$PB" agentvm_image_rebuild_ get)" "$("$PB" agentvm_net_allow_ get)"
     printf 'pasteboards: %s\n' "$(/usr/bin/find "$OMCTEST_UI/pb" -type f -exec /usr/bin/cksum {} + | /usr/bin/sort | /usr/bin/cksum)"
     printf 'cache files: %s\n' "$(/usr/bin/find "$TMPDIR/AgentVM" -type f -exec /usr/bin/cksum {} + | /usr/bin/sort | /usr/bin/cksum)"
 }
@@ -138,7 +140,7 @@ without_window() {
 }
 
 fake_reset
-# The stopped box is made a kept one, so that Recreate can be asked about it too, and dev-agents's
+# The stopped box is made a kept one, so that a Recreate window can be asked for it too, and dev-agents's
 # base changed, so that it can be built again (Build Again...).
 /usr/bin/jq '(.boxes[] | select(.box.name == "cadabra-spike")).box.disposable = false
     | (.images[] | select(.name == "dev-agents")).needs += [{kind: "rebuild", reason: "base-rebuilt", base: "dev-node"}]' \
@@ -172,7 +174,8 @@ in_window "$MAIN_UUID"
 "$PB" agentvm_box_ set "$BOX"
 "$PB" agentvm_image_ set dev-xcode
 "$PB" agentvm_box_delete_ set "$BOX"
-"$PB" agentvm_box_recreate_ set "$BOX"
+# A Recreate window for the box, with a ready image chosen (the New Box window's "picked" below).
+"$PB" agentvm_recreate_ set "$BOX"
 "$PB" agentvm_image_delete_ set dev-xcode
 "$PB" agentvm_image_rebuild_ set dev-agents
 "$PB" agentvm_net_allow_ set "$BOX registry.yarnpkg.com"
@@ -253,7 +256,9 @@ check "a box could be made under the empty uuid: a New Box window, a ready image
     "1|dev-xcode|planted|4|8|pack:npm|" \
     "$("$PB" agentvm_newbox_ get)|$("$PB" agentvm_image_ get)|$("$PB" agentvm_name_ get)|$("$PB" agentvm_cpus_ get)|$("$PB" agentvm_memory_ get)|$(/bin/cat "$TMPDIR/AgentVM/rules")|$(/usr/bin/awk -F'\t' '$1 == "planted"' "$TMPDIR/AgentVM/boxes.tsv")"
 check "Delete was asked about the box"   "$BOX" "$("$PB" "agentvm_box_delete_$MAIN_UUID" get)"
-check "Recreate too"                     "$BOX" "$("$PB" "agentvm_box_recreate_$MAIN_UUID" get)"
+check "a Recreate window was asked for the box" "$APP_PID recreate:window|$APP_PID $BOX" \
+    "$("$PB" agentvm_open_request_recreate get)|$("$PB" agentvm_recreate_of get)"
+check "  and one is planted under the empty uuid, with a ready image chosen" "$BOX|dev-xcode" "$("$PB" agentvm_recreate_ get)|$("$PB" agentvm_picked_ get)"
 check "an image's Delete was asked"      "dev-xcode" "$("$PB" "agentvm_image_delete_$MAIN_UUID" get)"
 check "a rebuild could start under the empty uuid: an image whose base changed, ready, asked about" \
     "dev-agents${TAB}base-rebuilt${TAB}dev-node|ready|dev-agents" \

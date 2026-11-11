@@ -413,14 +413,19 @@ agentvm_box_view() {
     agentvm_json box view "$1" >/dev/null
 }
 
-# agentvm_box_recreate <name>  ->  0 once the stopped box is made again as a fresh clone of its
-# image as the image is now, with the same name, processors, memory, network rules and disposable
-# flag. Everything written in the old box goes; its logs so far are kept as a deleted box's are.
-# agent-vm refuses a box that runs, and one whose image is gone. A clone, so it takes a moment,
-# not a job.
+# agentvm_box_recreate <name> [image]  ->  0 once the stopped box is made again as a fresh clone of
+# the image given (`--image`), or of its own image, as the image is now, with the same name,
+# processors, memory, network rules and disposable flag. Everything written in the old box goes;
+# its logs so far are kept as a deleted box's are. agent-vm refuses a box that runs, and an image
+# that is gone or not ready. A clone, so it takes a moment, not a job.
 agentvm_box_recreate() {
     _agentvm_need_name box "$1" || return $?
-    agentvm_json box recreate "$1" >/dev/null
+    if [ -z "${2:-}" ]; then
+        agentvm_json box recreate "$1" >/dev/null
+        return $?
+    fi
+    _agentvm_need_name image "$2" || return $?
+    agentvm_json box recreate "$1" --image "$2" >/dev/null
 }
 
 # agentvm_box_rename <name> <new name>  ->  0 once the stopped box has the new name. What it holds,

@@ -187,6 +187,20 @@
     },
     {
       "NAME": "AgentVM",
+      "COMMAND_ID": "AgentVM.recreate",
+      "ACTIVATION_MODE": "act_always",
+      "EXECUTION_MODE": "exe_script_file",
+      "ACTIONUI_WINDOW": {
+        "JSON_NAME": "AgentVM.recreate",
+        "IS_BLOCKING": false,
+        "WINDOW_TITLE": "Recreate Box",
+        "INIT_SUBCOMMAND_ID": "AgentVM.recreate.init",
+        "WINDOW_DID_ACTIVATE_SUBCOMMAND_ID": "AgentVM.recreate.activated",
+        "END_CANCEL_SUBCOMMAND_ID": "AgentVM.recreate.close"
+      }
+    },
+    {
+      "NAME": "AgentVM",
       "COMMAND_ID": "AgentVM.logs",
       "ACTIVATION_MODE": "act_always",
       "EXECUTION_MODE": "exe_script_file",

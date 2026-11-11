@@ -16,8 +16,8 @@
 # so neither is a job.
 #
 # AFTER A RENAME nothing of the app may go on naming the old name: the windows opened for it
-# close (a box's network and programs windows, an image's update window and Full Disk Access
-# guide), and the main window reads its lists again and selects the new name.
+# close (a box's network and programs windows and its Recreate window, an image's update window
+# and Full Disk Access guide), and the main window reads its lists again and selects the new name.
 #
 # Sources lib.agentvm.main.sh and lib.agentvm.wizard.sh. POSIX sh (bash 3.2 in POSIX mode) only.
 # Validate with "sh -n".
@@ -163,6 +163,9 @@ rename_done() {
     if [ "$1" = "box" ]; then
         ui_item_close network "$2"
         ui_item_close programs "$2"
+        # One Recreate window at a time, for whichever box: closed only when it is for this one.
+        local _recreate="$(ui_item_window recreate window)"
+        [ -n "$_recreate" ] && [ "$(ui_get recreate "$_recreate")" = "$2" ] && "$dialog" "$_recreate" omc_window omc_terminate_cancel
     else
         ui_item_close update "$2"
         ui_item_close access "$2"

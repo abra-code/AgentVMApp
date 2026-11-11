@@ -493,6 +493,8 @@ for function in agentvm_box_info agentvm_box_view agentvm_box_recreate agentvm_b
     with_fake "$function" "-rf" >/dev/null
     check "$function"                "2" "$?"
 done
+with_fake agentvm_box_recreate s3 "-rf" >/dev/null
+check "agentvm_box_recreate, an image" "2" "$?"
 with_fake agentvm_avm_file "-rf" "$OMCTEST_WORK" >/dev/null
 check "agentvm_avm_file"             "2" "$?"
 check "  with the reason"            "yes" "$(with_fake agentvm_box_delete "S 3" 2>/dev/null; lib agentvm_last_error 2 | /usr/bin/grep -q -F '"S 3" is not a valid box name' && echo yes)"
@@ -503,10 +505,11 @@ fake_reset
 with_fake agentvm_box_view s3
 with_fake agentvm_box_view s3 interactive
 with_fake agentvm_box_recreate s3
+with_fake agentvm_box_recreate s3 dev
 with_fake agentvm_box_delete s3
 with_fake agentvm_box_info cadabra-spike >/dev/null
-check "view, view and control, recreate, delete, info" \
-    "box view s3 --json|box view s3 --interactive --json|box recreate s3 --json|box delete s3 --json|box info cadabra-spike --json" \
+check "view, view and control, recreate, recreate from another image, delete, info" \
+    "box view s3 --json|box view s3 --interactive --json|box recreate s3 --json|box recreate s3 --image dev --json|box delete s3 --json|box info cadabra-spike --json" \
     "$(fake_log | /usr/bin/paste -sd '|' -)"
 printf 'box s3 is running; stop it first\n' > "$FAKE_AGENTVM_DIR/fail-box-delete"
 with_fake agentvm_box_delete s3

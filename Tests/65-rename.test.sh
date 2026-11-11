@@ -35,6 +35,7 @@ UUID="OMCTEST-rename-$$"
 OTHER_UUID="OMCTEST-other-rename-$$"
 NET_UUID="OMCTEST-rename-network-$$"
 UPDATE_UUID="OMCTEST-rename-update-$$"
+RECREATE_UUID="OMCTEST-rename-recreate-$$"
 TAB="$(printf '\t')"
 
 in_window() {
@@ -260,6 +261,8 @@ check "a second Rename while the first is worked on asks agent-vm nothing" "" "$
 # -----------------------------------------------------------------------------------------------
 section "a box renamed"
 "$PB" agentvm_window_network_s3 set "$APP_PID $NET_UUID"
+"$PB" agentvm_window_recreate_window set "$APP_PID $RECREATE_UUID"
+"$PB" "agentvm_recreate_$RECREATE_UUID" set s3
 in_window "$MAIN_UUID"
 select_box s3
 in_window "$UUID"
@@ -270,6 +273,7 @@ check_status "the handler exits cleanly" 0
 check "agent-vm renames it, and then the lists are read" "version --json|box rename s3 work --json|status --json" \
     "$(fake_log | /usr/bin/sed -n '1,3p' | /usr/bin/paste -sd '|' -)"
 check "the box's network window, opened under the old name, closes" "1" "$(closed "$NET_UUID")"
+check "  and so does the Recreate window opened for it" "1" "$(closed "$RECREATE_UUID")"
 check "the main window selects the box under its new name, on the Boxes tab" "work|0" \
     "$("$PB" "agentvm_box_$MAIN_UUID" get)|$(ui_value "$MAIN_STATUS_ID" "$MAIN_UUID")"
 check "  and measures it by that name" "1" "$(fake_log | /usr/bin/grep -c '^box info work --json$')"
@@ -277,6 +281,8 @@ check "the window closes, with no alert" "1|0" "$(closed "$UUID")|$(( $(ui_calls
 omc_run AgentVM.rename.close
 check "  and is the Rename window no more" "|" "$(registered)|$(target)"
 "$PB" agentvm_window_network_s3 set ""
+"$PB" agentvm_window_recreate_window set ""
+"$PB" "agentvm_recreate_$RECREATE_UUID" set ""
 
 # -----------------------------------------------------------------------------------------------
 section "an image renamed"

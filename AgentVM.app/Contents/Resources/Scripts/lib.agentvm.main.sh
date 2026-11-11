@@ -1676,10 +1676,10 @@ main_paint_box_detail() {
         # (not a starting one, nor one whose supervisor does not answer); recreating and deleting
         # need a stopped one, and agent-vm refuses the others anyway. A disposable box belongs to
         # the chat window that made it and is deleted when it stops: it is neither recreated nor
-        # given to avm. Recreating needs the image the box was made from, ready. Stop is for a box
-        # that runs, answering or not; Start for a stopped one. A box a job holds gets none of
-        # them until the job ends.
-        local _running=0 _stopped=0 _kept=1 _image_ready=0 _free=1 _stoppable=0
+        # given to avm. Recreate opens a window where the image is chosen, so it is on whether or not
+        # the box's own image is still there and ready. Stop is for a box that runs, answering or
+        # not; Start for a stopped one. A box a job holds gets none of them until the job ends.
+        local _running=0 _stopped=0 _kept=1 _free=1 _stoppable=0
         [ -n "$_job" ] && _free=0
         case "$_state" in
             running|unresponsive) _stoppable=1 ;;
@@ -1687,7 +1687,6 @@ main_paint_box_detail() {
         [ "$_state" = "running" ] && _running=1
         [ "$_state" = "stopped" ] && _stopped=1
         [ "$_disposable" = "true" ] && _kept=0
-        [ "$(main_row "$_uuid" images "$_image" | /usr/bin/cut -f2)" = "ready" ] && _image_ready=1
         ui_enable "$_uuid" "$MAIN_BOX_STOP_ID" "$(( _stoppable * _free ))"
         ui_enable "$_uuid" "$MAIN_BOX_START_ID" "$(( _stopped * _free ))"
         # View, last among the buttons of a running box, is shown for a box that has a screen
@@ -1702,7 +1701,7 @@ main_paint_box_detail() {
         ui_enable "$_uuid" "$MAIN_BOX_SHELL_ID" "$(( _running * _free ))"
         # avm starts a stopped box itself.
         ui_enable "$_uuid" "$MAIN_BOX_AGENT_ID" "$(( (_running + _stopped) * _kept * _free ))"
-        ui_enable "$_uuid" "$MAIN_BOX_RECREATE_ID" "$(( _stopped * _kept * _image_ready * _free ))"
+        ui_enable "$_uuid" "$MAIN_BOX_RECREATE_ID" "$(( _stopped * _kept * _free ))"
         ui_enable "$_uuid" "$MAIN_BOX_DELETE_ID" "$(( _stopped * _free ))"
         # The Rename button beside the name: agent-vm renames a stopped box only, and not one that is
         # deleted when it stops.
@@ -1724,18 +1723,10 @@ main_box_delete_question() {
     printf '%s This cannot be undone.\n' "$_text"
 }
 
-# main_box_recreate_question <uuid> <name>  ->  the confirmation's message: what stays and what
-# goes, and that agent-vm keeps the logs of the box as it was for some days.
-main_box_recreate_question() {
-    local _image="$(main_row "$1" boxes "$2" | /usr/bin/cut -f3)"
-    local _kept="$(main_box_logs_kept_text "$1" "$2")"
-    printf 'It is made again from image %s as the image is now, with the same name, processors, memory and network rules. Everything installed or saved in the box, logins included, is deleted.%s This cannot be undone.\n' "$_image" "${_kept:+ $_kept}"
-}
-
 # main_box_askable <uuid> <name> <recreate|delete|start|stop>  ->  0 when that can be done to the
 # box now, from the rows just read: it exists and no job holds it; for stop it runs, answering or
-# not; for the others it is stopped, and for recreate it is kept and its image ready (the rules
-# main_paint_box_detail enables the buttons by).
+# not; for the others it is stopped, and for recreate it is kept (the rules main_paint_box_detail
+# enables the buttons by). The image a box is recreated from is the Recreate window's to judge.
 main_box_askable() {
     local _row="$(main_row "$1" boxes "$2")"
     [ -n "$_row" ] || return 1
@@ -1747,8 +1738,7 @@ main_box_askable() {
     fi
     [ "$_state" = "stopped" ] || return 1
     [ "$3" = "recreate" ] || return 0
-    [ "$(printf '%s\n' "$_row" | /usr/bin/cut -f13)" != "true" ] || return 1
-    [ "$(main_row "$1" images "$(printf '%s\n' "$_row" | /usr/bin/cut -f3)" | /usr/bin/cut -f2)" = "ready" ]
+    [ "$(printf '%s\n' "$_row" | /usr/bin/cut -f13)" != "true" ]
 }
 
 # main_box_renamable <uuid> <name>  ->  0 when the box can be given another name now, from the
@@ -2235,14 +2225,14 @@ main_image_rebuild() {
 
 # main_image_delete_question <uuid> <name>  ->  the confirmation's message: what deleting frees,
 # and what it means for what was made from the image (they are clones and keep working; a box
-# can no longer be recreated, since recreating makes it again from its image).
+# can then be recreated only from another image).
 main_image_delete_question() {
     local _text="The image's folder and disk are deleted"
     local _size="$(ui_size_text "$(main_info "$1" image "$2" | /usr/bin/cut -f25)")"
     [ -n "$_size" ] && _text="$_text, which frees about $_size"
     _text="$_text."
     local _boxes="$(main_rows "$1" boxes | /usr/bin/awk -F'\t' -v name="$2" '$3 "" == name { print $1 }')"
-    [ -n "$_boxes" ] && _text="$_text Boxes made from it ($(ui_lines_text "$_boxes")) keep working, but cannot be recreated."
+    [ -n "$_boxes" ] && _text="$_text Boxes made from it ($(ui_lines_text "$_boxes")) keep working; they can be recreated from another image only."
     local _derived="$(main_rows "$1" images | /usr/bin/awk -F'\t' -v name="$2" '$6 "" == name { print $1 }')"
     [ -n "$_derived" ] && _text="$_text Images built from it ($(ui_lines_text "$_derived")) keep working."
     printf '%s This cannot be undone.\n' "$_text"
