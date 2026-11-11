@@ -412,6 +412,10 @@ check "  and is not kept" "" "$("$PB" "agentvm_box_$UUID" get)"
 section "the selection survives a repaint"
 select_box try1
 select_image dev-acp
+# A pass that paints: without the answer kept beside the rows, as when it is older than
+# MAIN_POLL_FRESH_SECONDS. (A pass whose answer is the one shown paints nothing, and the cards
+# keep their highlight: see "the poll loop: an answer the window shows already paints nothing".)
+/bin/rm -f "$CACHE/status.json"
 poll 1
 check "the box card is highlighted again, by name" "2" "$(ui_selection "$MAIN_BOXES_ID")"
 check "  and so is the image card" "1" "$(ui_selection "$MAIN_IMAGES_ID")"
@@ -465,6 +469,97 @@ store status-variety.json
 : > "$FAKE_SLEEP_LOG"
 ( OMC_APP_PROCESS_ID="$dead_pid"; export OMC_APP_PROCESS_ID; poll 3 )
 check "no wait, no agent-vm" "" "$(/bin/cat "$FAKE_SLEEP_LOG")$(fake_log)"
+
+# The loop runs while the app is in the background too, and painting is nearly all of what a pass
+# costs: a pass whose answer the window shows already paints nothing (main_refresh, "poll").
+# writes  ->  how many times the handlers wrote to a window since the journal was emptied.
+writes() { /usr/bin/awk 'END { print NR }' "$OMCTEST_UI/journal.tsv"; }
+some_writes() { [ "$(writes)" -gt 0 ] && echo yes || echo no; }
+AGENTVM_APP_NOW=1790769600
+export AGENTVM_APP_NOW
+
+section "the poll loop: an answer the window shows already paints nothing"
+fake_reset
+store status.json
+open_window
+fake_reset
+store status.json
+: > "$OMCTEST_UI/journal.tsv"
+poll 2
+check "status is still read on every pass" "status --json status --json " "$(fake_log | /usr/bin/tr '\n' ' ')"
+check "the window is not written to" "0" "$(writes)"
+check "the answer is kept beside its rows" "yes" "$([ -s "$CACHE/status.json" ] && echo yes || echo no)"
+AGENTVM_APP_NOW=$((AGENTVM_APP_NOW + 600))
+: > "$OMCTEST_UI/journal.tsv"
+poll 1
+check "nothing runs: not even when the minute changes" "0" "$(writes)"
+
+section "the poll loop: a changed answer paints"
+/usr/bin/jq '(.boxes[] | select(.box.name == "s3")).state = "starting"' \
+    "$FIXTURES_AGENTVM/status.json" > "$FAKE_AGENTVM_DIR/status.json"
+: > "$OMCTEST_UI/journal.tsv"
+poll 1
+check "the window is painted" "yes" "$(some_writes)"
+check "  with the box's new state" "circle.dotted${TAB}#0A84FF" "$(card "$MAIN_BOXES_ID" s3 | col 2,6)"
+
+section "the poll loop: a running box's time is painted once a minute"
+store status-variety.json
+poll 1
+check "s3 runs: the answer changed, and is painted" "yes" "$(some_writes)"
+: > "$OMCTEST_UI/journal.tsv"
+poll 1
+check "the same minute: nothing" "0" "$(writes)"
+AGENTVM_APP_NOW=$((AGENTVM_APP_NOW + 60))
+: > "$OMCTEST_UI/journal.tsv"
+poll 1
+check "the next minute: painted, for the time it has run" "yes" "$(some_writes)"
+: > "$OMCTEST_UI/journal.tsv"
+poll 1
+check "  once" "0" "$(writes)"
+
+section "the poll loop: an answer kept for long is made into rows again"
+store status.json
+poll 1
+check "a pass that changed the store paints" "yes" "$(some_writes)"
+/usr/bin/touch -t "$(/bin/date -v-10M '+%Y%m%d%H%M')" "$CACHE/status.json"
+: > "$OMCTEST_UI/journal.tsv"
+poll 1
+check "the same answer, kept for 10 minutes: painted" "yes" "$(some_writes)"
+kept_at="$(/usr/bin/stat -f %m "$CACHE/status.json")"
+check "  and kept anew" "yes" "$([ "$(( $(/bin/date +%s) - ${kept_at:-0} ))" -lt 60 ] && echo yes || echo no)"
+
+section "the poll loop: after a failed reading, the same answer paints"
+printf 'the store is busy\n' > "$FAKE_AGENTVM_DIR/fail-status"
+poll 1
+check_contains "the failure is said" "the store is busy" "$(ui_value "$MAIN_BOXES_NOTE_ID")"
+/bin/rm -f "$FAKE_AGENTVM_DIR/fail-status"
+: > "$OMCTEST_UI/journal.tsv"
+poll 1
+check "the answer from before the failure: painted" "yes" "$(some_writes)"
+check "  and the failure is no longer said" "" "$(ui_value "$MAIN_BOXES_NOTE_ID")"
+
+section "the poll loop: a handler's refresh paints whatever the answer"
+: > "$OMCTEST_UI/journal.tsv"
+poll 1
+check "the poll loop: nothing" "0" "$(writes)"
+: > "$OMCTEST_UI/journal.tsv"
+( . "$APP_SCRIPTS/lib.agentvm.main.sh" >/dev/null 2>&1; main_refresh "$UUID" status )
+check "a handler's status refresh, the same answer: painted" "yes" "$(some_writes)"
+
+section "the poll loop: rows a handler made without main_refresh are painted by the next pass"
+# A handler that reads status and then paints a part, asks a question, or nothing (Settings'
+# logs choices, Delete...): the jobs that ended in that answer are not reported yet either.
+/usr/bin/jq '(.boxes[] | select(.box.name == "s3")).state = "starting"' \
+    "$FIXTURES_AGENTVM/status.json" > "$FAKE_AGENTVM_DIR/status.json"
+( . "$APP_SCRIPTS/lib.agentvm.main.sh" >/dev/null 2>&1; main_read_status "$UUID" )
+: > "$OMCTEST_UI/journal.tsv"
+poll 1
+check "the same answer as the handler's: painted" "yes" "$(some_writes)"
+check "  with the box's new state" "circle.dotted${TAB}#0A84FF" "$(card "$MAIN_BOXES_ID" s3 | col 2,6)"
+: > "$OMCTEST_UI/journal.tsv"
+poll 1
+check "  and the pass after it: nothing" "0" "$(writes)"
+unset AGENTVM_APP_NOW
 
 # -----------------------------------------------------------------------------------------------
 section "activation"

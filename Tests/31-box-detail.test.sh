@@ -46,6 +46,15 @@ poll() {
     ( AGENTVM_APP_POLL_PASSES="$1"; export AGENTVM_APP_POLL_PASSES; omc_run AgentVM.main.poll )
 }
 
+# repaint  ->  one pass of the poll loop that paints: without the answer kept beside the rows, as
+# when it is older than MAIN_POLL_FRESH_SECONDS. A pass whose answer is the one the window shows
+# paints nothing, and these checks change what the pane shows besides status (a measurement in
+# the cache, a log file on disk).
+repaint() {
+    /bin/rm -f "$TMPDIR/AgentVM/$UUID/status.json"
+    poll 1
+}
+
 # select_box <name>  ->  a click on that card (an empty name deselects).
 select_box() {
     omc_table_cell "$MAIN_BOXES_ID" 1 "$1"
@@ -111,13 +120,13 @@ check "  with the new size"     "41.0 GB" "$(ui_value "$MAIN_BOX_SPACE_ID" | /us
 
 section "measurements belong to the box they were read for"
 "$PB" "agentvm_box_$UUID" set s3
-poll 1
+repaint
 check "s3, with cadabra-spike's row in the cache: no size shown" "not measured" "$(ui_value "$MAIN_BOX_SPACE_ID")"
 select_box s3
 check "a box agent-vm cannot measure says why" "not measured: no box s3; \`agent-vm box list\` shows the existing ones" \
     "$(ui_value "$MAIN_BOX_SPACE_ID")"
 "$PB" "agentvm_box_$UUID" set cadabra-spike
-poll 1
+repaint
 check "cadabra-spike after s3's failure: its own last measurement, not s3's reason" "41.0 GB" "$(ui_value "$MAIN_BOX_SPACE_ID" | /usr/bin/cut -d';' -f1)"
 select_box try1
 : > "$FAKE_AGENTVM_DIR/log"
@@ -452,7 +461,7 @@ omc_run AgentVM.main.box.logs.show
 omc_run AgentVM.main.box.logs.console
 check "  the handlers, run anyway, open nothing" "" "$(opened)"
 : > "$mac_folder/supervisor.log"
-poll 1
+repaint
 check "the box's own log is there: the row says what the files are, and both buttons are on" "Programs, connections and the box's own log|1|1" "$(logs_row)"
 omc_run AgentVM.main.box.logs.show
 check "  Show in Finder selects it"  "-R $mac_folder/supervisor.log" "$(opened)"
@@ -470,7 +479,7 @@ check "with every log there, the programs' is the one selected" "-R $mac_folder/
 omc_run AgentVM.main.box.logs.show
 check "  without it, the connections let through" "-R $mac_folder/network-allowed.jsonl" "$(opened)"
 /bin/rm -f "$mac_folder/supervisor.log" "$mac_folder/network-allowed.jsonl"
-poll 1
+repaint
 check "connections refused, and no log of the box's own: Show in Finder is on, Open in Console is off" \
     "Programs, connections and the box's own log|1|0" "$(logs_row)"
 : > "$FAKE_OPEN_LOG"
@@ -479,7 +488,7 @@ omc_run AgentVM.main.box.logs.show
 check "  Console is given nothing to open; Finder selects the connections refused" "-R $mac_folder/network.jsonl" "$(opened)"
 /bin/rm -f "$mac_folder/network.jsonl"
 /bin/mkdir "$mac_folder/exec.jsonl"
-poll 1
+repaint
 check "a folder of a log's name is not a log" "Nothing logged yet|0|0" "$(logs_row)"
 : > "$linux_folder/console.log"
 select_box lb
@@ -545,7 +554,7 @@ check "Delete: agent-vm kept the box's logs, and a toast says so, and for how lo
 check "  their folder is not on this Mac: Show in Finder stays off, and opens nothing" "0|" \
     "$(enabled "$MAIN_KEPT_SHOW_ID")|$(: > "$FAKE_OPEN_LOG"; omc_run AgentVM.main.box.logs.kept; opened)"
 /bin/mkdir -p "$KEPT_FOLDER/s3-20261008T120000Z"
-poll 1
+repaint
 check "  with the folder on this Mac: on" "1" "$(enabled "$MAIN_KEPT_SHOW_ID")"
 : > "$FAKE_OPEN_LOG"
 omc_run AgentVM.main.box.logs.kept

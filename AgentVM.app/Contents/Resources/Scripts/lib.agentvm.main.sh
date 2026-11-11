@@ -36,7 +36,10 @@
 # MAIN_POLL_BUSY_SECONDS while something moves (a box starting or stopping, an image being
 # built). A token on the pasteboard makes the newest loop the only one that paints, and the
 # close handler's "closed" ends it. It also ends when the app is gone. AGENTVM_APP_POLL_PASSES,
-# for the tests, ends it after that many passes.
+# for the tests, ends it after that many passes. The loop runs whether or not the app is in front,
+# so a pass whose answer is the one the window shows already paints nothing (main_refresh, "poll"):
+# the paint is nearly all of a pass's cost. The window is still painted at least every
+# MAIN_POLL_FRESH_SECONDS, and once a minute while it shows a time that follows the clock.
 #
 # THE SELECTIONS, one per list, are kept by name in the window's pasteboard values "box" and
 # "image". Name is the FIRST column of both lists' rows on purpose: a list keeps its selection
@@ -193,12 +196,28 @@ main_read_doctor() {
     printf '%s\n' "$_rows" | ui_store "$(ui_cache "$1" doctor.tsv)"
 }
 
-# main_read_status <uuid> [check]  ->  0, with the cache files boxes.tsv, images.tsv, updates.tsv,
+# main_read_status <uuid> [check|poll]  ->  0, with the cache files boxes.tsv, images.tsv, updates.tsv,
 # newest.tsv, vm.tsv, kept.tsv, kernels.tsv, recipes.tsv, inputs.tsv, rebuilds.tsv and jobs.tsv holding the rows lib.agentvm.sh documents; or agent-vm's status,
 # with the previous rows kept and its message in the cache file "status-error" (empty after a
 # success). "check" has agent-vm ask Apple for the newest macOS first (agentvm_status_checked).
+#
+# The answer the rows were made from is kept last, as the cache file status.json. "poll" (the poll
+# loop) leaves the rows as they are when agent-vm answers exactly that again, the last reading
+# succeeded, and status.json is less than MAIN_POLL_FRESH_SECONDS old; it then sets
+# main_status_unchanged to 1 (0 otherwise), so the caller can leave the window as it is too. The
+# age bound is there because the eleven files are not replaced together: a handler that reads
+# status while the poll loop does can leave rows of two answers, which a pass that makes them
+# again mends. Nor does "poll" leave them when the cache file status-shown is missing: rows made
+# again remove it, and main_refresh makes it once it has read them, so rows a handler made with no
+# main_refresh (main_read_status, then a paint of its own, a question, or nothing) are reported
+# and painted by the next pass, as every pass did before.
+MAIN_POLL_FRESH_SECONDS=120
+main_status_unchanged=0
 main_read_status() {
+    main_status_unchanged=0
     local _error="$(ui_cache "$1" status-error)"
+    local _kept="$(ui_cache "$1" status.json)"
+    local _shown="$(ui_cache "$1" status-shown)"
     local _json _status
     if [ "${2:-}" = "check" ]; then
         _json="$(agentvm_status_checked)"
@@ -210,6 +229,13 @@ main_read_status() {
     if [ "$_status" -ne 0 ]; then
         ui_one_line "$(agentvm_last_error "$_status")" | ui_store "$_error"
         return "$_status"
+    fi
+    if [ "${2:-}" = "poll" ] && [ -f "$_kept" ] && [ -f "$_shown" ] && [ ! -s "$_error" ] && main_kept_fresh "$_kept"; then
+        local _last_json="$(/bin/cat "$_kept")"
+        if [ "$_last_json" = "$_json" ]; then
+            main_status_unchanged=1
+            return 0
+        fi
     fi
     printf '%s\n' "$_json" | agentvm_status_box_rows | ui_store "$(ui_cache "$1" boxes.tsv)"
     printf '%s\n' "$_json" | agentvm_status_image_rows | ui_store "$(ui_cache "$1" images.tsv)"
@@ -223,7 +249,38 @@ main_read_status() {
     printf '%s\n' "$_json" | agentvm_status_rebuild_rows | ui_store "$(ui_cache "$1" rebuilds.tsv)"
     printf '%s\n' "$_json" | agentvm_job_rows | ui_store "$(ui_cache "$1" jobs.tsv)"
     : | ui_store "$_error"
+    # After the rows: a main_refresh that makes status-shown later has read these rows.
+    /bin/rm -f "$_shown"
+    # Last: only rows made from it may stand beside it.
+    printf '%s\n' "$_json" | ui_store "$_kept"
     return 0
+}
+
+# main_kept_fresh <file>  ->  0 when the file was written less than MAIN_POLL_FRESH_SECONDS ago.
+# The real clock, not main_now: a file's time is always the real one.
+main_kept_fresh() {
+    local _written
+    _written="$(/usr/bin/stat -f %m "$1" 2>/dev/null)"
+    local _status=$?
+    [ "$_status" -eq 0 ] || return 1
+    local _now="$(/bin/date +%s)"
+    case "$_written" in
+        ''|*[!0123456789]*) return 1 ;;
+    esac
+    case "$_now" in
+        ''|*[!0123456789]*) return 1 ;;
+    esac
+    local _age=$(( _now - _written ))
+    [ "$_age" -ge 0 ] && [ "$_age" -lt "$MAIN_POLL_FRESH_SECONDS" ]
+}
+
+# main_clock_shown <uuid>  ->  0 when the window shows a text that changes with the clock and not
+# with status: a running box's time ("Running for 2 h 13 min", and the note on a box idle for
+# MAIN_IDLE_BOX_HOURS) or a running job's ("elapsed 4 min"). Both are written to the minute.
+main_clock_shown() {
+    local _running="$( { main_rows "$1" boxes | /usr/bin/awk -F'\t' '$2 == "running"'
+        main_rows "$1" jobs | /usr/bin/awk -F'\t' '$2 == "running"'; } )"
+    [ -n "$_running" ]
 }
 
 # main_rows <uuid> <boxes|images|updates|newest|doctor|vm|kept|kernels|recipes|inputs|rebuilds|jobs>  ->  that cache file's rows, nothing when it is missing.
@@ -2286,12 +2343,23 @@ main_goto() {
     fi
 }
 
-# main_refresh <uuid> <full|status>  ->  reads agent-vm, then paints. "full" checks agent-vm
-# itself and runs doctor too (opening, activation); "status" reads only the lists (the poll loop),
-# unless agent-vm could not be used last time, when it checks again whether it can now.
+# main_refresh <uuid> <full|status|poll>  ->  reads agent-vm, then paints. "full" checks agent-vm
+# itself and runs doctor too (opening, activation); "status" reads only the lists (a handler that
+# changed something), unless agent-vm could not be used last time, when it checks again whether it
+# can now; "poll" is "status" for the poll loop.
+#
+# A "poll" pass on the Status face whose answer is the one the window shows already
+# (main_read_status poll) paints nothing, which is most of what a pass costs (some 0.5 s of CPU,
+# against some 0.03 s for the reading), except once a minute while a text that follows the clock
+# is shown (main_clock_shown). What the window says only once (a job that ended, an image that
+# lost its Full Disk Access) has been said already: a pass skips only rows a main_refresh has read
+# (status-shown, see main_read_status), never rows a handler made and left. Only the poll loop skips: a handler that
+# refreshes after changing the window's own state (a selection, a note) needs the paint whatever
+# agent-vm says.
 main_refresh() {
     local _uuid="$1"
     local _mode="$2"
+    main_status_unchanged=0
     local _last="$(main_agentvm_line "$_uuid" 1)"
     [ "$_last" = "0" ] || _mode="full"
     local _available=0
@@ -2305,14 +2373,22 @@ main_refresh() {
         # The time is taken before the reading: a job that ends while agent-vm answers is then
         # reported at the next launch, perhaps a second time, rather than never.
         local _looked="$(main_time_text)"
-        main_read_status "$_uuid"
-        _status=$?
+        if [ "$_mode" = "poll" ]; then
+            main_read_status "$_uuid" poll
+            _status=$?
+        else
+            main_read_status "$_uuid"
+            _status=$?
+        fi
         # What ended among the jobs this window saw running is said once, whoever reads first; and
         # the app has looked until that time, for the report at the next launch.
         if [ "$_status" -eq 0 ]; then
-            main_report_jobs "$_uuid"
+            # Before the report and the paint read the rows (main_read_status, status-shown): rows
+            # a handler makes meanwhile remove it again.
+            [ "$main_status_unchanged" -eq 1 ] || : | ui_store "$(ui_cache "$_uuid" status-shown)"
+            [ "$main_status_unchanged" -eq 1 ] || main_report_jobs "$_uuid"
             main_mark_jobs_seen "$_looked"
-            main_note_access "$_uuid"
+            [ "$main_status_unchanged" -eq 1 ] || main_note_access "$_uuid"
         fi
         # The selected box's and image's measurements: on opening and activation, not in the poll
         # loop.
@@ -2341,7 +2417,20 @@ main_refresh() {
     # An agent-vm that cannot be used says why in Get started; a status error from before it
     # went away would be a second, stale explanation.
     [ "$_available" -eq 0 ] || : | ui_store "$(ui_cache "$_uuid" status-error)"
-    main_paint "$_uuid"
+    local _minute=$(( $(main_now) / 60 ))
+    local _painted="$(ui_cache "$_uuid" painted-minute)"
+    local _paint=1
+    if [ "$main_status_unchanged" -eq 1 ] && [ "$_available" -eq 0 ] && [ "$(main_face "$_uuid")" = "status" ]; then
+        _paint=0
+        if main_clock_shown "$_uuid"; then
+            local _painted_minute="$(/bin/cat "$_painted" 2>/dev/null)"
+            [ "$_painted_minute" = "$_minute" ] || _paint=1
+        fi
+    fi
+    if [ "$_paint" -eq 1 ]; then
+        main_paint "$_uuid"
+        printf '%s\n' "$_minute" | ui_store "$_painted"
+    fi
     # The window closed while agent-vm was being read (a status call can take seconds): the
     # close handler has removed the cache folder, and the reads above made it again.
     local _poll="$(ui_get poll "$_uuid")"
@@ -2380,7 +2469,7 @@ main_poll() {
         _holder="$(ui_get poll "$_uuid")"
         [ "$_holder" = "$_token" ] || return 0
         ui_app_alive || break
-        main_refresh "$_uuid" status
+        main_refresh "$_uuid" poll
         _passes=$((_passes + 1))
         if [ -n "${AGENTVM_APP_POLL_PASSES:-}" ] && [ "$_passes" -ge "$AGENTVM_APP_POLL_PASSES" ]; then
             break

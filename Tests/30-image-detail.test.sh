@@ -51,6 +51,15 @@ poll() {
     ( AGENTVM_APP_POLL_PASSES="$1"; export AGENTVM_APP_POLL_PASSES; omc_run AgentVM.main.poll )
 }
 
+# repaint  ->  one pass of the poll loop that paints: without the answer kept beside the rows, as
+# when it is older than MAIN_POLL_FRESH_SECONDS. A pass whose answer is the one the window shows
+# paints nothing, and these checks change what the pane shows besides status (a measurement in
+# the cache, a console log on disk).
+repaint() {
+    /bin/rm -f "$TMPDIR/AgentVM/$UUID/status.json"
+    poll 1
+}
+
 # select_image <name> / select_box <name>  ->  a click on that card.
 select_image() {
     omc_table_cell "$MAIN_IMAGES_ID" 1 "$1"
@@ -119,7 +128,7 @@ section "measurements belong to the image they were read for"
 # Two selections' handlers overlap: A's slower measuring lands after B was selected. The pane
 # for B must not show A's facts.
 "$PB" "agentvm_image_$UUID" set dev-agents
-poll 1
+repaint
 check "dev-agents, with dev-acp's row in the cache: no size shown" "not measured" "$(ui_value "$MAIN_IMAGE_SPACE_ID")"
 check "  nor its processors and memory" "-" "$(ui_value "$MAIN_IMAGE_HARDWARE_ID")"
 
@@ -136,7 +145,7 @@ check "dev-acp's measurements are not shown for dev" "-" "$(ui_value "$MAIN_IMAG
 check "the images built from it" "dev-node and dev-xcode" "$(ui_value "$MAIN_IMAGE_DERIVED_ID")"
 # The overlap again, with a failure: dev's failed measuring lands after dev-acp was selected.
 "$PB" "agentvm_image_$UUID" set dev-acp
-poll 1
+repaint
 check "dev-acp after dev's failure: its own last measurement, not dev's reason" "40.0 GB" "$(ui_value "$MAIN_IMAGE_SPACE_ID" | /usr/bin/cut -d';' -f1)"
 select_image dev-node
 check "without image info, a Full Disk Access need says not granted" "not granted" "$(ui_value "$MAIN_IMAGE_FDA_ID")"
@@ -552,7 +561,7 @@ check "  and the next reading puts it right" "$NONE|0" "$(image_logs | /usr/bin/
 select_image deb
 check "a Linux image: Show Console Log is shown, and off while there is no console log" "$NONE|0|1|0" "$(image_logs)"
 : > "$deb_folder/console.log"
-poll 1
+repaint
 check "  with a console log in its folder: on" "$NONE|0|1|1" "$(image_logs)"
 : > "$FAKE_OPEN_LOG"
 omc_run AgentVM.main.image.logs.console
