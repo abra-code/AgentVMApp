@@ -1294,6 +1294,10 @@ EOF
 #     made again (agent-vm's recreate need, with its reason: the image was updated, built again,
 #     or had its guest daemon replaced); a disposable box is left out, since it is deleted when
 #     it stops;
+#   - a box whose image was deleted: it works as it is, but `box recreate` cannot make it again
+#     from that image, and agent-vm says nothing of it (it compares a box only with an image that
+#     is there), so the app tells it from the image list. Recreate makes it again from another
+#     image. A disposable box is left out here too;
 #   - a running box whose supervisor is another agent-vm version: each version is installed in
 #     a folder of its own, so a box keeps the version it started with until it is stopped;
 #   - an image that needs a guest update (after an agent-vm update), or for which a newer macOS
@@ -1306,7 +1310,9 @@ main_maintenance() {
     local _version="$(main_agentvm_line "$1" 2)"
     case "$2" in
         boxes)
-            main_rows "$1" boxes | /usr/bin/awk -F'\t' -v current="$_version" '
+            main_rows "$1" boxes | /usr/bin/awk -F'\t' -v current="$_version" -v images=" $(main_rows "$1" images | /usr/bin/cut -f1 | /usr/bin/tr '\n' ' ')" '
+                $13 != "true" && $3 != "-" && !index(images, " " $3 " ") {
+                    printf "%s\tImage %s, which it was made from, was deleted. It works as it is; Recreate makes it again from another image, and what was changed inside it is lost.\n", $1, $3 }
                 $13 != "true" && (","$18",") ~ /,recreate,/ {
                     what = "changed"; gets = "the image as it is now"
                     if ($22 == "guest-update")  { what = "had its guest daemon replaced"; gets = "the new one" }
@@ -1595,6 +1601,9 @@ main_paint_box_detail() {
             [ "${_build:--}" != "-" ] && _text="$_text, $_build"
             _text="$_text)"
         fi
+        # An image deleted since the box was made from it: a fact for any box; for a kept one,
+        # main_maintenance also says what to do.
+        [ "$_image" != "-" ] && [ -z "$(main_row "$_uuid" images "$_image")" ] && _text="$_text; image deleted"
         "$dialog" "$_uuid" "$MAIN_BOX_IMAGE_ID" "$_text"
 
         case "$_mode" in

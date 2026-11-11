@@ -146,6 +146,23 @@ open_with "$QUIET"' | (.boxes[] | select(.box.name == "s3" or .box.name == "cada
 check "a disposable box is not marked: it is deleted when it stops" "$TAB" "$(box_mark cadabra-spike)"
 check "  and lists nothing" "" "$(box_lines cadabra-spike)"
 
+section "a box whose image was deleted"
+# cadabra-spike made a kept box; its image dev-agents deleted. agent-vm says nothing of it.
+GONE='(.boxes[] | select(.box.name == "cadabra-spike")).box.disposable = false | del(.images[] | select(.name == "dev-agents"))'
+open_with "$QUIET | $GONE"
+check "marked" "$MARK" "$(box_mark cadabra-spike)"
+check "which image, and that Recreate makes it again from another" \
+    "Needs maintenance|Image dev-agents, which it was made from, was deleted. It works as it is; Recreate makes it again from another image, and what was changed inside it is lost." \
+    "$(box_lines cadabra-spike)"
+check "  its Image row says the image is deleted" "1" "$(ui_value "$MAIN_BOX_IMAGE_ID" | /usr/bin/grep -c '^dev-agents (macOS [^)]*); image deleted$')"
+check "a box whose image is there is not marked for it" "$TAB|" "$(box_mark try1)|$(box_lines try1 | /usr/bin/grep -c 'was deleted' | /usr/bin/sed 's/^0$//')"
+check "  and its Image row says nothing of it" "0" "$(ui_value "$MAIN_BOX_IMAGE_ID" | /usr/bin/grep -c 'deleted')"
+open_with "$QUIET"' | del(.images[] | select(.name == "dev-agents"))'
+check "a disposable box is not marked: it is deleted when it stops" "$TAB|" "$(box_mark cadabra-spike)|$(box_lines cadabra-spike)"
+open_with "$QUIET"' | del(.images[] | select(.name == "dev-acp")) | (.boxes[] | select(.box.name == "s3")).supervisorVersion = "0.3.12"'
+check "with another need: both, the deleted image first" "3|Image dev-acp" \
+    "$(box_lines s3 | /usr/bin/tr '|' '\n' | /usr/bin/awk 'END { print NR }')|$(box_lines s3 | /usr/bin/cut -d'|' -f2 | /usr/bin/cut -c1-13)"
+
 section "a running box whose supervisor is another agent-vm version"
 open_with "$QUIET"' | (.boxes[] | select(.box.name == "s3")).supervisorVersion = "0.3.12"'
 check "marked" "$MARK" "$(box_mark s3)"
