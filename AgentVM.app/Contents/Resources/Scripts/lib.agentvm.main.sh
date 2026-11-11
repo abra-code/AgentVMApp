@@ -2098,7 +2098,7 @@ main_paint_image_detail() {
     }
     # Set Up... opens the image's Full Disk Access guide (lib.agentvm.access.sh): for a ready
     # image, also while a setup holds it, which the guide then follows.
-    # New Image from This... opens the New Image window (lib.agentvm.newimage.sh) with the image
+    # Derived Image opens the New Image window (lib.agentvm.newimage.sh) with the image
     # as the start: for a ready image, and the window says when something is changing it.
     # New Box from It... opens the New Box window (lib.agentvm.newbox.sh) with the image chosen,
     # under the same rule.

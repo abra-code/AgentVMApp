@@ -1,6 +1,6 @@
 #!/bin/sh
 # AgentVM.main.image.new.sh
-# The plus button under the image list, and New Image from This... in the image pane: the New
+# The plus button under the image list, and Derived Image in the image pane: the New
 # Image window opens, or comes to the front. From the pane's button, the selected image is handed
 # over as the start, for a window that opens now.
 

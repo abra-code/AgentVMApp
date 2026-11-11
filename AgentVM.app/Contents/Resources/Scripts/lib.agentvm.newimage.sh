@@ -4,7 +4,7 @@
 # The New Image window (AgentVM.newimage.json, the views 1001-1248): five steps that end in one
 # `agent-vm image create`, started as a job. One window at a time (lib.agentvm.ui.sh, "Box
 # windows", with the kind "newimage" and the name "window"), opened by the plus button under the
-# main window's image list, or by New Image from This... in the image pane, which hands over the
+# main window's image list, or by Derived Image in the image pane, which hands over the
 # selected image as the start. Sources lib.agentvm.main.sh for which agent-vm runs and for telling
 # the main window about the job.
 #

@@ -3,7 +3,7 @@
 # The New Image window opens (INIT_SUBCOMMAND_ID): it becomes the one New Image window, reads
 # agent-vm (which one runs, its recipes and which system each is for, the Linux systems it
 # builds and the sizes it gives a new image, the images, the restore files), fills the start
-# table, and shows step 1; or step 2, with the start chosen, when New Image from This... handed
+# table, and shows step 1; or step 2, with the start chosen, when Derived Image handed
 # an image over that a build can start from. A window opened without a request of this run of
 # the app (a URL naming the command itself), or while another New Image window is open, closes
 # again.

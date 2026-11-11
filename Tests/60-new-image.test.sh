@@ -389,7 +389,7 @@ chains_reset
 "$PB" agentvm_open_request_newimage set ""
 omc_trigger "$MAIN_IMAGE_DERIVE_ID"
 omc_run AgentVM.main.image.new
-check "New Image from This... with no image selected opens nothing" "0|" "$(chain_asked AgentVM.newimage)|$(request)"
+check "Derived Image with no image selected opens nothing" "0|" "$(chain_asked AgentVM.newimage)|$(request)"
 select_image latest-test
 check "a failed image cannot be built from" "0" "$(enabled "$MAIN_IMAGE_DERIVE_ID")"
 select_image dev
@@ -620,7 +620,7 @@ check "Back shows the name and sizes kept" "Step 4 of 5 - Name and size|mine|6|1
 omc_run AgentVM.newimage.close
 
 # -----------------------------------------------------------------------------------------------
-section "New Image from This...: the window opens on the tools"
+section "Derived Image: the window opens on the tools"
 store "$LISTED"
 open_new dev-node
 check "step 2, with the image as the start" "Step 2 of 5 - Tools|2|dnttt|image dev-node" "$(step_shown)|$(kept start)"
@@ -1329,7 +1329,7 @@ check "the command line shown is the one run" "$(ui_value "$NEW_COMMAND_ID")" "a
 omc_run AgentVM.newimage.close
 "$PB" agentvm_open_request_progress set ""
 
-section "New Image from This..., on a Linux image"
+section "Derived Image, on a Linux image"
 fake_reset
 mixed '.'
 open_new deb-agents
