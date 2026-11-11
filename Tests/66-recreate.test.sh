@@ -357,6 +357,52 @@ for handler in AgentVM.recreate.init AgentVM.recreate.activated; do
 done
 
 # -----------------------------------------------------------------------------------------------
+section "only images of the box's own system"
+# The store with both kinds: s3 a macOS box, lb a Linux box made from deb.
+mixed() {
+    /usr/bin/jq "${1:-.}" "$FIXTURES_AGENTVM/status-mixed.json" > "$FAKE_AGENTVM_DIR/status.json"
+}
+mixed
+open_recreate s3
+check "a macOS box: the macOS images only" "dev,dev-acp,dev-agents,dev-node,dev-xcode,dev-xcode-ios" "$(listed)"
+omc_run AgentVM.recreate.cancel
+close_recreate
+open_recreate lb
+check "a Linux box: the Linux images only, its own chosen" "deb,deb-agents,ub,ub-agents|deb" "$(listed)|$(picked)"
+choose dev
+omc_run AgentVM.recreate.apply
+check "an image of the other system that a click carried is not used" "|0" "$(picked)|$(recreates)"
+omc_run AgentVM.recreate.cancel
+close_recreate
+mixed 'del(.images[] | select(.name == "deb"))'
+open_recreate lb
+check "its own image deleted: the line says so, then to choose another" \
+    "Image deb, which the box was made from, was deleted. Choose another image." "$(note)"
+omc_run AgentVM.recreate.cancel
+close_recreate
+mixed '(.images[] | select(.name == "deb") | .guest) = "macos"'
+open_recreate lb
+check "its own image's name now a macOS image's: not chosen, and the line says so" \
+    "deb-agents,ub,ub-agents||Image deb, which the box was made from, is a macOS image now. Choose another image." \
+    "$(listed)|$(picked)|$(note)"
+omc_run AgentVM.recreate.cancel
+close_recreate
+mixed 'del(.images[] | select(.guest == "linux" and .name != "deb")) | (.images[] | select(.name == "deb")).state = "provisioning"'
+open_recreate lb
+check "its own image not ready, and no other of its system: the line says to wait first" \
+    "Image deb, which the box was made from, is not ready. There is no other ready Linux image, so wait until it is ready, or use New Image... to build another." "$(note)"
+omc_run AgentVM.recreate.cancel
+close_recreate
+mixed 'del(.images[] | select(.guest == "linux"))'
+open_recreate lb
+check "and no other image of its system: the line says so, and how to get one" \
+    "|Image deb, which the box was made from, was deleted. There is no other ready Linux image to make the box from. New Image... builds one.|0" \
+    "$(listed)|$(note)|$(enabled "$RECREATE_APPLY_ID")"
+omc_run AgentVM.recreate.cancel
+close_recreate
+store
+
+# -----------------------------------------------------------------------------------------------
 section "the logs agent-vm keeps"
 box_folder="$OMCTEST_WORK/Boxes/$BOX"
 /bin/mkdir -p "$box_folder"

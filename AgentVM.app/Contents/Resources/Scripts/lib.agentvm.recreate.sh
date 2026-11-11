@@ -14,7 +14,8 @@
 # WHY A WINDOW and not a question: the image a box was made from can be deleted, or be one the
 # user no longer wants, and `box recreate --image` makes the box from another. The window says
 # what goes, as the question did, and lists the images a box can be made from, as New Box does
-# (newbox_image_rows).
+# (newbox_image_rows), of the box's own system only (recreate_image_rows): a recreate keeps the
+# box's memory and network rules, and is not the way to turn a macOS box into a Linux one.
 #
 # WHAT IT READS: `status`, into its own cache (main_read_status), on opening, on activation and
 # before Recreate; the image rows as New Box reads them (build.tsv) come from the same answer.
@@ -125,16 +126,52 @@ recreate_what_text() {
     printf 'The box is made again from the image chosen below, as the image is now, with the same name, processors, memory and network rules. Everything installed or saved in the box, logins included, is deleted.%s This cannot be undone.\n' "${_kept:+ $_kept}"
 }
 
-# recreate_own_text <uuid>  ->  why the box's own image is not chosen already, or nothing when it
-# is listed: it is gone, or not ready.
+# recreate_image_rows <uuid>  ->  the rows of the image table: New Box's rows (newbox_image_rows)
+# for the images that run the box's system, macOS or Linux (column 23 of the box's row, column 13
+# of an image's build row).
+recreate_image_rows() {
+    local _linux=0
+    [ "$(main_row "$1" boxes "$(recreate_box "$1")" | /usr/bin/cut -f23)" = "linux" ] && _linux=1
+    newbox_image_rows "$1" | /usr/bin/awk -F'\t' -v linux="$_linux" -v build="$(ui_cache "$1" build.tsv)" '
+        BEGIN { while ((getline line < build) > 0) { split(line, cell, "\t"); guest[cell[1] ""] = cell[13] } }
+        ((guest[$1 ""] == "linux") ? 1 : 0) == linux + 0'
+}
+
+# recreate_own_text <uuid>  ->  why nothing is chosen when nothing is: what became of the box's own
+# image when it is not listed (deleted, an image of the other system now that another was built
+# under its name, or not ready), then what to do (choose another, wait, or build one when no image
+# of the box's system is listed).
 recreate_own_text() {
     local _own="$(recreate_own_image "$1")"
-    [ -n "$_own" ] || return 0
-    [ -n "$(newbox_image_rows "$1" | /usr/bin/awk -F'\t' -v name="$_own" '$1 "" == name { print "yes"; exit }')" ] && return 0
-    if [ -z "$(newbox_image_row "$1" "$_own")" ]; then
-        printf 'Image %s, which the box was made from, was deleted. Choose another image.\n' "$_own"
+    local _rows="$(recreate_image_rows "$1")"
+    local _system="macOS"
+    [ "$(main_row "$1" boxes "$(recreate_box "$1")" | /usr/bin/cut -f23)" = "linux" ] && _system="Linux"
+    local _fact=""
+    local _advice="Choose another image."
+    if [ -n "$_own" ] && [ -z "$(printf '%s\n' "$_rows" | /usr/bin/awk -F'\t' -v name="$_own" '$1 "" == name { print "yes"; exit }')" ]; then
+        local _row="$(newbox_image_row "$1" "$_own")"
+        local _image_system="macOS"
+        [ "$(printf '%s\n' "$_row" | /usr/bin/cut -f13)" = "linux" ] && _image_system="Linux"
+        if [ -z "$_row" ]; then
+            _fact="Image $_own, which the box was made from, was deleted."
+        elif [ "$_image_system" != "$_system" ]; then
+            _fact="Image $_own, which the box was made from, is a $_image_system image now."
+        else
+            _fact="Image $_own, which the box was made from, is not ready."
+            _advice="Choose another image, or wait until it is ready."
+        fi
+    fi
+    if [ -z "$(printf '%s\n' "$_rows" | /usr/bin/awk 'NF')" ]; then
+        # Its own image is only not ready (being built, most likely): waiting for it comes first.
+        if [ "$_advice" != "Choose another image." ]; then
+            printf '%s There is no other ready %s image, so wait until it is ready, or use New Image... to build another.\n' "$_fact" "$_system"
+            return 0
+        fi
+        printf '%sThere is no other ready %s image to make the box from. New Image... builds one.\n' "${_fact:+$_fact }" "$_system"
+    elif [ -z "$_fact" ]; then
+        printf 'Choose the image the box is made from.\n'
     else
-        printf 'Image %s, which the box was made from, is not ready. Choose another image, or wait until it is ready.\n' "$_own"
+        printf '%s %s\n' "$_fact" "$_advice"
     fi
 }
 
@@ -158,8 +195,7 @@ recreate_blocker() {
     fi
     local _picked="$(recreate_picked "$1")"
     if [ -z "$_picked" ]; then
-        local _own_text="$(recreate_own_text "$1")"
-        printf '%s\n' "${_own_text:-Choose the image the box is made from.}"
+        recreate_own_text "$1"
         return 0
     fi
     newbox_image_blocker "$1" "$_picked"
@@ -201,7 +237,7 @@ recreate_paint() {
     local _box="$(recreate_box "$1")"
     "$dialog" "$1" "$RECREATE_HEAD_ID" "Recreate box $_box"
     "$dialog" "$1" "$RECREATE_WHAT_ID" "$(recreate_what_text "$1")"
-    local _rows="$(newbox_image_rows "$1")"
+    local _rows="$(recreate_image_rows "$1")"
     printf '%s\n' "$_rows" | /usr/bin/awk 'NF' | "$dialog" "$1" "$RECREATE_IMAGES_ID" omc_table_set_rows_from_stdin
     local _picked="$(recreate_picked "$1")"
     if [ -n "$_picked" ] && [ -z "$(printf '%s\n' "$_rows" | /usr/bin/awk -F'\t' -v name="$_picked" '$1 "" == name { print "yes"; exit }')" ]; then
