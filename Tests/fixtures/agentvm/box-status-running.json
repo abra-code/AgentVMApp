@@ -1,0 +1,57 @@
+{
+  "activeExecs": 0,
+  "box": {
+    "cpuCount": 4,
+    "createdAt": "2026-11-16T10:11:38Z",
+    "formatVersion": 3,
+    "guest": "linux",
+    "guestDigest": "8bcd2b2236a7894380d3606bbe021ce5cbbaefeaaee64122e71d9d4bc8385fa8",
+    "guestProtocol": 1,
+    "guestVersion": "0.8.8",
+    "image": "replay-debian13",
+    "imageCreatedAt": "2026-11-04T18:07:19Z",
+    "imageRevision": 0,
+    "linux": {
+      "architecture": "arm64",
+      "distribution": "debian",
+      "kernel": "6.12.115+deb13.1-arm64-16k",
+      "name": "Debian GNU/Linux 13 (trixie)",
+      "pageSize": 16384,
+      "version": "13"
+    },
+    "macAddress": "0a:b4:99:96:15:72",
+    "memoryBytes": 4294967296,
+    "name": "memfix",
+    "network": {
+      "allow": [],
+      "mode": "allowlist"
+    },
+    "userName": "agent"
+  },
+  "guest": "linux",
+  "guestFeatures": [
+    "terminal",
+    "time-sync",
+    "terminal-pixels",
+    "flow-control"
+  ],
+  "guestVersion": "0.8.8",
+  "memory": {
+    "configuredBytes": 4294967296,
+    "guestAvailableBytes": 3499704320,
+    "guestCacheBytes": 75776000,
+    "guestTotalBytes": 4163354624,
+    "hostFootprintBytes": 815171216,
+    "sampledAt": "2026-11-16T10:11:47Z"
+  },
+  "needs": [],
+  "path": "/Users/you/Library/Application Support/agent-vm/Boxes/memfix",
+  "pid": 80879,
+  "projects": [],
+  "running": true,
+  "startedAt": "2026-11-16T10:11:38Z",
+  "state": "running",
+  "supervisorPath": "/Users/you/.local/share/agent-vm/versions/0.8.12/agent-vm",
+  "supervisorVersion": "0.8.12",
+  "system": "Debian GNU/Linux 13 (trixie)"
+}

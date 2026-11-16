@@ -487,9 +487,22 @@ check "a Linux box (box-info-linux.json): the first twenty-six are status's row 
     "$(lib agentvm_status_box_rows < "$FIXTURES_AGENTVM/status-linux.json" | row_named "$(printf '%s\n' "$row" | col 1)")" "$(printf '%s\n' "$row" | col 1-26)"
 check "  its screen, and its space and its own" "true${TAB}2044194816${TAB}159846400" "$(printf '%s\n' "$row" | col 26-28)"
 
+section "box memory row (box-status-running.json)"
+row="$(lib agentvm_box_memory_row < "$FIXTURES_AGENTVM/box-status-running.json")"
+check "seven fields"                 "7" "$(printf '%s\n' "$row" | field_count)"
+check "its size, the guest's total, available and cache, what the Mac holds, when, no notes" \
+    "4294967296${TAB}4163354624${TAB}3499704320${TAB}75776000${TAB}815171216${TAB}2026-11-16T10:11:47Z${TAB}-" "$row"
+check "a stopped box (box-info.json) has no row" "" "$(lib agentvm_box_memory_row < "$FIXTURES_AGENTVM/box-info.json")"
+check "a running box of an agent-vm before 0.8.12 (status-variety.json's s3) has none either" "" \
+    "$(/usr/bin/jq '.boxes[] | select(.box.name == "s3")' "$FIXTURES_AGENTVM/status-variety.json" | lib agentvm_box_memory_row)"
+row="$(/usr/bin/jq '.memory = {configuredBytes: 8589934592, notes: ["no figures: the box'"'"'s supervisor is agent-vm 0.8.11", "a second\tline"]}' \
+    "$FIXTURES_AGENTVM/box-status-running.json" | lib agentvm_box_memory_row)"
+check "a figure agent-vm could not have is -, and the notes are one cell" \
+    "8589934592${TAB}-${TAB}-${TAB}-${TAB}-${TAB}-${TAB}no figures: the box's supervisor is agent-vm 0.8.11; a second line" "$row"
+
 section "box commands: names agent-vm would refuse are refused first"
 fake_reset
-for function in agentvm_box_info agentvm_box_view agentvm_box_recreate agentvm_box_delete agentvm_shell_file; do
+for function in agentvm_box_info agentvm_box_status agentvm_box_view agentvm_box_recreate agentvm_box_delete agentvm_shell_file; do
     with_fake "$function" "-rf" >/dev/null
     check "$function"                "2" "$?"
 done
@@ -508,8 +521,9 @@ with_fake agentvm_box_recreate s3
 with_fake agentvm_box_recreate s3 dev
 with_fake agentvm_box_delete s3
 with_fake agentvm_box_info cadabra-spike >/dev/null
-check "view, view and control, recreate, recreate from another image, delete, info" \
-    "box view s3 --json|box view s3 --interactive --json|box recreate s3 --json|box recreate s3 --image dev --json|box delete s3 --json|box info cadabra-spike --json" \
+with_fake agentvm_box_status s3 >/dev/null
+check "view, view and control, recreate, recreate from another image, delete, info, status" \
+    "box view s3 --json|box view s3 --interactive --json|box recreate s3 --json|box recreate s3 --image dev --json|box delete s3 --json|box info cadabra-spike --json|box status s3 --json" \
     "$(fake_log | /usr/bin/paste -sd '|' -)"
 printf 'box s3 is running; stop it first\n' > "$FAKE_AGENTVM_DIR/fail-box-delete"
 with_fake agentvm_box_delete s3

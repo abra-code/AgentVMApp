@@ -131,6 +131,12 @@ real_lib agentvm_image_delete nosuch
 check "image delete fails" "1" "$?"
 check "  saying there is no such image" "no image nosuch" "$(lib agentvm_last_error | /usr/bin/cut -d';' -f1)"
 
+section "box status of a box the store does not have"
+# The poll loop reads the selected box's memory with it (since agent-vm 0.8.12); a refusal about
+# the box, and not about the command, says that agent-vm knows it.
+real_lib agentvm_box_status nosuch > /dev/null
+check "box status fails, saying there is no such box" "1|no box nosuch" "$?|$(lib agentvm_last_error | /usr/bin/cut -d';' -f1)"
+
 section "box rename and image rename of what the store does not have"
 # The Rename window shows the refusal as agent-vm's own message. A refusal about the name, and
 # not about the command, says that agent-vm knows both commands.

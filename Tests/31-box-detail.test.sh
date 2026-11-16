@@ -142,6 +142,83 @@ check "a volume that does not report the box's own part: all of it only" "40.2 G
 /bin/rm -f "$FAKE_AGENTVM_DIR/box-info-cadabra-spike.json"
 
 # -----------------------------------------------------------------------------------------------
+section "a running box's memory: read with its entry when it is selected"
+# s3 runs (status-variety.json); its entry with the figures of box-status-running.json, as
+# `box info` and `box status` of agent-vm 0.8.12 answer for a running box.
+MEMORY="$(/usr/bin/jq -c .memory "$FIXTURES_AGENTVM/box-status-running.json")"
+s3_entry() {
+    /usr/bin/jq --argjson memory "$MEMORY" "$1"' | .boxes[] | select(.box.name == "s3") | .memory = $memory' "$FIXTURES_AGENTVM/status-variety.json"
+}
+# memory_writes  ->  how many times the Memory row was written since the window opened.
+memory_writes() {
+    /usr/bin/awk -F'\t' -v id="$MAIN_BOX_MEMORY_ID" '$2 == id' "$OMCTEST_UI/journal.tsv" | /usr/bin/awk 'END { print NR }'
+}
+s3_entry '.' | /usr/bin/jq '. + {diskUsage: {bytes: 30000000000, unsharedBytes: 1000000000}}' > "$FAKE_AGENTVM_DIR/box-info-s3.json"
+s3_entry '.' > "$FAKE_AGENTVM_DIR/box-status-s3.json"
+# A pass in a new minute paints every row while a box runs, which would write the Memory row once
+# more than the checks count: the clock stands still in these sections.
+AGENTVM_APP_NOW="$(/bin/date -u +%s)"
+export AGENTVM_APP_NOW
+store '.'
+poll 1
+: > "$FAKE_AGENTVM_DIR/log"
+select_box s3
+check "programs (total less available), file cache, and what this Mac holds" \
+    "programs use 0.6 GB, file cache 0.1 GB; this Mac holds 0.8 GB for it" "$(ui_value "$MAIN_BOX_MEMORY_ID")"
+check "  from \`box info\` alone: selecting asks no \`box status\`" "0" "$(fake_log | /usr/bin/grep -c '^box status')"
+
+section "the poll loop reads the selected running box's memory again"
+s3_entry '.' | /usr/bin/jq '.memory.guestAvailableBytes = 2147483648 | .memory.hostFootprintBytes = 3435973837' > "$FAKE_AGENTVM_DIR/box-status-s3.json"
+: > "$FAKE_AGENTVM_DIR/log"
+writes="$(memory_writes)"
+poll 2
+check "\`box status\` of s3 once a pass, and no \`box info\`" "2|0" "$(fake_log | /usr/bin/grep -c -x 'box status s3 --json')|$(asks)"
+check "  the new figures shown" "programs use 1.9 GB, file cache 0.1 GB; this Mac holds 3.2 GB for it" "$(ui_value "$MAIN_BOX_MEMORY_ID")"
+check "  written once: the second pass changed no text" "$((writes + 1))" "$(memory_writes)"
+
+section "what agent-vm could not have is said"
+s3_entry '.' | /usr/bin/jq '.memory = {configuredBytes: 8589934592, sampledAt: "2026-11-16T10:11:47Z",
+    notes: ["no figures: the box'"'"'s supervisor is agent-vm 0.8.11, which does not report memory; restarting the box runs this one (0.8.12)"]}' \
+    > "$FAKE_AGENTVM_DIR/box-status-s3.json"
+poll 1
+check "a supervisor older than 0.8.12: agent-vm's note" \
+    "no figures: the box's supervisor is agent-vm 0.8.11, which does not report memory; restarting the box runs this one (0.8.12)" \
+    "$(ui_value "$MAIN_BOX_MEMORY_ID")"
+s3_entry '.' | /usr/bin/jq 'del(.memory.guestTotalBytes, .memory.guestAvailableBytes, .memory.guestCacheBytes)
+    | .memory.notes = ["the guest did not answer within 5 seconds"]' > "$FAKE_AGENTVM_DIR/box-status-s3.json"
+poll 1
+check "a guest that did not answer: what this Mac holds, and why the rest is missing" \
+    "this Mac holds 0.8 GB for it; the guest did not answer within 5 seconds" "$(ui_value "$MAIN_BOX_MEMORY_ID")"
+/bin/rm -f "$FAKE_AGENTVM_DIR/box-status-s3.json"
+poll 1
+check "an entry with no memory (an agent-vm before 0.8.12): -" "-" "$(ui_value "$MAIN_BOX_MEMORY_ID")"
+printf 'the supervisor did not answer\n' > "$FAKE_AGENTVM_DIR/fail-box-status"
+s3_entry '.' > "$FAKE_AGENTVM_DIR/box-status-s3.json"
+poll 1
+check "a \`box status\` that failed: -, not the figures from before" "-" "$(ui_value "$MAIN_BOX_MEMORY_ID")"
+/bin/rm -f "$FAKE_AGENTVM_DIR/fail-box-status"
+
+section "only a running box, and only the selected one, is asked"
+: > "$FAKE_AGENTVM_DIR/log"
+select_box cadabra-spike
+check "a stopped box: -" "-" "$(ui_value "$MAIN_BOX_MEMORY_ID")"
+poll 2
+check "  and the poll loop does not ask it" "0" "$(fake_log | /usr/bin/grep -c '^box status')"
+select_box try1
+: > "$FAKE_AGENTVM_DIR/log"
+poll 2
+check "a box that does not answer: -, and not asked" "-|0" "$(ui_value "$MAIN_BOX_MEMORY_ID")|$(fake_log | /usr/bin/grep -c '^box status')"
+store '(.boxes[] | select(.box.name == "s3")).state = "stopping"'
+select_box s3
+: > "$FAKE_AGENTVM_DIR/log"
+poll 1
+check "a box that is stopping: -, and not asked" "-|0" "$(ui_value "$MAIN_BOX_MEMORY_ID")|$(fake_log | /usr/bin/grep -c '^box status')"
+/bin/rm -f "$FAKE_AGENTVM_DIR/box-info-s3.json" "$FAKE_AGENTVM_DIR/box-status-s3.json"
+store '.'
+poll 1
+unset AGENTVM_APP_NOW
+
+# -----------------------------------------------------------------------------------------------
 section "which buttons each state enables"
 select_box s3
 check "running: the screen, a shell and avm; not Recreate or Delete" "1 1 1 0 0" "$(buttons)"

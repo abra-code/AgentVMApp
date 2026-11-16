@@ -399,6 +399,33 @@ agentvm_box_info_row() {
     /usr/bin/jq -r "$agentvm_jq_defs$agentvm_jq_guest_defs$agentvm_jq_box_defs"' box_cells + [.diskUsage.bytes, .diskUsage.unsharedBytes] | row'
 }
 
+# agentvm_box_status <name>  ->  `agent-vm box status <name> --json`: the box's status entry, as
+# `box info` has it without the sizes, so no disk is measured. For a running box it is asked of
+# its supervisor, which (since agent-vm 0.8.12) adds the box's memory (agentvm_box_memory_row):
+# the guest's own figures, read with a short command in the guest at most every 3 seconds however
+# often it is asked, and what this Mac holds for the box. It changes nothing, so it can be polled
+# for one box; a guest that does not answer holds it up for about 5 seconds (the figures then come
+# without the guest's), and a supervisor that does not answer as long as it holds up `status`.
+agentvm_box_status() {
+    _agentvm_need_name box "$1" || return $?
+    agentvm_json box status "$1"
+}
+
+# agentvm_box_memory_row  <  box status or box info JSON  ->  one row with the box's memory, in
+# bytes, or nothing when the entry has none (a stopped box, or an agent-vm before 0.8.12):
+#    1 configuredBytes (the box's size)   2 guestTotalBytes   3 guestAvailableBytes (what the
+#      guest could still give programs)   4 guestCacheBytes (its file cache)
+#    5 hostFootprintBytes (what this Mac holds for the box: the physical footprint of its
+#      Virtualization process, compressed memory included)   6 sampledAt
+#    7 notes: why a figure is missing, agent-vm's lines joined with "; " (a box whose supervisor
+#      is older than 0.8.12 has only its size and a note until it restarts).
+# A figure agent-vm could not have is "-".
+agentvm_box_memory_row() {
+    /usr/bin/jq -r "$agentvm_jq_defs"' select(.memory != null) | .memory
+        | [.configuredBytes, .guestTotalBytes, .guestAvailableBytes, .guestCacheBytes, .hostFootprintBytes, .sampledAt,
+           (.notes // [] | if length == 0 then null else join("; ") end)] | row'
+}
+
 # agentvm_box_view <name> [interactive]  ->  0 once the box's supervisor shows its screen in a
 # window, or brought that window to the front. The supervisor owns the window, so the command
 # returns at once and closing the window leaves the box running. "interactive" lets keys and

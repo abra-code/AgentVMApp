@@ -34,6 +34,8 @@
 #   job-log-<id>.json  a job's log: {"events": [...], "lines": [...]}, what `job log <id>` answers
 #              with the job's record; a job without one has no events. The job's `progress` and
 #              `notice`, in `status`, `job list` and `job log`, are then the log's last ones.
+#   box-status-<name>.json  what `box status <name>` answers; without it, the box's entry in what
+#              `status` answers (no `memory`), and a box it does not list is not found.
 #   status.json  also what `box create` adds the new box to, as agent-vm's store would hold it.
 #   kept-logs  when present, the folder `box delete` says it moved the box's logs to (`keptLogs`
 #              in its answer); without it the box is taken to have logged nothing.
@@ -57,7 +59,8 @@
 #   what `status` answers, nothing else changes), box rename <name> <new-name> --json and image rename <name> <new-name>
 #   --json (the name is changed in what `status` answers, with the boxes of a renamed image and
 #   the images built from it following; a name that is not listed or is taken, and a box that is
-#   not stopped, are refused; a renamed box's record gets `formerNames`), box info <name> --json, and
+#   not stopped, are refused; a renamed box's record gets `formerNames`), box info <name> --json,
+#   box status <name> --json (see box-status-<name>.json above), and
 #   box view <name> [--interactive] --json (which shows nothing, and is refused for a Linux box,
 #   which has no screen), box packs --json,
 #   box create <name> --image <image> [--cpus <n>] [--memory-gb <n>] [--net <mode>] [--allow <rule> ...]
@@ -277,6 +280,19 @@ case "$*" in
                 exit 1
             fi
             /bin/cat "$fixtures/box-info.json"
+        fi ;;
+    "box status "*" --json")
+        # box-status-<name>.json in the state directory, else the box's entry in what `status`
+        # answers, which has no memory (as a stopped box's, or one an older agent-vm reads).
+        if [ -f "$state/box-status-$3.json" ]; then
+            /bin/cat "$state/box-status-$3.json"
+        else
+            entry="$(answer status | /usr/bin/jq --arg name "$3" '[.boxes[] | select(.box.name == $name)][0] // empty')"
+            if [ -z "$entry" ]; then
+                printf 'Error: no box %s; `agent-vm box list` shows the existing ones\n' "$3" >&2
+                exit 1
+            fi
+            printf '%s\n' "$entry"
         fi ;;
     "box packs --json")
         answer packs ;;

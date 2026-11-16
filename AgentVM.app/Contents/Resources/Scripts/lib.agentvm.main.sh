@@ -29,7 +29,9 @@
 # repaints runs no agent-vm, and the poll loop reads only `status`, the one cheap call (doctor asks
 # the virtualization framework, and `box info` and `image info` measure a disk: they are read on
 # opening and activation, and `box info` and `image info` for the selected box or image also on
-# selecting it).
+# selecting it). The one exception is the selected box's memory while it runs: the loop asks
+# `box status` of that box alone on every pass (main_poll_memory), which measures no disk and
+# writes only the Memory row when its text changed.
 #
 # THE POLL LOOP keeps the lists current while the window is open, so boxes started from
 # Terminal or Cadabra appear without a click: every MAIN_POLL_IDLE_SECONDS, or every
@@ -101,6 +103,7 @@ MAIN_BOX_KEPT_ID=357
 MAIN_BOX_CREATED_ID=358
 MAIN_BOX_FOLDER_ID=359
 MAIN_BOX_SPACE_ID=360
+MAIN_BOX_MEMORY_ID=366
 
 MAIN_IMAGES_ID=411
 MAIN_IMAGES_FOOTER_ID=412
@@ -1658,6 +1661,7 @@ main_paint_box_detail() {
         [ "$_cpus" != "-" ] && _text="$_cpus CPUs"
         [ "$_memory" != "-" ] && _text="${_text:+$_text, }$_memory GB"
         "$dialog" "$_uuid" "$MAIN_BOX_HARDWARE_ID" "${_text:--}"
+        main_paint_box_memory "$_uuid" "$_name" "$_state" always
 
         if [ "$_disposable" = "true" ]; then
             _text="no: it is deleted when it stops"
@@ -1862,12 +1866,109 @@ main_read_info() {
     local _status=$?
     if [ "$_status" -ne 0 ]; then
         : | ui_store "$(ui_cache "$1" "$2-info-$3.tsv")"
+        [ "$2" = "box" ] && : | ui_store "$(ui_cache "$1" "box-memory-$3.tsv")"
         ui_one_line "$(agentvm_last_error "$_status")" | ui_store "$_error"
         return "$_status"
     fi
     printf '%s\n' "$_json" | agentvm_"$2"_info_row | ui_store "$(ui_cache "$1" "$2-info-$3.tsv")"
+    # A running box's entry carries its memory (main_read_memory).
+    [ "$2" = "box" ] && printf '%s\n' "$_json" | agentvm_box_memory_row | ui_store "$(ui_cache "$1" "box-memory-$3.tsv")"
     : | ui_store "$_error"
     return 0
+}
+
+# main_read_memory <uuid> <name>  ->  agent-vm's status, with `box status` of that box's memory in
+# the cache file box-memory-<name>.tsv (agentvm_box_memory_row's row; empty when the box has none
+# or the call failed, so no old figure stands as a new one). `box info` leaves the same file, so
+# the pane has figures as soon as a box is selected; the poll loop reads them again for the
+# selected box while it runs (main_poll_memory). A name agent-vm would refuse is never part of a
+# path.
+main_read_memory() {
+    agentvm_valid_name "$2" || return 2
+    local _file="$(ui_cache "$1" "box-memory-$2.tsv")"
+    local _json
+    _json="$(agentvm_box_status "$2")"
+    local _status=$?
+    if [ "$_status" -ne 0 ]; then
+        : | ui_store "$_file"
+        return "$_status"
+    fi
+    printf '%s\n' "$_json" | agentvm_box_memory_row | ui_store "$_file"
+    return 0
+}
+
+# main_gib_text <bytes>  ->  "3.2 GB", in units of 2^30 bytes with one decimal, as agent-vm writes
+# memory (and as the box's size is given, "8 GB" for 8 x 2^30); nothing for what is not a number.
+main_gib_text() {
+    case "$1" in
+        ''|*[!0123456789]*) return 0 ;;
+    esac
+    /usr/bin/awk -v b="$1" 'BEGIN { printf "%.1f GB\n", b / 1073741824 }'
+}
+
+# main_memory_text <uuid> <name> <state>  ->  the Memory row of the box pane: for a running box,
+# what the programs in it use (the guest's total less what it could still give them), its file
+# cache, and what this Mac holds for it, with agent-vm's note for each figure it could not have;
+# "-" for a box that does not run, and for one whose figures were not read (or agent-vm has none).
+main_memory_text() {
+    [ "$3" = "running" ] || { echo "-"; return 0; }
+    agentvm_valid_name "$2" || { echo "-"; return 0; }
+    local _file="$(ui_cache "$1" "box-memory-$2.tsv")"
+    local _row=""
+    [ -f "$_file" ] && _row="$(/usr/bin/awk 'NF { print; exit }' "$_file")"
+    [ -n "$_row" ] || { echo "-"; return 0; }
+    printf '%s\n' "$_row" | {
+        local _size _total _available _cache _host _sampled _notes
+        IFS="$ui_tab" read -r _size _total _available _cache _host _sampled _notes
+        local _text="" _used=""
+        case "$_total$_available" in
+            *[!0123456789]*|'') ;;
+            *) [ "$_total" -ge "$_available" ] && _used="$(main_gib_text "$((_total - _available))")" ;;
+        esac
+        [ -n "$_used" ] && _text="programs use $_used"
+        local _cached="$(main_gib_text "$_cache")"
+        [ -n "$_cached" ] && _text="${_text:+$_text, }file cache $_cached"
+        local _held="$(main_gib_text "$_host")"
+        [ -n "$_held" ] && _text="${_text:+$_text; }this Mac holds $_held for it"
+        [ "${_notes:--}" != "-" ] && _text="${_text:+$_text; }$_notes"
+        printf '%s\n' "${_text:--}"
+    }
+}
+
+# main_paint_box_memory <uuid> <name> <state> [always]  ->  the Memory row, from the cache. With
+# "always" (main_paint_box_detail, which writes every row) it is written; without it only when its
+# text differs from what the row shows, as the poll loop has it on a pass that paints nothing else.
+# The cache file memory-shown holds the name and the text last written.
+main_paint_box_memory() {
+    local _text="$(main_memory_text "$1" "$2" "$3")"
+    local _shown="$(ui_cache "$1" memory-shown)"
+    local _line="$2$ui_tab$_text"
+    if [ "${4:-}" != "always" ] && [ -f "$_shown" ]; then
+        local _last="$(/bin/cat "$_shown")"
+        [ "$_last" = "$_line" ] && return 0
+    fi
+    "$dialog" "$1" "$MAIN_BOX_MEMORY_ID" "$_text"
+    printf '%s\n' "$_line" | ui_store "$_shown"
+}
+
+# main_poll_memory <uuid>  ->  for the poll loop, after `status`: the selected box's memory read
+# again (main_read_memory) when it is running and no job holds it, and the row written when its
+# text changed. Only on the Status face, and only for that one box: each reading runs a command
+# in its guest, and a box that is starting, stopping or not answering is not asked (its supervisor
+# would refuse, or keep the pass waiting).
+main_poll_memory() {
+    [ "$(main_face "$1")" = "status" ] || return 0
+    local _name="$(ui_get box "$1")"
+    [ -n "$_name" ] || return 0
+    local _state="$(main_row "$1" boxes "$_name" | /usr/bin/cut -f2)"
+    [ "$_state" = "running" ] || return 0
+    [ -z "$(main_job "$1" box "$_name")" ] || return 0
+    main_read_memory "$1" "$_name"
+    # Another box selected while agent-vm answered has had its pane painted by the selection
+    # handler: this box's figures written now would stand in that pane until the next paint.
+    local _selected="$(ui_get box "$1")"
+    [ "$_selected" = "$_name" ] || return 0
+    main_paint_box_memory "$1" "$_name" "$_state"
 }
 
 # main_read_selected <uuid> <box|image>  ->  main_read_info for the selected box or image, when it
@@ -2429,6 +2530,11 @@ main_refresh() {
     if [ "$_paint" -eq 1 ]; then
         main_paint "$_uuid"
         printf '%s\n' "$_minute" | ui_store "$_painted"
+    fi
+    # The selected running box's memory changes without `status` changing: the poll loop reads it
+    # on every pass, after the paint, and writes the one row when its text changed.
+    if [ "$_mode" = "poll" ] && [ "$_available" -eq 0 ] && [ "${_status:-1}" -eq 0 ]; then
+        main_poll_memory "$_uuid"
     fi
     # The window closed while agent-vm was being read (a status call can take seconds): the
     # close handler has removed the cache folder, and the reads above made it again.

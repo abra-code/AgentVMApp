@@ -305,3 +305,9 @@ What was done to the fixtures, for the first time by `update-agentvmapp.sh`:
 
 - `version.json` and `packs.json` captured again from the installed 0.8.9 (`refresh_agentvm_fixtures.sh ~/.local/bin/agent-vm version packs recipe-check follow`; versions, paths and digests only; `recipe-check.json` came out as it was).
 - The new part `follow` did what was done by hand before: the version strings in `status-variety.json` and `job-log-variety.json`, and the Linux guest daemon's digest in `doctor.json`, whose free space stays at 134 GB. The tests read the version from `version.json` instead of naming it.
+
+## The move to agent-vm 0.8.12 (2026-11-16)
+
+agent-vm 0.8.12 reports a running box's memory: `box status`, `box list` and `box info` give each running box's entry a `memory` object (`configuredBytes`, `guestTotalBytes`, `guestAvailableBytes`, `guestCacheBytes`, `hostFootprintBytes`, `sampledAt`, and `notes` for a figure that could not be had). `status` does not: it never asks a guest. The box pane shows it in its Memory use row, and the poll loop asks `box status` of the selected running box for it.
+
+- `box-status-running.json` is new: `agent-vm box status memfix --json` of a running Debian 13 box of 4 GB (`memfix`, made from an image `replay-debian13` for the capture and deleted after), a few seconds after its start, from a development build of 0.8.12. Two edits: the home folder written as `/Users/you`, and the supervisor's path, which was the development build's in a temporary folder, written as the installed 0.8.12's. The tests derive the other cases from it with `jq` (a box whose supervisor is older than 0.8.12: its size and a note only; a guest that did not answer: the host figure and a note).
