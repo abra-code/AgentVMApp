@@ -12,12 +12,15 @@
 # by exactly those sessions and not by the project. What discarding the sessions ticked frees
 # is summed from it here (agentvm_held_freed), so a tick runs no agent-vm.
 #
-# THE UNIT IS THE PROJECT. The sidebar's cards are projects, largest "to free" first (the order
-# `session usage` gives); the detail pane lists the project's sessions with a checkbox each.
-# Sessions of one project share blocks with one another, and only with one another, so the
-# project is where the figures are honest. A card's first column is the project's path: a list
-# keeps its selection by the first column, and the path is what the pasteboard value
-# "session-project" holds.
+# THE UNIT IS THE PROJECT. The sidebar's cards are projects; the detail pane lists the project's
+# sessions with a checkbox each. Sessions of one project share blocks with one another, and only
+# with one another, so the project is where the figures are honest. A card's first column is the
+# project's path: a list keeps its selection by the first column, and the path is what the
+# pasteboard value "session-project" holds. The cards are the projects with a session that is not
+# discarded, those with a saved list of exclusions, and those added with the plus button in the
+# toolbar (kept while the window is open), so a project with no session yet can have its
+# exclusions chosen. The sort menu in the toolbar orders them by size, largest "to free" first
+# (the order `session usage` gives), or by date, the latest session end first.
 #
 # READING. `session usage` measures (seconds to tens of seconds for a large store), so it runs
 # only when the tab is opened and the kept measurement is stale (older than SES_MEASURE_HOURS,
@@ -52,7 +55,10 @@ SES_SPACE_ID=751
 SES_COUNTS_ID=752
 SES_EXCLUSIONS_ID=753
 SES_EXCLUSIONS_CHOOSE_ID=754
-SES_FOLDER_EXCLUSIONS_ID=743
+SES_SORT_DATE_ID=744
+SES_SORT_SIZE_ID=747
+SES_ADD_ID=745
+SES_REVEAL_ID=746
 SES_DISCARD_ID=732
 SES_DISCARD_ALL_ID=733
 SES_OLDER_ID=742
@@ -76,8 +82,8 @@ SES_OLDER_DAYS="7 30"
 ses_df_tool="${AGENTVM_APP_DF:-/bin/df}"
 # A kept measurement older than this is taken again when the tab is opened.
 SES_MEASURE_HOURS=6
-# A card's color: a project with something to free, and one without (only active sessions, or
-# nothing measured yet).
+# A card's color: a project with something to free, and one without (no session or only active
+# ones, or nothing measured yet).
 SES_CARD_COLOR="#5B4BB7"
 SES_CARD_IDLE_COLOR="#6B7280"
 
@@ -215,41 +221,131 @@ ses_measured_at() {
     /usr/bin/jq -r '.measuredAt // empty' "$_file" 2>/dev/null
 }
 
-# ses_card_rows <uuid>  ->  one card per project with a session that is not discarded: path,
-# name, line, color. Projects the measurement has come first, in its order (most to free first);
-# the others after, by path.
+# ses_sort  ->  the order of the cards the sort menu has: "size" (the default) or "date". It is the
+# app's pasteboard value "agentvm_sessions_sort", kept while the app runs.
+ses_sort() {
+    local _sort="$("$pasteboard" agentvm_sessions_sort get)"
+    case "$_sort" in
+        date) printf 'date\n' ;;
+        *) printf 'size\n' ;;
+    esac
+}
+
+# ses_added_projects <uuid>  ->  the projects added with the plus button in that window, one per
+# line.
+ses_added_projects() {
+    local _file="$(ses_cache "$1" session-added)"
+    [ -f "$_file" ] || return 0
+    /usr/bin/awk 'NF' "$_file"
+}
+
+# ses_add_project <uuid> <folder>  ->  the folder becomes a card of that window, selected, and the
+# tab is painted again. The folder is checked here: it came from the folder panel.
+ses_add_project() {
+    agentvm_valid_project "$2" || return 0
+    {
+        ses_added_projects "$1" | SES_PROJECT="$2" /usr/bin/awk '$0 != ENVIRON["SES_PROJECT"]'
+        printf '%s\n' "$2"
+    } | ui_store "$(ses_cache "$1" session-added)"
+    ui_set session-project "$1" "$2"
+    ses_paint "$1" force
+}
+
+# ses_card_rows <uuid>  ->  one card per project (see the header): path, name, line, color, and
+# when its last session ended (ses_card_date; "Active" when its only sessions are active, nothing
+# when it has none). By size: the projects the measurement has come first, in its order (most to
+# free first), the others after, by path. By date: the latest session end first, a project whose
+# sessions are all active above them and one with none at the end, then by path.
 ses_card_rows() {
     local _uuid="$1"
     local _usage="$(ses_cache "$_uuid" session-usage.json)"
     local _held="$(ses_held_rows "$_uuid")"
     # The rows are read from the list once, not once per project.
     local _rows="$(ses_session_rows "$_uuid")"
+    local _projects="$(ses_cache "$_uuid" projects.tsv)"
+    # Per project: ended and undone sessions, active ones, and the latest end (an ISO 8601 time,
+    # which sorts as text; an undone session with no end counts from its undo).
     printf '%s\n' "$_rows" | /usr/bin/awk -F'\t' -v OFS='\t' '
+        function iso(t) { return t ~ /^[0123456789][0123456789][0123456789][0123456789]-/ }
         NF == 0 { next }
-        { count[$2]++; if ($3 == "active") active[$2]++; if (!($2 in seen)) { seen[$2] = 1; order[++n] = $2 } }
-        END { for (i = 1; i <= n; i++) print order[i], count[order[i]] - active[order[i]], active[order[i]] + 0 }' > "$(ses_cache "$_uuid" projects.tsv)"
-    local _measured=""
-    [ -f "$_usage" ] && _measured="$(agentvm_usage_project_rows < "$_usage" | /usr/bin/cut -f1)"
-    local _project _ended _active
-    {
-        printf '%s\n' "$_measured"
-        /usr/bin/cut -f1 "$(ses_cache "$_uuid" projects.tsv)" | /usr/bin/sort
-    } | /usr/bin/awk 'NF && !seen[$0]++' | while IFS= read -r _project; do
-        local _row="$(/usr/bin/awk -F'\t' -v p="$_project" '$1 == p' "$(ses_cache "$_uuid" projects.tsv)")"
-        [ -n "$_row" ] || continue
-        _ended="$(printf '%s\n' "$_row" | /usr/bin/cut -f2)"
-        _active="$(printf '%s\n' "$_row" | /usr/bin/cut -f3)"
-        local _ids="$(printf '%s\n' "$_rows" | /usr/bin/awk -F'\t' -v p="$_project" '$2 == p && $3 != "active" { print $1 }' | /usr/bin/paste -sd ' ' -)"
+        {
+            if (!($2 in seen)) { seen[$2] = 1; order[++n] = $2 }
+            if ($3 == "active") { active[$2]++; next }
+            ended[$2]++
+            end = (iso($5) ? $5 : (iso($6) ? $6 : ""))
+            if (end > last[$2]) last[$2] = end
+        }
+        END { for (i = 1; i <= n; i++) print order[i], ended[order[i]] + 0, active[order[i]] + 0, last[order[i]] }' > "$_projects"
+    # Every project, by path: those with sessions, those with a saved list, those added.
+    local _exclusions="$(ses_cache "$_uuid" session-exclusions.tsv)"
+    local _all="$( {
+        /usr/bin/cut -f1 "$_projects"
+        [ -f "$_exclusions" ] && /usr/bin/awk -F'\t' '$1 != "-" && NF > 1 { print $1 }' "$_exclusions"
+        ses_added_projects "$_uuid"
+    } | /usr/bin/awk 'NF && !seen[$0]++' | LC_ALL=C /usr/bin/sort)"
+    local _order
+    if [ "$(ses_sort)" = "date" ]; then
+        # The key: the latest end; "9" (after any year) for only active sessions; "0" for none.
+        _order="$(printf '%s\n' "$_all" | SES_PROJECTS="$_projects" /usr/bin/awk -F'\t' -v OFS='\t' '
+            BEGIN { while ((getline line < ENVIRON["SES_PROJECTS"]) > 0) { split(line, f, "\t"); key[f[1]] = (f[4] != "" ? f[4] : (f[3] > 0 ? "9" : "0")) } }
+            NF { print (($0 in key) ? key[$0] : "0"), $0 }' | LC_ALL=C /usr/bin/sort -t "$ui_tab" -k1,1r -k2,2 | /usr/bin/cut -f2-)"
+    else
+        local _measured=""
+        [ -f "$_usage" ] && _measured="$(agentvm_usage_project_rows < "$_usage" | /usr/bin/cut -f1)"
+        # The measurement's order, of the projects listed now, then the rest by path.
+        _order="$( { printf '%s\n' "$_measured" | SES_ALL="$_all" /usr/bin/awk 'BEGIN { n = split(ENVIRON["SES_ALL"], a, "\n"); for (i = 1; i <= n; i++) known[a[i]] = 1 } ($0 in known)'
+            printf '%s\n' "$_all"; } | /usr/bin/awk 'NF && !seen[$0]++')"
+    fi
+    local _project _ended _active _last
+    printf '%s\n' "$_order" | while IFS= read -r _project; do
+        [ -n "$_project" ] || continue
+        # The project through the environment: awk -v would read a backslash in it as an escape.
+        local _row="$(SES_PROJECT="$_project" /usr/bin/awk -F'\t' '$1 == ENVIRON["SES_PROJECT"]' "$_projects")"
+        _ended=0
+        _active=0
+        _last=""
+        if [ -n "$_row" ]; then
+            _ended="$(printf '%s\n' "$_row" | /usr/bin/cut -f2)"
+            _active="$(printf '%s\n' "$_row" | /usr/bin/cut -f3)"
+            _last="$(printf '%s\n' "$_row" | /usr/bin/cut -f4)"
+        fi
+        local _ids="$(printf '%s\n' "$_rows" | SES_PROJECT="$_project" /usr/bin/awk -F'\t' '$2 == ENVIRON["SES_PROJECT"] && $3 != "active" { print $1 }' | /usr/bin/paste -sd ' ' -)"
         local _freed=""
         [ -n "$_held" ] && [ -n "$_ids" ] && _freed="$(printf '%s\n' "$_held" | agentvm_held_freed "$_ids")"
-        printf '%s\t%s\t%s\t%s\n' "$_project" "$(/usr/bin/basename "$_project")" "$(ses_card_line "$_ended" "$_active" "$_freed")" \
-            "$(if [ -n "$_freed" ] && [ "$_freed" != "0" ]; then printf '%s' "$SES_CARD_COLOR"; else printf '%s' "$SES_CARD_IDLE_COLOR"; fi)"
+        local _date=""
+        if [ -n "$_last" ]; then
+            _date="$(ses_card_date "$_last")"
+        elif [ "$_active" -gt 0 ]; then
+            _date="Active"
+        fi
+        printf '%s\t%s\t%s\t%s\t%s\n' "$_project" "$(/usr/bin/basename "$_project")" "$(ses_card_line "$_ended" "$_active" "$_freed")" \
+            "$(if [ -n "$_freed" ] && [ "$_freed" != "0" ]; then printf '%s' "$SES_CARD_COLOR"; else printf '%s' "$SES_CARD_IDLE_COLOR"; fi)" "$_date"
     done
 }
 
+# ses_card_date <ISO 8601 time>  ->  the time on top of a card, short: "Today 14:02", "Nov 24
+# 09:10", and "Nov 24 2025" for an earlier year; nothing when it is not a time.
+ses_card_date() {
+    local _seconds="$(ui_seconds_since_epoch "$1")"
+    [ -n "$_seconds" ] || return 0
+    local _now="$(main_now)"
+    if [ "$(/bin/date -r "$_seconds" '+%Y-%m-%d')" = "$(/bin/date -r "$_now" '+%Y-%m-%d')" ]; then
+        /bin/date -r "$_seconds" '+Today %H:%M'
+    elif [ "$(/bin/date -r "$_seconds" '+%Y')" = "$(/bin/date -r "$_now" '+%Y')" ]; then
+        /bin/date -r "$_seconds" '+%b %e %H:%M' | /usr/bin/sed 's/  / /'
+    else
+        /bin/date -r "$_seconds" '+%b %e %Y' | /usr/bin/sed 's/  / /'
+    fi
+}
+
 # ses_card_line <ended and undone> <active> <bytes to free, or nothing when not measured>  ->
-# "2 sessions, about 1 MB to free", "1 active", "3 sessions, 1 active, not measured".
+# "2 sessions, about 1 MB to free", "1 active", "3 sessions, 1 active, not measured", and "no
+# sessions yet" for a project with none.
 ses_card_line() {
+    if [ "$1" -eq 0 ] && [ "$2" -eq 0 ]; then
+        printf 'no sessions yet\n'
+        return 0
+    fi
     local _line=""
     [ "$1" -gt 0 ] && _line="$(main_count_text "$1" session)"
     if [ "$2" -gt 0 ]; then
@@ -283,7 +379,7 @@ ses_table_rows() {
     local _held="$(ses_held_rows "$_uuid")"
     local _ticked="$(ses_ticked "$_uuid" | /usr/bin/paste -sd ' ' -)"
     local _id _project _state _started _ended _undone _scope _bytes _own _at
-    ses_session_rows "$_uuid" | /usr/bin/awk -F'\t' -v p="$2" '$2 == p' |
+    ses_session_rows "$_uuid" | SES_PROJECT="$2" /usr/bin/awk -F'\t' '$2 == ENVIRON["SES_PROJECT"]' |
     while IFS="$ui_tab" read -r _id _project _state _started _ended _undone _scope _bytes _own _at; do
         local _tick=false
         case " $_ticked " in *" $_id "*) [ "$_state" != "active" ] && _tick=true ;; esac
@@ -391,19 +487,29 @@ ses_paint() {
     # among them, since the footer says "today".
     local _key="$( { /bin/cat "$(ses_cache "$_uuid" session-list.json)" "$(ses_cache "$_uuid" session-usage.json)" \
         "$(ses_cache "$_uuid" sessions.tsv)" "$(ses_cache "$_uuid" session-ticks)" "$(ses_cache "$_uuid" session-error)" \
-        "$(ses_cache "$_uuid" session-list-error)" "$(ses_cache "$_uuid" session-exclusions.tsv)" 2>/dev/null
-        printf '%s\n%s\n' "$(ui_get session-project "$_uuid")" "$(/bin/date -r "$(main_now)" '+%Y-%m-%d')"; } | /usr/bin/cksum)"
+        "$(ses_cache "$_uuid" session-list-error)" "$(ses_cache "$_uuid" session-exclusions.tsv)" \
+        "$(ses_cache "$_uuid" session-added)" 2>/dev/null
+        printf '%s\n%s\n%s\n' "$(ui_get session-project "$_uuid")" "$(/bin/date -r "$(main_now)" '+%Y-%m-%d')" "$(ses_sort)"; } | /usr/bin/cksum)"
     local _painted="$(ses_cache "$_uuid" session-painted)"
     local _was="$(/bin/cat "$_painted" 2>/dev/null)"
     if [ "${2:-}" != "force" ] && [ "$_key" = "$_was" ]; then
         return 0
     fi
     printf '%s\n' "$_key" | ui_store "$_painted"
+    # The sort menu: a check mark on the order chosen. Toggles, which a menu draws as items with
+    # a check mark; picking the one already checked unchecks it, and this paint checks it again.
+    if [ "$(ses_sort)" = "date" ]; then
+        "$dialog" "$_uuid" "$SES_SORT_DATE_ID" true
+        "$dialog" "$_uuid" "$SES_SORT_SIZE_ID" false
+    else
+        "$dialog" "$_uuid" "$SES_SORT_DATE_ID" false
+        "$dialog" "$_uuid" "$SES_SORT_SIZE_ID" true
+    fi
     ses_card_rows "$_uuid" | ui_store "$(ses_cache "$_uuid" session-cards.tsv)"
     "$dialog" "$_uuid" "$SES_PROJECTS_ID" omc_table_set_rows_from_stdin < "$(ses_cache "$_uuid" session-cards.tsv)"
     local _project="$(ui_get session-project "$_uuid")"
     if [ -n "$_project" ]; then
-        if [ -n "$(/usr/bin/awk -F'\t' -v p="$_project" '$1 == p' "$(ses_cache "$_uuid" session-cards.tsv)")" ]; then
+        if [ -n "$(SES_PROJECT="$_project" /usr/bin/awk -F'\t' '$1 == ENVIRON["SES_PROJECT"]' "$(ses_cache "$_uuid" session-cards.tsv)")" ]; then
             "$dialog" "$_uuid" "$SES_PROJECTS_ID" omc_select_row_with_content "$_project" 1
         else
             ui_set session-project "$_uuid" ""
@@ -426,6 +532,11 @@ ses_paint_detail() {
     local _uuid="$1"
     local _project="$(ui_get session-project "$_uuid")"
     local _cards="$(/usr/bin/awk 'NF' "$(ses_cache "$_uuid" session-cards.tsv)" 2>/dev/null)"
+    if [ -n "$_project" ] && [ -d "$_project" ]; then
+        ui_enable "$_uuid" "$SES_REVEAL_ID" 1
+    else
+        ui_enable "$_uuid" "$SES_REVEAL_ID" 0
+    fi
     if [ -z "$_project" ]; then
         ui_show "$_uuid" "$SES_DETAIL_ID" 0
         if [ -z "$_cards" ]; then
@@ -440,7 +551,7 @@ ses_paint_detail() {
     ui_show "$_uuid" "$SES_NONE_ID" 0
     ui_show "$_uuid" "$SES_NONE_SELECTED_ID" 0
     ui_show "$_uuid" "$SES_DETAIL_ID" 1
-    local _card="$(printf '%s\n' "$_cards" | /usr/bin/awk -F'\t' -v p="$_project" '$1 == p')"
+    local _card="$(printf '%s\n' "$_cards" | SES_PROJECT="$_project" /usr/bin/awk -F'\t' '$1 == ENVIRON["SES_PROJECT"]')"
     "$dialog" "$_uuid" "$SES_NAME_ID" "$(/usr/bin/basename "$_project")"
     "$dialog" "$_uuid" "$SES_PATH_ID" "$_project"
     "$dialog" "$_uuid" "$SES_COUNTS_ID" "$(printf '%s\n' "$_card" | /usr/bin/cut -f3)"
@@ -455,9 +566,14 @@ ses_paint_detail() {
 
 # ses_space_text <uuid> <project>  ->  what discarding all its ended and undone sessions frees.
 ses_space_text() {
-    local _ids="$(ses_session_rows "$1" | /usr/bin/awk -F'\t' -v p="$2" '$2 == p && $3 != "active" { print $1 }' | /usr/bin/paste -sd ' ' -)"
+    local _ids="$(ses_session_rows "$1" | SES_PROJECT="$2" /usr/bin/awk -F'\t' '$2 == ENVIRON["SES_PROJECT"] && $3 != "active" { print $1 }' | /usr/bin/paste -sd ' ' -)"
     if [ -z "$_ids" ]; then
-        printf 'nothing to discard: its only session is active\n'
+        local _active="$(ses_session_rows "$1" | SES_PROJECT="$2" /usr/bin/awk -F'\t' '$2 == ENVIRON["SES_PROJECT"]' | /usr/bin/awk 'END { print NR }')"
+        case "$_active" in
+            0) printf 'nothing to discard: no session yet\n' ;;
+            1) printf 'nothing to discard: its only session is active\n' ;;
+            *) printf 'nothing to discard: its sessions are active\n' ;;
+        esac
         return 0
     fi
     if [ ! -f "$(ses_cache "$1" session-usage.json)" ]; then
@@ -494,6 +610,24 @@ ses_open() {
         ses_read "$_uuid"
     fi
     ses_paint "$_uuid" force
+}
+
+# ses_reveal <uuid>  ->  the selected project's folder, selected in a Finder window.
+ses_reveal() {
+    local _project="$(ui_get session-project "$1")"
+    [ -n "$_project" ] && [ -d "$_project" ] || return 0
+    "$open_tool" -R "$_project"
+}
+
+# ses_sort_set <uuid> <size|date>  ->  the sort menu's choice kept for the app, and the cards
+# painted in that order.
+ses_sort_set() {
+    case "$2" in
+        size|date) ;;
+        *) return 0 ;;
+    esac
+    "$pasteboard" agentvm_sessions_sort set "$2"
+    ses_paint "$1" force
 }
 
 # ses_tick <uuid> <row index>  ->  the tick of that row of the table changed: the ids ticked are
@@ -541,7 +675,7 @@ ses_ticked_ids() {
 
 # ses_ended_ids <uuid> <project>  ->  the ids of the project's ended and undone sessions.
 ses_ended_ids() {
-    ses_session_rows "$1" | /usr/bin/awk -F'\t' -v p="$2" '$2 == p && $3 != "active" { print $1 }' | /usr/bin/paste -sd ' ' -
+    ses_session_rows "$1" | SES_PROJECT="$2" /usr/bin/awk -F'\t' '$2 == ENVIRON["SES_PROJECT"] && $3 != "active" { print $1 }' | /usr/bin/paste -sd ' ' -
 }
 
 # ses_store_root <uuid>  ->  the store's folder, from where `status` says it keeps restore images

@@ -11,7 +11,7 @@ project="$OMC_ACTIONUI_TABLE_711_COLUMN_1_VALUE"
 known=""
 cards="$(ui_cache "$window_uuid" session-cards.tsv)"
 if [ -n "$project" ] && [ -f "$cards" ]; then
-    known="$(/usr/bin/awk -F'\t' -v p="$project" '$1 == p { print "yes"; exit }' "$cards")"
+    known="$(SES_PROJECT="$project" /usr/bin/awk -F'\t' '$1 == ENVIRON["SES_PROJECT"] { print "yes"; exit }' "$cards")"
 fi
 if [ "$known" = "yes" ]; then
     ui_set session-project "$window_uuid" "$project"

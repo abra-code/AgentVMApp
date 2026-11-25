@@ -164,6 +164,7 @@ section "no sessions"
 now_after 1
 open_window
 printf '[]\n' > "$FAKE_AGENTVM_DIR/session-list.json"
+printf '{"projects": []}\n' > "$FAKE_AGENTVM_DIR/session-exclusions.json"
 printf '{"formatVersion": 1, "held": [], "measuredAt": "%s", "notes": [], "projects": [], "sessions": [], "totals": {"bytes": 0, "freedIfAllDiscardedBytes": 0, "sessions": 0}}\n' "$MEASURED" > "$FAKE_AGENTVM_DIR/session-usage.json"
 open_tab 2
 check "no card, and the placeholder that says what sessions are" "|1|0" \
@@ -192,5 +193,104 @@ omc_run AgentVM.main.activated
 omc_run AgentVM.main.activated
 check "  dismissed at 42 GB, then discarded down to 1 GB: it is back at 12 GB, not 52" "1" "$(shown "$SES_NUDGE_ID")"
 "$OMC_OMC_SUPPORT_PATH/pasteboard" agentvm_sessions_nudge_dismissed set ""
+
+section "the project cards: when the last session ended, and the sort menu"
+# Besides myapp: zeta, whose session ended later the same day; old, ended a year earlier; and
+# alpha, with no session and a saved list of exclusions. Only myapp is in the measurement.
+# sort_by <date|size> <true|false>  ->  that item of the sort menu picked: its toggle as the click
+# leaves it (false: it was checked already).
+sort_by() {
+    local _id="$SES_SORT_SIZE_ID"
+    [ "$1" = "date" ] && _id="$SES_SORT_DATE_ID"
+    omc_control "$_id" "$2"
+    omc_trigger "$_id"
+    omc_run "AgentVM.main.session.sort.$1"
+}
+# checked  ->  the sort menu's check marks: Sort by Date, Sort by Size.
+checked() {
+    printf '%s,%s\n' "$(ui_value "$SES_SORT_DATE_ID")" "$(ui_value "$SES_SORT_SIZE_ID")"
+}
+cards() {
+    ui_rows "$SES_PROJECTS_ID" | /usr/bin/awk -F'\t' '{ print $2 "=" $5 }' | /usr/bin/paste -sd '|' -
+}
+selected() {
+    "$OMC_OMC_SUPPORT_PATH/pasteboard" "agentvm_session-project_$OMC_ACTIONUI_WINDOW_UUID" get
+}
+enabled() {
+    [ "$(ui_enabled "$1")" = "1" ] && echo 1 || echo 0
+}
+write_projects() {
+    /usr/bin/jq '. + [
+        {"endedAt": "2026-11-25T09:00:00Z", "formatVersion": 1, "id": "20261125-040000-aaaa", "project": "/Users/you/src/zeta", "startSeconds": 1795595000, "state": "ended"},
+        {"endedAt": "2025-03-01T10:00:00Z", "formatVersion": 1, "id": "20250301-050000-bbbb", "project": "/Users/you/src/old", "startSeconds": 1740800000, "state": "ended"}]' \
+        "$FIXTURES_AGENTVM/session-list.json" > "$FAKE_AGENTVM_DIR/session-list.json"
+    printf '{"projects": [{"project": "/Users/you/src/alpha", "paths": [".build"]}, {"project": "%s", "paths": [".build"]}]}\n' "$PROJECT" > "$FAKE_AGENTVM_DIR/session-exclusions.json"
+}
+now_after 1
+"$OMC_OMC_SUPPORT_PATH/pasteboard" agentvm_sessions_sort set ""
+open_window
+write_projects
+open_tab 2
+check "by size, the default: the measured project first, then the others by path; each with when its last session ended" \
+    "myapp=Today 08:22|alpha=|old=Mar 1 2025|zeta=Today 09:00" "$(cards)"
+check "  the menu checks Sort by Size" "false,true" "$(checked)"
+check "  a project with no session: no time, and the card says so" "no sessions yet" \
+    "$(ui_rows "$SES_PROJECTS_ID" | /usr/bin/awk -F'\t' '$2 == "alpha" { print $3 }')"
+select_project "/Users/you/src/zeta"
+sort_by date true
+check "by date: the latest end first, a project with none at the end" "zeta=Today 09:00|myapp=Today 08:22|old=Mar 1 2025|alpha=" "$(cards)"
+check "  the choice is kept for the app, the menu checks it alone, and the selection stays on the project" "date|true,false|/Users/you/src/zeta|0" \
+    "$("$OMC_OMC_SUPPORT_PATH/pasteboard" agentvm_sessions_sort get)|$(checked)|$(selected)|$(ui_selection "$SES_PROJECTS_ID")"
+sort_by date false
+check "  picking the checked item again keeps the order and its check mark" "date|true,false|zeta=Today 09:00|myapp=Today 08:22|old=Mar 1 2025|alpha=" \
+    "$("$OMC_OMC_SUPPORT_PATH/pasteboard" agentvm_sessions_sort get)|$(checked)|$(cards)"
+open_window
+write_projects
+open_tab 2
+check "  a new window sorts as chosen" "true,false|zeta" "$(checked)|$(cards | /usr/bin/cut -d= -f1)"
+/usr/bin/jq '[.[] | if .state == "active" then . else empty end]' "$FIXTURES_AGENTVM/session-list.json" > "$FAKE_AGENTVM_DIR/session-list.json"
+omc_run AgentVM.main.session.measure
+check "a project whose only sessions are active: on top by date, said on its card" "myapp=Active|alpha=" "$(cards)"
+
+section "adding a project, and Show in Finder"
+ADDED="$OMCTEST_WORK/projects/newapp"
+/bin/mkdir -p "$ADDED"
+: > "$FAKE_OPEN_LOG"
+check "nothing selected: Show in Finder is off" "0" "$(enabled "$SES_REVEAL_ID")"
+omc_dialog_answer choose_folder ""
+omc_run AgentVM.main.session.project.add
+check "Cancel in the folder panel adds nothing" "myapp|alpha" "$(cards | /usr/bin/sed 's/=[^|]*//g')"
+omc_dialog_answer choose_folder "$ADDED/"
+omc_run AgentVM.main.session.project.add
+check "the folder chosen becomes a card, without its trailing slash, and is selected" "1|$ADDED" \
+    "$(ui_rows "$SES_PROJECTS_ID" | /usr/bin/awk -F'\t' -v p="$ADDED" '$1 == p' | /usr/bin/grep -c .)|$(selected)"
+check "  its pane: no sessions, nothing to discard, nothing left out yet" \
+    "1|newapp|no sessions yet|nothing to discard: no session yet|none: the snapshots take the whole project|0|0" \
+    "$(shown "$SES_DETAIL_ID")|$(ui_value "$SES_NAME_ID")|$(ui_value "$SES_COUNTS_ID")|$(ui_value "$SES_SPACE_ID")|$(ui_value "$SES_EXCLUSIONS_ID")|$(enabled "$SES_DISCARD_ID")|$(enabled "$SES_DISCARD_ALL_ID")"
+omc_dialog_answer choose_folder "$ADDED"
+omc_run AgentVM.main.session.project.add
+check "  added again: still one card" "1" "$(ui_rows "$SES_PROJECTS_ID" | /usr/bin/awk -F'\t' -v p="$ADDED" '$1 == p' | /usr/bin/grep -c .)"
+check "Show in Finder is on for a folder that exists" "1" "$(enabled "$SES_REVEAL_ID")"
+omc_run AgentVM.main.session.reveal
+check "  and shows it in Finder" "-R $ADDED" "$(/bin/cat "$FAKE_OPEN_LOG")"
+select_project "/Users/you/src/alpha"
+check "a project folder this Mac does not have: Show in Finder is off" "0" "$(enabled "$SES_REVEAL_ID")"
+: > "$FAKE_OPEN_LOG"
+omc_run AgentVM.main.session.reveal
+check "  and its handler opens nothing" "" "$(/bin/cat "$FAKE_OPEN_LOG")"
+SLASHED="$OMCTEST_WORK/projects/new\\app"
+/bin/mkdir -p "$SLASHED"
+omc_dialog_answer choose_folder "$SLASHED"
+omc_run AgentVM.main.session.project.add
+check "a folder with a backslash in its path: selected, with its pane" "$SLASHED|no sessions yet" \
+    "$(selected)|$(ui_value "$SES_COUNTS_ID")"
+select_project "/Users/you/src/alpha"
+select_project "$SLASHED"
+check "  and selected again from its card" "$SLASHED" "$(selected)"
+open_window
+open_tab 2
+check "a new window does not keep the projects added in the one before" "0" \
+    "$(ui_rows "$SES_PROJECTS_ID" | /usr/bin/awk -F'\t' -v p="$ADDED" '$1 == p' | /usr/bin/grep -c .)"
+"$OMC_OMC_SUPPORT_PATH/pasteboard" agentvm_sessions_sort set ""
 
 omctest_end

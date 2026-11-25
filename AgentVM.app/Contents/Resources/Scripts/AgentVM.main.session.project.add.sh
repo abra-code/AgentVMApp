@@ -1,11 +1,11 @@
 #!/bin/sh
-# AgentVM.main.session.exclusions.folder.sh
-# The folder button under the Sessions tab's project list. Its command in Command.json has a
+# AgentVM.main.session.project.add.sh
+# The plus button in the Sessions tab's toolbar. Its command in Command.json has a
 # CHOOSE_FOLDER_DIALOG, so the engine asks for a folder before this runs; Cancel leaves the
-# chosen folder empty. The Exclusions window then opens for that folder: a project with no
-# session yet has no pane to choose from.
+# chosen folder empty. The folder becomes a project card, selected, so a project with no session
+# yet can have its exclusions chosen in its pane.
 
-. "$OMC_APP_BUNDLE_PATH/Contents/Resources/Scripts/lib.agentvm.exclusions.sh"
+. "$OMC_APP_BUNDLE_PATH/Contents/Resources/Scripts/lib.agentvm.main.sh"
 
 window_uuid="$OMC_ACTIONUI_WINDOW_UUID"
 [ -n "$window_uuid" ] || exit 0
@@ -16,5 +16,5 @@ case "$folder" in
     /) ;;
     */) folder="${folder%/}" ;;
 esac
-excl_ask "$folder" "$OMC_CURRENT_COMMAND_GUID"
+ses_add_project "$window_uuid" "$folder"
 exit 0

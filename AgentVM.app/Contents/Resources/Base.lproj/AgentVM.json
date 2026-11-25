@@ -455,18 +455,45 @@
                         "type": "VStack",
                         "properties": { "alignment": "leading", "spacing": 6, "padding": 12, "frame": { "maxWidth": "infinity", "alignment": "leading" }, "foregroundStyle": "white", "background": "$4", "cornerRadius": 12 },
                         "children": [
-                          { "type": "Image", "properties": { "systemName": "clock.arrow.circlepath", "font": "title2" } },
+                          { "type": "HStack", "properties": { "spacing": 8 }, "children": [
+                            { "type": "Image", "properties": { "systemName": "clock.arrow.circlepath", "font": "title2" } },
+                            { "type": "Text", "properties": { "text": "$5", "font": { "size": 11, "weight": "semibold" } } }
+                          ] },
                           { "type": "Text", "properties": { "text": "$2", "font": { "size": 17, "weight": "bold" } } },
                           { "type": "Text", "properties": { "text": "$3", "font": "caption", "opacity": 0.85 } }
                         ]
-                      }
+                      },
+                      "toolbar": [
+                        {
+                          "type": "ToolbarItem",
+                          "properties": { "placement": "primaryAction" },
+                          "content": {
+                            "type": "Button",
+                            "id": 745,
+                            "properties": { "systemImage": "plus", "help": "Add Project...", "actionID": "AgentVM.main.session.project.add" }
+                          }
+                        },
+                        {
+                          "type": "ToolbarItem",
+                          "properties": { "placement": "primaryAction" },
+                          "content": {
+                            "type": "Menu",
+                            "properties": { "help": "Sort the projects" },
+                            "label": { "type": "Image", "properties": { "systemName": "arrow.up.arrow.down" } },
+                            "children": [
+                              { "type": "Toggle", "id": 744, "properties": { "title": "Sort by Date", "actionID": "AgentVM.main.session.sort.date", "help": "The project whose last session ended latest first" } },
+                              { "type": "Toggle", "id": 747, "properties": { "title": "Sort by Size", "actionID": "AgentVM.main.session.sort.size", "help": "The project with the most to free first" } }
+                            ]
+                          }
+                        }
+                      ]
                     },
                     { "type": "Divider" },
                     { "type": "HStack", "properties": { "spacing": 14.0, "buttonStyle": "borderless", "padding": { "top": 8, "leading": 16, "bottom": 2, "trailing": 12 } }, "children": [
                       { "type": "Button", "id": 741, "properties": { "systemImage": "arrow.clockwise", "imageScale": "large", "actionID": "AgentVM.main.session.measure", "help": "Measure again what the sessions hold" } },
                       { "type": "Button", "id": 742, "properties": { "systemImage": "calendar.badge.minus", "imageScale": "large", "disabled": true, "actionID": "AgentVM.main.session.older", "help": "Discard the sessions of every project that ended long ago..." } },
-                      { "type": "Button", "id": 743, "properties": { "systemImage": "folder.badge.gearshape", "imageScale": "large", "actionID": "AgentVM.main.session.exclusions.folder", "help": "Choose what the sessions of a folder leave out of their snapshots..." } },
-                      { "type": "Spacer" }
+                      { "type": "Spacer" },
+                      { "type": "Button", "id": 746, "properties": { "systemImage": "folder", "imageScale": "large", "disabled": true, "actionID": "AgentVM.main.session.reveal", "help": "Show the selected project's folder in Finder" } }
                     ] },
                     { "type": "VStack", "properties": { "spacing": 4.0, "alignment": "leading", "padding": { "top": 6, "leading": 16, "bottom": 10, "trailing": 12 }, "frame": { "maxWidth": "infinity", "alignment": "leading" } }, "children": [
                       { "type": "Text", "id": 712, "properties": { "text": "", "font": "caption", "foregroundStyle": "secondary" } },
@@ -479,7 +506,7 @@
                   "properties": { "frame": { "maxWidth": "infinity", "minHeight": 0, "maxHeight": "infinity" } },
                   "children": [
                     { "type": "ContentUnavailableView", "id": 719, "properties": { "title": "No Project Selected", "systemImage": "clock.arrow.circlepath", "description": "Select a project to see its sessions." } },
-                    { "type": "ContentUnavailableView", "id": 718, "properties": { "hidden": true, "title": "No Sessions", "systemImage": "clock.arrow.circlepath", "description": "A session is a snapshot of a project folder taken before an agent works on it, kept so that what the agent did can be undone. avm takes one when it shares a folder that the box may change, and so does Cadabra.\nA snapshot costs nothing at first, and more as the folder changes: sessions kept for weeks can hold much of the disk. This tab shows what they hold and frees it." } },
+                    { "type": "ContentUnavailableView", "id": 718, "properties": { "hidden": true, "title": "No Sessions", "systemImage": "clock.arrow.circlepath", "description": "A session is a snapshot of a project folder taken before an agent works on it, kept so that what the agent did can be undone. avm takes one when it shares a folder that the box may change, and so does Cadabra.\nA snapshot costs nothing at first, and more as the folder changes: sessions kept for weeks can hold much of the disk. This tab shows what they hold and frees it.\nUse the plus button in the toolbar to add a project and choose what its sessions leave out of their snapshots." } },
                     {
                       "type": "VStack",
                       "id": 720,

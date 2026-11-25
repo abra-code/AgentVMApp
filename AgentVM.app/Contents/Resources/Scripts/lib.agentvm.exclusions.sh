@@ -4,8 +4,8 @@
 # The Exclusions window (AgentVM.exclusions.json, the views 5301-5309): which folders of a project
 # its sessions leave out of their snapshots. One window at a time (lib.agentvm.ui.sh, "Box
 # windows", with the kind "exclusions" and the name "window"), opened by Choose... on the
-# Exclusions row of the Sessions tab's project pane, and by the folder button under the tab's
-# project list, which asks for a folder first: a project with no session yet has no pane.
+# Exclusions row of the Sessions tab's project pane (a project with no session yet gets a card,
+# and so a pane, from the plus button in the tab's toolbar).
 #
 # THE PROJECT is the window's value "exclusions": its full path, handed over by the main window in
 # a pasteboard entry of its own and read once by the init handler. It is also what says that the

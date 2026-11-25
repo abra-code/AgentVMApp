@@ -1,10 +1,10 @@
 #!/bin/sh
 # Tests/68-exclusions.test.sh - snapshot exclusions: the Exclusions row of the Sessions tab's
 # project pane, and the Exclusions window. The window opens only when this run of the app asked
-# for it, one at a time, from Choose... or from the folder button under the project list; it
-# scans the project (rows, sizes, why, ticked as saved or as suggested), keeps the ticks, says
-# when a ticked folder may hold work, saves (one call with every path, the main window's row
-# follows, the window closes), and shows agent-vm's refusal and a failed scan.
+# for it, one at a time, from Choose...; it scans the project (rows, sizes, why, ticked as saved
+# or as suggested), keeps the ticks, says when a ticked folder may hold work, saves (one
+# call with every path, the main window's row follows, the window closes), and shows
+# agent-vm's refusal and a failed scan.
 #
 # agent-vm is the fake: the sessions of status-sessions.json and session-list.json, the scan of
 # session-scan.json and the lists of session-exclusions.json (fixtures/agentvm, part exclusions).
@@ -14,7 +14,7 @@
 . "$OMCTEST_TESTS/lib.test.agentvm.sh"
 
 import_view_ids "$APP_SCRIPTS/lib.agentvm.main.sh" "$APP_SCRIPTS/lib.agentvm.sessions.sh" "$APP_SCRIPTS/lib.agentvm.exclusions.sh"
-[ -n "$SES_EXCLUSIONS_ID" ] && [ -n "$SES_EXCLUSIONS_CHOOSE_ID" ] && [ -n "$SES_FOLDER_EXCLUSIONS_ID" ] && [ -n "$SES_PROJECTS_ID" ] \
+[ -n "$SES_EXCLUSIONS_ID" ] && [ -n "$SES_EXCLUSIONS_CHOOSE_ID" ] && [ -n "$SES_ADD_ID" ] && [ -n "$SES_PROJECTS_ID" ] \
     && [ -n "$EXCL_HEAD_ID" ] && [ -n "$EXCL_PATH_ID" ] && [ -n "$EXCL_TABLE_ID" ] && [ -n "$EXCL_STATE_ID" ] && [ -n "$EXCL_WARN_ID" ] \
     && [ -n "$EXCL_NOTES_ID" ] && [ -n "$EXCL_SAVE_ID" ] && [ -n "$MAIN_STATUS_ID" ] || {
     printf '68-exclusions: no view ids imported from the libraries\n' >&2
@@ -112,8 +112,12 @@ check "the tab reads every project's list with the sessions" "1" "$(fake_log | /
 check "nothing saved: the snapshots take the whole project" "none: the snapshots take the whole project" "$(ui_value "$SES_EXCLUSIONS_ID")"
 check "the row is in the pane's form, with Choose... beside it, which runs its handler" "AgentVM.main.session.exclusions|Choose..." \
     "$(/usr/bin/jq -r --argjson id "$SES_EXCLUSIONS_CHOOSE_ID" '.. | objects | select(.id? == $id) | .properties | "\(.actionID)|\(.title)"' "$APP_RESOURCES/Base.lproj/AgentVM.json")"
-check "the folder button is under the project list, beside Discard Older Than..." "742,$SES_FOLDER_EXCLUSIONS_ID|AgentVM.main.session.exclusions.folder" \
-    "$(/usr/bin/jq -r '[.. | objects | select(.type? == "HStack") | [.children[]?.id?] | select(index(742)) | map(select(. != null)) | .[1:3] | map(tostring) | join(",")][0]' "$APP_RESOURCES/Base.lproj/AgentVM.json" | /usr/bin/sed 's/^741,//')|$(/usr/bin/jq -r --argjson id "$SES_FOLDER_EXCLUSIONS_ID" '.. | objects | select(.id? == $id) | .properties.actionID' "$APP_RESOURCES/Base.lproj/AgentVM.json")"
+check "the project list's toolbar: Add Project... (with its folder panel) and the sort menu" "745|AgentVM.main.session.project.add|Toggle:Sort by Date:AgentVM.main.session.sort.date,Toggle:Sort by Size:AgentVM.main.session.sort.size" \
+    "$(/usr/bin/jq -r '[.. | objects | select(.id? == 711) | .toolbar[].content | (.id // .children[0].id)] | map(tostring) | .[0]' "$APP_RESOURCES/Base.lproj/AgentVM.json")|$(/usr/bin/jq -r '.. | objects | select(.id? == 745) | .properties.actionID' "$APP_RESOURCES/Base.lproj/AgentVM.json")|$(/usr/bin/jq -r '[.. | objects | select(.id? == 711) | .toolbar[].content | select(.type == "Menu") | .children[] | "\(.type):\(.properties.title):\(.properties.actionID)"] | join(",")' "$APP_RESOURCES/Base.lproj/AgentVM.json")"
+check "  Add Project... asks for a folder first" "1" \
+    "$(/usr/bin/jq '[.COMMAND_LIST[]? // .[]? | objects | select(.COMMAND_ID? == "AgentVM.main.session.project.add") | select(.CHOOSE_FOLDER_DIALOG)] | length' "$APP_RESOURCES/Command.json")"
+check "the bar under the project list: no folder button; Show in Finder at its right end" "741,742,Spacer,746|AgentVM.main.session.reveal" \
+    "$(/usr/bin/jq -r '[.. | objects | select(.type? == "HStack") | select([.children[]?.id?] | index(742)) | [.children[] | (.id // .type) | tostring] | join(",")][0]' "$APP_RESOURCES/Base.lproj/AgentVM.json")|$(/usr/bin/jq -r '.. | objects | select(.id? == 746) | .properties.actionID' "$APP_RESOURCES/Base.lproj/AgentVM.json")"
 fake_reset
 open_main
 check "a saved list: its paths" ".build, .swiftpm left out of the snapshots" "$(ui_value "$SES_EXCLUSIONS_ID")"
@@ -128,26 +132,13 @@ check "  a list agent-vm cannot read: said, and the sessions are still shown" "c
 no_saved_list
 
 # -----------------------------------------------------------------------------------------------
-section "Choose... and the folder button ask for the window"
+section "Choose... asks for the window"
 open_main
 chains_reset
 : > "$FAKE_AGENTVM_DIR/log"
 omc_run AgentVM.main.session.exclusions
 check "Choose...: the window, with a request of this run and the selected project, and agent-vm asked nothing" \
     "1|$APP_PID exclusions:window|$APP_PID $PROJECT|" "$(chain_asked AgentVM.exclusions)|$(request)|$(handed)|$(fake_log)"
-"$PB" agentvm_open_request_exclusions set ""
-"$PB" agentvm_exclusions_of set ""
-chains_reset
-omc_dialog_answer choose_folder "/Users/you/src/other/"
-omc_run AgentVM.main.session.exclusions.folder
-check "the folder button: the folder chosen, without its trailing slash" "1|$APP_PID /Users/you/src/other" \
-    "$(chain_asked AgentVM.exclusions)|$(handed)"
-"$PB" agentvm_open_request_exclusions set ""
-"$PB" agentvm_exclusions_of set ""
-chains_reset
-omc_dialog_answer choose_folder ""
-omc_run AgentVM.main.session.exclusions.folder
-check "  Cancel in the chooser: nothing" "0|" "$(chain_asked AgentVM.exclusions)|$(handed)"
 
 # -----------------------------------------------------------------------------------------------
 section "the window opens and looks through the project"
