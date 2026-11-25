@@ -48,6 +48,13 @@ SES_PICKED_ID=731
 SES_MEASURE_ID=741
 SES_SPACE_ID=751
 SES_COUNTS_ID=752
+SES_DISCARD_ID=732
+SES_DISCARD_ALL_ID=733
+SES_OLDER_ID=742
+# The two ages Discard Older Than... offers, in days.
+SES_OLDER_DAYS="7 30"
+# Free space before and after a discard (a seam for the tests).
+ses_df_tool="${AGENTVM_APP_DF:-/bin/df}"
 # A kept measurement older than this is taken again when the tab is opened.
 SES_MEASURE_HOURS=6
 # A card's color: a project with something to free, and one without (only active sessions, or
@@ -313,6 +320,19 @@ main_time_text_of() {
 # footer and the note.
 ses_paint() {
     local _uuid="$1"
+    # The poll loop paints the window on every change of `status`: the tab is painted again only
+    # when something it is painted from changed (or a handler wrote into it: "force"). The day is
+    # among them, since the footer says "today".
+    local _key="$( { /bin/cat "$(ses_cache "$_uuid" session-list.json)" "$(ses_cache "$_uuid" session-usage.json)" \
+        "$(ses_cache "$_uuid" sessions.tsv)" "$(ses_cache "$_uuid" session-ticks)" "$(ses_cache "$_uuid" session-error)" \
+        "$(ses_cache "$_uuid" session-list-error)" 2>/dev/null
+        printf '%s\n%s\n' "$(ui_get session-project "$_uuid")" "$(/bin/date -r "$(main_now)" '+%Y-%m-%d')"; } | /usr/bin/cksum)"
+    local _painted="$(ses_cache "$_uuid" session-painted)"
+    local _was="$(/bin/cat "$_painted" 2>/dev/null)"
+    if [ "${2:-}" != "force" ] && [ "$_key" = "$_was" ]; then
+        return 0
+    fi
+    printf '%s\n' "$_key" | ui_store "$_painted"
     ses_card_rows "$_uuid" | ui_store "$(ses_cache "$_uuid" session-cards.tsv)"
     "$dialog" "$_uuid" "$SES_PROJECTS_ID" omc_table_set_rows_from_stdin < "$(ses_cache "$_uuid" session-cards.tsv)"
     local _project="$(ui_get session-project "$_uuid")"
@@ -325,6 +345,12 @@ ses_paint() {
     fi
     "$dialog" "$_uuid" "$SES_FOOTER_ID" "$(ses_footer_text "$_uuid")"
     "$dialog" "$_uuid" "$SES_NOTE_ID" "$(/bin/cat "$(ses_cache "$_uuid" session-error)" "$(ses_cache "$_uuid" session-list-error)" 2>/dev/null | /usr/bin/awk 'NF')"
+    local _ended="$(ses_status_row "$_uuid" | /usr/bin/awk -F'\t' '{ print $2 + $3 }')"
+    if [ "${_ended:-0}" -gt 0 ]; then
+        ui_enable "$_uuid" "$SES_OLDER_ID" 1
+    else
+        ui_enable "$_uuid" "$SES_OLDER_ID" 0
+    fi
     ses_paint_detail "$_uuid"
 }
 
@@ -357,6 +383,7 @@ ses_paint_detail() {
     "$dialog" "$_uuid" "$SES_TABLE_ID" omc_table_set_rows_from_stdin < "$(ses_cache "$_uuid" session-table.tsv)"
     "$dialog" "$_uuid" "$SES_PICKED_ID" "$(ses_picked_text "$_uuid")"
     "$dialog" "$_uuid" "$SES_HINT_ID" "$(ses_hint_text "$_uuid")"
+    ses_paint_buttons "$_uuid" "$_project"
 }
 
 # ses_space_text <uuid> <project>  ->  what discarding all its ended and undone sessions frees.
@@ -399,7 +426,7 @@ ses_open() {
     else
         ses_read "$_uuid"
     fi
-    ses_paint "$_uuid"
+    ses_paint "$_uuid" force
 }
 
 # ses_tick <uuid> <row index>  ->  the tick of that row of the table changed: the ids ticked are
@@ -423,4 +450,238 @@ ses_tick() {
         [ "$_was" = "true" ] || printf '%s\n' "$_id"
     } | ui_store "$(ses_cache "$_uuid" session-ticks)"
     ses_paint_detail "$_uuid"
+}
+
+# ses_paint_buttons <uuid> <project>  ->  Discard Ticked... on while a session of the project is
+# ticked, Discard All Ended... while it has an ended or undone session.
+ses_paint_buttons() {
+    if [ -n "$(ses_ticked_ids "$1")" ]; then
+        ui_enable "$1" "$SES_DISCARD_ID" 1
+    else
+        ui_enable "$1" "$SES_DISCARD_ID" 0
+    fi
+    if [ -n "$(ses_ended_ids "$1" "$2")" ]; then
+        ui_enable "$1" "$SES_DISCARD_ALL_ID" 1
+    else
+        ui_enable "$1" "$SES_DISCARD_ALL_ID" 0
+    fi
+}
+
+# ses_ticked_ids <uuid>  ->  the ids ticked in the table as painted, separated by spaces.
+ses_ticked_ids() {
+    /usr/bin/awk -F'\t' '$1 == "true" && $9 != "true" { print $8 }' "$(ses_cache "$1" session-table.tsv)" 2>/dev/null | /usr/bin/paste -sd ' ' -
+}
+
+# ses_ended_ids <uuid> <project>  ->  the ids of the project's ended and undone sessions.
+ses_ended_ids() {
+    ses_session_rows "$1" | /usr/bin/awk -F'\t' -v p="$2" '$2 == p && $3 != "active" { print $1 }' | /usr/bin/paste -sd ' ' -
+}
+
+# ses_store_root <uuid>  ->  the store's folder, from where `status` says it keeps restore images
+# (<store>/Cache/ipsw); the home folder when it does not say. Where the free space is read: the
+# sessions are on that volume.
+ses_store_root() {
+    local _directory="$(/usr/bin/awk -F'\t' '{ print $4 }' "$(ses_cache "$1" restore.tsv)" 2>/dev/null)"
+    case "$_directory" in
+        */Cache/ipsw) printf '%s\n' "${_directory%/Cache/ipsw}" ;;
+        *) printf '%s\n' "$HOME" ;;
+    esac
+}
+
+# ses_free_bytes <uuid>  ->  the free space of the store's volume, in bytes, or nothing.
+ses_free_bytes() {
+    local _root="$(ses_store_root "$1")"
+    "$ses_df_tool" -k "$_root" 2>/dev/null | /usr/bin/awk 'NR == 2 && $4 ~ /^[0123456789]+$/ { printf "%.0f\n", $4 * 1024 }'
+}
+
+# ses_question <uuid> <ids> <whose>  ->  the message of the question before a discard: how many,
+# what it frees, and that undo ends for them.
+ses_question() {
+    local _count="$(printf '%s\n' "$2" | /usr/bin/awk '{ print NF }')"
+    local _freed="$(ses_held_rows "$1" | agentvm_held_freed "$2")"
+    local _space="what they hold only together is not known: they were not measured"
+    if [ -f "$(ses_cache "$1" session-usage.json)" ]; then
+        if [ "$_freed" = "0" ]; then
+            _space="this frees nothing now: what they hold is held by other sessions or by the project too"
+        else
+            _space="this frees about $(ui_size_text "$_freed") once macOS has removed its local Time Machine snapshots"
+        fi
+    fi
+    printf '%s of %s: their snapshots, and what an undo kept, are deleted; %s. Undo is no longer possible for them; their records and reports stay in agent-vm session list.\n' \
+        "$(main_count_text "$_count" session)" "$3" "$_space"
+}
+
+# ses_ask <uuid> <ids> <whose>  ->  the question before discarding those sessions; Discard goes on
+# with AgentVM.main.session.discard.confirmed, which reads the ids kept here.
+ses_ask() {
+    local _count="$(printf '%s\n' "$2" | /usr/bin/awk '{ print NF }')"
+    ui_set session-discard "$1" "$2"
+    "$dialog" "$1" omc_window omc_present_alert "Discard $(main_count_text "$_count" session)?" \
+        "$(ses_question "$1" "$2" "$3")" \
+        "Cancel:cancel:" "Discard:destructive:AgentVM.main.session.discard.confirmed"
+}
+
+# ses_freed_text <before> <after> <expected>  ->  what the discard freed, as the volume's free space
+# says it; when that is much less than expected, why (local Time Machine snapshots). Nothing when
+# the free space was not read both times.
+ses_freed_text() {
+    case "$1" in
+        ''|*[!0123456789]*) return 0 ;;
+    esac
+    case "$2" in
+        ''|*[!0123456789]*) return 0 ;;
+    esac
+    local _gained=$(( $2 - $1 ))
+    [ "$_gained" -lt 0 ] && _gained=0
+    local _text="Free space was $(ui_size_text "$1"), now $(ui_size_text "$2")."
+    case "$3" in
+        ''|*[!0123456789]*) ;;
+        *)
+            if [ "$3" -gt 100000000 ] && [ "$_gained" -lt $(( $3 / 2 )) ]; then
+                _text="$_text macOS has not given all of it back yet: local Time Machine snapshots keep deleted data for up to a day, and macOS removes them sooner when it needs the space."
+            fi ;;
+    esac
+    printf '%s\n' "$_text"
+}
+
+# ses_forget <uuid> <ids>  ->  the window's measurement without those sessions, as agent-vm keeps
+# its own after a discard: their part of each holder set goes, and an entry no session holds any
+# more was freed. The figures of the others stay right without measuring again.
+ses_forget() {
+    local _file="$(ses_cache "$1" session-usage.json)"
+    [ -f "$_file" ] || return 0
+    /usr/bin/jq --arg ids "$2" '($ids | split(" ") | map(select(. != ""))) as $gone
+        | .sessions |= map(select(.id as $id | $gone | index($id) | not))
+        | .held |= (map(.sessions -= $gone) | map(select(.sessions | length > 0)))' "$_file" > "$_file.new"
+    local _status=$?
+    if [ "$_status" -eq 0 ]; then
+        ui_store "$_file" < "$_file.new"
+    else
+        /bin/rm -f "$_file"
+    fi
+    /bin/rm -f "$_file.new"
+}
+
+# ses_discard <uuid> <ids>  ->  discards those sessions: the free space before and after, the ticks
+# and the window's measurement without them, the list and status read again, and what it freed
+# said (or why it failed). The ids are checked here: they came back through the pasteboard.
+ses_discard() {
+    local _uuid="$1"
+    local _id
+    for _id in $2; do
+        agentvm_valid_session_id "$_id" || return 0
+    done
+    # agent-vm discards an active session when asked by id: one the list shows as active is left
+    # out here, whatever brought its id (an agent may still be working on its project).
+    local _active=" $(ses_session_rows "$_uuid" | /usr/bin/awk -F'\t' '$3 == "active" { print $1 }' | /usr/bin/paste -sd ' ' -) "
+    local _ids=""
+    for _id in $2; do
+        case "$_active" in
+            *" $_id "*) ;;
+            *) _ids="$_ids $_id" ;;
+        esac
+    done
+    _ids="${_ids# }"
+    [ -n "$_ids" ] || return 0
+    local _expected="$(ses_held_rows "$_uuid" | agentvm_held_freed "$_ids")"
+    local _before="$(ses_free_bytes "$_uuid")"
+    # shellcheck disable=SC2086 # the ids are words
+    agentvm_session_discard $_ids > /dev/null
+    local _status=$?
+    local _after="$(ses_free_bytes "$_uuid")"
+    if [ "$_status" -ne 0 ]; then
+        main_alert "$_uuid" "Not every session was discarded" "$(agentvm_last_error "$_status")"
+    fi
+    ses_read "$_uuid"
+    # A refusal leaves all as they were, and a failure partway discards some: then only the ids
+    # the list read again no longer has are gone (none when it could not be read).
+    local _gone="$_ids"
+    if [ "$_status" -ne 0 ]; then
+        local _listed=" $(ses_session_rows "$_uuid" | /usr/bin/cut -f1 | /usr/bin/paste -sd ' ' -) "
+        _gone=""
+        for _id in $_ids; do
+            case "$_listed" in
+                *" $_id "*) ;;
+                *) _gone="$_gone $_id" ;;
+            esac
+        done
+    fi
+    ses_forget "$_uuid" "$_gone"
+    ses_ticked "$_uuid" | /usr/bin/awk -v gone=" $_gone " 'index(gone, " " $0 " ") == 0' | ui_store "$(ses_cache "$_uuid" session-ticks)"
+    main_read_status "$_uuid"
+    ses_paint "$_uuid" force
+    [ "$_status" -eq 0 ] || return "$_status"
+    local _text="$(ses_freed_text "$_before" "$_after" "$_expected")"
+    case "$_text" in
+        *"Time Machine"*) main_alert "$_uuid" "The sessions are discarded" "$_text" ;;
+        '') "$dialog" "$_uuid" omc_window omc_present_toast "The sessions are discarded." "$MAIN_TOAST_SECONDS" ;;
+        *) "$dialog" "$_uuid" omc_window omc_present_toast "The sessions are discarded. $_text" "$MAIN_TOAST_SECONDS" ;;
+    esac
+    return 0
+}
+
+# ses_older_ids <uuid> <days>  ->  the ended and undone sessions, of every project, that ended
+# that many days ago or earlier (a session with no end counts from its start), as agent-vm's
+# `session discard --older-than` takes them.
+ses_older_ids() {
+    local _cutoff=$(( $(main_now) - $2 * 86400 ))
+    local _id _project _state _started _ended _rest
+    ses_session_rows "$1" | while IFS="$ui_tab" read -r _id _project _state _started _ended _rest; do
+        [ "$_state" = "active" ] && continue
+        local _when="$(ui_seconds_since_epoch "$_ended")"
+        [ -n "$_when" ] || _when="$_started"
+        case "$_when" in
+            ''|*[!0123456789]*) continue ;;
+        esac
+        [ "$_when" -le "$_cutoff" ] && printf '%s\n' "$_id"
+    done | /usr/bin/paste -sd ' ' -
+}
+
+# ses_older_ask <uuid>  ->  the question of Discard Older Than...: for each age offered, how many
+# sessions ended that long ago and what discarding them frees; a button per age that has any.
+ses_older_ask() {
+    local _uuid="$1"
+    local _text="" _buttons="" _days
+    local _usage="$(ses_cache "$_uuid" session-usage.json)"
+    for _days in $SES_OLDER_DAYS; do
+        local _ids="$(ses_older_ids "$_uuid" "$_days")"
+        local _count="$(printf '%s\n' "$_ids" | /usr/bin/awk '{ print NF }')"
+        local _part="ended $_days days ago or earlier: $(main_count_text "$_count" session)"
+        if [ "$_count" -gt 0 ] && [ -f "$_usage" ]; then
+            _part="$_part, about $(ui_size_text "$(ses_held_rows "$_uuid" | agentvm_held_freed "$_ids")") to free"
+        fi
+        [ -n "$_text" ] && _text="$_text; "
+        _text="$_text$_part"
+        [ "$_count" -gt 0 ] && _buttons="$_buttons $_days"
+        # What the question names for this age is what its button discards (ses_older).
+        ui_set "session-older-$_days" "$_uuid" "$_ids"
+    done
+    if [ -z "$_buttons" ]; then
+        main_alert "$_uuid" "No session ended that long ago" "Sessions $_text."
+        return 0
+    fi
+    # One button per age with sessions, each with its own action: the alert passes no value. The
+    # actions are spelled out, so the wiring test sees each one with its script.
+    set -- "Cancel:cancel:"
+    for _days in $_buttons; do
+        case "$_days" in
+            7) set -- "$@" "Older Than 7 Days:destructive:AgentVM.main.session.older.7" ;;
+            30) set -- "$@" "Older Than 30 Days:destructive:AgentVM.main.session.older.30" ;;
+        esac
+    done
+    "$dialog" "$_uuid" omc_window omc_present_alert "Discard the sessions that ended long ago?" \
+        "Sessions $_text. Their snapshots are deleted; undo is no longer possible for them, and their records and reports stay. Active sessions are never discarded." "$@"
+}
+
+# ses_older <uuid> <days>  ->  discards the sessions the question of Discard Older Than... named for
+# that age (kept when it asked: sessions that crossed the line since, or were listed since, are
+# not taken), through ses_discard; the ids of every age are then forgotten.
+ses_older() {
+    local _ids="$(ui_get "session-older-$2" "$1")"
+    local _days
+    for _days in $SES_OLDER_DAYS; do
+        ui_set "session-older-$_days" "$1" ""
+    done
+    [ -n "$_ids" ] || return 0
+    ses_discard "$1" "$_ids"
 }

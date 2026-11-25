@@ -460,6 +460,7 @@
                 { "type": "Divider" },
                 { "type": "HStack", "properties": { "spacing": 14.0, "buttonStyle": "borderless", "padding": { "top": 8, "leading": 16, "bottom": 2, "trailing": 12 } }, "children": [
                   { "type": "Button", "id": 741, "properties": { "systemImage": "arrow.clockwise", "imageScale": "large", "actionID": "AgentVM.main.session.measure", "help": "Measure again what the sessions hold" } },
+                  { "type": "Button", "id": 742, "properties": { "systemImage": "calendar.badge.minus", "imageScale": "large", "disabled": true, "actionID": "AgentVM.main.session.older", "help": "Discard the sessions of every project that ended long ago..." } },
                   { "type": "Spacer" }
                 ] },
                 { "type": "VStack", "properties": { "spacing": 4.0, "alignment": "leading", "padding": { "top": 6, "leading": 16, "bottom": 10, "trailing": 12 }, "frame": { "maxWidth": "infinity", "alignment": "leading" } }, "children": [
@@ -495,7 +496,11 @@
                       "minWidths": [28, 90, 50, 90, 60, 80, 60],
                       "frame": { "maxWidth": "infinity", "minHeight": 140, "maxHeight": "infinity" }
                     } },
-                    { "type": "Text", "id": 731, "properties": { "text": "", "textSelection": "enabled", "frame": { "maxWidth": "infinity", "alignment": "leading" } } },
+                    { "type": "HStack", "properties": { "spacing": 10 }, "children": [
+                      { "type": "Text", "id": 731, "properties": { "text": "", "textSelection": "enabled", "frame": { "maxWidth": "infinity", "alignment": "leading" } } },
+                      { "type": "Button", "id": 732, "properties": { "title": "Discard Ticked...", "disabled": true, "actionID": "AgentVM.main.session.discard", "help": "Delete the snapshots of the sessions ticked. Undo is then no longer possible for them; their records and reports stay." } },
+                      { "type": "Button", "id": 733, "properties": { "title": "Discard All Ended...", "disabled": true, "actionID": "AgentVM.main.session.discard.all", "help": "Delete the snapshots of all this project's ended and undone sessions. Undo is then no longer possible for them; their records and reports stay." } }
+                    ] },
                     { "type": "Text", "id": 723, "properties": { "text": "", "font": "caption", "foregroundStyle": "secondary", "textSelection": "enabled", "frame": { "maxWidth": "infinity", "alignment": "leading" } } }
                   ]
                 }

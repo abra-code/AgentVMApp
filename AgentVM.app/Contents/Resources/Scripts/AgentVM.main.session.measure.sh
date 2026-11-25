@@ -12,5 +12,5 @@ ui_enable "$window_uuid" "$SES_MEASURE_ID" 0
 ses_read "$window_uuid" measure
 ui_enable "$window_uuid" "$SES_MEASURE_ID" 1
 main_read_status "$window_uuid"
-ses_paint "$window_uuid"
+ses_paint "$window_uuid" force
 exit 0
