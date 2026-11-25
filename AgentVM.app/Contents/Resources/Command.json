@@ -28,6 +28,17 @@
     },
     {
       "NAME": "AgentVM",
+      "COMMAND_ID": "AgentVM.main.session.exclusions.folder",
+      "EXECUTION_MODE": "exe_script_file",
+      "ACTIVATION_MODE": "act_always",
+      "CHOOSE_FOLDER_DIALOG": {
+        "MESSAGE": "Choose the project folder whose sessions leave folders out of their snapshots",
+        "BUTTON_PROMPT": "Choose",
+        "DIALOG_IDENTIFIER": "com.abracode.AgentVM.projectFolder"
+      }
+    },
+    {
+      "NAME": "AgentVM",
       "COMMAND_ID": "omc.app.handle-url",
       "ACTIVATION_MODE": "act_always",
       "EXECUTION_MODE": "exe_script_file"
@@ -183,6 +194,19 @@
         "WINDOW_TITLE": "Rename",
         "INIT_SUBCOMMAND_ID": "AgentVM.rename.init",
         "END_CANCEL_SUBCOMMAND_ID": "AgentVM.rename.close"
+      }
+    },
+    {
+      "NAME": "AgentVM",
+      "COMMAND_ID": "AgentVM.exclusions",
+      "ACTIVATION_MODE": "act_always",
+      "EXECUTION_MODE": "exe_script_file",
+      "ACTIONUI_WINDOW": {
+        "JSON_NAME": "AgentVM.exclusions",
+        "IS_BLOCKING": false,
+        "WINDOW_TITLE": "Snapshot Exclusions",
+        "INIT_SUBCOMMAND_ID": "AgentVM.exclusions.init",
+        "END_CANCEL_SUBCOMMAND_ID": "AgentVM.exclusions.close"
       }
     },
     {

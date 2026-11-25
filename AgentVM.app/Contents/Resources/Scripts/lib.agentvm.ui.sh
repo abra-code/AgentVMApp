@@ -218,8 +218,9 @@ ui_size_text() {
 # the word "window". So are the New Box window (lib.agentvm.newbox.sh), with the kind "newbox",
 # the Get macOS window (lib.agentvm.getmacos.sh), with the kind "getmacos", the Agent Keys
 # window (lib.agentvm.keys.sh), with the kind "keys", and the How to Use a Box window
-# (lib.agentvm.howto.sh), with the kind "howto", and the Rename window (lib.agentvm.rename.sh),
-# with the kind "rename".
+# (lib.agentvm.howto.sh), with the kind "howto", the Rename window (lib.agentvm.rename.sh),
+# with the kind "rename", and the Exclusions window (lib.agentvm.exclusions.sh), with the kind
+# "exclusions".
 
 # The request key of a kind is this, an underscore and the kind.
 AGENTVM_OPEN_REQUEST_KEY="agentvm_open_request"

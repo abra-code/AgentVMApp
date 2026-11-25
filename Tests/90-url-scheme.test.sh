@@ -62,7 +62,7 @@ waiting() {
 # changes  ->  what the fake was asked that is not a plain read.
 # (session usage measures, and keeps the measurement in the store, which changes no session.)
 changes() {
-    fake_log | /usr/bin/grep -v -e '^status ' -e '^doctor' -e '^--version' -e '^version' -e '^box info ' -e '^image info ' -e '^job list ' -e '^session list ' -e '^session usage '
+    fake_log | /usr/bin/grep -v -e '^status ' -e '^doctor' -e '^--version' -e '^version' -e '^box info ' -e '^image info ' -e '^job list ' -e '^session list ' -e '^session usage ' -e '^session exclusions --json$'
 }
 
 fake_reset

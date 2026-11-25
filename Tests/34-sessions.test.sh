@@ -84,7 +84,7 @@ check "the window opened on the Status face, and measured nothing" "1|0" "$(show
 open_tab 0
 check "choosing Boxes reads nothing about sessions" "0|" "$(measured_count)|$(fake_log | /usr/bin/grep '^session ')"
 open_tab 2
-check "opening Sessions the first time measures, and lists the sessions" "1|session usage --json|session list --json" \
+check "opening Sessions the first time measures, lists the sessions and reads what each project leaves out" "1|session usage --json|session list --json|session exclusions --json" \
     "$(measured_count)|$(fake_log | /usr/bin/grep '^session ' | /usr/bin/paste -sd '|' -)"
 check "one card: the project's path, its name, two sessions and one active with 1 MB to free" \
     "$PROJECT${TAB}myapp${TAB}2 sessions, 1 active, about 1 MB to free" "$(ui_rows "$SES_PROJECTS_ID" | col 1-3)"

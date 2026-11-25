@@ -23,7 +23,9 @@
 # only when the tab is opened and the kept measurement is stale (older than SES_MEASURE_HOURS,
 # or sessions started since), and on the Measure Again button; never in the poll loop, which
 # reads only `status` (whose `sessions` say how many there are and when they were measured).
-# `session list` is cheap and is read with it. Both answers stay in the window's cache.
+# `session list` is cheap and is read with it, and so is `session exclusions`, every project's
+# list of what its snapshots leave out, for the pane's Exclusions row. The answers stay in the
+# window's cache.
 #
 # POSIX sh (bash 3.2 in POSIX mode) only. Validate with "sh -n".
 [ -n "${__AGENTVM_APP_SESSIONS_LIB:-}" ] && return 0
@@ -48,6 +50,9 @@ SES_PICKED_ID=731
 SES_MEASURE_ID=741
 SES_SPACE_ID=751
 SES_COUNTS_ID=752
+SES_EXCLUSIONS_ID=753
+SES_EXCLUSIONS_CHOOSE_ID=754
+SES_FOLDER_EXCLUSIONS_ID=743
 SES_DISCARD_ID=732
 SES_DISCARD_ALL_ID=733
 SES_OLDER_ID=742
@@ -139,7 +144,54 @@ ses_read() {
     fi
     printf '%s\n' "$_json" | ui_store "$(ses_cache "$_uuid" session-list.json)"
     : | ui_store "$_list_error"
+    ses_read_exclusions "$_uuid"
     return "$_measure_status"
+}
+
+# ses_read_exclusions <uuid>  ->  every project's saved exclusions (`session exclusions`) into the
+# window's cache, as rows (agentvm_exclusions_rows); when agent-vm cannot say, the file holds
+# "-" alone, and the Exclusions row says the list could not be read. Read with the session list,
+# and again when the Exclusions window saved a list.
+ses_read_exclusions() {
+    local _json _status
+    _json="$(agentvm_session_exclusions)"
+    _status=$?
+    if [ "$_status" -ne 0 ]; then
+        agentvm_last_error "$_status" >/dev/null
+        printf -- '-\n' | ui_store "$(ses_cache "$1" session-exclusions.tsv)"
+        return "$_status"
+    fi
+    printf '%s\n' "$_json" | agentvm_exclusions_rows | ui_store "$(ses_cache "$1" session-exclusions.tsv)"
+    return 0
+}
+
+# ses_exclusions_text <uuid> <project>  ->  the pane's Exclusions row: "none", the paths saved
+# (the first three, then how many more), or why it cannot say.
+ses_exclusions_text() {
+    local _file="$(ses_cache "$1" session-exclusions.tsv)"
+    if [ ! -f "$_file" ]; then
+        printf 'not read yet\n'
+        return 0
+    fi
+    if [ "$(/usr/bin/head -n 1 "$_file")" = "-" ]; then
+        printf 'could not be read\n'
+        return 0
+    fi
+    # The project through the environment: awk -v would read a backslash in it as an escape.
+    local _row="$(SES_PROJECT="$2" /usr/bin/awk -F'\t' '$1 == ENVIRON["SES_PROJECT"]' "$_file")"
+    if [ -z "$_row" ]; then
+        printf 'none: the snapshots take the whole project\n'
+        return 0
+    fi
+    printf '%s\n' "$_row" | /usr/bin/awk -F'\t' '{
+        # How many from agent-vm itself: a path may hold ", ", which the split below cuts.
+        n = $2 + 0
+        split($3, paths, ", ")
+        text = ""
+        for (i = 1; i <= n && i <= 3; i++) text = text (i > 1 ? ", " : "") paths[i]
+        if (n > 3) text = text " and " (n - 3) " more"
+        printf "%s left out of the snapshots\n", text
+    }'
 }
 
 # ses_session_rows <uuid>  ->  agentvm_session_rows of the cached list.
@@ -339,7 +391,7 @@ ses_paint() {
     # among them, since the footer says "today".
     local _key="$( { /bin/cat "$(ses_cache "$_uuid" session-list.json)" "$(ses_cache "$_uuid" session-usage.json)" \
         "$(ses_cache "$_uuid" sessions.tsv)" "$(ses_cache "$_uuid" session-ticks)" "$(ses_cache "$_uuid" session-error)" \
-        "$(ses_cache "$_uuid" session-list-error)" 2>/dev/null
+        "$(ses_cache "$_uuid" session-list-error)" "$(ses_cache "$_uuid" session-exclusions.tsv)" 2>/dev/null
         printf '%s\n%s\n' "$(ui_get session-project "$_uuid")" "$(/bin/date -r "$(main_now)" '+%Y-%m-%d')"; } | /usr/bin/cksum)"
     local _painted="$(ses_cache "$_uuid" session-painted)"
     local _was="$(/bin/cat "$_painted" 2>/dev/null)"
@@ -393,6 +445,7 @@ ses_paint_detail() {
     "$dialog" "$_uuid" "$SES_PATH_ID" "$_project"
     "$dialog" "$_uuid" "$SES_COUNTS_ID" "$(printf '%s\n' "$_card" | /usr/bin/cut -f3)"
     "$dialog" "$_uuid" "$SES_SPACE_ID" "$(ses_space_text "$_uuid" "$_project")"
+    "$dialog" "$_uuid" "$SES_EXCLUSIONS_ID" "$(ses_exclusions_text "$_uuid" "$_project")"
     ses_table_rows "$_uuid" "$_project" | ui_store "$(ses_cache "$_uuid" session-table.tsv)"
     "$dialog" "$_uuid" "$SES_TABLE_ID" omc_table_set_rows_from_stdin < "$(ses_cache "$_uuid" session-table.tsv)"
     "$dialog" "$_uuid" "$SES_PICKED_ID" "$(ses_picked_text "$_uuid")"

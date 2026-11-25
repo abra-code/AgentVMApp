@@ -1,0 +1,45 @@
+{
+  "type": "VStack",
+  "properties": {
+    "alignment": "leading",
+    "spacing": 10,
+    "padding": 20,
+    "frame": { "minWidth": 560, "idealWidth": 680, "minHeight": 380, "idealHeight": 460 }
+  },
+  "children": [
+    { "type": "Text", "id": 5301, "properties": { "text": "", "font": "headline" } },
+    { "type": "Text", "id": 5302, "properties": { "text": "", "font": "caption", "foregroundStyle": "secondary", "textSelection": "enabled" } },
+    {
+      "type": "Text",
+      "id": 5303,
+      "properties": {
+        "text": "Folders left out of the snapshot are not protected: undo does not restore them, and what an agent changes in them is listed in the report but cannot be undone. Leave out only what can be made again, such as build output.",
+        "frame": { "maxWidth": "infinity", "alignment": "leading" }
+      }
+    },
+    {
+      "type": "Table",
+      "id": 5304,
+      "properties": {
+        "columns": [ "", "Folder", "Size", "Why" ],
+        "columnTypes": [ { "viewType": "Toggle", "style": "checkbox", "actionID": "AgentVM.exclusions.tick" } ],
+        "widths": [ 24, 200, 80, 330 ],
+        "minWidths": [ 24, 100, 60, 120 ],
+        "frame": { "maxWidth": "infinity", "minHeight": 120, "maxHeight": "infinity" }
+      }
+    },
+    { "type": "Text", "id": 5305, "properties": { "text": "", "textSelection": "enabled", "frame": { "maxWidth": "infinity", "alignment": "leading" } } },
+    { "type": "Text", "id": 5306, "properties": { "text": "", "foregroundStyle": "orange", "textSelection": "enabled", "frame": { "maxWidth": "infinity", "alignment": "leading" } } },
+    { "type": "Text", "id": 5307, "properties": { "text": "", "font": "caption", "foregroundStyle": "secondary", "textSelection": "enabled", "frame": { "maxWidth": "infinity", "alignment": "leading" } } },
+    {
+      "type": "HStack",
+      "properties": { "spacing": 8 },
+      "children": [
+        { "type": "Text", "properties": { "text": "The next session of the project follows the list; sessions already taken are not changed.", "font": "caption", "foregroundStyle": "secondary" } },
+        { "type": "Spacer" },
+        { "type": "Button", "id": 5308, "properties": { "title": "Cancel", "role": "cancel", "actionID": "AgentVM.exclusions.cancel" } },
+        { "type": "Button", "id": 5309, "properties": { "title": "Save", "buttonStyle": "borderedProminent", "disabled": true, "actionID": "AgentVM.exclusions.save", "help": "Save the ticked folders as what this project's sessions leave out" } }
+      ]
+    }
+  ]
+}

@@ -465,6 +465,7 @@
                     { "type": "HStack", "properties": { "spacing": 14.0, "buttonStyle": "borderless", "padding": { "top": 8, "leading": 16, "bottom": 2, "trailing": 12 } }, "children": [
                       { "type": "Button", "id": 741, "properties": { "systemImage": "arrow.clockwise", "imageScale": "large", "actionID": "AgentVM.main.session.measure", "help": "Measure again what the sessions hold" } },
                       { "type": "Button", "id": 742, "properties": { "systemImage": "calendar.badge.minus", "imageScale": "large", "disabled": true, "actionID": "AgentVM.main.session.older", "help": "Discard the sessions of every project that ended long ago..." } },
+                      { "type": "Button", "id": 743, "properties": { "systemImage": "folder.badge.gearshape", "imageScale": "large", "actionID": "AgentVM.main.session.exclusions.folder", "help": "Choose what the sessions of a folder leave out of their snapshots..." } },
                       { "type": "Spacer" }
                     ] },
                     { "type": "VStack", "properties": { "spacing": 4.0, "alignment": "leading", "padding": { "top": 6, "leading": 16, "bottom": 10, "trailing": 12 }, "frame": { "maxWidth": "infinity", "alignment": "leading" } }, "children": [
@@ -490,7 +491,11 @@
                           "type": "Form",
                           "children": [
                             { "type": "LabeledContent", "properties": { "title": "Space" }, "children": [ { "type": "Text", "id": 751, "properties": { "text": "", "textSelection": "enabled", "help": "What discarding every ended and undone session of this project frees, once macOS has removed its local Time Machine snapshots, which keep deleted data for up to a day.", "frame": { "maxWidth": "infinity", "alignment": "leading" } } } ] },
-                            { "type": "LabeledContent", "properties": { "title": "Sessions" }, "children": [ { "type": "Text", "id": 752, "properties": { "text": "", "textSelection": "enabled", "frame": { "maxWidth": "infinity", "alignment": "leading" } } } ] }
+                            { "type": "LabeledContent", "properties": { "title": "Sessions" }, "children": [ { "type": "Text", "id": 752, "properties": { "text": "", "textSelection": "enabled", "frame": { "maxWidth": "infinity", "alignment": "leading" } } } ] },
+                            { "type": "LabeledContent", "properties": { "title": "Exclusions" }, "children": [ { "type": "HStack", "properties": { "spacing": 10 }, "children": [
+                              { "type": "Text", "id": 753, "properties": { "text": "", "textSelection": "enabled", "help": "Folders the project's sessions leave out of their snapshots, so they hold no copy of them. Undo cannot restore what was left out.", "frame": { "maxWidth": "infinity", "alignment": "leading" } } },
+                              { "type": "Button", "id": 754, "properties": { "title": "Choose...", "actionID": "AgentVM.main.session.exclusions", "help": "Choose which folders of this project its sessions leave out of their snapshots, such as build output" } }
+                            ] } ] }
                           ]
                         },
                         { "type": "Table", "id": 730, "properties": {
