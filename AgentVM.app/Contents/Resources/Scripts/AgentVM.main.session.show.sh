@@ -1,7 +1,7 @@
 #!/bin/sh
 # AgentVM.main.session.show.sh
-# Show, beside the sessions in Settings: the Sessions tab, opened as choosing it does (measured when
-# the kept measurement is stale).
+# Show, beside the sessions in Settings, and Show Sessions in the banner: the Sessions tab, opened
+# as choosing it does (measured when the kept measurement is stale).
 
 . "$OMC_APP_BUNDLE_PATH/Contents/Resources/Scripts/lib.agentvm.main.sh"
 

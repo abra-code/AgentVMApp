@@ -58,6 +58,11 @@ SES_KEPT_ID=771
 SES_SHOW_ID=772
 SES_EXPIRY_ID=773
 SES_EXPIRY_TEXT_ID=774
+SES_NUDGE_ID=790
+SES_NUDGE_TEXT_ID=791
+# The banner below the tabs shows when sessions hold this much that can be freed, and again after
+# Not Now once they hold this much more.
+SES_NUDGE_BYTES=10000000000
 # The ages the expiry picker in Settings offers, in days; 0: never.
 SES_EXPIRY_CHOICES="14 30 60 0"
 # The two ages Discard Older Than... offers, in days.
@@ -830,4 +835,69 @@ ses_restore_question() {
     [ "$_count" = "1" ] || _what="them"
     printf '%s. A new macOS image needs a restore image again: Get macOS... downloads one (about 27 GB). Images and boxes made from %s are not touched.\n' \
         "$(printf '%s\n' "$2" | /usr/bin/tr ' ' '\n' | /usr/bin/paste -sd ',' - | /usr/bin/sed 's/,/, /g')" "$_what"
+}
+
+# -- The banner below the tabs ------------------------------------------------------------------
+# One line below the main window's tabs when the sessions hold SES_NUDGE_BYTES or more that
+# discarding them would free (from the last measurement, as `status` gives it): nothing else in
+# the window says so while another tab is shown. Not Now hides it until they hold SES_NUDGE_BYTES
+# more than when it was dismissed; that figure is the app's pasteboard value
+# "agentvm_sessions_nudge_dismissed", kept while the app runs.
+
+# ses_nudge_bytes <uuid>  ->  what the banner would name, or nothing when it is not to be shown.
+ses_nudge_bytes() {
+    local _freed="$(ses_status_field "$1" 8)"
+    case "$_freed" in
+        ''|*[!0123456789]*) return 0 ;;
+    esac
+    local _dismissed="$("$pasteboard" agentvm_sessions_nudge_dismissed get)"
+    case "$_dismissed" in
+        ''|*[!0123456789]*) ;;
+        *)
+            # Less than when Not Now was chosen (sessions were discarded): forgotten, so the
+            # banner comes back at the usual figure, not 10 GB above the old one.
+            if [ "$_freed" -lt "$_dismissed" ]; then
+                "$pasteboard" agentvm_sessions_nudge_dismissed set ""
+            elif [ "$_freed" -lt $((_dismissed + SES_NUDGE_BYTES)) ]; then
+                return 0
+            fi ;;
+    esac
+    [ "$_freed" -ge "$SES_NUDGE_BYTES" ] || return 0
+    printf '%s\n' "$_freed"
+}
+
+# ses_nudge_show <uuid> <0|1>  ->  the banner shown, or hidden and collapsed. A hidden view keeps
+# its space in ActionUI, so a hidden banner would leave an empty strip below the tabs: hidden, its
+# frame is 0 high (as in AgentVM.json); shown, the frame is set back first.
+ses_nudge_show() {
+    if [ "$2" = "1" ]; then
+        "$dialog" "$1" "$SES_NUDGE_ID" omc_set_property frame '{"maxWidth":"infinity"}'
+        ui_show "$1" "$SES_NUDGE_ID" 1
+    else
+        ui_show "$1" "$SES_NUDGE_ID" 0
+        "$dialog" "$1" "$SES_NUDGE_ID" omc_set_property frame '{"maxWidth":"infinity","maxHeight":0}'
+    fi
+}
+
+# ses_paint_nudge <uuid> <face>  ->  the banner shown, with its text, or hidden (always on the Get
+# started face).
+ses_paint_nudge() {
+    local _bytes=""
+    [ "$2" = "status" ] && _bytes="$(ses_nudge_bytes "$1")"
+    if [ -z "$_bytes" ]; then
+        ses_nudge_show "$1" 0
+        return 0
+    fi
+    "$dialog" "$1" "$SES_NUDGE_TEXT_ID" "agent-vm sessions hold about $(ui_size_text "$_bytes") that only their undo needs; discarding them frees it."
+    ses_nudge_show "$1" 1
+}
+
+# ses_nudge_dismiss <uuid>  ->  Not Now: the figure kept, the banner hidden.
+ses_nudge_dismiss() {
+    local _freed="$(ses_status_field "$1" 8)"
+    case "$_freed" in
+        ''|*[!0123456789]*) ;;
+        *) "$pasteboard" agentvm_sessions_nudge_dismissed set "$_freed" ;;
+    esac
+    ses_nudge_show "$1" 0
 }

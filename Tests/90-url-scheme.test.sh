@@ -60,8 +60,9 @@ waiting() {
 }
 
 # changes  ->  what the fake was asked that is not a plain read.
+# (session usage measures, and keeps the measurement in the store, which changes no session.)
 changes() {
-    fake_log | /usr/bin/grep -v -e '^status ' -e '^doctor' -e '^--version' -e '^version' -e '^box info ' -e '^image info ' -e '^job list '
+    fake_log | /usr/bin/grep -v -e '^status ' -e '^doctor' -e '^--version' -e '^version' -e '^box info ' -e '^image info ' -e '^job list ' -e '^session list ' -e '^session usage '
 }
 
 fake_reset
@@ -73,6 +74,7 @@ store '.'
 # -----------------------------------------------------------------------------------------------
 section "which URLs are routed"
 check "status"                   "status" "$(ui ui_url_target agentvm://status)"
+check "the Sessions tab"        "sessions|sessions|" "$(ui ui_url_target agentvm://sessions)|$(ui ui_url_target AgentVM://Sessions/)|$(ui ui_url_target agentvm://sessions/myapp)"
 check "the logs"                 "logs|logs|" "$(ui ui_url_target agentvm://logs)|$(ui ui_url_target AgentVM://Logs/)|$(ui ui_url_target agentvm://logs/s3)"
 check "  with a trailing slash, a query or a fragment" "status|status|status" \
     "$(ui ui_url_target agentvm://status/)|$(ui ui_url_target 'agentvm://status?from=cadabra')|$(ui ui_url_target 'agentvm://status#top')"
@@ -130,6 +132,14 @@ url agentvm://status
 check "the window comes to the front" "1" "$(ui_calls "${UUID}${TAB}omc_window${TAB}omc_select")"
 check "  the tab is left as it is" "" "$(ui_value "$MAIN_STATUS_ID")"
 check "  and so are the selections" "s3|dev-acp" "$("$PB" "agentvm_box_$UUID" get)|$("$PB" "agentvm_image_$UUID" get)"
+
+section "the Sessions tab, by a URL"
+ui_reset
+: > "$FAKE_AGENTVM_DIR/log"
+url agentvm://sessions
+check "the window comes to the front on the Sessions tab, and the sessions are read" "1|2|1" \
+    "$(ui_calls "${UUID}${TAB}omc_window${TAB}omc_select")|$(ui_value "$MAIN_STATUS_ID")|$(fake_log | /usr/bin/grep -c '^session list --json$')"
+check "  and nothing is changed"  "" "$(changes)"
 
 section "the Where the Logs Are window, by a URL"
 ui_reset

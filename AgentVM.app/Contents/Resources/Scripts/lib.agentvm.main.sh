@@ -2405,10 +2405,12 @@ main_paint() {
         main_paint_box_detail "$_uuid"
         main_paint_image_detail "$_uuid"
         ses_paint "$_uuid"
+        ses_paint_nudge "$_uuid" status
     else
         ui_show "$_uuid" "$MAIN_STATUS_ID" 0
         ui_show "$_uuid" "$MAIN_GETSTARTED_ID" 1
         main_paint_stages "$_uuid"
+        ses_paint_nudge "$_uuid" getstarted
         "$dialog" "$_uuid" "$MAIN_GETSTARTED_NOTE_ID" "$_error"
     fi
 }
@@ -2416,9 +2418,9 @@ main_paint() {
 # main_goto <uuid> <target>  ->  the window showing what a URL named (lib.agentvm.ui.sh, "The
 # agentvm URL scheme"): "box <name>" or "image <name>" shows that tab with the card selected and
 # its details read, as selecting it by hand does; "logs" opens the Where the Logs Are window
-# (lib.agentvm.logs.sh), or brings it to the front, whichever face is shown; "status" changes
-# nothing. From the caches, so
-# the caller reads `status` first. A name the lists do not hold is said in an alert, since the
+# (lib.agentvm.logs.sh), or brings it to the front, whichever face is shown; "sessions" opens the
+# Sessions tab as choosing it does; "status" changes nothing. From the caches, so the caller
+# reads `status` first. A name the lists do not hold is said in an alert, since the
 # link came from somewhere that believed it existed. Nothing happens on the Get started face,
 # which has no lists.
 main_goto() {
@@ -2431,6 +2433,12 @@ main_goto() {
         image) _tab=1; _list=images ;;
         logs)
             ui_item_open logs window "$OMC_CURRENT_COMMAND_GUID"
+            return 0 ;;
+        sessions)
+            # The Sessions tab, opened as choosing it does (measured when stale).
+            [ "$(main_face "$_uuid")" = "status" ] || return 0
+            "$dialog" "$_uuid" "$MAIN_STATUS_ID" "$SES_TAB_INDEX"
+            ses_open "$_uuid"
             return 0 ;;
         *)     return 0 ;;
     esac

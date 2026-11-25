@@ -169,4 +169,28 @@ open_tab 2
 check "no card, and the placeholder that says what sessions are" "|1|0" \
     "$(ui_rows "$SES_PROJECTS_ID")|$(shown "$SES_NONE_ID")|$(shown "$SES_NONE_SELECTED_ID")"
 
+section "the banner below the tabs"
+now_after 1
+open_window
+check "1 MB to free: no banner, and it takes no space" "0|{\"maxWidth\":\"infinity\",\"maxHeight\":0}" "$(shown "$SES_NUDGE_ID")|$(ui_prop "$SES_NUDGE_ID" frame)"
+"$OMC_OMC_SUPPORT_PATH/pasteboard" agentvm_sessions_nudge_dismissed set ""
+/usr/bin/jq '.sessions.freedIfAllDiscardedBytes = 31700000000' "$FAKE_AGENTVM_DIR/status.json" > "$FAKE_AGENTVM_DIR/status.new" && /bin/mv "$FAKE_AGENTVM_DIR/status.new" "$FAKE_AGENTVM_DIR/status.json"
+omc_run AgentVM.main.activated
+check "31.7 GB to free: the banner says so" "1|{\"maxWidth\":\"infinity\"}|agent-vm sessions hold about 31.7 GB that only their undo needs; discarding them frees it." \
+    "$(shown "$SES_NUDGE_ID")|$(ui_prop "$SES_NUDGE_ID" frame)|$(ui_value "$SES_NUDGE_TEXT_ID")"
+omc_run AgentVM.main.session.nudge.dismiss
+check "  Not Now hides it" "0" "$(shown "$SES_NUDGE_ID")"
+omc_run AgentVM.main.activated
+check "  and it stays hidden while the figure is the same" "0" "$(shown "$SES_NUDGE_ID")"
+/usr/bin/jq '.sessions.freedIfAllDiscardedBytes = 42000000000' "$FAKE_AGENTVM_DIR/status.json" > "$FAKE_AGENTVM_DIR/status.new" && /bin/mv "$FAKE_AGENTVM_DIR/status.new" "$FAKE_AGENTVM_DIR/status.json"
+omc_run AgentVM.main.activated
+check "  10 GB more: it is back" "1" "$(shown "$SES_NUDGE_ID")"
+omc_run AgentVM.main.session.nudge.dismiss
+/usr/bin/jq '.sessions.freedIfAllDiscardedBytes = 1000000000' "$FAKE_AGENTVM_DIR/status.json" > "$FAKE_AGENTVM_DIR/status.new" && /bin/mv "$FAKE_AGENTVM_DIR/status.new" "$FAKE_AGENTVM_DIR/status.json"
+omc_run AgentVM.main.activated
+/usr/bin/jq '.sessions.freedIfAllDiscardedBytes = 12000000000' "$FAKE_AGENTVM_DIR/status.json" > "$FAKE_AGENTVM_DIR/status.new" && /bin/mv "$FAKE_AGENTVM_DIR/status.new" "$FAKE_AGENTVM_DIR/status.json"
+omc_run AgentVM.main.activated
+check "  dismissed at 42 GB, then discarded down to 1 GB: it is back at 12 GB, not 52" "1" "$(shown "$SES_NUDGE_ID")"
+"$OMC_OMC_SUPPORT_PATH/pasteboard" agentvm_sessions_nudge_dismissed set ""
+
 omctest_end

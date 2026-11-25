@@ -329,7 +329,7 @@ ui_url_target() {
         */*) _name="${_rest#*/}" ;;
     esac
     case "$_kind" in
-        status|logs)
+        status|logs|sessions)
             [ -z "$_name" ] && printf '%s\n' "$_kind" ;;
         box|image)
             agentvm_valid_name "$_name" && printf '%s %s\n' "$_kind" "$_name" ;;

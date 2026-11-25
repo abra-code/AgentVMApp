@@ -66,6 +66,7 @@ open agentvm://status          # the main window
 open agentvm://box/<name>      # with that box selected
 open agentvm://image/<name>    # with that image selected
 open agentvm://logs            # the Where the Logs Are window
+open agentvm://sessions        # the Sessions tab
 ```
 
 A link only shows; it never changes a box or an image.

@@ -41,599 +41,611 @@
       ]
     },
     {
-      "type": "TabView",
-      "id": 300,
-      "properties": { "hidden": true, "actionID": "AgentVM.main.tab" },
+      "type": "VStack",
+      "properties": { "spacing": 0.0, "frame": { "maxWidth": "infinity", "maxHeight": "infinity", "alignment": "top" } },
       "children": [
-        {
-          "type": "Tab",
-          "properties": { "title": "Boxes", "systemImage": "shippingbox" },
-          "content": {
-            "type": "NavigationSplitView",
-            "id": 310,
-            "properties": { "columnVisibility": "all", "style": "balanced" },
-            "sidebar": {
-              "type": "VStack",
-              "properties": {
-                "spacing": 0.0,
-                "navigationSplitViewColumnWidth": { "min": 220, "ideal": 260, "max": 340 }
-              },
-              "children": [
-                {
-                  "type": "List",
-                  "id": 311,
+    {
+          "type": "TabView",
+          "id": 300,
+          "properties": { "hidden": true, "actionID": "AgentVM.main.tab" },
+          "children": [
+            {
+              "type": "Tab",
+              "properties": { "title": "Boxes", "systemImage": "shippingbox" },
+              "content": {
+                "type": "NavigationSplitView",
+                "id": 310,
+                "properties": { "columnVisibility": "all", "style": "balanced" },
+                "sidebar": {
+                  "type": "VStack",
                   "properties": {
-                    "actionID": "AgentVM.main.box.selected",
-                    "listStyle": "sidebar",
-                    "listRowSeparator": "hidden",
-                    "listRowInsets": { "top": 4, "leading": 8, "bottom": 4, "trailing": 8 }
+                    "spacing": 0.0,
+                    "navigationSplitViewColumnWidth": { "min": 220, "ideal": 260, "max": 340 }
                   },
-                  "template": {
-                    "type": "VStack",
-                    "properties": {
-                      "alignment": "leading",
-                      "spacing": 6,
-                      "padding": 12,
-                      "frame": { "maxWidth": "infinity", "alignment": "leading" },
-                      "foregroundStyle": "white",
-                      "background": "$6",
-                      "cornerRadius": 12
-                    },
-                    "children": [
-                      {
-                        "type": "HStack",
+                  "children": [
+                    {
+                      "type": "List",
+                      "id": 311,
+                      "properties": {
+                        "actionID": "AgentVM.main.box.selected",
+                        "listStyle": "sidebar",
+                        "listRowSeparator": "hidden",
+                        "listRowInsets": { "top": 4, "leading": 8, "bottom": 4, "trailing": 8 }
+                      },
+                      "template": {
+                        "type": "VStack",
+                        "properties": {
+                          "alignment": "leading",
+                          "spacing": 6,
+                          "padding": 12,
+                          "frame": { "maxWidth": "infinity", "alignment": "leading" },
+                          "foregroundStyle": "white",
+                          "background": "$6",
+                          "cornerRadius": 12
+                        },
                         "children": [
-                          { "type": "Image", "properties": { "systemName": "shippingbox.fill", "font": "title2" } },
-                          { "type": "Spacer" },
                           {
                             "type": "HStack",
-                            "properties": { "spacing": 4 },
                             "children": [
-                              { "type": "Image", "properties": { "systemName": "$5", "font": "caption" } },
-                              { "type": "Text", "properties": { "text": "$4", "font": { "size": 11, "weight": "semibold" } } }
+                              { "type": "Image", "properties": { "systemName": "shippingbox.fill", "font": "title2" } },
+                              { "type": "Spacer" },
+                              {
+                                "type": "HStack",
+                                "properties": { "spacing": 4 },
+                                "children": [
+                                  { "type": "Image", "properties": { "systemName": "$5", "font": "caption" } },
+                                  { "type": "Text", "properties": { "text": "$4", "font": { "size": 11, "weight": "semibold" } } }
+                                ]
+                              },
+                              { "type": "Image", "properties": { "systemName": "$2", "font": "title2" } }
                             ]
                           },
-                          { "type": "Image", "properties": { "systemName": "$2", "font": "title2" } }
+                          { "type": "Text", "properties": { "text": "$1", "font": { "size": 17, "weight": "bold" } } },
+                          { "type": "Text", "properties": { "text": "$3", "font": "caption", "opacity": 0.85 } }
                         ]
                       },
-                      { "type": "Text", "properties": { "text": "$1", "font": { "size": 17, "weight": "bold" } } },
-                      { "type": "Text", "properties": { "text": "$3", "font": "caption", "opacity": 0.85 } }
-                    ]
-                  },
-                  "toolbar": [
-                    {
-                      "type": "ToolbarItem",
-                      "properties": { "placement": "primaryAction" },
-                      "content": {
-                        "type": "Button",
-                        "id": 314,
-                        "properties": { "systemImage": "plus", "help": "New Box...", "actionID": "AgentVM.main.box.new" }
-                      }
-                    }
-                  ]
-                },
-                { "type": "Divider" },
-                {
-                  "type": "HStack",
-                  "properties": { "spacing": 14.0, "buttonStyle": "borderless", "padding": { "top": 8, "leading": 16, "bottom": 2, "trailing": 12 } },
-                  "children": [
-                    { "type": "Button", "id": 342, "properties": { "systemImage": "folder", "imageScale": "large", "disabled": true, "actionID": "AgentVM.main.box.show", "help": "Show the selected box in Finder" } },
-                    { "type": "Button", "id": 345, "properties": { "systemImage": "trash", "imageScale": "large", "disabled": true, "actionID": "AgentVM.main.box.delete", "help": "Delete the selected box..." } },
-                    { "type": "Spacer" },
-                    { "type": "Button", "id": 346, "properties": { "systemImage": "questionmark.circle", "imageScale": "large", "actionID": "AgentVM.howto.open", "help": "How to use a box" } }
-                  ]
-                },
-                {
-                  "type": "VStack",
-                  "properties": {
-                    "spacing": 4.0,
-                    "alignment": "leading",
-                    "padding": { "top": 6, "leading": 16, "bottom": 10, "trailing": 12 },
-                    "frame": { "maxWidth": "infinity", "alignment": "leading" }
-                  },
-                  "children": [
-                    {
-                      "type": "Text",
-                      "id": 312,
-                      "properties": { "text": "", "font": "caption", "foregroundStyle": "secondary" }
-                    },
-                    {
-                      "type": "Text",
-                      "id": 313,
-                      "properties": { "text": "", "font": "caption", "foregroundStyle": "red" }
-                    }
-                  ]
-                }
-              ]
-            },
-            "detail": {
-              "type": "ZStack",
-              "properties": { "frame": { "maxWidth": "infinity", "minHeight": 0, "maxHeight": "infinity" } },
-              "children": [
-                {
-                  "type": "ContentUnavailableView",
-                  "id": 319,
-                  "properties": { "title": "No Box Selected", "systemImage": "shippingbox", "description": "Select a box to see its details." }
-                },
-                {
-                  "type": "ContentUnavailableView",
-                  "id": 318,
-                  "properties": { "hidden": true, "title": "No Boxes Yet", "systemImage": "shippingbox", "description": "A box is a working clone of an image, made in seconds, and it is what runs. An image is the template with a sealed macOS or Linux system and tools in it, and never runs itself.\nUse the plus button ⊕ in the toolbar to make a new box.\nSome tools like 'avm' in Terminal or Cadabra can make temporary boxes from an image when they need one and delete them afterwards." }
-                },
-                {
-                  "type": "VStack",
-                  "id": 320,
-                  "properties": {
-                    "hidden": true,
-                    "alignment": "leading",
-                    "spacing": 12,
-                    "padding": 20,
-                    "frame": { "maxWidth": "infinity", "minHeight": 0, "maxHeight": "infinity", "alignment": "topLeading" }
-                  },
-                  "children": [
-                    { "type": "HStack", "properties": { "alignment": "center", "spacing": 12.0 }, "children": [
-                      { "type": "Text", "id": 321, "properties": { "text": "", "font": "largeTitle", "textSelection": "enabled" } },
-                      { "type": "Button", "id": 348, "properties": { "title": "Rename", "controlSize": "small", "systemImage": "pencil", "padding": { "top": 4, "leading": 6 }, "disabled": true, "actionID": "AgentVM.main.box.rename", "help": "Rename the box... It has to be stopped." } }
-                    ] },
-                    { "type": "HStack", "properties": { "spacing": 8.0 }, "children": [
-                      { "type": "Text", "id": 322, "properties": { "text": "", "foregroundStyle": "secondary", "textSelection": "enabled" } },
-                      { "type": "Button", "id": 324, "properties": { "title": "Progress...", "controlSize": "small", "hidden": true, "actionID": "AgentVM.main.box.progress", "help": "Open the progress window of the box's job: its steps, the end of its log, and Stop." } }
-                    ] },
-                    {
-                      "type": "HStack",
-                      "properties": { "spacing": 8.0 },
-                      "children": [
+                      "toolbar": [
                         {
-                          "type": "ZStack",
-                          "properties": { "alignment": "leading" },
-                          "children": [
-                            {
-                              "type": "HStack",
-                              "id": 330,
-                              "properties": { "hidden": true, "spacing": 8.0 },
-                              "children": [
-                                { "type": "Button", "id": 331, "properties": { "title": "Stop", "systemImage": "stop.fill", "imageScale": "large", "disabled": true, "actionID": "AgentVM.main.box.stop", "help": "Shut the box down. Asks first when another program started it or programs run in it." } },
-                                { "type": "Button", "id": 334, "properties": { "title": "Connect", "systemImage": "apple.terminal.fill", "imageScale": "large", "disabled": true, "actionID": "AgentVM.main.box.shell", "help": "Open a shell in the box in Terminal." } },
-                                { "type": "Button", "id": 332, "properties": { "title": "View", "systemImage": "macwindow", "imageScale": "large", "disabled": true, "actionID": "AgentVM.main.box.view", "help": "Show the box's screen in a window. Keys and clicks reach the box." } }
-                              ]
-                            },
-                            {
-                              "type": "HStack",
-                              "id": 340,
-                              "properties": { "hidden": true, "spacing": 8.0 },
-                              "children": [
-                                { "type": "Button", "id": 341, "properties": { "title": "Start", "systemImage": "play.fill", "imageScale": "large", "disabled": true, "actionID": "AgentVM.main.box.start", "help": "Start the box. It runs until it is stopped, whether or not this app is open." } }
-                              ]
-                            }
-                          ]
+                          "type": "ToolbarItem",
+                          "properties": { "placement": "primaryAction" },
+                          "content": {
+                            "type": "Button",
+                            "id": 314,
+                            "properties": { "systemImage": "plus", "help": "New Box...", "actionID": "AgentVM.main.box.new" }
+                          }
                         }
                       ]
                     },
+                    { "type": "Divider" },
                     {
                       "type": "HStack",
-                      "properties": { "spacing": 8.0 },
+                      "properties": { "spacing": 14.0, "buttonStyle": "borderless", "padding": { "top": 8, "leading": 16, "bottom": 2, "trailing": 12 } },
                       "children": [
-                        { "type": "Button", "id": 343, "properties": { "title": "Run an Agent", "systemImage": "rectangle.badge.sparkles.fill", "imageScale": "large", "disabled": true, "actionID": "AgentVM.main.box.agent", "help": "Choose a project folder; avm starts the box if needed, shares the folder and asks what to run." } },
-                        { "type": "Button", "id": 344, "properties": { "title": "Recreate", "systemImage": "arrow.trianglehead.clockwise.rotate.90", "imageScale": "large", "disabled": true, "actionID": "AgentVM.main.box.recreate", "help": "Make the stopped box again from its image as the image is now." } }
+                        { "type": "Button", "id": 342, "properties": { "systemImage": "folder", "imageScale": "large", "disabled": true, "actionID": "AgentVM.main.box.show", "help": "Show the selected box in Finder" } },
+                        { "type": "Button", "id": 345, "properties": { "systemImage": "trash", "imageScale": "large", "disabled": true, "actionID": "AgentVM.main.box.delete", "help": "Delete the selected box..." } },
+                        { "type": "Spacer" },
+                        { "type": "Button", "id": 346, "properties": { "systemImage": "questionmark.circle", "imageScale": "large", "actionID": "AgentVM.howto.open", "help": "How to use a box" } }
                       ]
                     },
                     {
-                      "type": "Form",
+                      "type": "VStack",
+                      "properties": {
+                        "spacing": 4.0,
+                        "alignment": "leading",
+                        "padding": { "top": 6, "leading": 16, "bottom": 10, "trailing": 12 },
+                        "frame": { "maxWidth": "infinity", "alignment": "leading" }
+                      },
                       "children": [
-                        { "type": "LabeledContent", "properties": { "title": "Image" }, "children": [ { "type": "Text", "id": 351, "properties": { "text": "", "textSelection": "enabled", "frame": { "maxWidth": "infinity", "alignment": "leading" } } } ] },
-                        { "type": "LabeledContent", "properties": { "title": "Network" }, "children": [ { "type": "HStack", "properties": { "spacing": 8.0, "frame": { "maxWidth": "infinity", "alignment": "leading" } }, "children": [
-                          { "type": "Text", "id": 352, "properties": { "text": "", "textSelection": "enabled" } },
-                          { "type": "Button", "id": 361, "properties": { "title": "Details...", "controlSize": "small", "actionID": "AgentVM.main.box.network", "help": "Open the box's network window: what it may reach, and the connections it made lately." } }
-                        ] } ] },
-                        { "type": "LabeledContent", "properties": { "title": "Project folder" }, "children": [ { "type": "Text", "id": 353, "properties": { "text": "", "textSelection": "enabled", "frame": { "maxWidth": "infinity", "alignment": "leading" } } } ] },
-                        { "type": "LabeledContent", "properties": { "title": "Programs running" }, "children": [ { "type": "HStack", "properties": { "spacing": 8.0, "frame": { "maxWidth": "infinity", "alignment": "leading" } }, "children": [
-                          { "type": "Text", "id": 354, "properties": { "text": "", "textSelection": "enabled" } },
-                          { "type": "Button", "id": 362, "properties": { "title": "Details...", "controlSize": "small", "actionID": "AgentVM.main.box.programs", "help": "Open the box's programs window: what ran in it, and the permission prompts programs waited on." } }
-                        ] } ] },
-                        { "type": "LabeledContent", "properties": { "title": "Logs" }, "children": [ { "type": "HStack", "properties": { "spacing": 8.0, "frame": { "maxWidth": "infinity", "alignment": "leading" } }, "children": [
-                          { "type": "Text", "id": 363, "properties": { "text": "", "textSelection": "enabled" } },
-                          { "type": "Button", "id": 364, "properties": { "title": "Show in Finder", "controlSize": "small", "disabled": true, "actionID": "AgentVM.main.box.logs.show", "help": "Show the box's log files in Finder. agent-vm keeps them in the box's folder on this Mac, out of the box's reach: exec.jsonl (the programs it ran), network-allowed.jsonl and network.jsonl (the connections let through, and those refused or failed), supervisor.log (the box itself), and a Linux box's console.log." } },
-                          { "type": "Button", "id": 365, "properties": { "title": "Open in Console", "controlSize": "small", "disabled": true, "actionID": "AgentVM.main.box.logs.console", "help": "Open the box's own log, supervisor.log, in Console: why it started or stopped, and the folders shared with it." } }
-                        ] } ] },
-                        { "type": "LabeledContent", "properties": { "title": "Started by" }, "children": [ { "type": "Text", "id": 355, "properties": { "text": "", "textSelection": "enabled", "frame": { "maxWidth": "infinity", "alignment": "leading" } } } ] },
-                        { "type": "LabeledContent", "properties": { "title": "CPUs and RAM" }, "children": [ { "type": "Text", "id": 356, "properties": { "text": "", "textSelection": "enabled", "frame": { "maxWidth": "infinity", "alignment": "leading" } } } ] },
-                        { "type": "LabeledContent", "properties": { "title": "Memory use" }, "children": [ { "type": "Text", "id": 366, "properties": { "text": "", "textSelection": "enabled", "help": "While the box runs: what the programs in it use and its file cache, which the box gives back to its programs when they need it (the box's own figures), and what this Mac holds for the box now. What a box once used, the Mac holds until the box stops, so stopping it is how that memory comes back.", "frame": { "maxWidth": "infinity", "alignment": "leading" } } } ] },
-                        { "type": "LabeledContent", "properties": { "title": "Space" }, "children": [ { "type": "Text", "id": 360, "properties": { "text": "", "textSelection": "enabled", "frame": { "maxWidth": "infinity", "alignment": "leading" } } } ] },
-                        { "type": "LabeledContent", "properties": { "title": "Kept" }, "children": [ { "type": "Text", "id": 357, "properties": { "text": "", "textSelection": "enabled", "frame": { "maxWidth": "infinity", "alignment": "leading" } } } ] },
-                        { "type": "LabeledContent", "properties": { "title": "Created" }, "children": [ { "type": "Text", "id": 358, "properties": { "text": "", "textSelection": "enabled", "frame": { "maxWidth": "infinity", "alignment": "leading" } } } ] },
-                        { "type": "LabeledContent", "properties": { "title": "Folder" }, "children": [ { "type": "Text", "id": 359, "properties": { "text": "", "textSelection": "enabled", "frame": { "maxWidth": "infinity", "alignment": "leading" } } } ] }
+                        {
+                          "type": "Text",
+                          "id": 312,
+                          "properties": { "text": "", "font": "caption", "foregroundStyle": "secondary" }
+                        },
+                        {
+                          "type": "Text",
+                          "id": 313,
+                          "properties": { "text": "", "font": "caption", "foregroundStyle": "red" }
+                        }
                       ]
+                    }
+                  ]
+                },
+                "detail": {
+                  "type": "ZStack",
+                  "properties": { "frame": { "maxWidth": "infinity", "minHeight": 0, "maxHeight": "infinity" } },
+                  "children": [
+                    {
+                      "type": "ContentUnavailableView",
+                      "id": 319,
+                      "properties": { "title": "No Box Selected", "systemImage": "shippingbox", "description": "Select a box to see its details." }
                     },
-                    { "type": "Text", "id": 323, "properties": { "text": "", "foregroundStyle": "orange", "textSelection": "enabled", "frame": { "maxWidth": "infinity", "alignment": "leading" } } },
-                    { "type": "Spacer" }
+                    {
+                      "type": "ContentUnavailableView",
+                      "id": 318,
+                      "properties": { "hidden": true, "title": "No Boxes Yet", "systemImage": "shippingbox", "description": "A box is a working clone of an image, made in seconds, and it is what runs. An image is the template with a sealed macOS or Linux system and tools in it, and never runs itself.\nUse the plus button ⊕ in the toolbar to make a new box.\nSome tools like 'avm' in Terminal or Cadabra can make temporary boxes from an image when they need one and delete them afterwards." }
+                    },
+                    {
+                      "type": "VStack",
+                      "id": 320,
+                      "properties": {
+                        "hidden": true,
+                        "alignment": "leading",
+                        "spacing": 12,
+                        "padding": 20,
+                        "frame": { "maxWidth": "infinity", "minHeight": 0, "maxHeight": "infinity", "alignment": "topLeading" }
+                      },
+                      "children": [
+                        { "type": "HStack", "properties": { "alignment": "center", "spacing": 12.0 }, "children": [
+                          { "type": "Text", "id": 321, "properties": { "text": "", "font": "largeTitle", "textSelection": "enabled" } },
+                          { "type": "Button", "id": 348, "properties": { "title": "Rename", "controlSize": "small", "systemImage": "pencil", "padding": { "top": 4, "leading": 6 }, "disabled": true, "actionID": "AgentVM.main.box.rename", "help": "Rename the box... It has to be stopped." } }
+                        ] },
+                        { "type": "HStack", "properties": { "spacing": 8.0 }, "children": [
+                          { "type": "Text", "id": 322, "properties": { "text": "", "foregroundStyle": "secondary", "textSelection": "enabled" } },
+                          { "type": "Button", "id": 324, "properties": { "title": "Progress...", "controlSize": "small", "hidden": true, "actionID": "AgentVM.main.box.progress", "help": "Open the progress window of the box's job: its steps, the end of its log, and Stop." } }
+                        ] },
+                        {
+                          "type": "HStack",
+                          "properties": { "spacing": 8.0 },
+                          "children": [
+                            {
+                              "type": "ZStack",
+                              "properties": { "alignment": "leading" },
+                              "children": [
+                                {
+                                  "type": "HStack",
+                                  "id": 330,
+                                  "properties": { "hidden": true, "spacing": 8.0 },
+                                  "children": [
+                                    { "type": "Button", "id": 331, "properties": { "title": "Stop", "systemImage": "stop.fill", "imageScale": "large", "disabled": true, "actionID": "AgentVM.main.box.stop", "help": "Shut the box down. Asks first when another program started it or programs run in it." } },
+                                    { "type": "Button", "id": 334, "properties": { "title": "Connect", "systemImage": "apple.terminal.fill", "imageScale": "large", "disabled": true, "actionID": "AgentVM.main.box.shell", "help": "Open a shell in the box in Terminal." } },
+                                    { "type": "Button", "id": 332, "properties": { "title": "View", "systemImage": "macwindow", "imageScale": "large", "disabled": true, "actionID": "AgentVM.main.box.view", "help": "Show the box's screen in a window. Keys and clicks reach the box." } }
+                                  ]
+                                },
+                                {
+                                  "type": "HStack",
+                                  "id": 340,
+                                  "properties": { "hidden": true, "spacing": 8.0 },
+                                  "children": [
+                                    { "type": "Button", "id": 341, "properties": { "title": "Start", "systemImage": "play.fill", "imageScale": "large", "disabled": true, "actionID": "AgentVM.main.box.start", "help": "Start the box. It runs until it is stopped, whether or not this app is open." } }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "HStack",
+                          "properties": { "spacing": 8.0 },
+                          "children": [
+                            { "type": "Button", "id": 343, "properties": { "title": "Run an Agent", "systemImage": "rectangle.badge.sparkles.fill", "imageScale": "large", "disabled": true, "actionID": "AgentVM.main.box.agent", "help": "Choose a project folder; avm starts the box if needed, shares the folder and asks what to run." } },
+                            { "type": "Button", "id": 344, "properties": { "title": "Recreate", "systemImage": "arrow.trianglehead.clockwise.rotate.90", "imageScale": "large", "disabled": true, "actionID": "AgentVM.main.box.recreate", "help": "Make the stopped box again from its image as the image is now." } }
+                          ]
+                        },
+                        {
+                          "type": "Form",
+                          "children": [
+                            { "type": "LabeledContent", "properties": { "title": "Image" }, "children": [ { "type": "Text", "id": 351, "properties": { "text": "", "textSelection": "enabled", "frame": { "maxWidth": "infinity", "alignment": "leading" } } } ] },
+                            { "type": "LabeledContent", "properties": { "title": "Network" }, "children": [ { "type": "HStack", "properties": { "spacing": 8.0, "frame": { "maxWidth": "infinity", "alignment": "leading" } }, "children": [
+                              { "type": "Text", "id": 352, "properties": { "text": "", "textSelection": "enabled" } },
+                              { "type": "Button", "id": 361, "properties": { "title": "Details...", "controlSize": "small", "actionID": "AgentVM.main.box.network", "help": "Open the box's network window: what it may reach, and the connections it made lately." } }
+                            ] } ] },
+                            { "type": "LabeledContent", "properties": { "title": "Project folder" }, "children": [ { "type": "Text", "id": 353, "properties": { "text": "", "textSelection": "enabled", "frame": { "maxWidth": "infinity", "alignment": "leading" } } } ] },
+                            { "type": "LabeledContent", "properties": { "title": "Programs running" }, "children": [ { "type": "HStack", "properties": { "spacing": 8.0, "frame": { "maxWidth": "infinity", "alignment": "leading" } }, "children": [
+                              { "type": "Text", "id": 354, "properties": { "text": "", "textSelection": "enabled" } },
+                              { "type": "Button", "id": 362, "properties": { "title": "Details...", "controlSize": "small", "actionID": "AgentVM.main.box.programs", "help": "Open the box's programs window: what ran in it, and the permission prompts programs waited on." } }
+                            ] } ] },
+                            { "type": "LabeledContent", "properties": { "title": "Logs" }, "children": [ { "type": "HStack", "properties": { "spacing": 8.0, "frame": { "maxWidth": "infinity", "alignment": "leading" } }, "children": [
+                              { "type": "Text", "id": 363, "properties": { "text": "", "textSelection": "enabled" } },
+                              { "type": "Button", "id": 364, "properties": { "title": "Show in Finder", "controlSize": "small", "disabled": true, "actionID": "AgentVM.main.box.logs.show", "help": "Show the box's log files in Finder. agent-vm keeps them in the box's folder on this Mac, out of the box's reach: exec.jsonl (the programs it ran), network-allowed.jsonl and network.jsonl (the connections let through, and those refused or failed), supervisor.log (the box itself), and a Linux box's console.log." } },
+                              { "type": "Button", "id": 365, "properties": { "title": "Open in Console", "controlSize": "small", "disabled": true, "actionID": "AgentVM.main.box.logs.console", "help": "Open the box's own log, supervisor.log, in Console: why it started or stopped, and the folders shared with it." } }
+                            ] } ] },
+                            { "type": "LabeledContent", "properties": { "title": "Started by" }, "children": [ { "type": "Text", "id": 355, "properties": { "text": "", "textSelection": "enabled", "frame": { "maxWidth": "infinity", "alignment": "leading" } } } ] },
+                            { "type": "LabeledContent", "properties": { "title": "CPUs and RAM" }, "children": [ { "type": "Text", "id": 356, "properties": { "text": "", "textSelection": "enabled", "frame": { "maxWidth": "infinity", "alignment": "leading" } } } ] },
+                            { "type": "LabeledContent", "properties": { "title": "Memory use" }, "children": [ { "type": "Text", "id": 366, "properties": { "text": "", "textSelection": "enabled", "help": "While the box runs: what the programs in it use and its file cache, which the box gives back to its programs when they need it (the box's own figures), and what this Mac holds for the box now. What a box once used, the Mac holds until the box stops, so stopping it is how that memory comes back.", "frame": { "maxWidth": "infinity", "alignment": "leading" } } } ] },
+                            { "type": "LabeledContent", "properties": { "title": "Space" }, "children": [ { "type": "Text", "id": 360, "properties": { "text": "", "textSelection": "enabled", "frame": { "maxWidth": "infinity", "alignment": "leading" } } } ] },
+                            { "type": "LabeledContent", "properties": { "title": "Kept" }, "children": [ { "type": "Text", "id": 357, "properties": { "text": "", "textSelection": "enabled", "frame": { "maxWidth": "infinity", "alignment": "leading" } } } ] },
+                            { "type": "LabeledContent", "properties": { "title": "Created" }, "children": [ { "type": "Text", "id": 358, "properties": { "text": "", "textSelection": "enabled", "frame": { "maxWidth": "infinity", "alignment": "leading" } } } ] },
+                            { "type": "LabeledContent", "properties": { "title": "Folder" }, "children": [ { "type": "Text", "id": 359, "properties": { "text": "", "textSelection": "enabled", "frame": { "maxWidth": "infinity", "alignment": "leading" } } } ] }
+                          ]
+                        },
+                        { "type": "Text", "id": 323, "properties": { "text": "", "foregroundStyle": "orange", "textSelection": "enabled", "frame": { "maxWidth": "infinity", "alignment": "leading" } } },
+                        { "type": "Spacer" }
+                      ]
+                    }
                   ]
                 }
-              ]
-            }
-          }
-        },
-        {
-          "type": "Tab",
-          "properties": { "title": "Images", "systemImage": "square.stack.3d.up" },
-          "content": {
-            "type": "NavigationSplitView",
-            "id": 410,
-            "properties": { "columnVisibility": "all", "style": "balanced" },
-            "sidebar": {
-              "type": "VStack",
-              "properties": {
-                "spacing": 0.0,
-                "navigationSplitViewColumnWidth": { "min": 220, "ideal": 260, "max": 340 }
-              },
-              "children": [
-                {
-                  "type": "List",
-                  "id": 411,
+              }
+            },
+            {
+              "type": "Tab",
+              "properties": { "title": "Images", "systemImage": "square.stack.3d.up" },
+              "content": {
+                "type": "NavigationSplitView",
+                "id": 410,
+                "properties": { "columnVisibility": "all", "style": "balanced" },
+                "sidebar": {
+                  "type": "VStack",
                   "properties": {
-                    "actionID": "AgentVM.main.image.selected",
-                    "listStyle": "sidebar",
-                    "listRowSeparator": "hidden",
-                    "listRowInsets": { "top": 4, "leading": 8, "bottom": 4, "trailing": 8 }
+                    "spacing": 0.0,
+                    "navigationSplitViewColumnWidth": { "min": 220, "ideal": 260, "max": 340 }
                   },
-                  "template": {
-                    "type": "VStack",
-                    "properties": {
-                      "alignment": "leading",
-                      "spacing": 6,
-                      "padding": 12,
-                      "frame": { "maxWidth": "infinity", "alignment": "leading" },
-                      "foregroundStyle": "white",
-                      "background": "$6",
-                      "cornerRadius": 12
-                    },
-                    "children": [
-                      {
-                        "type": "HStack",
+                  "children": [
+                    {
+                      "type": "List",
+                      "id": 411,
+                      "properties": {
+                        "actionID": "AgentVM.main.image.selected",
+                        "listStyle": "sidebar",
+                        "listRowSeparator": "hidden",
+                        "listRowInsets": { "top": 4, "leading": 8, "bottom": 4, "trailing": 8 }
+                      },
+                      "template": {
+                        "type": "VStack",
+                        "properties": {
+                          "alignment": "leading",
+                          "spacing": 6,
+                          "padding": 12,
+                          "frame": { "maxWidth": "infinity", "alignment": "leading" },
+                          "foregroundStyle": "white",
+                          "background": "$6",
+                          "cornerRadius": 12
+                        },
                         "children": [
-                          { "type": "Image", "properties": { "systemName": "$2", "font": "title2" } },
-                          { "type": "Spacer" },
                           {
                             "type": "HStack",
-                            "properties": { "spacing": 4 },
                             "children": [
-                              { "type": "Image", "properties": { "systemName": "$5", "font": "caption" } },
-                              { "type": "Text", "properties": { "text": "$4", "font": { "size": 11, "weight": "semibold" } } }
+                              { "type": "Image", "properties": { "systemName": "$2", "font": "title2" } },
+                              { "type": "Spacer" },
+                              {
+                                "type": "HStack",
+                                "properties": { "spacing": 4 },
+                                "children": [
+                                  { "type": "Image", "properties": { "systemName": "$5", "font": "caption" } },
+                                  { "type": "Text", "properties": { "text": "$4", "font": { "size": 11, "weight": "semibold" } } }
+                                ]
+                              },
+                              { "type": "Text", "properties": { "text": "$7", "font": { "size": 22, "weight": "bold" } } }
                             ]
                           },
-                          { "type": "Text", "properties": { "text": "$7", "font": { "size": 22, "weight": "bold" } } }
+                          { "type": "Text", "properties": { "text": "$1", "font": { "size": 17, "weight": "bold" } } },
+                          { "type": "Text", "properties": { "text": "$3", "font": "caption", "opacity": 0.85 } }
                         ]
                       },
-                      { "type": "Text", "properties": { "text": "$1", "font": { "size": 17, "weight": "bold" } } },
-                      { "type": "Text", "properties": { "text": "$3", "font": "caption", "opacity": 0.85 } }
-                    ]
-                  },
-                  "toolbar": [
-                    {
-                      "type": "ToolbarItem",
-                      "properties": { "placement": "primaryAction" },
-                      "content": {
-                        "type": "Button",
-                        "id": 414,
-                        "properties": { "systemImage": "plus", "help": "New Image...", "actionID": "AgentVM.main.image.new" }
-                      }
+                      "toolbar": [
+                        {
+                          "type": "ToolbarItem",
+                          "properties": { "placement": "primaryAction" },
+                          "content": {
+                            "type": "Button",
+                            "id": 414,
+                            "properties": { "systemImage": "plus", "help": "New Image...", "actionID": "AgentVM.main.image.new" }
+                          }
+                        },
+                        {
+                          "type": "ToolbarItem",
+                          "properties": { "placement": "primaryAction" },
+                          "content": {
+                            "type": "Button",
+                            "id": 415,
+                            "properties": { "systemImage": "arrow.down.circle", "help": "Get macOS...", "actionID": "AgentVM.getmacos.open" }
+                          }
+                        }
+                      ]
                     },
-                    {
-                      "type": "ToolbarItem",
-                      "properties": { "placement": "primaryAction" },
-                      "content": {
-                        "type": "Button",
-                        "id": 415,
-                        "properties": { "systemImage": "arrow.down.circle", "help": "Get macOS...", "actionID": "AgentVM.getmacos.open" }
-                      }
-                    }
-                  ]
-                },
-                { "type": "Divider" },
-                {
-                  "type": "HStack",
-                  "properties": { "spacing": 14.0, "buttonStyle": "borderless", "padding": { "top": 8, "leading": 16, "bottom": 2, "trailing": 12 } },
-                  "children": [
-                    { "type": "Button", "id": 433, "properties": { "systemImage": "folder", "imageScale": "large", "disabled": true, "actionID": "AgentVM.main.image.show", "help": "Show the selected image in Finder" } },
-                    { "type": "Button", "id": 434, "properties": { "systemImage": "trash", "imageScale": "large", "disabled": true, "actionID": "AgentVM.main.image.delete", "help": "Delete the selected image..." } },
-                    { "type": "Spacer" }
-                  ]
-                },
-                {
-                  "type": "VStack",
-                  "properties": {
-                    "spacing": 4.0,
-                    "alignment": "leading",
-                    "padding": { "top": 6, "leading": 16, "bottom": 10, "trailing": 12 },
-                    "frame": { "maxWidth": "infinity", "alignment": "leading" }
-                  },
-                  "children": [
-                    {
-                      "type": "Text",
-                      "id": 412,
-                      "properties": { "text": "", "font": "caption", "foregroundStyle": "secondary" }
-                    },
-                    {
-                      "type": "Text",
-                      "id": 413,
-                      "properties": { "text": "", "font": "caption", "foregroundStyle": "red" }
-                    }
-                  ]
-                }
-              ]
-            },
-            "detail": {
-              "type": "ZStack",
-              "properties": { "frame": { "maxWidth": "infinity", "minHeight": 0, "maxHeight": "infinity" } },
-              "children": [
-                {
-                  "type": "ContentUnavailableView",
-                  "id": 419,
-                  "properties": { "title": "No Image Selected", "systemImage": "square.stack.3d.up", "description": "Select an image to see its details." }
-                },
-                {
-                  "type": "VStack",
-                  "id": 420,
-                  "properties": {
-                    "hidden": true,
-                    "alignment": "leading",
-                    "spacing": 12,
-                    "padding": 20,
-                    "frame": { "maxWidth": "infinity", "minHeight": 0, "maxHeight": "infinity", "alignment": "topLeading" }
-                  },
-                  "children": [
-                    { "type": "HStack", "properties": { "alignment": "center", "spacing": 12.0 }, "children": [
-                      { "type": "Text", "id": 421, "properties": { "text": "", "font": "largeTitle", "textSelection": "enabled" } },
-                      { "type": "Button", "id": 437, "properties": { "title": "Rename", "controlSize": "small", "systemImage": "pencil", "padding": { "top": 4, "leading": 6 }, "disabled": true, "actionID": "AgentVM.main.image.rename", "help": "Rename the image... Its boxes follow." } }
-                    ] },
-                    { "type": "HStack", "properties": { "spacing": 8.0 }, "children": [
-                      { "type": "Text", "id": 422, "properties": { "text": "", "foregroundStyle": "secondary", "textSelection": "enabled" } },
-                      { "type": "Button", "id": 424, "properties": { "title": "Progress...", "controlSize": "small", "hidden": true, "actionID": "AgentVM.main.image.progress", "help": "Open the progress window of the image's job: its steps, the end of its log, and Stop." } }
-                    ] },
+                    { "type": "Divider" },
                     {
                       "type": "HStack",
-                      "properties": { "spacing": 8.0 },
+                      "properties": { "spacing": 14.0, "buttonStyle": "borderless", "padding": { "top": 8, "leading": 16, "bottom": 2, "trailing": 12 } },
                       "children": [
-                        { "type": "Button", "id": 431, "properties": { "title": "New Box", "systemImage": "shippingbox", "imageScale": "large", "disabled": true, "actionID": "AgentVM.main.box.new", "help": "Make a box that is a copy of this image." } },
-                        { "type": "Button", "id": 432, "properties": { "title": "Derived Image", "systemImage": "square.3.layers.3d.top.filled", "imageScale": "large",  "disabled": true, "actionID": "AgentVM.main.image.new", "help": "Build a derived image: a new image that starts as a copy of this one, usually with more tools. The plus button above the list builds one from scratch." } },
-                        { "type": "Button", "id": 435, "properties": { "title": "Update", "systemImage": "arrow.trianglehead.2.clockwise.rotate.90", "imageScale": "large", "disabled": true, "actionID": "AgentVM.main.image.update", "help": "Choose what to update in the image: its system, the tools its recipes installed, the guest daemon." } },
-                        { "type": "Button", "id": 436, "properties": { "title": "View", "systemImage": "macwindow", "imageScale": "large", "disabled": true, "actionID": "AgentVM.main.image.view", "help": "Start the image and show its screen in a window, with keyboard and mouse, for setup done by hand. Closing that window shuts the image down and keeps what was done." } },
-                        { "type": "Button", "id": 438, "properties": { "title": "Build Again...", "systemImage": "hammer", "imageScale": "large", "hidden": true, "disabled": true, "actionID": "AgentVM.main.image.rebuild", "help": "Build the image again from its base image, which changed since the image was made from it: a fresh copy of the base, with the image's own recipes run on it again. The image stays as it is until the new one is ready." } }
+                        { "type": "Button", "id": 433, "properties": { "systemImage": "folder", "imageScale": "large", "disabled": true, "actionID": "AgentVM.main.image.show", "help": "Show the selected image in Finder" } },
+                        { "type": "Button", "id": 434, "properties": { "systemImage": "trash", "imageScale": "large", "disabled": true, "actionID": "AgentVM.main.image.delete", "help": "Delete the selected image..." } },
+                        { "type": "Spacer" }
                       ]
                     },
                     {
-                      "type": "Form",
+                      "type": "VStack",
+                      "properties": {
+                        "spacing": 4.0,
+                        "alignment": "leading",
+                        "padding": { "top": 6, "leading": 16, "bottom": 10, "trailing": 12 },
+                        "frame": { "maxWidth": "infinity", "alignment": "leading" }
+                      },
                       "children": [
-                        { "type": "LabeledContent", "properties": { "title": "System" }, "children": [ { "type": "Text", "id": 451, "properties": { "text": "", "textSelection": "enabled", "frame": { "maxWidth": "infinity", "alignment": "leading" } } } ] },
-                        { "type": "LabeledContent", "properties": { "title": "Built from" }, "children": [ { "type": "Text", "id": 452, "properties": { "text": "", "textSelection": "enabled", "frame": { "maxWidth": "infinity", "alignment": "leading" } } } ] },
-                        { "type": "LabeledContent", "properties": { "title": "Tools" }, "children": [ { "type": "Text", "id": 453, "properties": { "text": "", "textSelection": "enabled", "frame": { "maxWidth": "infinity", "alignment": "leading" } } } ] },
-                        { "type": "LabeledContent", "properties": { "title": "Guest daemon" }, "children": [ { "type": "Text", "id": 454, "properties": { "text": "", "textSelection": "enabled", "frame": { "maxWidth": "infinity", "alignment": "leading" } } } ] },
-                        { "type": "LabeledContent", "properties": { "title": "Full Disk Access" }, "children": [ { "type": "HStack", "properties": { "spacing": 8.0, "frame": { "maxWidth": "infinity", "alignment": "leading" } }, "children": [
-                          { "type": "Text", "id": 459, "properties": { "text": "", "textSelection": "enabled" } },
-                          { "type": "Button", "id": 462, "properties": { "title": "Set Up...", "controlSize": "small", "disabled": true, "actionID": "AgentVM.main.image.access", "help": "Open the image's Full Disk Access guide: what to do on the image's own screen, and where it is in it." } }
-                        ] } ] },
-                        { "type": "LabeledContent", "properties": { "title": "Logs" }, "children": [ { "type": "HStack", "properties": { "spacing": 8.0, "frame": { "maxWidth": "infinity", "alignment": "leading" } }, "children": [
-                          { "type": "Text", "id": 463, "properties": { "text": "", "textSelection": "enabled" } },
-                          { "type": "Button", "id": 464, "properties": { "title": "Show Build Log", "controlSize": "small", "disabled": true, "actionID": "AgentVM.main.image.logs.build", "help": "Show the log of the job that last built or updated the image, in Finder: every step and line of it. agent-vm keeps a job for a week." } },
-                          { "type": "Button", "id": 465, "properties": { "title": "Show Console Log", "controlSize": "small", "disabled": true, "actionID": "AgentVM.main.image.logs.console", "help": "Show console.log of the image's folder, in Finder: what the Linux system printed while the image was built and updated." } }
-                        ] } ] },
-                        { "type": "LabeledContent", "properties": { "title": "CPUs and RAM" }, "children": [ { "type": "Text", "id": 460, "properties": { "text": "", "textSelection": "enabled", "frame": { "maxWidth": "infinity", "alignment": "leading" } } } ] },
-                        { "type": "LabeledContent", "properties": { "title": "Space" }, "children": [ { "type": "Text", "id": 461, "properties": { "text": "", "textSelection": "enabled", "frame": { "maxWidth": "infinity", "alignment": "leading" } } } ] },
-                        { "type": "LabeledContent", "properties": { "title": "Created" }, "children": [ { "type": "Text", "id": 455, "properties": { "text": "", "textSelection": "enabled", "frame": { "maxWidth": "infinity", "alignment": "leading" } } } ] },
-                        { "type": "LabeledContent", "properties": { "title": "Boxes made from it" }, "children": [ { "type": "Text", "id": 456, "properties": { "text": "", "textSelection": "enabled", "frame": { "maxWidth": "infinity", "alignment": "leading" } } } ] },
-                        { "type": "LabeledContent", "properties": { "title": "Images built from it" }, "children": [ { "type": "Text", "id": 457, "properties": { "text": "", "textSelection": "enabled", "frame": { "maxWidth": "infinity", "alignment": "leading" } } } ] },
-                        { "type": "LabeledContent", "properties": { "title": "Folder" }, "children": [ { "type": "Text", "id": 458, "properties": { "text": "", "textSelection": "enabled", "frame": { "maxWidth": "infinity", "alignment": "leading" } } } ] }
+                        {
+                          "type": "Text",
+                          "id": 412,
+                          "properties": { "text": "", "font": "caption", "foregroundStyle": "secondary" }
+                        },
+                        {
+                          "type": "Text",
+                          "id": 413,
+                          "properties": { "text": "", "font": "caption", "foregroundStyle": "red" }
+                        }
                       ]
-                    },
-                    { "type": "Text", "id": 423, "properties": { "text": "", "foregroundStyle": "orange", "textSelection": "enabled", "frame": { "maxWidth": "infinity", "alignment": "leading" } } },
-                    { "type": "Spacer" }
+                    }
                   ]
-                }
-              ]
-            }
-          }
-        },
-        {
-          "type": "Tab",
-          "properties": { "title": "Sessions", "systemImage": "clock.arrow.circlepath" },
-          "content": {
-            "type": "NavigationSplitView",
-            "id": 710,
-            "properties": { "columnVisibility": "all", "style": "balanced" },
-            "sidebar": {
-              "type": "VStack",
-              "properties": { "spacing": 0.0, "navigationSplitViewColumnWidth": { "min": 220, "ideal": 260, "max": 340 } },
-              "children": [
-                {
-                  "type": "List",
-                  "id": 711,
-                  "properties": { "actionID": "AgentVM.main.session.project.selected", "listStyle": "sidebar", "listRowSeparator": "hidden", "listRowInsets": { "top": 4, "leading": 8, "bottom": 4, "trailing": 8 } },
-                  "template": {
-                    "type": "VStack",
-                    "properties": { "alignment": "leading", "spacing": 6, "padding": 12, "frame": { "maxWidth": "infinity", "alignment": "leading" }, "foregroundStyle": "white", "background": "$4", "cornerRadius": 12 },
-                    "children": [
-                      { "type": "Image", "properties": { "systemName": "clock.arrow.circlepath", "font": "title2" } },
-                      { "type": "Text", "properties": { "text": "$2", "font": { "size": 17, "weight": "bold" } } },
-                      { "type": "Text", "properties": { "text": "$3", "font": "caption", "opacity": 0.85 } }
-                    ]
-                  }
                 },
-                { "type": "Divider" },
-                { "type": "HStack", "properties": { "spacing": 14.0, "buttonStyle": "borderless", "padding": { "top": 8, "leading": 16, "bottom": 2, "trailing": 12 } }, "children": [
-                  { "type": "Button", "id": 741, "properties": { "systemImage": "arrow.clockwise", "imageScale": "large", "actionID": "AgentVM.main.session.measure", "help": "Measure again what the sessions hold" } },
-                  { "type": "Button", "id": 742, "properties": { "systemImage": "calendar.badge.minus", "imageScale": "large", "disabled": true, "actionID": "AgentVM.main.session.older", "help": "Discard the sessions of every project that ended long ago..." } },
-                  { "type": "Spacer" }
-                ] },
-                { "type": "VStack", "properties": { "spacing": 4.0, "alignment": "leading", "padding": { "top": 6, "leading": 16, "bottom": 10, "trailing": 12 }, "frame": { "maxWidth": "infinity", "alignment": "leading" } }, "children": [
-                  { "type": "Text", "id": 712, "properties": { "text": "", "font": "caption", "foregroundStyle": "secondary" } },
-                  { "type": "Text", "id": 713, "properties": { "text": "", "font": "caption", "foregroundStyle": "red" } }
-                ] }
-              ]
-            },
-            "detail": {
-              "type": "ZStack",
-              "properties": { "frame": { "maxWidth": "infinity", "minHeight": 0, "maxHeight": "infinity" } },
-              "children": [
-                { "type": "ContentUnavailableView", "id": 719, "properties": { "title": "No Project Selected", "systemImage": "clock.arrow.circlepath", "description": "Select a project to see its sessions." } },
-                { "type": "ContentUnavailableView", "id": 718, "properties": { "hidden": true, "title": "No Sessions", "systemImage": "clock.arrow.circlepath", "description": "A session is a snapshot of a project folder taken before an agent works on it, kept so that what the agent did can be undone. avm takes one when it shares a folder that the box may change, and so does Cadabra.\nA snapshot costs nothing at first, and more as the folder changes: sessions kept for weeks can hold much of the disk. This tab shows what they hold and frees it." } },
-                {
-                  "type": "VStack",
-                  "id": 720,
-                  "properties": { "hidden": true, "alignment": "leading", "spacing": 12, "padding": 20, "frame": { "maxWidth": "infinity", "minHeight": 0, "maxHeight": "infinity", "alignment": "topLeading" } },
+                "detail": {
+                  "type": "ZStack",
+                  "properties": { "frame": { "maxWidth": "infinity", "minHeight": 0, "maxHeight": "infinity" } },
                   "children": [
-                    { "type": "Text", "id": 721, "properties": { "text": "", "font": { "size": 22, "weight": "bold" } } },
-                    { "type": "Text", "id": 722, "properties": { "text": "", "font": "caption", "foregroundStyle": "secondary", "textSelection": "enabled" } },
                     {
-                      "type": "Form",
-                      "children": [
-                        { "type": "LabeledContent", "properties": { "title": "Space" }, "children": [ { "type": "Text", "id": 751, "properties": { "text": "", "textSelection": "enabled", "help": "What discarding every ended and undone session of this project frees, once macOS has removed its local Time Machine snapshots, which keep deleted data for up to a day.", "frame": { "maxWidth": "infinity", "alignment": "leading" } } } ] },
-                        { "type": "LabeledContent", "properties": { "title": "Sessions" }, "children": [ { "type": "Text", "id": 752, "properties": { "text": "", "textSelection": "enabled", "frame": { "maxWidth": "infinity", "alignment": "leading" } } } ] }
-                      ]
+                      "type": "ContentUnavailableView",
+                      "id": 419,
+                      "properties": { "title": "No Image Selected", "systemImage": "square.stack.3d.up", "description": "Select an image to see its details." }
                     },
-                    { "type": "Table", "id": 730, "properties": {
-                      "columns": ["", "Started", "State", "Ended", "Its own", "Shared"],
-                      "columnTypes": [ { "viewType": "Toggle", "style": "checkbox", "actionID": "AgentVM.main.session.tick", "disabledColumn": 9 } ],
-                      "widths": [24, 92, 64, 92, 70, 140],
-                      "minWidths": [24, 70, 44, 70, 50, 80],
-                      "frame": { "maxWidth": "infinity", "minHeight": 140, "maxHeight": "infinity" }
-                    } },
-                    { "type": "HStack", "properties": { "spacing": 10 }, "children": [
-                      { "type": "Text", "id": 731, "properties": { "text": "", "textSelection": "enabled", "frame": { "maxWidth": "infinity", "alignment": "leading" } } },
-                      { "type": "Button", "id": 732, "properties": { "title": "Discard Ticked...", "disabled": true, "actionID": "AgentVM.main.session.discard", "help": "Delete the snapshots of the sessions ticked. Undo is then no longer possible for them; their records and reports stay." } },
-                      { "type": "Button", "id": 733, "properties": { "title": "Discard All Ended...", "disabled": true, "actionID": "AgentVM.main.session.discard.all", "help": "Delete the snapshots of all this project's ended and undone sessions. Undo is then no longer possible for them; their records and reports stay." } }
-                    ] },
-                    { "type": "Text", "id": 723, "properties": { "text": "", "font": "caption", "foregroundStyle": "secondary", "textSelection": "enabled", "frame": { "maxWidth": "infinity", "alignment": "leading" } } }
+                    {
+                      "type": "VStack",
+                      "id": 420,
+                      "properties": {
+                        "hidden": true,
+                        "alignment": "leading",
+                        "spacing": 12,
+                        "padding": 20,
+                        "frame": { "maxWidth": "infinity", "minHeight": 0, "maxHeight": "infinity", "alignment": "topLeading" }
+                      },
+                      "children": [
+                        { "type": "HStack", "properties": { "alignment": "center", "spacing": 12.0 }, "children": [
+                          { "type": "Text", "id": 421, "properties": { "text": "", "font": "largeTitle", "textSelection": "enabled" } },
+                          { "type": "Button", "id": 437, "properties": { "title": "Rename", "controlSize": "small", "systemImage": "pencil", "padding": { "top": 4, "leading": 6 }, "disabled": true, "actionID": "AgentVM.main.image.rename", "help": "Rename the image... Its boxes follow." } }
+                        ] },
+                        { "type": "HStack", "properties": { "spacing": 8.0 }, "children": [
+                          { "type": "Text", "id": 422, "properties": { "text": "", "foregroundStyle": "secondary", "textSelection": "enabled" } },
+                          { "type": "Button", "id": 424, "properties": { "title": "Progress...", "controlSize": "small", "hidden": true, "actionID": "AgentVM.main.image.progress", "help": "Open the progress window of the image's job: its steps, the end of its log, and Stop." } }
+                        ] },
+                        {
+                          "type": "HStack",
+                          "properties": { "spacing": 8.0 },
+                          "children": [
+                            { "type": "Button", "id": 431, "properties": { "title": "New Box", "systemImage": "shippingbox", "imageScale": "large", "disabled": true, "actionID": "AgentVM.main.box.new", "help": "Make a box that is a copy of this image." } },
+                            { "type": "Button", "id": 432, "properties": { "title": "Derived Image", "systemImage": "square.3.layers.3d.top.filled", "imageScale": "large",  "disabled": true, "actionID": "AgentVM.main.image.new", "help": "Build a derived image: a new image that starts as a copy of this one, usually with more tools. The plus button above the list builds one from scratch." } },
+                            { "type": "Button", "id": 435, "properties": { "title": "Update", "systemImage": "arrow.trianglehead.2.clockwise.rotate.90", "imageScale": "large", "disabled": true, "actionID": "AgentVM.main.image.update", "help": "Choose what to update in the image: its system, the tools its recipes installed, the guest daemon." } },
+                            { "type": "Button", "id": 436, "properties": { "title": "View", "systemImage": "macwindow", "imageScale": "large", "disabled": true, "actionID": "AgentVM.main.image.view", "help": "Start the image and show its screen in a window, with keyboard and mouse, for setup done by hand. Closing that window shuts the image down and keeps what was done." } },
+                            { "type": "Button", "id": 438, "properties": { "title": "Build Again...", "systemImage": "hammer", "imageScale": "large", "hidden": true, "disabled": true, "actionID": "AgentVM.main.image.rebuild", "help": "Build the image again from its base image, which changed since the image was made from it: a fresh copy of the base, with the image's own recipes run on it again. The image stays as it is until the new one is ready." } }
+                          ]
+                        },
+                        {
+                          "type": "Form",
+                          "children": [
+                            { "type": "LabeledContent", "properties": { "title": "System" }, "children": [ { "type": "Text", "id": 451, "properties": { "text": "", "textSelection": "enabled", "frame": { "maxWidth": "infinity", "alignment": "leading" } } } ] },
+                            { "type": "LabeledContent", "properties": { "title": "Built from" }, "children": [ { "type": "Text", "id": 452, "properties": { "text": "", "textSelection": "enabled", "frame": { "maxWidth": "infinity", "alignment": "leading" } } } ] },
+                            { "type": "LabeledContent", "properties": { "title": "Tools" }, "children": [ { "type": "Text", "id": 453, "properties": { "text": "", "textSelection": "enabled", "frame": { "maxWidth": "infinity", "alignment": "leading" } } } ] },
+                            { "type": "LabeledContent", "properties": { "title": "Guest daemon" }, "children": [ { "type": "Text", "id": 454, "properties": { "text": "", "textSelection": "enabled", "frame": { "maxWidth": "infinity", "alignment": "leading" } } } ] },
+                            { "type": "LabeledContent", "properties": { "title": "Full Disk Access" }, "children": [ { "type": "HStack", "properties": { "spacing": 8.0, "frame": { "maxWidth": "infinity", "alignment": "leading" } }, "children": [
+                              { "type": "Text", "id": 459, "properties": { "text": "", "textSelection": "enabled" } },
+                              { "type": "Button", "id": 462, "properties": { "title": "Set Up...", "controlSize": "small", "disabled": true, "actionID": "AgentVM.main.image.access", "help": "Open the image's Full Disk Access guide: what to do on the image's own screen, and where it is in it." } }
+                            ] } ] },
+                            { "type": "LabeledContent", "properties": { "title": "Logs" }, "children": [ { "type": "HStack", "properties": { "spacing": 8.0, "frame": { "maxWidth": "infinity", "alignment": "leading" } }, "children": [
+                              { "type": "Text", "id": 463, "properties": { "text": "", "textSelection": "enabled" } },
+                              { "type": "Button", "id": 464, "properties": { "title": "Show Build Log", "controlSize": "small", "disabled": true, "actionID": "AgentVM.main.image.logs.build", "help": "Show the log of the job that last built or updated the image, in Finder: every step and line of it. agent-vm keeps a job for a week." } },
+                              { "type": "Button", "id": 465, "properties": { "title": "Show Console Log", "controlSize": "small", "disabled": true, "actionID": "AgentVM.main.image.logs.console", "help": "Show console.log of the image's folder, in Finder: what the Linux system printed while the image was built and updated." } }
+                            ] } ] },
+                            { "type": "LabeledContent", "properties": { "title": "CPUs and RAM" }, "children": [ { "type": "Text", "id": 460, "properties": { "text": "", "textSelection": "enabled", "frame": { "maxWidth": "infinity", "alignment": "leading" } } } ] },
+                            { "type": "LabeledContent", "properties": { "title": "Space" }, "children": [ { "type": "Text", "id": 461, "properties": { "text": "", "textSelection": "enabled", "frame": { "maxWidth": "infinity", "alignment": "leading" } } } ] },
+                            { "type": "LabeledContent", "properties": { "title": "Created" }, "children": [ { "type": "Text", "id": 455, "properties": { "text": "", "textSelection": "enabled", "frame": { "maxWidth": "infinity", "alignment": "leading" } } } ] },
+                            { "type": "LabeledContent", "properties": { "title": "Boxes made from it" }, "children": [ { "type": "Text", "id": 456, "properties": { "text": "", "textSelection": "enabled", "frame": { "maxWidth": "infinity", "alignment": "leading" } } } ] },
+                            { "type": "LabeledContent", "properties": { "title": "Images built from it" }, "children": [ { "type": "Text", "id": 457, "properties": { "text": "", "textSelection": "enabled", "frame": { "maxWidth": "infinity", "alignment": "leading" } } } ] },
+                            { "type": "LabeledContent", "properties": { "title": "Folder" }, "children": [ { "type": "Text", "id": 458, "properties": { "text": "", "textSelection": "enabled", "frame": { "maxWidth": "infinity", "alignment": "leading" } } } ] }
+                          ]
+                        },
+                        { "type": "Text", "id": 423, "properties": { "text": "", "foregroundStyle": "orange", "textSelection": "enabled", "frame": { "maxWidth": "infinity", "alignment": "leading" } } },
+                        { "type": "Spacer" }
+                      ]
+                    }
                   ]
                 }
-              ]
-            }
-          }
-        },
-        {
-          "type": "Tab",
-          "properties": { "title": "Settings", "systemImage": "gearshape" },
-          "content": {
-            "type": "VStack",
-            "properties": {
-              "alignment": "leading",
-              "spacing": 16.0,
-              "padding": 20.0,
-              "frame": { "maxWidth": "infinity", "maxHeight": "infinity", "alignment": "topLeading" }
-            },
-            "children": [
-              {
-                "type": "GroupBox",
-                "properties": { "title": "agent-vm" },
-                "children": [
-                  {
-                    "type": "VStack",
-                    "properties": { "alignment": "leading", "padding": 6.0, "frame": { "maxWidth": "infinity", "alignment": "leading" } },
-                    "children": [
-                      { "type": "Divider", "properties": { "opacity": 0, "frame": { "height": 0 } } },
-                      { "type": "Form", "children": [
-                  { "type": "LabeledContent", "properties": { "title": "Version" }, "children": [ { "type": "Text", "id": 501, "properties": { "text": "", "textSelection": "enabled" } } ] },
-                  { "type": "LabeledContent", "properties": { "title": "Location" }, "children": [ { "type": "Text", "id": 502, "properties": { "text": "", "textSelection": "enabled" } } ] },
-                  {
-                    "type": "LabeledContent",
-                    "properties": { "title": "Updates" },
-                    "children": [ { "type": "Button", "id": 503, "properties": { "title": "Check for Updates...", "systemImage": "arrow.trianglehead.2.clockwise.rotate.90", "imageScale": "large", "actionID": "AgentVM.install.open", "help": "See whether a newer agent-vm is released, and install it." } } ]
-                  }
-                      ] }
-                    ]
-                  }
-                ]
-              },
-              {
-                "type": "GroupBox",
-                "properties": { "title": "Agents" },
-                "children": [
-                  {
-                    "type": "VStack",
-                    "properties": { "alignment": "leading", "padding": 6.0, "frame": { "maxWidth": "infinity", "alignment": "leading" } },
-                    "children": [
-                      { "type": "Divider", "properties": { "opacity": 0, "frame": { "height": 0 } } },
-                      { "type": "Form", "children": [
-                  {
-                    "type": "LabeledContent",
-                    "properties": { "title": "Keys and tokens" },
-                    "children": [ { "type": "Button", "id": 521, "properties": { "title": "Agent Keys", "systemImage": "key", "imageScale": "large", "actionID": "AgentVM.keys.open", "help": "See which keys the agents can use and which are stored in your login Keychain; store or remove one." } } ]
-                  }
-                      ] }
-                    ]
-                  }
-                ]
-              },
-              {
-                "type": "GroupBox",
-                "properties": { "title": "This Mac" },
-                "children": [
-                  {
-                    "type": "VStack",
-                    "properties": { "alignment": "leading", "padding": 6.0, "frame": { "maxWidth": "infinity", "alignment": "leading" } },
-                    "children": [
-                      { "type": "Divider", "properties": { "opacity": 0, "frame": { "height": 0 } } },
-                      { "type": "Form", "children": [
-                  { "type": "LabeledContent", "properties": { "title": "Virtual machines" }, "children": [ { "type": "Text", "id": 511, "properties": { "text": "", "textSelection": "enabled" } } ] },
-                  { "type": "LabeledContent", "properties": { "title": "Free disk space" }, "children": [ { "type": "Text", "id": 512, "properties": { "text": "", "textSelection": "enabled" } } ] },
-                  { "type": "LabeledContent", "properties": { "title": "macOS restore images" }, "children": [ { "type": "HStack", "properties": { "spacing": 8.0 }, "children": [
-                    { "type": "Text", "id": 761, "properties": { "text": "", "textSelection": "enabled" } },
-                    { "type": "Button", "id": 762, "properties": { "title": "Show in Finder", "controlSize": "small", "disabled": true, "actionID": "AgentVM.main.restore.show", "help": "Open the folder of the downloaded macOS restore images in Finder." } },
-                    { "type": "Button", "id": 763, "properties": { "title": "Remove...", "controlSize": "small", "disabled": true, "actionID": "AgentVM.main.restore.remove", "help": "Remove the macOS restore images agent-vm downloaded. Images and boxes made from them are not touched; a new macOS image then needs a new download (about 27 GB)." } }
-                  ] } ] }
-                      ] }
-                    ]
-                  }
-                ]
-              },
-              {
-                "type": "GroupBox",
-                "properties": { "title": "Sessions" },
-                "children": [
-                  {
-                    "type": "VStack",
-                    "properties": { "alignment": "leading", "padding": 6.0, "frame": { "maxWidth": "infinity", "alignment": "leading" } },
-                    "children": [
-                      { "type": "Divider", "properties": { "opacity": 0, "frame": { "height": 0 } } },
-                      { "type": "Form", "children": [
-                  { "type": "LabeledContent", "properties": { "title": "Kept now" }, "children": [ { "type": "HStack", "properties": { "spacing": 8.0 }, "children": [
-                    { "type": "Text", "id": 771, "properties": { "text": "", "textSelection": "enabled" } },
-                    { "type": "Button", "id": 772, "properties": { "title": "Show", "controlSize": "small", "actionID": "AgentVM.main.session.show", "help": "Show the Sessions tab: what each project's sessions hold, and discarding them." } }
-                  ] } ] },
-                  { "type": "LabeledContent", "properties": { "title": "Discarded after" }, "children": [ { "type": "HStack", "properties": { "spacing": 8.0 }, "children": [
-                    { "type": "Picker", "id": 773, "properties": { "title": "Discarded after", "labelsHidden": true, "pickerStyle": "segmented", "options": [ { "title": "14 days", "tag": "14" }, { "title": "30 days", "tag": "30" }, { "title": "60 days", "tag": "60" }, { "title": "Never", "tag": "0" } ], "actionID": "AgentVM.main.session.expiry", "disabled": true, "frame": { "width": 300 }, "help": "After how many days agent-vm discards an ended session on its own, at the end of a later session (an undone one counts from its undo). Never: sessions stay until discarded by hand. It is a setting of the store, for Terminal and Cadabra too." } },
-                    { "type": "Text", "id": 774, "properties": { "text": "", "foregroundStyle": "secondary", "textSelection": "enabled" } }
-                  ] } ] }
-                      ] }
-                    ]
-                  }
-                ]
-              },
-              {
-                "type": "GroupBox",
-                "properties": { "title": "Logs of deleted boxes" },
-                "children": [
-                  {
-                    "type": "VStack",
-                    "properties": { "alignment": "leading", "padding": 6.0, "frame": { "maxWidth": "infinity", "alignment": "leading" } },
-                    "children": [
-                      { "type": "Divider", "properties": { "opacity": 0, "frame": { "height": 0 } } },
-                      { "type": "Form", "children": [
-                  { "type": "LabeledContent", "properties": { "title": "Kept now" }, "children": [ { "type": "HStack", "properties": { "spacing": 8.0 }, "children": [
-                    { "type": "Text", "id": 531, "properties": { "text": "", "textSelection": "enabled" } },
-                    { "type": "Button", "id": 532, "properties": { "title": "Show in Finder", "controlSize": "small", "disabled": true, "actionID": "AgentVM.main.box.logs.kept", "help": "Open the folder of the logs of deleted boxes in Finder: a folder per box, named after the box and the time it was deleted." } },
-                    { "type": "Button", "id": 533, "properties": { "title": "Remove All...", "controlSize": "small", "disabled": true, "actionID": "AgentVM.main.logs.remove", "help": "Remove the logs of every deleted box. The logs of boxes that exist are not touched." } }
-                  ] } ] },
-                  { "type": "LabeledContent", "properties": { "title": "Kept for" }, "children": [ { "type": "HStack", "properties": { "spacing": 8.0 }, "children": [
-                    { "type": "Picker", "id": 534, "properties": { "title": "Kept for", "labelsHidden": true, "pickerStyle": "segmented", "options": [ { "title": "7 days", "tag": "7" }, { "title": "30 days", "tag": "30" }, { "title": "90 days", "tag": "90" }, { "title": "Never", "tag": "0" } ], "actionID": "AgentVM.main.logs.hold", "disabled": true, "frame": { "width": 300 }, "help": "For how long agent-vm keeps what a box ran and contacted once the box is deleted or recreated. It is a setting of the store, for Terminal and Cadabra too." } },
-                    { "type": "Text", "id": 535, "properties": { "text": "", "foregroundStyle": "secondary", "textSelection": "enabled" } }
-                  ] } ] }
-                      ] }
-                    ]
-                  }
-                ]
               }
-            ]
-          }
-        }
+            },
+            {
+              "type": "Tab",
+              "properties": { "title": "Sessions", "systemImage": "clock.arrow.circlepath" },
+              "content": {
+                "type": "NavigationSplitView",
+                "id": 710,
+                "properties": { "columnVisibility": "all", "style": "balanced" },
+                "sidebar": {
+                  "type": "VStack",
+                  "properties": { "spacing": 0.0, "navigationSplitViewColumnWidth": { "min": 220, "ideal": 260, "max": 340 } },
+                  "children": [
+                    {
+                      "type": "List",
+                      "id": 711,
+                      "properties": { "actionID": "AgentVM.main.session.project.selected", "listStyle": "sidebar", "listRowSeparator": "hidden", "listRowInsets": { "top": 4, "leading": 8, "bottom": 4, "trailing": 8 } },
+                      "template": {
+                        "type": "VStack",
+                        "properties": { "alignment": "leading", "spacing": 6, "padding": 12, "frame": { "maxWidth": "infinity", "alignment": "leading" }, "foregroundStyle": "white", "background": "$4", "cornerRadius": 12 },
+                        "children": [
+                          { "type": "Image", "properties": { "systemName": "clock.arrow.circlepath", "font": "title2" } },
+                          { "type": "Text", "properties": { "text": "$2", "font": { "size": 17, "weight": "bold" } } },
+                          { "type": "Text", "properties": { "text": "$3", "font": "caption", "opacity": 0.85 } }
+                        ]
+                      }
+                    },
+                    { "type": "Divider" },
+                    { "type": "HStack", "properties": { "spacing": 14.0, "buttonStyle": "borderless", "padding": { "top": 8, "leading": 16, "bottom": 2, "trailing": 12 } }, "children": [
+                      { "type": "Button", "id": 741, "properties": { "systemImage": "arrow.clockwise", "imageScale": "large", "actionID": "AgentVM.main.session.measure", "help": "Measure again what the sessions hold" } },
+                      { "type": "Button", "id": 742, "properties": { "systemImage": "calendar.badge.minus", "imageScale": "large", "disabled": true, "actionID": "AgentVM.main.session.older", "help": "Discard the sessions of every project that ended long ago..." } },
+                      { "type": "Spacer" }
+                    ] },
+                    { "type": "VStack", "properties": { "spacing": 4.0, "alignment": "leading", "padding": { "top": 6, "leading": 16, "bottom": 10, "trailing": 12 }, "frame": { "maxWidth": "infinity", "alignment": "leading" } }, "children": [
+                      { "type": "Text", "id": 712, "properties": { "text": "", "font": "caption", "foregroundStyle": "secondary" } },
+                      { "type": "Text", "id": 713, "properties": { "text": "", "font": "caption", "foregroundStyle": "red" } }
+                    ] }
+                  ]
+                },
+                "detail": {
+                  "type": "ZStack",
+                  "properties": { "frame": { "maxWidth": "infinity", "minHeight": 0, "maxHeight": "infinity" } },
+                  "children": [
+                    { "type": "ContentUnavailableView", "id": 719, "properties": { "title": "No Project Selected", "systemImage": "clock.arrow.circlepath", "description": "Select a project to see its sessions." } },
+                    { "type": "ContentUnavailableView", "id": 718, "properties": { "hidden": true, "title": "No Sessions", "systemImage": "clock.arrow.circlepath", "description": "A session is a snapshot of a project folder taken before an agent works on it, kept so that what the agent did can be undone. avm takes one when it shares a folder that the box may change, and so does Cadabra.\nA snapshot costs nothing at first, and more as the folder changes: sessions kept for weeks can hold much of the disk. This tab shows what they hold and frees it." } },
+                    {
+                      "type": "VStack",
+                      "id": 720,
+                      "properties": { "hidden": true, "alignment": "leading", "spacing": 12, "padding": 20, "frame": { "maxWidth": "infinity", "minHeight": 0, "maxHeight": "infinity", "alignment": "topLeading" } },
+                      "children": [
+                        { "type": "Text", "id": 721, "properties": { "text": "", "font": { "size": 22, "weight": "bold" } } },
+                        { "type": "Text", "id": 722, "properties": { "text": "", "font": "caption", "foregroundStyle": "secondary", "textSelection": "enabled" } },
+                        {
+                          "type": "Form",
+                          "children": [
+                            { "type": "LabeledContent", "properties": { "title": "Space" }, "children": [ { "type": "Text", "id": 751, "properties": { "text": "", "textSelection": "enabled", "help": "What discarding every ended and undone session of this project frees, once macOS has removed its local Time Machine snapshots, which keep deleted data for up to a day.", "frame": { "maxWidth": "infinity", "alignment": "leading" } } } ] },
+                            { "type": "LabeledContent", "properties": { "title": "Sessions" }, "children": [ { "type": "Text", "id": 752, "properties": { "text": "", "textSelection": "enabled", "frame": { "maxWidth": "infinity", "alignment": "leading" } } } ] }
+                          ]
+                        },
+                        { "type": "Table", "id": 730, "properties": {
+                          "columns": ["", "Started", "State", "Ended", "Its own", "Shared"],
+                          "columnTypes": [ { "viewType": "Toggle", "style": "checkbox", "actionID": "AgentVM.main.session.tick", "disabledColumn": 9 } ],
+                          "widths": [24, 92, 64, 92, 70, 140],
+                          "minWidths": [24, 70, 44, 70, 50, 80],
+                          "frame": { "maxWidth": "infinity", "minHeight": 140, "maxHeight": "infinity" }
+                        } },
+                        { "type": "HStack", "properties": { "spacing": 10 }, "children": [
+                          { "type": "Text", "id": 731, "properties": { "text": "", "textSelection": "enabled", "frame": { "maxWidth": "infinity", "alignment": "leading" } } },
+                          { "type": "Button", "id": 732, "properties": { "title": "Discard Ticked...", "disabled": true, "actionID": "AgentVM.main.session.discard", "help": "Delete the snapshots of the sessions ticked. Undo is then no longer possible for them; their records and reports stay." } },
+                          { "type": "Button", "id": 733, "properties": { "title": "Discard All Ended...", "disabled": true, "actionID": "AgentVM.main.session.discard.all", "help": "Delete the snapshots of all this project's ended and undone sessions. Undo is then no longer possible for them; their records and reports stay." } }
+                        ] },
+                        { "type": "Text", "id": 723, "properties": { "text": "", "font": "caption", "foregroundStyle": "secondary", "textSelection": "enabled", "frame": { "maxWidth": "infinity", "alignment": "leading" } } }
+                      ]
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "type": "Tab",
+              "properties": { "title": "Settings", "systemImage": "gearshape" },
+              "content": { "type": "ScrollView", "content": {
+                "type": "VStack",
+                "properties": {
+                  "alignment": "leading",
+                  "spacing": 16.0,
+                  "padding": 20.0,
+                  "frame": { "maxWidth": "infinity", "maxHeight": "infinity", "alignment": "topLeading" }
+                },
+                "children": [
+                  {
+                    "type": "GroupBox",
+                    "properties": { "title": "agent-vm" },
+                    "children": [
+                      {
+                        "type": "VStack",
+                        "properties": { "alignment": "leading", "padding": 6.0, "frame": { "maxWidth": "infinity", "alignment": "leading" } },
+                        "children": [
+                          { "type": "Divider", "properties": { "opacity": 0, "frame": { "height": 0 } } },
+                          { "type": "Form", "children": [
+                      { "type": "LabeledContent", "properties": { "title": "Version" }, "children": [ { "type": "Text", "id": 501, "properties": { "text": "", "textSelection": "enabled" } } ] },
+                      { "type": "LabeledContent", "properties": { "title": "Location" }, "children": [ { "type": "Text", "id": 502, "properties": { "text": "", "textSelection": "enabled" } } ] },
+                      {
+                        "type": "LabeledContent",
+                        "properties": { "title": "Updates" },
+                        "children": [ { "type": "Button", "id": 503, "properties": { "title": "Check for Updates...", "systemImage": "arrow.trianglehead.2.clockwise.rotate.90", "imageScale": "large", "actionID": "AgentVM.install.open", "help": "See whether a newer agent-vm is released, and install it." } } ]
+                      }
+                          ] }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "type": "GroupBox",
+                    "properties": { "title": "Agents" },
+                    "children": [
+                      {
+                        "type": "VStack",
+                        "properties": { "alignment": "leading", "padding": 6.0, "frame": { "maxWidth": "infinity", "alignment": "leading" } },
+                        "children": [
+                          { "type": "Divider", "properties": { "opacity": 0, "frame": { "height": 0 } } },
+                          { "type": "Form", "children": [
+                      {
+                        "type": "LabeledContent",
+                        "properties": { "title": "Keys and tokens" },
+                        "children": [ { "type": "Button", "id": 521, "properties": { "title": "Agent Keys", "systemImage": "key", "imageScale": "large", "actionID": "AgentVM.keys.open", "help": "See which keys the agents can use and which are stored in your login Keychain; store or remove one." } } ]
+                      }
+                          ] }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "type": "GroupBox",
+                    "properties": { "title": "This Mac" },
+                    "children": [
+                      {
+                        "type": "VStack",
+                        "properties": { "alignment": "leading", "padding": 6.0, "frame": { "maxWidth": "infinity", "alignment": "leading" } },
+                        "children": [
+                          { "type": "Divider", "properties": { "opacity": 0, "frame": { "height": 0 } } },
+                          { "type": "Form", "children": [
+                      { "type": "LabeledContent", "properties": { "title": "Virtual machines" }, "children": [ { "type": "Text", "id": 511, "properties": { "text": "", "textSelection": "enabled" } } ] },
+                      { "type": "LabeledContent", "properties": { "title": "Free disk space" }, "children": [ { "type": "Text", "id": 512, "properties": { "text": "", "textSelection": "enabled" } } ] },
+                      { "type": "LabeledContent", "properties": { "title": "macOS restore images" }, "children": [ { "type": "HStack", "properties": { "spacing": 8.0 }, "children": [
+                        { "type": "Text", "id": 761, "properties": { "text": "", "textSelection": "enabled" } },
+                        { "type": "Button", "id": 762, "properties": { "title": "Show in Finder", "controlSize": "small", "disabled": true, "actionID": "AgentVM.main.restore.show", "help": "Open the folder of the downloaded macOS restore images in Finder." } },
+                        { "type": "Button", "id": 763, "properties": { "title": "Remove...", "controlSize": "small", "disabled": true, "actionID": "AgentVM.main.restore.remove", "help": "Remove the macOS restore images agent-vm downloaded. Images and boxes made from them are not touched; a new macOS image then needs a new download (about 27 GB)." } }
+                      ] } ] }
+                          ] }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "type": "GroupBox",
+                    "properties": { "title": "Sessions" },
+                    "children": [
+                      {
+                        "type": "VStack",
+                        "properties": { "alignment": "leading", "padding": 6.0, "frame": { "maxWidth": "infinity", "alignment": "leading" } },
+                        "children": [
+                          { "type": "Divider", "properties": { "opacity": 0, "frame": { "height": 0 } } },
+                          { "type": "Form", "children": [
+                      { "type": "LabeledContent", "properties": { "title": "Kept now" }, "children": [ { "type": "HStack", "properties": { "spacing": 8.0 }, "children": [
+                        { "type": "Text", "id": 771, "properties": { "text": "", "textSelection": "enabled" } },
+                        { "type": "Button", "id": 772, "properties": { "title": "Show", "controlSize": "small", "actionID": "AgentVM.main.session.show", "help": "Show the Sessions tab: what each project's sessions hold, and discarding them." } }
+                      ] } ] },
+                      { "type": "LabeledContent", "properties": { "title": "Discarded after" }, "children": [ { "type": "HStack", "properties": { "spacing": 8.0 }, "children": [
+                        { "type": "Picker", "id": 773, "properties": { "title": "Discarded after", "labelsHidden": true, "pickerStyle": "segmented", "options": [ { "title": "14 days", "tag": "14" }, { "title": "30 days", "tag": "30" }, { "title": "60 days", "tag": "60" }, { "title": "Never", "tag": "0" } ], "actionID": "AgentVM.main.session.expiry", "disabled": true, "frame": { "width": 300 }, "help": "After how many days agent-vm discards an ended session on its own, at the end of a later session (an undone one counts from its undo). Never: sessions stay until discarded by hand. It is a setting of the store, for Terminal and Cadabra too." } },
+                        { "type": "Text", "id": 774, "properties": { "text": "", "foregroundStyle": "secondary", "textSelection": "enabled" } }
+                      ] } ] }
+                          ] }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "type": "GroupBox",
+                    "properties": { "title": "Logs of deleted boxes" },
+                    "children": [
+                      {
+                        "type": "VStack",
+                        "properties": { "alignment": "leading", "padding": 6.0, "frame": { "maxWidth": "infinity", "alignment": "leading" } },
+                        "children": [
+                          { "type": "Divider", "properties": { "opacity": 0, "frame": { "height": 0 } } },
+                          { "type": "Form", "children": [
+                      { "type": "LabeledContent", "properties": { "title": "Kept now" }, "children": [ { "type": "HStack", "properties": { "spacing": 8.0 }, "children": [
+                        { "type": "Text", "id": 531, "properties": { "text": "", "textSelection": "enabled" } },
+                        { "type": "Button", "id": 532, "properties": { "title": "Show in Finder", "controlSize": "small", "disabled": true, "actionID": "AgentVM.main.box.logs.kept", "help": "Open the folder of the logs of deleted boxes in Finder: a folder per box, named after the box and the time it was deleted." } },
+                        { "type": "Button", "id": 533, "properties": { "title": "Remove All...", "controlSize": "small", "disabled": true, "actionID": "AgentVM.main.logs.remove", "help": "Remove the logs of every deleted box. The logs of boxes that exist are not touched." } }
+                      ] } ] },
+                      { "type": "LabeledContent", "properties": { "title": "Kept for" }, "children": [ { "type": "HStack", "properties": { "spacing": 8.0 }, "children": [
+                        { "type": "Picker", "id": 534, "properties": { "title": "Kept for", "labelsHidden": true, "pickerStyle": "segmented", "options": [ { "title": "7 days", "tag": "7" }, { "title": "30 days", "tag": "30" }, { "title": "90 days", "tag": "90" }, { "title": "Never", "tag": "0" } ], "actionID": "AgentVM.main.logs.hold", "disabled": true, "frame": { "width": 300 }, "help": "For how long agent-vm keeps what a box ran and contacted once the box is deleted or recreated. It is a setting of the store, for Terminal and Cadabra too." } },
+                        { "type": "Text", "id": 535, "properties": { "text": "", "foregroundStyle": "secondary", "textSelection": "enabled" } }
+                      ] } ] }
+                          ] }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              } }
+            }
+          ]
+    },
+        { "type": "HStack", "id": 790, "properties": { "hidden": true, "spacing": 10.0, "padding": { "top": 8, "leading": 16, "bottom": 8, "trailing": 16 }, "background": "#FFF4D6", "frame": { "maxWidth": "infinity", "maxHeight": 0 } }, "children": [
+          { "type": "Image", "properties": { "systemName": "externaldrive.badge.exclamationmark", "foregroundStyle": "orange" } },
+          { "type": "Text", "id": 791, "properties": { "text": "", "foregroundStyle": "black", "frame": { "maxWidth": "infinity", "alignment": "leading" } } },
+          { "type": "Button", "id": 792, "properties": { "title": "Show Sessions", "controlSize": "small", "actionID": "AgentVM.main.session.show", "help": "Show the Sessions tab: what each project's sessions hold, and discarding them." } },
+          { "type": "Button", "id": 793, "properties": { "title": "Not Now", "controlSize": "small", "actionID": "AgentVM.main.session.nudge.dismiss", "help": "Hide this until the sessions hold 10 GB more." } }
+        ] }
       ]
     }
   ]
