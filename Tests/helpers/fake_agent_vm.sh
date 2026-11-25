@@ -44,6 +44,15 @@
 #   kept-logs-count  how many deleted boxes' logs `store logs --remove-older-than 0` says it
 #              removed (default none).
 #   hold-days  WRITTEN by `store logs --hold-days <n>`: the number it was given.
+#   session-list.json, session-usage.json  what `session list` and `session usage` answer (else the
+#              fixtures); session-usage-count WRITTEN: how many times `session usage` measured.
+#   discarded  WRITTEN by `session discard <id>...`: the ids, one per line (an id the session list
+#              does not have, or has as discarded, is refused and nothing is written).
+#   discard-older  WRITTEN by `session discard --older-than <days>`: the days; discard-older-count
+#              says how many of the ended and undone sessions it answers as discarded (default 0).
+#   discard-after  WRITTEN by `store sessions --discard-after <days>`: the days.
+#   removed-ipsw  WRITTEN by `image fetch-ipsw --remove <name>`: the name (one --list does not
+#              have is refused).
 #   job-start-state  when present, the state a job is in as `job start` returns ("failed"), with
 #              the text of job-start-error as its error: a job that fails within the moment.
 #
@@ -75,7 +84,10 @@
 #   job start [--after <id>] --json -- <command...>, job list --json, job cancel <id> --json and
 #   job forget <id> --json (see jobs.json above), and job log <id> --json.
 #   store logs --remove-older-than 0 --json and store logs --hold-days <n> --json (which change
-#   nothing in what status answers: the test changes status.json to match),
+#   nothing in what status answers: the test changes status.json to match), session list --json,
+#   session usage --json, session discard <id>... --json, session discard --older-than <days>
+#   --json, store sessions --discard-after <days> --json and image fetch-ipsw --remove <name>
+#   --json (see their state files above; none changes what status answers),
 #   recipe check <path>... --json (see recipe_check below; recipe-check.json and
 #   recipe-check-status in the state directory replace its answer and status).
 # Anything else fails with status 64, so a test that reaches an unimplemented command finds out.
@@ -439,6 +451,52 @@ case "$*" in
             "$state/status-was.json" > "$state/status.json.new" && /bin/mv "$state/status.json.new" "$state/status.json"
         /usr/bin/jq --arg name "$4" '.images[] | select(.name == $name)' "$state/status.json"
         /bin/rm -f "$state/status-was.json" ;;
+    "session list --json")
+        answer session-list ;;
+    "session usage --json")
+        # A measurement: what the test asked for is counted in session-usage-count.
+        count=0
+        [ -f "$state/session-usage-count" ] && count="$(/bin/cat "$state/session-usage-count")"
+        printf '%s\n' "$((count + 1))" > "$state/session-usage-count"
+        answer session-usage ;;
+    "session discard --older-than "*" --json")
+        # The days are kept for the test to read; nothing is discarded unless the test says how
+        # many (discard-older-count).
+        printf '%s\n' "$4" > "$state/discard-older"
+        count=0
+        [ -f "$state/discard-older-count" ] && count="$(/bin/cat "$state/discard-older-count")"
+        answer session-list | /usr/bin/jq --argjson count "$count" '[.[] | select(.state != "active" and .state != "discarded")][0:$count] | map(.state = "discarded")' ;;
+    "session discard "*" --json")
+        # The ids are kept, one per line, for the test to read; an id the session list does not
+        # have, or has as discarded, is refused before anything is written, as agent-vm does.
+        shift 2
+        ids=""
+        while [ "$#" -gt 1 ]; do
+            known="$(answer session-list | /usr/bin/jq -r --arg id "$1" '.[] | select(.id == $id and .state != "discarded") | .id')"
+            if [ -z "$known" ]; then
+                printf 'Error: no session %s\n' "$1" >&2
+                exit 1
+            fi
+            ids="$ids $1"
+            shift
+        done
+        printf '%s\n' $ids >> "$state/discarded"
+        answer session-list | /usr/bin/jq --arg ids "$ids" '($ids | split(" ") | map(select(. != ""))) as $chosen
+            | [.[] | select(.id as $id | $chosen | index($id)) | .state = "discarded" | del(.snapshotPath, .usage)]
+            | if length == 1 then .[0] else . end' ;;
+    "store sessions --discard-after "*" --json")
+        printf '%s\n' "$4" > "$state/discard-after"
+        /usr/bin/jq -n --arg days "$4" '{discardAfterDays: ($days | tonumber), directory: "/Users/you/Library/Application Support/agent-vm/Sessions"}' ;;
+    "image fetch-ipsw --remove "*" --json")
+        # The name is kept for the test to read, once it is known; the bytes are those --list
+        # gives the file.
+        bytes="$(answer ipsw-list | /usr/bin/jq -r --arg name "$4" '[.[] | select(.name == $name) | .bytes][0] // empty')"
+        if [ -z "$bytes" ]; then
+            printf 'Error: no restore image %s in the store; `agent-vm image fetch-ipsw --list` lists them\n' "$4" >&2
+            exit 1
+        fi
+        printf '%s\n' "$4" > "$state/removed-ipsw"
+        /usr/bin/jq -n --arg name "$4" --argjson bytes "$bytes" '{name: $name, bytes: $bytes, removed: ["/Users/you/Library/Application Support/agent-vm/Cache/ipsw/\($name)"]}' ;;
     "store logs --remove-older-than 0 --json")
         # Every kept log goes: as many deleted boxes' as the state file kept-logs-count says.
         count=0

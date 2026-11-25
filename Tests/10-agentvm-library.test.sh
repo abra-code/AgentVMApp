@@ -722,6 +722,82 @@ check "a store that keeps none"      "0${TAB}0${TAB}0${TAB}/x/Logs" \
 check "an agent-vm that says nothing of them: none, and neither a number of days nor a folder" "0${TAB}0${TAB}-${TAB}-" \
     "$(printf '{"boxes": [], "images": []}\n' | lib agentvm_status_kept_logs_row)"
 
+
+section "sessions: what they hold on disk and what discarding frees (session usage, session list)"
+SESSIONS_AT="$(/usr/bin/jq -r '.sessions.measuredAt' "$FIXTURES_AGENTVM/status-sessions.json")"
+check "status: one active, two ended, measured, 2.1 MB on disk, 1 MiB to free, no expiry" \
+    "1${TAB}2${TAB}0${TAB}0${TAB}0${TAB}$SESSIONS_AT${TAB}2109440${TAB}1048576${TAB}0" \
+    "$(lib agentvm_status_sessions_row < "$FIXTURES_AGENTVM/status-sessions.json")"
+check "  an agent-vm that says nothing of sessions: none, and nothing measured" "0${TAB}0${TAB}0${TAB}0${TAB}0${TAB}-${TAB}-${TAB}-${TAB}0" \
+    "$(printf '{"boxes": [], "images": []}\n' | lib agentvm_status_sessions_row)"
+check "  never measured, two started since, discarded after 30 days" "2${TAB}0${TAB}0${TAB}5${TAB}2${TAB}-${TAB}-${TAB}-${TAB}30" \
+    "$(printf '{"sessions": {"active": 2, "discarded": 5, "unmeasured": 2, "discardAfterDays": 30}}\n' | lib agentvm_status_sessions_row)"
+check "restore images: one of 25.6 GB, and its folder" "1${TAB}25595670528${TAB}0${TAB}/x/Cache/ipsw" \
+    "$(printf '{"restoreImages": {"count": 1, "bytes": 25595670528, "partialBytes": 0, "directory": "/x/Cache/ipsw"}}\n' | lib agentvm_status_restore_row)"
+check "  an agent-vm that says nothing of them" "0${TAB}0${TAB}0${TAB}-" "$(printf '{}\n' | lib agentvm_status_restore_row)"
+
+rows="$(lib agentvm_session_rows < "$FIXTURES_AGENTVM/session-list.json")"
+check "a row per session that is not discarded: two ended and one active, of ~/src/myapp" \
+    "ended ended active|/Users/you/src/myapp" \
+    "$(printf '%s\n' "$rows" | /usr/bin/cut -f3 | /usr/bin/paste -sd ' ' -)|$(printf '%s\n' "$rows" | /usr/bin/cut -f2 | /usr/bin/sort -u)"
+check "  ten fields each; a whole snapshot (scope -), 0 bytes of its own each" "10|-|0 0 0" \
+    "$(printf '%s\n' "$rows" | field_count)|$(printf '%s\n' "$rows" | /usr/bin/cut -f7 | /usr/bin/sort -u)|$(printf '%s\n' "$rows" | /usr/bin/cut -f9 | /usr/bin/paste -sd ' ' -)"
+check "  a discarded session is left out; a snapshot of the git folders says git" "s2${TAB}/p${TAB}ended${TAB}5${TAB}-${TAB}-${TAB}git${TAB}-${TAB}-${TAB}-" \
+    "$(printf '[{"id": "s1", "state": "discarded"}, {"id": "s2", "project": "/p", "state": "ended", "startSeconds": 5, "scope": "gitFolders"}]\n' | lib agentvm_session_rows)"
+ENDED1="$(printf '%s\n' "$rows" | /usr/bin/awk -F'\t' 'NR == 1 { print $1 }')"
+ENDED2="$(printf '%s\n' "$rows" | /usr/bin/awk -F'\t' 'NR == 2 { print $1 }')"
+ACTIVE="$(printf '%s\n' "$rows" | /usr/bin/awk -F'\t' 'NR == 3 { print $1 }')"
+held="$(lib agentvm_usage_held_rows < "$FIXTURES_AGENTVM/session-usage.json")"
+check "the holder table: 1 MiB held by the two ended sessions together" "1048576${TAB}$(printf '%s\n' "$ENDED1 $ENDED2" | /usr/bin/tr ' ' '\n' | /usr/bin/sort | /usr/bin/paste -sd ' ' -)" "$held"
+check "  discarding both frees it, one alone nothing, and the active one nothing" "1048576|0|0" \
+    "$(printf '%s\n' "$held" | lib agentvm_held_freed "$ENDED1 $ENDED2")|$(printf '%s\n' "$held" | lib agentvm_held_freed "$ENDED1")|$(printf '%s\n' "$held" | lib agentvm_held_freed "$ACTIVE")"
+check "  an ended one shares 1 MiB with one other session; the active one shares nothing" "1048576 1|0 0" \
+    "$(printf '%s\n' "$held" | lib agentvm_held_shared "$ENDED1")|$(printf '%s\n' "$held" | lib agentvm_held_shared "$ACTIVE")"
+table="$(printf '27\ta b c\n4\ta\n2\tb c\n1\tc\n')"
+check "  sums over the sets inside a selection" "4|3|34|0" \
+    "$(printf '%s\n' "$table" | lib agentvm_held_freed "a")|$(printf '%s\n' "$table" | lib agentvm_held_freed "b c")|$(printf '%s\n' "$table" | lib agentvm_held_freed "c b a")|$(printf '%s\n' "$table" | lib agentvm_held_freed "")"
+check "  what b holds with others: 29 bytes, with 2 other sessions" "29 2" "$(printf '%s\n' "$table" | lib agentvm_held_shared b)"
+check "a row per project: two sessions to discard, one active, 1 MiB to free" "/Users/you/src/myapp${TAB}2${TAB}1${TAB}1048576" \
+    "$(lib agentvm_usage_project_rows < "$FIXTURES_AGENTVM/session-usage.json")"
+check "an empty measurement: no rows" "|" \
+    "$(printf '{"sessions": [], "held": [], "projects": []}\n' | lib agentvm_usage_held_rows)|$(printf '{"sessions": [], "held": [], "projects": []}\n' | lib agentvm_usage_project_rows)"
+ids=""
+for id in 20261125-032208-ea1b 20261125-032208-EA1B 20261125-03220-ea1b x --older-than "20261125-032208-ea1b " ""; do
+    lib agentvm_valid_session_id "$id" && ids="$ids[$id]"
+done
+check "what can be a session id: the time and four lower-case hexadecimal digits" "[20261125-032208-ea1b]" "$ids"
+
+section "sessions: what the library asks agent-vm to do"
+fake_reset
+check "session usage --json measures" "session usage --json|1" \
+    "$(with_fake agentvm_session_usage >/dev/null; fake_log | /usr/bin/tail -1)|$(/bin/cat "$FAKE_AGENTVM_DIR/session-usage-count")"
+check "session list --json reads" "session list --json" "$(with_fake agentvm_session_list >/dev/null; fake_log | /usr/bin/tail -1)"
+fake_reset
+check "discarding the two ended sessions: one call with both, and how many went" "2|session discard $ENDED1 $ENDED2 --json|$ENDED1 $ENDED2" \
+    "$(with_fake agentvm_session_discard "$ENDED1" "$ENDED2")|$(fake_log | /usr/bin/tail -1)|$(/usr/bin/paste -sd ' ' "$FAKE_AGENTVM_DIR/discarded")"
+fake_reset
+check "  one the store does not have: refused, nothing discarded" "1|no" \
+    "$(with_fake agentvm_session_discard "$ENDED1" 20990101-000000-abcd >/dev/null; echo $?)|$([ -f "$FAKE_AGENTVM_DIR/discarded" ] && echo yes || echo no)"
+fake_reset
+check "  what is not a session id never reaches agent-vm" "2|" \
+    "$(with_fake agentvm_session_discard "$ENDED1" --older-than >/dev/null; echo $?)|$(fake_log | /usr/bin/grep discard)"
+check "  nor an empty list" "2" "$(with_fake agentvm_session_discard >/dev/null; echo $?)"
+fake_reset
+check "discarding what ended 30 days ago or earlier" "session discard --older-than 30 --json|30" \
+    "$(with_fake agentvm_session_discard_older 30 >/dev/null; fake_log | /usr/bin/tail -1)|$(/bin/cat "$FAKE_AGENTVM_DIR/discard-older")"
+check "  days are a number" "2" "$(with_fake agentvm_session_discard_older 7d >/dev/null; echo $?)"
+check "the store's expiry: 14 days" "store sessions --discard-after 14 --json|14" \
+    "$(with_fake agentvm_store_discard_after 14 >/dev/null; fake_log | /usr/bin/tail -1)|$(/bin/cat "$FAKE_AGENTVM_DIR/discard-after")"
+RESTORE="$(/usr/bin/jq -r '.[0].name' "$FIXTURES_AGENTVM/ipsw-list.json")"
+fake_reset
+check "  at most 3650 days, as agent-vm takes; more never reaches it" "2|" \
+    "$(with_fake agentvm_store_discard_after 3651 >/dev/null; echo $?)|$(fake_log)"
+check "removing a restore image: its name, and the bytes freed" "image fetch-ipsw --remove $RESTORE --json|$(/usr/bin/jq -r '.[0].bytes' "$FIXTURES_AGENTVM/ipsw-list.json")" \
+    "$(with_fake agentvm_restore_remove "$RESTORE" >/dev/null; fake_log | /usr/bin/tail -1)|$(with_fake agentvm_restore_remove "$RESTORE")"
+fake_reset
+check "  a path, a hidden file, an option or another kind of file never reaches agent-vm" "2 2 2 2|" \
+    "$(for name in ../x.ipsw .x.ipsw --list.ipsw x.dmg; do with_fake agentvm_restore_remove "$name" >/dev/null; printf '%s ' $?; done | /usr/bin/sed 's/ $//')|$(fake_log)"
+
 section "an empty store (status-empty.json)"
 check "no box rows"                  "" "$(lib agentvm_status_box_rows < "$FIXTURES_AGENTVM/status-empty.json")"
 check "no image rows"                "" "$(lib agentvm_status_image_rows < "$FIXTURES_AGENTVM/status-empty.json")"

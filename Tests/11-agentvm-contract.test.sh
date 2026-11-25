@@ -338,5 +338,47 @@ id="$(real_lib agentvm_job_image_rebuild nosuch)"
 check "job start takes image rebuild, and answers with a job id" "0|0" "$?|$(lib agentvm_valid_job_id "$id"; echo $?)"
 check "an empty store has no image that needs a rebuild" "" "$(real_lib agentvm_status | lib agentvm_status_rebuild_rows)"
 
+
+section "sessions: measured, listed, discarded; restore images"
+# The Sessions tab reads `status`, `session list` and `session usage`, and discards through the
+# library. A project in the short folder, a 1 MiB file, two sessions ended, the file deleted:
+# the two hold it together. Sessions are made with agent-vm itself, in this file's store.
+PROJECT="$SHORT_DIR/myapp"
+/bin/mkdir -p "$PROJECT/Private"
+/bin/dd if=/dev/urandom of="$PROJECT/Private/big.img" bs=4096 count=256 2>/dev/null
+check "status before any session: none, never measured, no expiry" "0${TAB}0${TAB}0${TAB}0${TAB}0${TAB}-${TAB}-${TAB}-${TAB}0" \
+    "$(real_lib agentvm_status | lib agentvm_status_sessions_row)"
+check "  an empty store keeps no restore image, in the folder Cache/ipsw of the store" "0${TAB}0${TAB}0${TAB}yes" \
+    "$(real_lib agentvm_status | lib agentvm_status_restore_row | /usr/bin/awk -F'\t' '{ printf "%s\t%s\t%s\t%s\n", $1, $2, $3, ($4 ~ /\/empty-store\/Cache\/ipsw$/) ? "yes" : "no:" $4 }')"
+first="$(AGENT_VM_HOME="$STORE" "$real" session start --project "$PROJECT" --json 2>/dev/null | /usr/bin/jq -r '.id // empty')"
+AGENT_VM_HOME="$STORE" "$real" session end "$first" > /dev/null 2>&1
+second="$(AGENT_VM_HOME="$STORE" "$real" session start --project "$PROJECT" --json 2>/dev/null | /usr/bin/jq -r '.id // empty')"
+AGENT_VM_HOME="$STORE" "$real" session end "$second" > /dev/null 2>&1
+/bin/rm -f "$PROJECT/Private/big.img"
+check "two sessions made" "0|0" "$(lib agentvm_valid_session_id "$first"; echo $?)|$(lib agentvm_valid_session_id "$second"; echo $?)"
+real_lib agentvm_session_usage > "$OMCTEST_WORK/usage.json"
+check "session usage measures them" "0" "$?"
+check "  the holder table: 1 MiB held by the two together" "1048576${TAB}$(printf '%s\n%s\n' "$first" "$second" | /usr/bin/sort | /usr/bin/paste -sd ' ' -)" \
+    "$(lib agentvm_usage_held_rows < "$OMCTEST_WORK/usage.json")"
+check "  what discarding both frees, and one alone" "1048576|0" \
+    "$(lib agentvm_usage_held_rows < "$OMCTEST_WORK/usage.json" | lib agentvm_held_freed "$first $second")|$(lib agentvm_usage_held_rows < "$OMCTEST_WORK/usage.json" | lib agentvm_held_freed "$first")"
+check "  the project's row: two sessions, none active, 1 MiB" "2${TAB}0${TAB}1048576" \
+    "$(lib agentvm_usage_project_rows < "$OMCTEST_WORK/usage.json" | /usr/bin/cut -f2-4)"
+check "session list gives both, ended, with the measured figures" "ended${TAB}0|ended${TAB}0" \
+    "$(real_lib agentvm_session_list | lib agentvm_session_rows | /usr/bin/cut -f3,9 | /usr/bin/paste -sd '|' -)"
+check "status: two ended, measured, 1 MiB to free" "0${TAB}2${TAB}0${TAB}0${TAB}0${TAB}1048576" \
+    "$(real_lib agentvm_status | lib agentvm_status_sessions_row | /usr/bin/cut -f1-5,8)"
+real_lib agentvm_store_discard_after 14
+check "store sessions --discard-after is taken, and status says it" "0|14" "$?|$(real_lib agentvm_status | lib agentvm_status_sessions_row | col 9)"
+real_lib agentvm_store_discard_after 0
+discarded="$(real_lib agentvm_session_discard "$first" "$second")"
+check "session discard of both in one call: two discarded" "0|2" "$?|$discarded"
+check "  status: both discarded, and nothing left to free" "0${TAB}0${TAB}2${TAB}0" \
+    "$(real_lib agentvm_status | lib agentvm_status_sessions_row | /usr/bin/cut -f2-4,8)"
+older="$(real_lib agentvm_session_discard_older 0)"
+check "session discard --older-than 0 with nothing left: none" "0|0" "$?|$older"
+real_lib agentvm_restore_remove nosuch.ipsw > /dev/null
+check "fetch-ipsw --remove of a restore image the store does not have fails" "1" "$?"
+
 /bin/rm -rf "$SHORT_DIR"
 omctest_end

@@ -935,6 +935,189 @@ agentvm_store_hold_days() {
     agentvm_json store logs --hold-days "$1" >/dev/null
 }
 
+# -- Sessions ------------------------------------------------------------------------------------
+# A session is a snapshot of a project taken before an agent works on it, kept for undo until it
+# is discarded. Its snapshot is a copy-on-write clone: it costs nothing until the project's copy
+# changes or goes, and then the old data stays with the snapshot, often with several snapshots at
+# once. agent-vm measures that as a holder table (`session usage`): for each set of sessions, the
+# bytes held by exactly those sessions and not by the project. What discarding a selection frees
+# is the sum of the entries whose sessions are all selected (agentvm_held_freed), so a selection
+# needs no agent-vm call. The figures count what is freed once macOS has removed its local Time
+# Machine snapshots. `status` reads the last measurement and measures nothing.
+
+# agentvm_status_sessions_row  <  status JSON  ->  active, ended, undone, discarded, unmeasured,
+# measuredAt, bytes, freedIfAllDiscardedBytes, discardAfterDays: how many sessions are in each
+# state, how many the last measurement does not have (started since), and from it when it was
+# taken, the sessions' size on disk as du counts it and what discarding every ended and undone
+# one frees; and after how many days the store discards ended sessions on their own (0: never).
+# The counts are 0, and the measurement's three cells "-", when agent-vm does not say (never
+# measured, or no `sessions` at all).
+agentvm_status_sessions_row() {
+    /usr/bin/jq -r "$agentvm_jq_defs"' [(.sessions.active // 0), (.sessions.ended // 0), (.sessions.undone // 0),
+        (.sessions.discarded // 0), (.sessions.unmeasured // 0), .sessions.measuredAt, .sessions.bytes,
+        .sessions.freedIfAllDiscardedBytes, (.sessions.discardAfterDays // 0)] | row'
+}
+
+# agentvm_status_restore_row  <  status JSON  ->  count, bytes, partialBytes, directory: the macOS
+# restore images kept for new images (what removing them frees), the space of an interrupted
+# download, and their folder. 0, 0, 0 and "-" when agent-vm does not say.
+agentvm_status_restore_row() {
+    /usr/bin/jq -r "$agentvm_jq_defs"' [(.restoreImages.count // 0), (.restoreImages.bytes // 0),
+        (.restoreImages.partialBytes // 0), .restoreImages.directory] | row'
+}
+
+# agentvm_session_list  ->  `session list --json`: every session, discarded ones too, with the
+# figures of the last measurement (`usage`). Reads the records only.
+agentvm_session_list() {
+    agentvm_json session list
+}
+
+# agentvm_session_rows  <  session list JSON  ->  one row per session that is not discarded, oldest
+# first: id, project, state, startedAt (epoch seconds), endedAt, undoneAt (ISO 8601 or "-"),
+# scope ("git" for a snapshot of the git folders only, else "-"), bytes, ownBytes (from the last
+# measurement, "-" when it does not have the session), measuredAt.
+agentvm_session_rows() {
+    /usr/bin/jq -r "$agentvm_jq_defs"' .[] | select(.state != "discarded")
+        | [.id, .project, .state, .startSeconds, .endedAt, .undoneAt,
+           (if .scope == "gitFolders" then "git" else null end),
+           .usage.bytes, .usage.ownBytes, .usage.measuredAt] | row'
+}
+
+# agentvm_session_usage  ->  `session usage --json`: measures every session that is not discarded
+# (about a second per 100,000 files in the snapshots, longer on a Mac with local Time Machine
+# snapshots), keeps the result in the store, and prints it.
+agentvm_session_usage() {
+    agentvm_json session usage
+}
+
+# agentvm_usage_held_rows  <  session usage JSON  ->  the holder table, one row per entry: bytes,
+# then the ids of the sessions that hold them, separated by spaces.
+agentvm_usage_held_rows() {
+    /usr/bin/jq -r "$agentvm_jq_defs"' .held[]? | [.bytes, (.sessions | join(" "))] | row'
+}
+
+# agentvm_usage_project_rows  <  session usage JSON  ->  one row per project, what can be freed
+# first: project, how many ended and undone sessions it has, how many active ones, and what
+# discarding all the ended and undone ones frees.
+agentvm_usage_project_rows() {
+    /usr/bin/jq -r "$agentvm_jq_defs"' .projects[]? | [.project, (.sessions | length), .active, .freedBytes] | row'
+}
+
+# agentvm_held_freed <ids>  <  held rows  ->  the bytes discarding the sessions named (separated
+# by spaces) frees: the sum of the entries whose sessions are all named. No agent-vm runs.
+agentvm_held_freed() {
+    /usr/bin/awk -F'\t' -v chosen="$1" '
+        BEGIN { count = split(chosen, ids, " "); for (i = 1; i <= count; i++) picked[ids[i]] = 1 }
+        {
+            holders = split($2, held, " ")
+            all = holders > 0
+            for (i = 1; i <= holders; i++) if (!(held[i] in picked)) { all = 0; break }
+            if (all) total += $1
+        }
+        END { printf "%.0f\n", total }'
+}
+
+# agentvm_held_shared <id>  <  held rows  ->  bytes, others: what the session holds together with
+# other sessions (the entries with it and at least one more), and how many other sessions those
+# are. "0 0" when it holds nothing with another.
+agentvm_held_shared() {
+    /usr/bin/awk -F'\t' -v id="$1" '
+        {
+            holders = split($2, held, " ")
+            if (holders < 2) next
+            mine = 0
+            for (i = 1; i <= holders; i++) if (held[i] == id) mine = 1
+            if (!mine) next
+            total += $1
+            for (i = 1; i <= holders; i++) if (held[i] != id && !(held[i] in seen)) { seen[held[i]] = 1; others++ }
+        }
+        END { printf "%.0f %d\n", total, others }'
+}
+
+# agentvm_valid_session_id <id>  ->  0 when it has the form of a session id: the start time
+# (yyyyMMdd-HHmmss) and four hexadecimal digits, as agent-vm makes them.
+agentvm_valid_session_id() {
+    case "$1" in
+        [0123456789][0123456789][0123456789][0123456789][0123456789][0123456789][0123456789][0123456789]-[0123456789][0123456789][0123456789][0123456789][0123456789][0123456789]-[0123456789abcdef][0123456789abcdef][0123456789abcdef][0123456789abcdef]) return 0 ;;
+    esac
+    return 1
+}
+
+# agentvm_session_discard <id>...  ->  0 once agent-vm discarded those sessions: their snapshots
+# and what an undo kept are deleted, undo is no longer possible, and their records and reports
+# stay. agent-vm checks every id before it deletes anything, so one it refuses leaves all of them
+# as they were; a failure partway (a disk error, or another agent-vm discarding one of them
+# meanwhile) leaves the ones before it discarded, and the status is not 0: the caller says why and
+# reads the sessions again. Prints how many were discarded. Ids are arguments: each is checked
+# to be one.
+agentvm_session_discard() {
+    [ "$#" -gt 0 ] || { _agentvm_refuse 2 "No session to discard."; return 2; }
+    local _id
+    for _id in "$@"; do
+        agentvm_valid_session_id "$_id" || { _agentvm_refuse 2 "\"$_id\" is not a session id."; return 2; }
+    done
+    local _json
+    _json="$(agentvm_json session discard "$@")"
+    local _status=$?
+    [ "$_status" -eq 0 ] || return "$_status"
+    printf '%s\n' "$_json" | /usr/bin/jq -r 'if type == "array" then length else 1 end' 2>/dev/null
+    return 0
+}
+
+# agentvm_session_discard_older <days>  ->  0 once agent-vm discarded every ended and undone
+# session that ended that many days ago or earlier (never an active one). Prints how many.
+agentvm_session_discard_older() {
+    case "$1" in
+        ''|*[!0123456789]*|?????*)
+            _agentvm_refuse 2 "\"$1\" is not a number of days."
+            return 2 ;;
+    esac
+    local _json
+    _json="$(agentvm_json session discard --older-than "$1")"
+    local _status=$?
+    [ "$_status" -eq 0 ] || return "$_status"
+    printf '%s\n' "$_json" | /usr/bin/jq -r 'length' 2>/dev/null
+    return 0
+}
+
+# agentvm_store_discard_after <days>  ->  0 once the store discards ended and undone sessions that
+# many days after they end, at the end of every session from now on (an undone one counting from
+# its undo); 0: never. Nothing is discarded at this moment.
+agentvm_store_discard_after() {
+    case "$1" in
+        ''|*[!0123456789]*|?????*)
+            _agentvm_refuse 2 "\"$1\" is not a number of days."
+            return 2 ;;
+    esac
+    # agent-vm takes at most 3650 days (SessionStore.maximumDiscardAfterDays).
+    if [ "$1" -gt 3650 ]; then
+        _agentvm_refuse 2 "$1 days is more than agent-vm keeps sessions for: at most 3650."
+        return 2
+    fi
+    agentvm_json store sessions --discard-after "$1" >/dev/null
+}
+
+# agentvm_restore_remove <name>  ->  0 once agent-vm deleted that restore image from its cache,
+# with any partial download of it; prints the bytes freed. agent-vm refuses while a download runs
+# or a job that downloads or installs a restore image runs or waits. The name is an argument: a
+# plain file name ending in .ipsw, not starting with "." or "-".
+agentvm_restore_remove() {
+    case "$1" in
+        *.ipsw) ;;
+        *) _agentvm_refuse 2 "\"$1\" is not a restore image name."; return 2 ;;
+    esac
+    case "$1" in
+        */*|.*|-*) _agentvm_refuse 2 "\"$1\" is not a restore image name."; return 2 ;;
+    esac
+    local _json
+    _json="$(agentvm_json image fetch-ipsw --remove "$1")"
+    local _status=$?
+    [ "$_status" -eq 0 ] || return "$_status"
+    printf '%s\n' "$_json" | /usr/bin/jq -r '.bytes // 0' 2>/dev/null
+    return 0
+}
+
+
 # -- Jobs ----------------------------------------------------------------------------------------
 # What takes longer than a handler may wait (starting or stopping a box, building or updating an
 # image, a download) runs as an agent-vm job: a detached process that outlives the handler, the
