@@ -983,6 +983,12 @@ agentvm_session_rows() {
            .usage.bytes, .usage.ownBytes, .usage.measuredAt] | row'
 }
 
+# agentvm_session_discarded_rows  <  session list JSON  ->  one row per discarded session (whose
+# record stays): project, startSeconds, endedAt, undoneAt.
+agentvm_session_discarded_rows() {
+    /usr/bin/jq -r "$agentvm_jq_defs"' .[] | select(.state == "discarded") | [.project, .startSeconds, .endedAt, .undoneAt] | row'
+}
+
 # agentvm_session_usage  ->  `session usage --json`: measures every session that is not discarded
 # (about a second per 100,000 files in the snapshots, longer on a Mac with local Time Machine
 # snapshots), keeps the result in the store, and prints it.

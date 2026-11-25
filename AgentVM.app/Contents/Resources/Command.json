@@ -211,6 +211,19 @@
     },
     {
       "NAME": "AgentVM",
+      "COMMAND_ID": "AgentVM.discard",
+      "ACTIVATION_MODE": "act_always",
+      "EXECUTION_MODE": "exe_script_file",
+      "ACTIONUI_WINDOW": {
+        "JSON_NAME": "AgentVM.discard",
+        "IS_BLOCKING": false,
+        "WINDOW_TITLE": "Discard Sessions",
+        "INIT_SUBCOMMAND_ID": "AgentVM.discard.init",
+        "END_CANCEL_SUBCOMMAND_ID": "AgentVM.discard.close"
+      }
+    },
+    {
+      "NAME": "AgentVM",
       "COMMAND_ID": "AgentVM.recreate",
       "ACTIVATION_MODE": "act_always",
       "EXECUTION_MODE": "exe_script_file",

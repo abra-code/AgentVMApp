@@ -324,7 +324,7 @@ check "a project with an active session is not removed: an alert says why, and n
     "$(ui_alert_title)|$(ui_alert_message | /usr/bin/grep -c 'Remove it from the list once its session has ended')|$(pending)|$(discards)"
 remove_project "/Users/you/src/zeta"
 check "a project with an ended session: asks, saying the sessions are discarded and the folder stays" \
-    "Remove zeta from the list?|1 session of zeta: their snapshots, and what an undo kept, are deleted; what they hold only together is not known: they were not measured. Undo is no longer possible for them; their records and reports stay in agent-vm session list. The project folder itself is not touched." \
+    "Remove zeta from the list?|1 session of zeta: their snapshots, and what an undo kept, are deleted; what they hold only together is not known: they were not measured. Undo is no longer possible for them; their records and reports stay in agent-vm session list. The project folder itself is not touched. The project comes back to the list with its next session." \
     "$(ui_alert_title)|$(ui_alert_message)"
 check "  Remove goes on; nothing is discarded yet" "AgentVM.main.session.remove.confirmed|/Users/you/src/zeta|" \
     "$(ui_alert_action Remove)|$(pending)|$(discards)"
@@ -344,7 +344,7 @@ omc_run AgentVM.main.session.remove.confirmed
 check "  a second Remove without a question does nothing" "session discard 20261125-040000-aaaa --json" "$(discards)"
 remove_project "/Users/you/src/alpha"
 check "a project with only a saved list: the question says the list is cleared" \
-    "Remove alpha from the list?|Its list of folders left out of snapshots is cleared. The project folder itself is not touched." \
+    "Remove alpha from the list?|Its list of folders left out of snapshots is cleared. The project folder itself is not touched. The project comes back to the list with its next session." \
     "$(ui_alert_title)|$(ui_alert_message)"
 omc_run AgentVM.main.session.remove.confirmed
 check "  Remove clears the list, and its card goes, with the selection" \
@@ -355,12 +355,57 @@ omc_dialog_answer choose_folder "$ADDED"
 omc_run AgentVM.main.session.project.add
 remove_project "$ADDED"
 check "a project added with the plus button: the question says only that the folder stays" \
-    "Remove newapp from the list?|The project folder itself is not touched." "$(ui_alert_title)|$(ui_alert_message)"
+    "Remove newapp from the list?|The project folder itself is not touched. The project comes back to the list with its next session." "$(ui_alert_title)|$(ui_alert_message)"
 : > "$FAKE_AGENTVM_DIR/log"
 omc_run AgentVM.main.session.remove.confirmed
 check "  Remove takes its card off, and runs no agent-vm but to read the list again" \
     "0||session list --json|session exclusions --json" \
     "$(ui_rows "$SES_PROJECTS_ID" | /usr/bin/awk -F'\t' -v p="$ADDED" '$1 == p' | /usr/bin/grep -c .)|$(selected)|$(fake_log | /usr/bin/paste -sd '|' -)"
+
+section "a project whose sessions are all discarded"
+KEPT="$OMCTEST_WORK/projects/keptapp"
+/bin/mkdir -p "$KEPT"
+# write_discarded [later start]  ->  keptapp (its folder is there) and gone (it is not) have only
+# discarded sessions; with a start, keptapp has another one, started then.
+write_discarded() {
+    /usr/bin/jq --arg kept "$KEPT" --arg later "${1:-}" '. + [
+        {"endedAt": "2026-11-20T10:00:00Z", "formatVersion": 1, "id": "20261120-050000-cccc", "project": $kept, "startSeconds": 1795150000, "state": "discarded"},
+        {"endedAt": "2026-11-21T10:00:00Z", "formatVersion": 1, "id": "20261121-050000-dddd", "project": "/Users/you/src/gone", "startSeconds": 1795236000, "state": "discarded"}]
+        + (if $later == "" then [] else [{"endedAt": "2026-11-26T10:00:00Z", "formatVersion": 1, "id": "20261126-050000-eeee", "project": $kept, "startSeconds": ($later | tonumber), "state": "discarded"}] end)' \
+        "$FIXTURES_AGENTVM/session-list.json" > "$FAKE_AGENTVM_DIR/session-list.json"
+}
+now_after 1
+open_window
+write_discarded
+open_tab 2
+check "its folder is there: it keeps its card, with when its last session ended; one whose folder is gone has none" \
+    "1|Nov 20 10:00|all sessions discarded|0" \
+    "$(ui_rows "$SES_PROJECTS_ID" | /usr/bin/awk -F'\t' -v p="$KEPT" '$1 == p' | /usr/bin/grep -c .)|$(ui_rows "$SES_PROJECTS_ID" | /usr/bin/awk -F'\t' -v p="$KEPT" '$1 == p { print $5 "|" $3 }')|$(cards | /usr/bin/grep -c 'gone=')"
+remove_project "$KEPT"
+check "  its pane: nothing to discard" "nothing to discard: its sessions are discarded" "$(ui_value "$SES_SPACE_ID")"
+check "  Remove asks, with nothing to discard" "Remove keptapp from the list?|The project folder itself is not touched. The project comes back to the list with its next session." \
+    "$(ui_alert_title)|$(ui_alert_message)"
+: > "$FAKE_AGENTVM_DIR/log"
+omc_run AgentVM.main.session.remove.confirmed
+check "  Remove: its card goes, for good, kept in the app's list with the time; nothing is discarded" \
+    "0|$AGENTVM_APP_NOW${TAB}$KEPT|" \
+    "$(ui_rows "$SES_PROJECTS_ID" | /usr/bin/awk -F'\t' -v p="$KEPT" '$1 == p' | /usr/bin/grep -c .)|$(/usr/bin/grep "keptapp$" "$HOME/Library/Application Support/AgentVM/sessions-removed")|$(discards)"
+open_window
+write_discarded
+open_tab 2
+check "  a new window does not show it either" "0" "$(ui_rows "$SES_PROJECTS_ID" | /usr/bin/awk -F'\t' -v p="$KEPT" '$1 == p' | /usr/bin/grep -c .)"
+omc_dialog_answer choose_folder "$KEPT"
+omc_run AgentVM.main.session.project.add
+open_window
+write_discarded
+open_tab 2
+check "  added again with the plus button: no longer kept as removed, so a new window shows it" "1|" \
+    "$(ui_rows "$SES_PROJECTS_ID" | /usr/bin/awk -F'\t' -v p="$KEPT" '$1 == p' | /usr/bin/grep -c .)|$(/usr/bin/grep "keptapp$" "$HOME/Library/Application Support/AgentVM/sessions-removed")"
+remove_project "$KEPT"
+omc_run AgentVM.main.session.remove.confirmed
+write_discarded $((AGENTVM_APP_NOW + 60))
+omc_run AgentVM.main.session.measure
+check "  a session started after Remove brings it back" "1" "$(ui_rows "$SES_PROJECTS_ID" | /usr/bin/awk -F'\t' -v p="$KEPT" '$1 == p' | /usr/bin/grep -c .)"
 "$OMC_OMC_SUPPORT_PATH/pasteboard" agentvm_sessions_sort set ""
 
 omctest_end

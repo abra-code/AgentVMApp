@@ -17,10 +17,14 @@
 # with one another, so the project is where the figures are honest. A card's first column is the
 # project's path: a list keeps its selection by the first column, and the path is what the
 # pasteboard value "session-project" holds. The cards are the projects with a session that is not
-# discarded, those with a saved list of exclusions, and those added with the plus button in the
+# discarded, those with a saved list of exclusions, those added with the plus button in the
 # toolbar (kept while the window is open), so a project with no session yet can have its
-# exclusions chosen. The sort menu in the toolbar orders them by size, largest "to free" first
-# (the order `session usage` gives), or by date, the latest session end first.
+# exclusions chosen, and those whose sessions are all discarded while the folder is still there
+# (agent-vm keeps their records). Remove, the trash button under the cards, takes a project off
+# for good: it is kept in the app's list of removed projects (ses_removed_file) with the time, and
+# comes back with a session started after that, or when added again with the plus button. The
+# sort menu in the toolbar orders them by size, largest "to free" first (the order `session usage`
+# gives), or by date, the latest session end first.
 #
 # READING. `session usage` measures (seconds to tens of seconds for a large store), so it runs
 # only when the tab is opened and the kept measurement is stale (older than SES_MEASURE_HOURS,
@@ -62,7 +66,7 @@ SES_REVEAL_ID=746
 SES_REMOVE_ID=748
 SES_DISCARD_ID=732
 SES_DISCARD_ALL_ID=733
-SES_OLDER_ID=742
+SES_DISCARD_WINDOW_ID=742
 SES_RESTORE_ID=761
 SES_RESTORE_SHOW_ID=762
 SES_RESTORE_REMOVE_ID=763
@@ -77,8 +81,6 @@ SES_NUDGE_TEXT_ID=791
 SES_NUDGE_BYTES=10000000000
 # The ages the expiry picker in Settings offers, in days; 0: never.
 SES_EXPIRY_CHOICES="14 30 60 0"
-# The two ages Discard Older Than... offers, in days.
-SES_OLDER_DAYS="7 30"
 # Free space before and after a discard (a seam for the tests).
 ses_df_tool="${AGENTVM_APP_DF:-/bin/df}"
 # A kept measurement older than this is taken again when the tab is opened.
@@ -241,15 +243,40 @@ ses_added_projects() {
 }
 
 # ses_add_project <uuid> <folder>  ->  the folder becomes a card of that window, selected, and the
-# tab is painted again. The folder is checked here: it came from the folder panel.
+# tab is painted again; a project removed before is no longer kept as removed. The folder is
+# checked here: it came from the folder panel.
 ses_add_project() {
     agentvm_valid_project "$2" || return 0
+    ses_unmark_removed "$2"
     {
         ses_added_projects "$1" | SES_PROJECT="$2" /usr/bin/awk '$0 != ENVIRON["SES_PROJECT"]'
         printf '%s\n' "$2"
     } | ui_store "$(ses_cache "$1" session-added)"
     ui_set session-project "$1" "$2"
     ses_paint "$1" force
+}
+
+# ses_removed_file  ->  the app's list of projects removed with the trash button: when (seconds
+# since the epoch), a tab, the path; a line per project.
+ses_removed_file() {
+    printf '%s\n' "$agentvm_support_dir/sessions-removed"
+}
+
+# ses_mark_removed <project>  ->  the project is kept as removed now, in place of an earlier time.
+ses_mark_removed() {
+    local _file="$(ses_removed_file)"
+    [ -d "$agentvm_support_dir" ] || /bin/mkdir -p "$agentvm_support_dir"
+    {
+        [ -f "$_file" ] && SES_PROJECT="$1" /usr/bin/awk -F'\t' 'NF > 1 && $2 != ENVIRON["SES_PROJECT"]' "$_file"
+        printf '%s\t%s\n' "$(main_now)" "$1"
+    } | ui_store "$_file"
+}
+
+# ses_unmark_removed <project>  ->  the project is no longer kept as removed.
+ses_unmark_removed() {
+    local _file="$(ses_removed_file)"
+    [ -f "$_file" ] || return 0
+    SES_PROJECT="$1" /usr/bin/awk -F'\t' 'NF > 1 && $2 != ENVIRON["SES_PROJECT"]' "$_file" | ui_store "$_file"
 }
 
 # ses_card_rows <uuid>  ->  one card per project (see the header): path, name, line, color, and
@@ -277,18 +304,45 @@ ses_card_rows() {
             if (end > last[$2]) last[$2] = end
         }
         END { for (i = 1; i <= n; i++) print order[i], ended[order[i]] + 0, active[order[i]] + 0, last[order[i]] }' > "$_projects"
-    # Every project, by path: those with sessions, those with a saved list, those added.
+    # Per project whose sessions are all discarded: the latest end and the latest start. Its card
+    # stays while its folder is there, unless it was removed and no session started since.
+    local _discarded="$(ses_cache "$_uuid" projects-discarded.tsv)"
+    local _list="$(ses_cache "$_uuid" session-list.json)"
+    {
+        [ -f "$_list" ] && agentvm_session_discarded_rows < "$_list"
+    } | SES_PROJECTS="$_projects" SES_REMOVED="$(ses_removed_file)" /usr/bin/awk -F'\t' -v OFS='\t' '
+        function iso(t) { return t ~ /^[0123456789][0123456789][0123456789][0123456789]-/ }
+        BEGIN {
+            while ((getline line < ENVIRON["SES_PROJECTS"]) > 0) { split(line, f, "\t"); kept[f[1]] = 1 }
+            while ((getline line < ENVIRON["SES_REMOVED"]) > 0) { split(line, f, "\t"); removed[f[2]] = f[1] + 0 }
+        }
+        NF == 0 || ($1 in kept) { next }
+        {
+            if (!($1 in seen)) { seen[$1] = 1; order[++n] = $1 }
+            end = (iso($3) ? $3 : (iso($4) ? $4 : ""))
+            if (end > last[$1]) last[$1] = end
+            if ($2 ~ /^[0123456789]+$/ && $2 + 0 > start[$1]) start[$1] = $2 + 0
+        }
+        END { for (i = 1; i <= n; i++) { p = order[i]; if (!(p in removed) || start[p] > removed[p]) print p, last[p] } }' \
+        | while IFS="$ui_tab" read -r _gone _gone_last; do
+            [ -d "$_gone" ] && printf '%s\t%s\n' "$_gone" "$_gone_last"
+        done > "$_discarded"
+    # Every project, by path: those with sessions, those with only discarded ones (as filtered
+    # above), those with a saved list, those added.
     local _exclusions="$(ses_cache "$_uuid" session-exclusions.tsv)"
     local _all="$( {
-        /usr/bin/cut -f1 "$_projects"
+        /usr/bin/cut -f1 "$_projects" "$_discarded"
         [ -f "$_exclusions" ] && /usr/bin/awk -F'\t' '$1 != "-" && NF > 1 { print $1 }' "$_exclusions"
         ses_added_projects "$_uuid"
     } | /usr/bin/awk 'NF && !seen[$0]++' | LC_ALL=C /usr/bin/sort)"
     local _order
     if [ "$(ses_sort)" = "date" ]; then
         # The key: the latest end; "9" (after any year) for only active sessions; "0" for none.
-        _order="$(printf '%s\n' "$_all" | SES_PROJECTS="$_projects" /usr/bin/awk -F'\t' -v OFS='\t' '
-            BEGIN { while ((getline line < ENVIRON["SES_PROJECTS"]) > 0) { split(line, f, "\t"); key[f[1]] = (f[4] != "" ? f[4] : (f[3] > 0 ? "9" : "0")) } }
+        _order="$(printf '%s\n' "$_all" | SES_PROJECTS="$_projects" SES_DISCARDED="$_discarded" /usr/bin/awk -F'\t' -v OFS='\t' '
+            BEGIN {
+                while ((getline line < ENVIRON["SES_PROJECTS"]) > 0) { split(line, f, "\t"); key[f[1]] = (f[4] != "" ? f[4] : (f[3] > 0 ? "9" : "0")) }
+                while ((getline line < ENVIRON["SES_DISCARDED"]) > 0) { split(line, f, "\t"); if (!(f[1] in key)) key[f[1]] = (f[2] != "" ? f[2] : "0") }
+            }
             NF { print (($0 in key) ? key[$0] : "0"), $0 }' | LC_ALL=C /usr/bin/sort -t "$ui_tab" -k1,1r -k2,2 | /usr/bin/cut -f2-)"
     else
         local _measured=""
@@ -305,10 +359,17 @@ ses_card_rows() {
         _ended=0
         _active=0
         _last=""
+        local _gone_only=""
         if [ -n "$_row" ]; then
             _ended="$(printf '%s\n' "$_row" | /usr/bin/cut -f2)"
             _active="$(printf '%s\n' "$_row" | /usr/bin/cut -f3)"
             _last="$(printf '%s\n' "$_row" | /usr/bin/cut -f4)"
+        else
+            _row="$(SES_PROJECT="$_project" /usr/bin/awk -F'\t' '$1 == ENVIRON["SES_PROJECT"]' "$_discarded")"
+            if [ -n "$_row" ]; then
+                _gone_only=1
+                _last="$(printf '%s\n' "$_row" | /usr/bin/cut -f2)"
+            fi
         fi
         local _ids="$(printf '%s\n' "$_rows" | SES_PROJECT="$_project" /usr/bin/awk -F'\t' '$2 == ENVIRON["SES_PROJECT"] && $3 != "active" { print $1 }' | /usr/bin/paste -sd ' ' -)"
         local _freed=""
@@ -319,7 +380,7 @@ ses_card_rows() {
         elif [ "$_active" -gt 0 ]; then
             _date="Active"
         fi
-        printf '%s\t%s\t%s\t%s\t%s\n' "$_project" "$(/usr/bin/basename "$_project")" "$(ses_card_line "$_ended" "$_active" "$_freed")" \
+        printf '%s\t%s\t%s\t%s\t%s\n' "$_project" "$(/usr/bin/basename "$_project")" "$(ses_card_line "$_ended" "$_active" "$_freed" "$_gone_only")" \
             "$(if [ -n "$_freed" ] && [ "$_freed" != "0" ]; then printf '%s' "$SES_CARD_COLOR"; else printf '%s' "$SES_CARD_IDLE_COLOR"; fi)" "$_date"
     done
 }
@@ -339,12 +400,17 @@ ses_card_date() {
     fi
 }
 
-# ses_card_line <ended and undone> <active> <bytes to free, or nothing when not measured>  ->
-# "2 sessions, about 1 MB to free", "1 active", "3 sessions, 1 active, not measured", and "no
-# sessions yet" for a project with none.
+# ses_card_line <ended and undone> <active> <bytes to free, or nothing when not measured>
+# [discarded]  ->  "2 sessions, about 1 MB to free", "1 active", "3 sessions, 1 active, not
+# measured"; for a project with none, "all sessions discarded" when it had some (the fourth
+# argument not empty), "no sessions yet" otherwise.
 ses_card_line() {
     if [ "$1" -eq 0 ] && [ "$2" -eq 0 ]; then
-        printf 'no sessions yet\n'
+        if [ -n "${4:-}" ]; then
+            printf 'all sessions discarded\n'
+        else
+            printf 'no sessions yet\n'
+        fi
         return 0
     fi
     local _line=""
@@ -489,7 +555,7 @@ ses_paint() {
     local _key="$( { /bin/cat "$(ses_cache "$_uuid" session-list.json)" "$(ses_cache "$_uuid" session-usage.json)" \
         "$(ses_cache "$_uuid" sessions.tsv)" "$(ses_cache "$_uuid" session-ticks)" "$(ses_cache "$_uuid" session-error)" \
         "$(ses_cache "$_uuid" session-list-error)" "$(ses_cache "$_uuid" session-exclusions.tsv)" \
-        "$(ses_cache "$_uuid" session-added)" 2>/dev/null
+        "$(ses_cache "$_uuid" session-added)" "$(ses_removed_file)" 2>/dev/null
         printf '%s\n%s\n%s\n' "$(ui_get session-project "$_uuid")" "$(/bin/date -r "$(main_now)" '+%Y-%m-%d')" "$(ses_sort)"; } | /usr/bin/cksum)"
     local _painted="$(ses_cache "$_uuid" session-painted)"
     local _was="$(/bin/cat "$_painted" 2>/dev/null)"
@@ -520,9 +586,9 @@ ses_paint() {
     "$dialog" "$_uuid" "$SES_NOTE_ID" "$(/bin/cat "$(ses_cache "$_uuid" session-error)" "$(ses_cache "$_uuid" session-list-error)" 2>/dev/null | /usr/bin/awk 'NF')"
     local _ended="$(ses_status_row "$_uuid" | /usr/bin/awk -F'\t' '{ print $2 + $3 }')"
     if [ "${_ended:-0}" -gt 0 ]; then
-        ui_enable "$_uuid" "$SES_OLDER_ID" 1
+        ui_enable "$_uuid" "$SES_DISCARD_WINDOW_ID" 1
     else
-        ui_enable "$_uuid" "$SES_OLDER_ID" 0
+        ui_enable "$_uuid" "$SES_DISCARD_WINDOW_ID" 0
     fi
     ses_paint_detail "$_uuid"
 }
@@ -570,13 +636,24 @@ ses_paint_detail() {
     ses_paint_buttons "$_uuid" "$_project"
 }
 
+# ses_card_field <uuid> <project> <column>  ->  that column of the project's card as painted.
+ses_card_field() {
+    SES_PROJECT="$2" /usr/bin/awk -F'\t' -v c="$3" '$1 == ENVIRON["SES_PROJECT"] { print $c }' "$(ses_cache "$1" session-cards.tsv)" 2>/dev/null
+}
+
 # ses_space_text <uuid> <project>  ->  what discarding all its ended and undone sessions frees.
 ses_space_text() {
     local _ids="$(ses_session_rows "$1" | SES_PROJECT="$2" /usr/bin/awk -F'\t' '$2 == ENVIRON["SES_PROJECT"] && $3 != "active" { print $1 }' | /usr/bin/paste -sd ' ' -)"
     if [ -z "$_ids" ]; then
         local _active="$(ses_session_rows "$1" | SES_PROJECT="$2" /usr/bin/awk -F'\t' '$2 == ENVIRON["SES_PROJECT"]' | /usr/bin/awk 'END { print NR }')"
         case "$_active" in
-            0) printf 'nothing to discard: no session yet\n' ;;
+            0)
+                local _line="$(ses_card_field "$1" "$2" 3)"
+                if [ "$_line" = "all sessions discarded" ]; then
+                    printf 'nothing to discard: its sessions are discarded\n'
+                else
+                    printf 'nothing to discard: no session yet\n'
+                fi ;;
             1) printf 'nothing to discard: its only session is active\n' ;;
             *) printf 'nothing to discard: its sessions are active\n' ;;
         esac
@@ -666,7 +743,7 @@ ses_remove_ask() {
     local _text=""
     [ -n "$_ids" ] && _text="$(ses_question "$_uuid" "$_ids" "$_name") "
     ses_has_exclusions "$_uuid" "$_project" && _text="${_text}Its list of folders left out of snapshots is cleared. "
-    _text="${_text}The project folder itself is not touched."
+    _text="${_text}The project folder itself is not touched. The project comes back to the list with its next session."
     ui_set session-remove "$_uuid" "$_project"
     "$dialog" "$_uuid" omc_window omc_present_alert "Remove $_name from the list?" "$_text" \
         "Cancel:cancel:" "Remove:destructive:AgentVM.main.session.remove.confirmed"
@@ -689,6 +766,8 @@ ses_remove() {
         return 0
     fi
     local _name="$(/usr/bin/basename "$_project")"
+    # Kept as removed first: once its sessions are discarded, their records would keep its card.
+    ses_mark_removed "$_project"
     ses_added_projects "$_uuid" | SES_PROJECT="$_project" /usr/bin/awk '$0 != ENVIRON["SES_PROJECT"]' | ui_store "$(ses_cache "$_uuid" session-added)"
     if ses_has_exclusions "$_uuid" "$_project"; then
         agentvm_session_exclusions_set "$_project" > /dev/null
@@ -784,26 +863,30 @@ ses_free_bytes() {
     "$ses_df_tool" -k "$_root" 2>/dev/null | /usr/bin/awk 'NR == 2 && $4 ~ /^[0123456789]+$/ { printf "%.0f\n", $4 * 1024 }'
 }
 
-# ses_question <uuid> <ids> <whose>  ->  the message of the question before a discard: how many,
-# what it frees, and that undo ends for them.
-ses_question() {
-    local _count="$(printf '%s\n' "$2" | /usr/bin/awk '{ print NF }')"
+# ses_space_phrase <uuid> <ids>  ->  what discarding those sessions frees, as a phrase: about how
+# much, nothing now, or not known when one of them was not measured.
+ses_space_phrase() {
     local _freed="$(ses_held_rows "$1" | agentvm_held_freed "$2")"
-    local _space="what they hold only together is not known: they were not measured"
     local _usage="$(ses_cache "$1" session-usage.json)"
     # A session the measurement does not have (it ended after it, so neither its sessions nor its
     # holder table name it) would count as freeing nothing.
     local _unmeasured=""
     [ -f "$_usage" ] && _unmeasured="$(/usr/bin/jq -r --arg ids "$2" '([.sessions[]?.id] + [.held[]?.sessions[]?]) as $known | $ids | split(" ") | map(select(. != "" and (. as $id | $known | index($id) | not))) | .[]' "$_usage" 2>/dev/null)"
-    if [ -f "$_usage" ] && [ -z "$_unmeasured" ]; then
-        if [ "$_freed" = "0" ]; then
-            _space="this frees nothing now: what they hold is held by other sessions or by the project too"
-        else
-            _space="this frees about $(ui_size_text "$_freed") once macOS has removed its local Time Machine snapshots"
-        fi
+    if [ ! -f "$_usage" ] || [ -n "$_unmeasured" ]; then
+        printf 'what they hold only together is not known: they were not measured\n'
+    elif [ "$_freed" = "0" ]; then
+        printf 'this frees nothing now: what they hold is held by other sessions or by the project too\n'
+    else
+        printf 'this frees about %s once macOS has removed its local Time Machine snapshots\n' "$(ui_size_text "$_freed")"
     fi
+}
+
+# ses_question <uuid> <ids> <whose>  ->  the message of the question before a discard: how many,
+# what it frees, and that undo ends for them.
+ses_question() {
+    local _count="$(printf '%s\n' "$2" | /usr/bin/awk '{ print NF }')"
     printf '%s of %s: their snapshots, and what an undo kept, are deleted; %s. Undo is no longer possible for them; their records and reports stay in agent-vm session list.\n' \
-        "$(main_count_text "$_count" session)" "$3" "$_space"
+        "$(main_count_text "$_count" session)" "$3" "$(ses_space_phrase "$1" "$2")"
 }
 
 # ses_ask <uuid> <ids> <whose>  ->  the question before discarding those sessions; Discard goes on
@@ -916,11 +999,21 @@ ses_discard() {
 }
 
 # ses_older_ids <uuid> <days> [undo]  ->  the ended and undone sessions, of every project, that
-# ended that many days ago or earlier (a session with no end counts from its start), as agent-vm's
-# `session discard --older-than` takes them. With "undo", an undone session counts from its undo
-# when that is later, as the store's expiry (`store sessions --discard-after`) takes them.
+# ended that many days ago or earlier, as agent-vm's `session discard --older-than` takes them
+# (ses_ended_by_ids).
 ses_older_ids() {
-    local _cutoff=$(( $(main_now) - $2 * 86400 ))
+    ses_ended_by_ids "$1" $(( $(main_now) - $2 * 86400 )) "${3:-}"
+}
+
+# ses_ended_by_ids <uuid> <seconds since the epoch> [undo]  ->  the ended and undone sessions, of
+# every project, that ended at that time or earlier (a session with no end counts from its
+# start), separated by spaces. With "undo", an undone session counts from its undo when that is
+# later, as the store's expiry (`store sessions --discard-after`) takes them.
+ses_ended_by_ids() {
+    local _cutoff="$2"
+    case "$_cutoff" in
+        ''|*[!0123456789]*) return 0 ;;
+    esac
     local _from_undo="${3:-}"
     local _id _project _state _started _ended _undone _rest
     ses_session_rows "$1" | while IFS="$ui_tab" read -r _id _project _state _started _ended _undone _rest; do
@@ -939,55 +1032,6 @@ ses_older_ids() {
         esac
         [ "$_when" -le "$_cutoff" ] && printf '%s\n' "$_id"
     done | /usr/bin/paste -sd ' ' -
-}
-
-# ses_older_ask <uuid>  ->  the question of Discard Older Than...: for each age offered, how many
-# sessions ended that long ago and what discarding them frees; a button per age that has any.
-ses_older_ask() {
-    local _uuid="$1"
-    local _text="" _buttons="" _days
-    local _usage="$(ses_cache "$_uuid" session-usage.json)"
-    for _days in $SES_OLDER_DAYS; do
-        local _ids="$(ses_older_ids "$_uuid" "$_days")"
-        local _count="$(printf '%s\n' "$_ids" | /usr/bin/awk '{ print NF }')"
-        local _part="ended $_days days ago or earlier: $(main_count_text "$_count" session)"
-        if [ "$_count" -gt 0 ] && [ -f "$_usage" ]; then
-            _part="$_part, about $(ui_size_text "$(ses_held_rows "$_uuid" | agentvm_held_freed "$_ids")") to free"
-        fi
-        [ -n "$_text" ] && _text="$_text; "
-        _text="$_text$_part"
-        [ "$_count" -gt 0 ] && _buttons="$_buttons $_days"
-        # What the question names for this age is what its button discards (ses_older).
-        ui_set "session-older-$_days" "$_uuid" "$_ids"
-    done
-    if [ -z "$_buttons" ]; then
-        main_alert "$_uuid" "No session ended that long ago" "Sessions $_text."
-        return 0
-    fi
-    # One button per age with sessions, each with its own action: the alert passes no value. The
-    # actions are spelled out, so the wiring test sees each one with its script.
-    set -- "Cancel:cancel:"
-    for _days in $_buttons; do
-        case "$_days" in
-            7) set -- "$@" "Older Than 7 Days:destructive:AgentVM.main.session.older.7" ;;
-            30) set -- "$@" "Older Than 30 Days:destructive:AgentVM.main.session.older.30" ;;
-        esac
-    done
-    "$dialog" "$_uuid" omc_window omc_present_alert "Discard the sessions that ended long ago?" \
-        "Sessions $_text. Their snapshots are deleted; undo is no longer possible for them, and their records and reports stay. Active sessions are never discarded." "$@"
-}
-
-# ses_older <uuid> <days>  ->  discards the sessions the question of Discard Older Than... named for
-# that age (kept when it asked: sessions that crossed the line since, or were listed since, are
-# not taken), through ses_discard; the ids of every age are then forgotten.
-ses_older() {
-    local _ids="$(ui_get "session-older-$2" "$1")"
-    local _days
-    for _days in $SES_OLDER_DAYS; do
-        ui_set "session-older-$_days" "$1" ""
-    done
-    [ -n "$_ids" ] || return 0
-    ses_discard "$1" "$_ids"
 }
 
 # -- Settings: the Sessions group and the macOS restore images row ----------------------------

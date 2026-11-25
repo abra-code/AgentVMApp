@@ -21,8 +21,8 @@ ui_set logs_hold "$window_uuid" ""
 ui_set session-project "$window_uuid" ""
 ui_set session-discard "$window_uuid" ""
 ui_set session-remove "$window_uuid" ""
-ui_set session-older-7 "$window_uuid" ""
-ui_set session-older-30 "$window_uuid" ""
 ui_set session-expiry "$window_uuid" ""
 ui_set restore-remove "$window_uuid" ""
+# The Discard Sessions window works from this window's cache.
+ui_item_close discard window
 ui_cache_clear "$window_uuid"

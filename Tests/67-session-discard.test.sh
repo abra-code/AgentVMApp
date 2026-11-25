@@ -3,7 +3,8 @@
 # and Discard All Ended... (on only when there is something to discard), the question (how many,
 # what it frees, that undo ends), the discard itself (one call with the ids, the free space before
 # and after, the ticks and the window's measurement without them), the Time Machine sentence when
-# the free space rose much less than expected, a refusal, and Discard Older Than... with its ages.
+# the free space rose much less than expected, a refusal, and the Discard Sessions window opened
+# from the toolbar (the sessions that ended before a day, or all of them).
 #
 # agent-vm is the fake, as in 34-sessions.test.sh; df is fake_df.sh.
 #
@@ -11,8 +12,9 @@
 . "${OMCTEST_LIB:?set OMCTEST_LIB, or run via: appletbuilder test}"
 . "$OMCTEST_TESTS/lib.test.agentvm.sh"
 
-import_view_ids "$APP_SCRIPTS/lib.agentvm.main.sh" "$APP_SCRIPTS/lib.agentvm.sessions.sh"
-[ -n "$SES_DISCARD_ID" ] && [ -n "$SES_DISCARD_ALL_ID" ] && [ -n "$SES_OLDER_ID" ] && [ -n "$SES_TABLE_ID" ] || {
+import_view_ids "$APP_SCRIPTS/lib.agentvm.main.sh" "$APP_SCRIPTS/lib.agentvm.sessions.sh" "$APP_SCRIPTS/lib.agentvm.discard.sh"
+[ -n "$SES_DISCARD_ID" ] && [ -n "$SES_DISCARD_ALL_ID" ] && [ -n "$SES_DISCARD_WINDOW_ID" ] && [ -n "$SES_TABLE_ID" ] \
+    && [ -n "$DSC_CHOICE_ID" ] && [ -n "$DSC_DATE_ID" ] && [ -n "$DSC_SUMMARY_ID" ] && [ -n "$DSC_GO_ID" ] || {
     printf '67-session-discard: no view ids imported from the libraries\n' >&2
     exit 1
 }
@@ -69,8 +71,8 @@ discards() {
 
 section "the buttons"
 open_project
-check "nothing ticked: Discard Ticked... off; the project has ended sessions: Discard All Ended... and Discard Older Than... on" "0|1|1" \
-    "$(on "$SES_DISCARD_ID")|$(on "$SES_DISCARD_ALL_ID")|$(on "$SES_OLDER_ID")"
+check "nothing ticked: Discard Ticked... off; the project has ended sessions: Discard All Ended... and Discard Sessions... on" "0|1|1" \
+    "$(on "$SES_DISCARD_ID")|$(on "$SES_DISCARD_ALL_ID")|$(on "$SES_DISCARD_WINDOW_ID")"
 tick 0
 check "one ticked: Discard Ticked... on" "1" "$(on "$SES_DISCARD_ID")"
 
@@ -151,27 +153,84 @@ ACTIVE="$(printf '%s\n' "$ROWS" | /usr/bin/awk -F'\t' 'NR == 3 { print $1 }')"
 omc_run AgentVM.main.session.discard.confirmed
 check "an active session is never sent to agent-vm, whatever named it" "session discard $ENDED1 --json" "$(discards)"
 
-section "Discard Older Than..."
+section "the Discard Sessions window"
+PB="$OMC_OMC_SUPPORT_PATH/pasteboard"
+APP_PID="${OMC_APP_PROCESS_ID:?67-session-discard: OMC_APP_PROCESS_ID is not set}"
+MAIN_UUID="$OMC_ACTIONUI_WINDOW_UUID"
+UUID="OMCTEST-discard-$$"
+OTHER_UUID="OMCTEST-other-discard-$$"
+in_window() {
+    OMC_ACTIONUI_WINDOW_UUID="$1"
+    ACTIONUI_WINDOW_UUID="$1"
+    export OMC_ACTIONUI_WINDOW_UUID ACTIONUI_WINDOW_UUID
+}
+closed() { ui_calls "${1}${TAB}omc_window${TAB}omc_terminate_cancel"; }
+# open_discard [uuid]  ->  the window opened the way the toolbar button opens it: the request, then
+# the window's init handler, in a window of its own.
+open_discard() {
+    "$PB" agentvm_open_request_discard set "$APP_PID discard:window"
+    in_window "${1:-$UUID}"
+    omc_control_defaults AgentVM.discard
+    omc_run AgentVM.discard.init
+}
+choose() {
+    omc_control "$DSC_CHOICE_ID" "$1"
+    omc_trigger "$DSC_CHOICE_ID"
+    omc_run AgentVM.discard.choice
+}
+day() {
+    omc_control "$DSC_DATE_ID" "$1"
+    omc_trigger "$DSC_DATE_ID"
+    omc_run AgentVM.discard.date
+}
+"$PB" agentvm_window_discard_window set ""
 open_project
 alerts_reset
-AGENTVM_APP_NOW=$((MEASURED_SECONDS + 10 * 86400))
-export AGENTVM_APP_NOW
 omc_run AgentVM.main.session.older
-check "ten days on: both ended sessions ended 7 days ago or earlier, none 30" "Discard the sessions that ended long ago?|1|1" \
-    "$(ui_alert_title)|$(ui_alert_message | /usr/bin/grep -c 'Sessions ended 7 days ago or earlier: 2 sessions, about 1 MB to free; ended 30 days ago or earlier: 0 sessions. Their')|$(ui_alert_message | /usr/bin/grep -c 'Active sessions are never discarded.')"
-check "  a button for 7 days only" "AgentVM.main.session.older.7|" \
-    "$(ui_alert_action 'Older Than 7 Days')|$(ui_alert_action 'Older Than 30 Days')"
+check "the toolbar button asks for the window" "$APP_PID discard:window" "$("$PB" agentvm_open_request_discard get)"
+DEFAULT_DAY="$(/bin/date -u -r $((AGENTVM_APP_NOW - 30 * 86400)) '+%Y-%m-%d')"
+open_discard
+check "it opens on the sessions that ended before a day 30 days ago, of which there are none: Discard off" \
+    "0|before|$DEFAULT_DAY|1|No session ended before $(/bin/date -u -j -f '%Y-%m-%d' "$DEFAULT_DAY" '+%b %e %Y' | /usr/bin/sed 's/  / /').|0" \
+    "$(closed "$UUID")|$(ui_value "$DSC_CHOICE_ID")|$(ui_value "$DSC_DATE_ID")|$(on "$DSC_DATE_ID")|$(ui_value "$DSC_SUMMARY_ID")|$(on "$DSC_GO_ID")"
+choose all
+check "all: both ended sessions of the one project, never the active one; the day is off" \
+    "2 sessions of 1 project: this frees about 1 MB once macOS has removed its local Time Machine snapshots.|1|0" \
+    "$(ui_value "$DSC_SUMMARY_ID")|$(on "$DSC_GO_ID")|$(on "$DSC_DATE_ID")"
+choose before
+day 2026-11-25
+check "ended before the day they ended: none" "No session ended before Nov 25 2026.|0" "$(ui_value "$DSC_SUMMARY_ID")|$(on "$DSC_GO_ID")"
+day 2026-11-26T00:00:00
+check "ended before the day after: both (a date and time is taken as its day)" "2 sessions of 1 project|1" \
+    "$(ui_value "$DSC_SUMMARY_ID" | /usr/bin/cut -d: -f1)|$(on "$DSC_GO_ID")"
+day "not a day"
+check "  what is not a day changes nothing" "2 sessions of 1 project" "$(ui_value "$DSC_SUMMARY_ID" | /usr/bin/cut -d: -f1)"
+open_discard "$OTHER_UUID"
+check "a second window while one is open: the open one comes to the front, the new one closes" "1|1" \
+    "$(ui_calls "${UUID}${TAB}omc_window${TAB}omc_select")|$(closed "$OTHER_UUID")"
+in_window "$UUID"
+"$PB" "agentvm_discard-ids_$UUID" set "20260101-000000-zzzz"
+: > "$FAKE_AGENTVM_DIR/log"
+omc_run AgentVM.discard.go
+check "Discard takes only the sessions the line counted: none of them left, nothing is discarded, the window stays and is painted again" \
+    "0||2 sessions of 1 project" "$(closed "$UUID")|$(discards)|$(ui_value "$DSC_SUMMARY_ID" | /usr/bin/cut -d: -f1)"
 printf '20000000\n21024000\n' > "$FAKE_DF_FILE"
-omc_run AgentVM.main.session.older.7
-check "  Older Than 7 Days discards both, never the active one" "session discard $ENDED1 $ENDED2 --json" "$(discards)"
-omc_run AgentVM.main.session.older.7
-check "  pressed again: the question's ids are forgotten, nothing more is discarded" "1" "$(discards | /usr/bin/tr '|' '\n' | /usr/bin/grep -c .)"
-open_project
-alerts_reset
-AGENTVM_APP_NOW=$((MEASURED_SECONDS + 3600))
-export AGENTVM_APP_NOW
-omc_run AgentVM.main.session.older
-check "an hour on: no session ended that long ago, so nothing to choose" "No session ended that long ago|" \
-    "$(ui_alert_title)|$(ui_alert_action 'Older Than 7 Days')"
+: > "$FAKE_AGENTVM_DIR/log"
+omc_run AgentVM.discard.go
+check "Discard: the window closes, and both are discarded in one call" "1|session discard $ENDED1 $ENDED2 --json" \
+    "$(closed "$UUID")|$(discards)"
+check "  the main window says what was freed" "1" \
+    "$(ui_calls 'omc_present_toast.The sessions are discarded. Free space was 20.5 GB, now 21.5 GB..5')"
+omc_run AgentVM.discard.close
+check "  closed: no Discard Sessions window any more" "" "$("$PB" agentvm_window_discard_window get)"
+in_window "$UUID"
+: > "$FAKE_AGENTVM_DIR/log"
+omc_run AgentVM.discard.go
+check "  Discard in a window that is no longer one does nothing" "" "$(discards)"
+in_window "$OTHER_UUID"
+omc_control_defaults AgentVM.discard
+omc_run AgentVM.discard.init
+check "a window opened without a request closes again" "2" "$(closed "$OTHER_UUID")"
+in_window "$MAIN_UUID"
 
 omctest_end

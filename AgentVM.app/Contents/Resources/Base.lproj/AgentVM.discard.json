@@ -1,0 +1,124 @@
+{
+  "type": "VStack",
+  "properties": {
+    "alignment": "leading",
+    "spacing": 12,
+    "padding": 20,
+    "frame": {
+      "minWidth": 480,
+      "idealWidth": 540,
+      "minHeight": 240
+    }
+  },
+  "children": [
+    {
+      "type": "Text",
+      "properties": {
+        "text": "Discard the ended sessions of every project",
+        "font": "headline"
+      }
+    },
+    {
+      "type": "Text",
+      "properties": {
+        "text": "Discarding a session deletes its snapshot, and what an undo kept: undo is then no longer possible for it. Its record and report stay in agent-vm session list. Active sessions are never discarded.",
+        "foregroundStyle": "secondary",
+        "frame": {
+          "maxWidth": "infinity",
+          "alignment": "leading"
+        }
+      }
+    },
+    {
+      "type": "HStack",
+      "properties": {
+        "alignment": "top",
+        "spacing": 8
+      },
+      "children": [
+        {
+          "type": "Picker",
+          "id": 5402,
+          "properties": {
+            "title": "Which sessions",
+            "labelsHidden": true,
+            "pickerStyle": "radioGroup",
+            "options": [
+              {
+                "title": "Those that ended before",
+                "tag": "before"
+              },
+              {
+                "title": "All ended and undone sessions",
+                "tag": "all"
+              }
+            ],
+            "actionID": "AgentVM.discard.choice"
+          }
+        },
+        {
+          "type": "DatePicker",
+          "id": 5403,
+          "properties": {
+            "title": "Ended before",
+            "displayStyle": "stepperField",
+            "displayedComponents": "date",
+            "valueChangeActionID": "AgentVM.discard.date",
+            "help": "Sessions that ended before this day are discarded; a session that never ended counts from its start",
+            "labelsHidden": true
+          }
+        }
+      ]
+    },
+    {
+      "type": "Text",
+      "id": 5404,
+      "properties": {
+        "text": "",
+        "textSelection": "enabled",
+        "frame": {
+          "maxWidth": "infinity",
+          "alignment": "leading"
+        }
+      }
+    },
+    {
+      "type": "Spacer",
+      "properties": {
+        "minLength": 0
+      }
+    },
+    {
+      "type": "HStack",
+      "properties": {
+        "spacing": 8
+      },
+      "children": [
+        {
+          "type": "Spacer"
+        },
+        {
+          "type": "Button",
+          "id": 5405,
+          "properties": {
+            "title": "Cancel",
+            "role": "cancel",
+            "actionID": "AgentVM.discard.cancel"
+          }
+        },
+        {
+          "type": "Button",
+          "id": 5406,
+          "properties": {
+            "title": "Discard",
+            "role": "destructive",
+            "buttonStyle": "borderedProminent",
+            "disabled": true,
+            "actionID": "AgentVM.discard.go",
+            "help": "Discard the sessions chosen above"
+          }
+        }
+      ]
+    }
+  ]
+}
