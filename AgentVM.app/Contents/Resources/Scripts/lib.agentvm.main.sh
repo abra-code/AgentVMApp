@@ -1121,8 +1121,10 @@ main_paint_settings() {
     local _vms="$(main_vms_text "$_uuid" short)"
     "$dialog" "$_uuid" "$MAIN_VMS_ID" "${_vms:--}"
     local _disk="$(main_disk_text "$_uuid")"
+    [ -n "$_disk" ] && _disk="$_disk$(ses_disk_text "$_uuid")"
     "$dialog" "$_uuid" "$MAIN_DISK_ID" "${_disk:--}"
     main_paint_kept "$_uuid"
+    ses_paint_settings "$_uuid"
 }
 
 # What Get started says about Local Network access, while no image is ready: a first macOS image

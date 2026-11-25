@@ -490,10 +490,10 @@
                       ]
                     },
                     { "type": "Table", "id": 730, "properties": {
-                      "columns": ["", "Started", "State", "Ended", "Its own", "Shared", "On disk"],
+                      "columns": ["", "Started", "State", "Ended", "Its own", "Shared"],
                       "columnTypes": [ { "viewType": "Toggle", "style": "checkbox", "actionID": "AgentVM.main.session.tick", "disabledColumn": 9 } ],
-                      "widths": [28, 130, 70, 130, 90, 170, 90],
-                      "minWidths": [28, 90, 50, 90, 60, 80, 60],
+                      "widths": [24, 92, 64, 92, 70, 140],
+                      "minWidths": [24, 70, 44, 70, 50, 80],
                       "frame": { "maxWidth": "infinity", "minHeight": 140, "maxHeight": "infinity" }
                     } },
                     { "type": "HStack", "properties": { "spacing": 10 }, "children": [
@@ -573,7 +573,35 @@
                       { "type": "Divider", "properties": { "opacity": 0, "frame": { "height": 0 } } },
                       { "type": "Form", "children": [
                   { "type": "LabeledContent", "properties": { "title": "Virtual machines" }, "children": [ { "type": "Text", "id": 511, "properties": { "text": "", "textSelection": "enabled" } } ] },
-                  { "type": "LabeledContent", "properties": { "title": "Free disk space" }, "children": [ { "type": "Text", "id": 512, "properties": { "text": "", "textSelection": "enabled" } } ] }
+                  { "type": "LabeledContent", "properties": { "title": "Free disk space" }, "children": [ { "type": "Text", "id": 512, "properties": { "text": "", "textSelection": "enabled" } } ] },
+                  { "type": "LabeledContent", "properties": { "title": "macOS restore images" }, "children": [ { "type": "HStack", "properties": { "spacing": 8.0 }, "children": [
+                    { "type": "Text", "id": 761, "properties": { "text": "", "textSelection": "enabled" } },
+                    { "type": "Button", "id": 762, "properties": { "title": "Show in Finder", "controlSize": "small", "disabled": true, "actionID": "AgentVM.main.restore.show", "help": "Open the folder of the downloaded macOS restore images in Finder." } },
+                    { "type": "Button", "id": 763, "properties": { "title": "Remove...", "controlSize": "small", "disabled": true, "actionID": "AgentVM.main.restore.remove", "help": "Remove the macOS restore images agent-vm downloaded. Images and boxes made from them are not touched; a new macOS image then needs a new download (about 27 GB)." } }
+                  ] } ] }
+                      ] }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "GroupBox",
+                "properties": { "title": "Sessions" },
+                "children": [
+                  {
+                    "type": "VStack",
+                    "properties": { "alignment": "leading", "padding": 6.0, "frame": { "maxWidth": "infinity", "alignment": "leading" } },
+                    "children": [
+                      { "type": "Divider", "properties": { "opacity": 0, "frame": { "height": 0 } } },
+                      { "type": "Form", "children": [
+                  { "type": "LabeledContent", "properties": { "title": "Kept now" }, "children": [ { "type": "HStack", "properties": { "spacing": 8.0 }, "children": [
+                    { "type": "Text", "id": 771, "properties": { "text": "", "textSelection": "enabled" } },
+                    { "type": "Button", "id": 772, "properties": { "title": "Show", "controlSize": "small", "actionID": "AgentVM.main.session.show", "help": "Show the Sessions tab: what each project's sessions hold, and discarding them." } }
+                  ] } ] },
+                  { "type": "LabeledContent", "properties": { "title": "Discarded after" }, "children": [ { "type": "HStack", "properties": { "spacing": 8.0 }, "children": [
+                    { "type": "Picker", "id": 773, "properties": { "title": "Discarded after", "labelsHidden": true, "pickerStyle": "segmented", "options": [ { "title": "14 days", "tag": "14" }, { "title": "30 days", "tag": "30" }, { "title": "60 days", "tag": "60" }, { "title": "Never", "tag": "0" } ], "actionID": "AgentVM.main.session.expiry", "disabled": true, "frame": { "width": 300 }, "help": "After how many days agent-vm discards an ended session on its own, at the end of a later session (an undone one counts from its undo). Never: sessions stay until discarded by hand. It is a setting of the store, for Terminal and Cadabra too." } },
+                    { "type": "Text", "id": 774, "properties": { "text": "", "foregroundStyle": "secondary", "textSelection": "enabled" } }
+                  ] } ] }
                       ] }
                     ]
                   }

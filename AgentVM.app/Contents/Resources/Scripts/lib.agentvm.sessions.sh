@@ -51,6 +51,15 @@ SES_COUNTS_ID=752
 SES_DISCARD_ID=732
 SES_DISCARD_ALL_ID=733
 SES_OLDER_ID=742
+SES_RESTORE_ID=761
+SES_RESTORE_SHOW_ID=762
+SES_RESTORE_REMOVE_ID=763
+SES_KEPT_ID=771
+SES_SHOW_ID=772
+SES_EXPIRY_ID=773
+SES_EXPIRY_TEXT_ID=774
+# The ages the expiry picker in Settings offers, in days; 0: never.
+SES_EXPIRY_CHOICES="14 30 60 0"
 # The two ages Discard Older Than... offers, in days.
 SES_OLDER_DAYS="7 30"
 # Free space before and after a discard (a seam for the tests).
@@ -224,11 +233,11 @@ ses_table_rows() {
         local _started_text="-"
         case "$_started" in
             ''|*[!0123456789]*) ;;
-            *) _started_text="$(/bin/date -r "$_started" '+%b %e, %H:%M' | /usr/bin/sed 's/  / /')" ;;
+            *) _started_text="$(/bin/date -r "$_started" '+%b %e %H:%M' | /usr/bin/sed 's/  / /')" ;;
         esac
         local _ended_text="-"
         local _ended_seconds="$(ui_seconds_since_epoch "$_ended")"
-        [ -n "$_ended_seconds" ] && _ended_text="$(/bin/date -r "$_ended_seconds" '+%b %e, %H:%M' | /usr/bin/sed 's/  / /')"
+        [ -n "$_ended_seconds" ] && _ended_text="$(/bin/date -r "$_ended_seconds" '+%b %e %H:%M' | /usr/bin/sed 's/  / /')"
         local _state_text="$_state"
         [ "$_scope" = "git" ] && _state_text="$_state (git only)"
         local _own_text="-"
@@ -500,7 +509,8 @@ ses_question() {
     local _count="$(printf '%s\n' "$2" | /usr/bin/awk '{ print NF }')"
     local _freed="$(ses_held_rows "$1" | agentvm_held_freed "$2")"
     local _space="what they hold only together is not known: they were not measured"
-    if [ -f "$(ses_cache "$1" session-usage.json)" ]; then
+    local _usage="$(ses_cache "$1" session-usage.json)"
+    if [ -f "$_usage" ]; then
         if [ "$_freed" = "0" ]; then
             _space="this frees nothing now: what they hold is held by other sessions or by the project too"
         else
@@ -620,16 +630,25 @@ ses_discard() {
     return 0
 }
 
-# ses_older_ids <uuid> <days>  ->  the ended and undone sessions, of every project, that ended
-# that many days ago or earlier (a session with no end counts from its start), as agent-vm's
-# `session discard --older-than` takes them.
+# ses_older_ids <uuid> <days> [undo]  ->  the ended and undone sessions, of every project, that
+# ended that many days ago or earlier (a session with no end counts from its start), as agent-vm's
+# `session discard --older-than` takes them. With "undo", an undone session counts from its undo
+# when that is later, as the store's expiry (`store sessions --discard-after`) takes them.
 ses_older_ids() {
     local _cutoff=$(( $(main_now) - $2 * 86400 ))
-    local _id _project _state _started _ended _rest
-    ses_session_rows "$1" | while IFS="$ui_tab" read -r _id _project _state _started _ended _rest; do
+    local _from_undo="${3:-}"
+    local _id _project _state _started _ended _undone _rest
+    ses_session_rows "$1" | while IFS="$ui_tab" read -r _id _project _state _started _ended _undone _rest; do
         [ "$_state" = "active" ] && continue
         local _when="$(ui_seconds_since_epoch "$_ended")"
         [ -n "$_when" ] || _when="$_started"
+        if [ "$_from_undo" = "undo" ]; then
+            local _undo_when="$(ui_seconds_since_epoch "$_undone")"
+            case "$_undo_when:$_when" in
+                *[!0123456789:]*|:*|*:) ;;
+                *) [ "$_undo_when" -gt "$_when" ] && _when="$_undo_when" ;;
+            esac
+        fi
         case "$_when" in
             ''|*[!0123456789]*) continue ;;
         esac
@@ -684,4 +703,131 @@ ses_older() {
     done
     [ -n "$_ids" ] || return 0
     ses_discard "$1" "$_ids"
+}
+
+# -- Settings: the Sessions group and the macOS restore images row ----------------------------
+
+# ses_status_field <uuid> <column>  ->  that column of the `sessions` row of `status`.
+ses_status_field() {
+    ses_status_row "$1" | /usr/bin/cut -f"$2"
+}
+
+# ses_kept_text <uuid>  ->  Settings' "Kept now" of the sessions: "23 sessions, about 31.7 GB to
+# free", "3 sessions, not measured yet", "none".
+ses_kept_text() {
+    local _row="$(ses_status_row "$1")"
+    [ -n "$_row" ] || { printf -- '-\n'; return 0; }
+    local _kept="$(printf '%s\n' "$_row" | /usr/bin/awk -F'\t' '{ print $1 + $2 + $3 }')"
+    if [ "$_kept" = "0" ]; then
+        printf 'none\n'
+        return 0
+    fi
+    local _freed="$(printf '%s\n' "$_row" | /usr/bin/cut -f8)"
+    case "$_freed" in
+        ''|-) printf '%s, not measured yet\n' "$(main_count_text "$_kept" session)" ;;
+        0) printf '%s, nothing to free\n' "$(main_count_text "$_kept" session)" ;;
+        *) printf '%s, about %s to free\n' "$(main_count_text "$_kept" session)" "$(ui_size_text "$_freed")" ;;
+    esac
+}
+
+# ses_expiry_text <days>  ->  what the store's expiry means, beside the picker.
+ses_expiry_text() {
+    case "$1" in
+        0) printf 'kept until discarded\n' ;;
+        ''|-) printf '\n' ;;
+        *) printf 'an ended session goes %s days after it ends, at the end of a later session\n' "$1" ;;
+    esac
+}
+
+# ses_disk_text <uuid>  ->  what follows the free disk space in This Mac: what sessions hold that
+# can be freed, when it is 1 GB or more; nothing otherwise.
+ses_disk_text() {
+    local _freed="$(ses_status_field "$1" 8)"
+    case "$_freed" in
+        ''|*[!0123456789]*) return 0 ;;
+    esac
+    [ "$_freed" -ge 1000000000 ] || return 0
+    printf '; agent-vm sessions hold about %s you can free\n' "$(ui_size_text "$_freed")"
+}
+
+# ses_restore_text <uuid>  ->  the macOS restore images kept: "1, 25.6 GB", with an interrupted
+# download's size, or "none".
+ses_restore_text() {
+    local _row="$(/usr/bin/awk 'NF' "$(ses_cache "$1" restore.tsv)" 2>/dev/null)"
+    [ -n "$_row" ] || { printf -- '-\n'; return 0; }
+    local _count="$(printf '%s\n' "$_row" | /usr/bin/cut -f1)"
+    local _bytes="$(printf '%s\n' "$_row" | /usr/bin/cut -f2)"
+    local _partial="$(printf '%s\n' "$_row" | /usr/bin/cut -f3)"
+    local _text="none"
+    [ "$_count" != "0" ] && _text="$_count, $(ui_size_text "$_bytes")"
+    case "$_partial" in
+        ''|0|*[!0123456789]*) ;;
+        *) _text="$_text, and $(ui_size_text "$_partial") of an interrupted download" ;;
+    esac
+    printf '%s\n' "$_text"
+}
+
+# ses_paint_settings <uuid>  ->  Settings' Sessions group and restore images row, from `status`.
+ses_paint_settings() {
+    local _uuid="$1"
+    "$dialog" "$_uuid" "$SES_KEPT_ID" "$(ses_kept_text "$_uuid")"
+    local _days="$(ses_status_field "$_uuid" 9)"
+    case " $SES_EXPIRY_CHOICES " in
+        *" $_days "*) "$dialog" "$_uuid" "$SES_EXPIRY_ID" "$_days" ;;
+        *) "$dialog" "$_uuid" "$SES_EXPIRY_ID" "" ;;
+    esac
+    if [ -n "$_days" ]; then
+        ui_enable "$_uuid" "$SES_EXPIRY_ID" 1
+    else
+        ui_enable "$_uuid" "$SES_EXPIRY_ID" 0
+    fi
+    "$dialog" "$_uuid" "$SES_EXPIRY_TEXT_ID" "$(ses_expiry_text "$_days")"
+    "$dialog" "$_uuid" "$SES_RESTORE_ID" "$(ses_restore_text "$_uuid")"
+    local _count="$(/usr/bin/cut -f1 "$(ses_cache "$_uuid" restore.tsv)" 2>/dev/null)"
+    local _folder="$(/usr/bin/cut -f4 "$(ses_cache "$_uuid" restore.tsv)" 2>/dev/null)"
+    if [ -n "$_folder" ] && [ -d "$_folder" ]; then
+        ui_enable "$_uuid" "$SES_RESTORE_SHOW_ID" 1
+    else
+        ui_enable "$_uuid" "$SES_RESTORE_SHOW_ID" 0
+    fi
+    case "$_count" in
+        ''|0|*[!0123456789]*) ui_enable "$_uuid" "$SES_RESTORE_REMOVE_ID" 0 ;;
+        *) ui_enable "$_uuid" "$SES_RESTORE_REMOVE_ID" 1 ;;
+    esac
+}
+
+# ses_expiry_question <uuid> <days>  ->  the question before an expiry that would discard sessions: how many ended
+# sessions it would discard at the end of the next session, and what that frees; nothing when
+# none would go (then nothing is asked).
+ses_expiry_question() {
+    local _ids="$(ses_older_ids "$1" "$2" undo)"
+    [ -n "$_ids" ] || return 0
+    local _count="$(printf '%s\n' "$_ids" | /usr/bin/awk '{ print NF }')"
+    local _were="were"
+    [ "$_count" = "1" ] && _were="was"
+    local _text="At the end of the next session, agent-vm discards the $(main_count_text "$_count" session) that ended, or $_were undone, $2 days ago or earlier"
+    local _usage="$(ses_cache "$1" session-usage.json)"
+    if [ -f "$_usage" ]; then
+        _text="$_text (about $(ui_size_text "$(ses_held_rows "$1" | agentvm_held_freed "$_ids")") to free)"
+    fi
+    printf '%s, and from then on each one %s days after it ends. Undo is then no longer possible for them. It is a setting of the store, for Terminal and Cadabra too.\n' "$_text" "$2"
+}
+
+# ses_expiry_apply <uuid> <days>  ->  the store's expiry set, status read again, Settings painted;
+# a refusal is said in an alert.
+ses_expiry_apply() {
+    agentvm_store_discard_after "$2"
+    local _status=$?
+    [ "$_status" -eq 0 ] || main_alert "$1" "The expiry was not changed" "$(agentvm_last_error "$_status")"
+    main_read_status "$1"
+    ses_paint_settings "$1"
+}
+
+# ses_restore_question <uuid> <names>  ->  the question before removing the restore images named.
+ses_restore_question() {
+    local _count="$(printf '%s\n' "$2" | /usr/bin/awk '{ print NF }')"
+    local _what="it"
+    [ "$_count" = "1" ] || _what="them"
+    printf '%s. A new macOS image needs a restore image again: Get macOS... downloads one (about 27 GB). Images and boxes made from %s are not touched.\n' \
+        "$(printf '%s\n' "$2" | /usr/bin/tr ' ' '\n' | /usr/bin/paste -sd ',' - | /usr/bin/sed 's/,/, /g')" "$_what"
 }
