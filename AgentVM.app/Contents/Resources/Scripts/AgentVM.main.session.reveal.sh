@@ -1,7 +1,7 @@
 #!/bin/sh
 # AgentVM.main.session.reveal.sh
-# Show in Finder, at the right of the bar under the Sessions tab's project cards: the selected
-# project's folder, selected in a Finder window.
+# The folder button, at the left of the bar under the Sessions tab's project cards: the selected
+# project's folder, opened in a Finder window.
 
 . "$OMC_APP_BUNDLE_PATH/Contents/Resources/Scripts/lib.agentvm.main.sh"
 

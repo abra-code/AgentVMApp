@@ -252,11 +252,11 @@ check "  a new window sorts as chosen" "true,false|zeta" "$(checked)|$(cards | /
 omc_run AgentVM.main.session.measure
 check "a project whose only sessions are active: on top by date, said on its card" "myapp=Active|alpha=" "$(cards)"
 
-section "adding a project, and Show in Finder"
+section "adding a project, and opening its folder"
 ADDED="$OMCTEST_WORK/projects/newapp"
 /bin/mkdir -p "$ADDED"
 : > "$FAKE_OPEN_LOG"
-check "nothing selected: Show in Finder is off" "0" "$(enabled "$SES_REVEAL_ID")"
+check "nothing selected: the folder button is off" "0" "$(enabled "$SES_REVEAL_ID")"
 omc_dialog_answer choose_folder ""
 omc_run AgentVM.main.session.project.add
 check "Cancel in the folder panel adds nothing" "myapp|alpha" "$(cards | /usr/bin/sed 's/=[^|]*//g')"
@@ -270,11 +270,11 @@ check "  its pane: no sessions, nothing to discard, nothing left out yet" \
 omc_dialog_answer choose_folder "$ADDED"
 omc_run AgentVM.main.session.project.add
 check "  added again: still one card" "1" "$(ui_rows "$SES_PROJECTS_ID" | /usr/bin/awk -F'\t' -v p="$ADDED" '$1 == p' | /usr/bin/grep -c .)"
-check "Show in Finder is on for a folder that exists" "1" "$(enabled "$SES_REVEAL_ID")"
+check "the folder button is on for a folder that exists" "1" "$(enabled "$SES_REVEAL_ID")"
 omc_run AgentVM.main.session.reveal
-check "  and shows it in Finder" "-R $ADDED" "$(/bin/cat "$FAKE_OPEN_LOG")"
+check "  and opens the folder in Finder, not its parent" "$ADDED" "$(/bin/cat "$FAKE_OPEN_LOG")"
 select_project "/Users/you/src/alpha"
-check "a project folder this Mac does not have: Show in Finder is off" "0" "$(enabled "$SES_REVEAL_ID")"
+check "a project folder this Mac does not have: the folder button is off" "0" "$(enabled "$SES_REVEAL_ID")"
 : > "$FAKE_OPEN_LOG"
 omc_run AgentVM.main.session.reveal
 check "  and its handler opens nothing" "" "$(/bin/cat "$FAKE_OPEN_LOG")"
@@ -291,6 +291,76 @@ open_window
 open_tab 2
 check "a new window does not keep the projects added in the one before" "0" \
     "$(ui_rows "$SES_PROJECTS_ID" | /usr/bin/awk -F'\t' -v p="$ADDED" '$1 == p' | /usr/bin/grep -c .)"
+
+section "removing a project from the list"
+# pending  ->  the project the question of Remove named, kept for its confirmation.
+pending() {
+    "$OMC_OMC_SUPPORT_PATH/pasteboard" "agentvm_session-remove_$OMC_ACTIONUI_WINDOW_UUID" get
+}
+remove_project() {
+    alerts_reset
+    select_project "$1"
+    omc_run AgentVM.main.session.remove
+}
+discards() {
+    fake_log | /usr/bin/grep '^session discard' | /usr/bin/paste -sd '|' -
+}
+# The free space cannot be read, so the toast after a discard is the plain one.
+AGENTVM_APP_DF="$TEST_HELPERS/fake_df.sh"
+FAKE_DF_FILE="$OMCTEST_WORK/df"
+FAKE_DF_LOG="$OMCTEST_WORK/df.log"
+: > "$FAKE_DF_FILE"
+export AGENTVM_APP_DF FAKE_DF_FILE FAKE_DF_LOG
+now_after 1
+"$OMC_OMC_SUPPORT_PATH/pasteboard" agentvm_sessions_sort set date
+open_window
+write_projects
+open_tab 2
+check "nothing selected: Remove is off" "0" "$(enabled "$SES_REMOVE_ID")"
+remove_project "$PROJECT"
+check "  on for a selected project" "1" "$(enabled "$SES_REMOVE_ID")"
+check "a project with an active session is not removed: an alert says why, and nothing is asked" \
+    "myapp cannot be removed while a session is active|1||" \
+    "$(ui_alert_title)|$(ui_alert_message | /usr/bin/grep -c 'Remove it from the list once its session has ended')|$(pending)|$(discards)"
+remove_project "/Users/you/src/zeta"
+check "a project with an ended session: asks, saying the sessions are discarded and the folder stays" \
+    "Remove zeta from the list?|1 session of zeta: their snapshots, and what an undo kept, are deleted; what they hold only together is not known: they were not measured. Undo is no longer possible for them; their records and reports stay in agent-vm session list. The project folder itself is not touched." \
+    "$(ui_alert_title)|$(ui_alert_message)"
+check "  Remove goes on; nothing is discarded yet" "AgentVM.main.session.remove.confirmed|/Users/you/src/zeta|" \
+    "$(ui_alert_action Remove)|$(pending)|$(discards)"
+omc_run AgentVM.main.session.remove.confirmed
+check "  Remove discards its session, and leaves the exclusions alone" "session discard 20261125-040000-aaaa --json||" \
+    "$(discards)|$(pending)|$(/bin/cat "$FAKE_AGENTVM_DIR/exclusions-project" 2>/dev/null)"
+check "  a toast says so" "1" "$(ui_calls 'omc_present_toast.The sessions are discarded..5')"
+remove_project "/Users/you/src/old"
+/usr/bin/jq '[.[] | if .project == "/Users/you/src/old" then .state = "active" | del(.endedAt) else . end]' "$FAKE_AGENTVM_DIR/session-list.json" > "$FAKE_AGENTVM_DIR/session-list.new" && /bin/mv "$FAKE_AGENTVM_DIR/session-list.new" "$FAKE_AGENTVM_DIR/session-list.json"
+alerts_reset
+omc_run AgentVM.main.session.remove.confirmed
+check "a session that started between the question and Remove: refused then, and nothing is discarded" \
+    "old cannot be removed while a session is active|session discard 20261125-040000-aaaa --json|" \
+    "$(ui_alert_title)|$(discards)|$(pending)"
+write_projects
+omc_run AgentVM.main.session.remove.confirmed
+check "  a second Remove without a question does nothing" "session discard 20261125-040000-aaaa --json" "$(discards)"
+remove_project "/Users/you/src/alpha"
+check "a project with only a saved list: the question says the list is cleared" \
+    "Remove alpha from the list?|Its list of folders left out of snapshots is cleared. The project folder itself is not touched." \
+    "$(ui_alert_title)|$(ui_alert_message)"
+omc_run AgentVM.main.session.remove.confirmed
+check "  Remove clears the list, and its card goes, with the selection" \
+    "/Users/you/src/alpha||session discard 20261125-040000-aaaa --json|0|" \
+    "$(/bin/cat "$FAKE_AGENTVM_DIR/exclusions-project")|$(/bin/cat "$FAKE_AGENTVM_DIR/exclusions-set")|$(discards)|$(cards | /usr/bin/grep -c 'alpha=')|$(selected)"
+check "  a toast says it is removed" "1" "$(ui_calls 'omc_present_toast.alpha is removed from the list..5')"
+omc_dialog_answer choose_folder "$ADDED"
+omc_run AgentVM.main.session.project.add
+remove_project "$ADDED"
+check "a project added with the plus button: the question says only that the folder stays" \
+    "Remove newapp from the list?|The project folder itself is not touched." "$(ui_alert_title)|$(ui_alert_message)"
+: > "$FAKE_AGENTVM_DIR/log"
+omc_run AgentVM.main.session.remove.confirmed
+check "  Remove takes its card off, and runs no agent-vm but to read the list again" \
+    "0||session list --json|session exclusions --json" \
+    "$(ui_rows "$SES_PROJECTS_ID" | /usr/bin/awk -F'\t' -v p="$ADDED" '$1 == p' | /usr/bin/grep -c .)|$(selected)|$(fake_log | /usr/bin/paste -sd '|' -)"
 "$OMC_OMC_SUPPORT_PATH/pasteboard" agentvm_sessions_sort set ""
 
 omctest_end

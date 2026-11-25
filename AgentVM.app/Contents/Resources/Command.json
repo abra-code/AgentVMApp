@@ -32,7 +32,7 @@
       "EXECUTION_MODE": "exe_script_file",
       "ACTIVATION_MODE": "act_always",
       "CHOOSE_FOLDER_DIALOG": {
-        "MESSAGE": "Choose a project folder to add to the Sessions tab, to choose what its sessions leave out of their snapshots",
+        "MESSAGE": "Choose a project folder to track its sessions",
         "BUTTON_PROMPT": "Add",
         "DIALOG_IDENTIFIER": "com.abracode.AgentVM.projectFolder"
       }

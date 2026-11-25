@@ -59,6 +59,7 @@ SES_SORT_DATE_ID=744
 SES_SORT_SIZE_ID=747
 SES_ADD_ID=745
 SES_REVEAL_ID=746
+SES_REMOVE_ID=748
 SES_DISCARD_ID=732
 SES_DISCARD_ALL_ID=733
 SES_OLDER_ID=742
@@ -537,6 +538,11 @@ ses_paint_detail() {
     else
         ui_enable "$_uuid" "$SES_REVEAL_ID" 0
     fi
+    if [ -n "$_project" ]; then
+        ui_enable "$_uuid" "$SES_REMOVE_ID" 1
+    else
+        ui_enable "$_uuid" "$SES_REMOVE_ID" 0
+    fi
     if [ -z "$_project" ]; then
         ui_show "$_uuid" "$SES_DETAIL_ID" 0
         if [ -z "$_cards" ]; then
@@ -612,11 +618,94 @@ ses_open() {
     ses_paint "$_uuid" force
 }
 
-# ses_reveal <uuid>  ->  the selected project's folder, selected in a Finder window.
+# ses_reveal <uuid>  ->  the selected project's folder, opened in a Finder window.
 ses_reveal() {
     local _project="$(ui_get session-project "$1")"
     [ -n "$_project" ] && [ -d "$_project" ] || return 0
-    "$open_tool" -R "$_project"
+    "$open_tool" "$_project"
+}
+
+# ses_has_exclusions <uuid> <project>  ->  0 when the project has a saved list of exclusions.
+ses_has_exclusions() {
+    local _file="$(ses_cache "$1" session-exclusions.tsv)"
+    [ -f "$_file" ] || return 1
+    # The project through the environment: awk -v would read a backslash in it as an escape.
+    local _row="$(SES_PROJECT="$2" /usr/bin/awk -F'\t' '$1 == ENVIRON["SES_PROJECT"] && NF > 1' "$_file")"
+    [ -n "$_row" ]
+}
+
+# ses_remove_refused <uuid> <project>  ->  0, with an alert saying why, when the project has an
+# active session (as the list was last read): it is not removed.
+ses_remove_refused() {
+    local _active="$(ses_session_rows "$1" | SES_PROJECT="$2" /usr/bin/awk -F'\t' '$2 == ENVIRON["SES_PROJECT"] && $3 == "active"' | /usr/bin/awk 'END { print NR }')"
+    [ "$_active" -gt 0 ] || return 1
+    main_alert "$1" "$(/usr/bin/basename "$2") cannot be removed while a session is active" \
+        "An agent may still be working on the project. Remove it from the list once its $(if [ "$_active" -eq 1 ]; then printf 'session has'; else printf 'sessions have'; fi) ended."
+    return 0
+}
+
+# ses_remove_ask <uuid>  ->  the trash button under the cards: the question before taking the
+# selected project off the list. A card goes once nothing lists its project, so removing it
+# discards the project's ended and undone sessions, clears its saved exclusions, and forgets that
+# it was added; the project's folder is not touched. The list is read first, so the question is
+# about the sessions as they are now. A project with an active session is not removed: an agent
+# may be working on it, and the session would keep its card. Remove goes on with
+# AgentVM.main.session.remove.confirmed, which reads the project kept here.
+ses_remove_ask() {
+    local _uuid="$1"
+    local _project="$(ui_get session-project "$_uuid")"
+    [ -n "$_project" ] || return 0
+    ui_set session-remove "$_uuid" ""
+    ses_read "$_uuid"
+    ses_paint "$_uuid"
+    # The list read again may have no card for it any more: then the paint cleared the selection.
+    [ "$(ui_get session-project "$_uuid")" = "$_project" ] || return 0
+    ses_remove_refused "$_uuid" "$_project" && return 0
+    local _name="$(/usr/bin/basename "$_project")"
+    local _ids="$(ses_ended_ids "$_uuid" "$_project")"
+    local _text=""
+    [ -n "$_ids" ] && _text="$(ses_question "$_uuid" "$_ids" "$_name") "
+    ses_has_exclusions "$_uuid" "$_project" && _text="${_text}Its list of folders left out of snapshots is cleared. "
+    _text="${_text}The project folder itself is not touched."
+    ui_set session-remove "$_uuid" "$_project"
+    "$dialog" "$_uuid" omc_window omc_present_alert "Remove $_name from the list?" "$_text" \
+        "Cancel:cancel:" "Remove:destructive:AgentVM.main.session.remove.confirmed"
+}
+
+# ses_remove <uuid>  ->  Remove, in the question of the trash button: the project the question
+# named is forgotten as added, its saved exclusions are cleared, and its ended and undone sessions
+# are discarded (ses_discard, which also says what that freed); unless it has an active session
+# by now. The project is checked here: it came back through the pasteboard.
+ses_remove() {
+    local _uuid="$1"
+    local _project="$(ui_get session-remove "$_uuid")"
+    ui_set session-remove "$_uuid" ""
+    agentvm_valid_project "$_project" || return 0
+    # The list read again: a session that started since the question refuses it, as the question
+    # would have.
+    ses_read "$_uuid"
+    if ses_remove_refused "$_uuid" "$_project"; then
+        ses_paint "$_uuid" force
+        return 0
+    fi
+    local _name="$(/usr/bin/basename "$_project")"
+    ses_added_projects "$_uuid" | SES_PROJECT="$_project" /usr/bin/awk '$0 != ENVIRON["SES_PROJECT"]' | ui_store "$(ses_cache "$_uuid" session-added)"
+    if ses_has_exclusions "$_uuid" "$_project"; then
+        agentvm_session_exclusions_set "$_project" > /dev/null
+        local _status=$?
+        if [ "$_status" -ne 0 ]; then
+            main_alert "$_uuid" "The exclusions of $_name were not cleared" "$(agentvm_last_error "$_status")"
+        fi
+        ses_read_exclusions "$_uuid"
+    fi
+    local _ids="$(ses_ended_ids "$_uuid" "$_project")"
+    if [ -n "$_ids" ]; then
+        ses_discard "$_uuid" "$_ids"
+        return $?
+    fi
+    ses_paint "$_uuid" force
+    "$dialog" "$_uuid" omc_window omc_present_toast "$_name is removed from the list." "$MAIN_TOAST_SECONDS"
+    return 0
 }
 
 # ses_sort_set <uuid> <size|date>  ->  the sort menu's choice kept for the app, and the cards
@@ -702,7 +791,11 @@ ses_question() {
     local _freed="$(ses_held_rows "$1" | agentvm_held_freed "$2")"
     local _space="what they hold only together is not known: they were not measured"
     local _usage="$(ses_cache "$1" session-usage.json)"
-    if [ -f "$_usage" ]; then
+    # A session the measurement does not have (it ended after it, so neither its sessions nor its
+    # holder table name it) would count as freeing nothing.
+    local _unmeasured=""
+    [ -f "$_usage" ] && _unmeasured="$(/usr/bin/jq -r --arg ids "$2" '([.sessions[]?.id] + [.held[]?.sessions[]?]) as $known | $ids | split(" ") | map(select(. != "" and (. as $id | $known | index($id) | not))) | .[]' "$_usage" 2>/dev/null)"
+    if [ -f "$_usage" ] && [ -z "$_unmeasured" ]; then
         if [ "$_freed" = "0" ]; then
             _space="this frees nothing now: what they hold is held by other sessions or by the project too"
         else
