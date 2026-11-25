@@ -324,4 +324,7 @@ agent-vm 0.8.13 measures what sessions hold on disk (`session usage`), gives eac
 
 ## Snapshot exclusions (agent-vm 0.9.0, 2026-11-25)
 
-agent-vm 0.9.0 lists what a session's snapshot could leave out (`session scan`) and keeps a list of paths per project that every session leaves out of its snapshot (`session exclusions`). `session-scan.json` and `session-exclusions.json` are new (part `exclusions`, above), captured from the agent-vm working tree before its version became 0.9.0; nothing else changed in what the app reads.
+agent-vm 0.9.0 lists what a session's snapshot could leave out (`session scan`) and keeps a list of paths per project that every session leaves out of its snapshot (`session exclusions`). `session-scan.json` and `session-exclusions.json` are new (part `exclusions`, above), first captured from the agent-vm working tree and captured again from the released 0.9.0, the same but for when the list was saved.
+
+- `version.json`, `packs.json` and `recipe-check.json` are captured from the released 0.9.0 (parts `version`, `packs`, `recipe-check`), and the part `follow` changed the agent-vm version named in `status-variety.json` and `job-log-variety.json`, and the Linux guest daemon's digest in `doctor.json`.
+- Everything else is as it was: nothing the app reads changed in it.
