@@ -43,7 +43,7 @@
     {
       "type": "TabView",
       "id": 300,
-      "properties": { "hidden": true },
+      "properties": { "hidden": true, "actionID": "AgentVM.main.tab" },
       "children": [
         {
           "type": "Tab",
@@ -426,6 +426,77 @@
                     },
                     { "type": "Text", "id": 423, "properties": { "text": "", "foregroundStyle": "orange", "textSelection": "enabled", "frame": { "maxWidth": "infinity", "alignment": "leading" } } },
                     { "type": "Spacer" }
+                  ]
+                }
+              ]
+            }
+          }
+        },
+        {
+          "type": "Tab",
+          "properties": { "title": "Sessions", "systemImage": "clock.arrow.circlepath" },
+          "content": {
+            "type": "NavigationSplitView",
+            "id": 710,
+            "properties": { "columnVisibility": "all", "style": "balanced" },
+            "sidebar": {
+              "type": "VStack",
+              "properties": { "spacing": 0.0, "navigationSplitViewColumnWidth": { "min": 220, "ideal": 260, "max": 340 } },
+              "children": [
+                {
+                  "type": "List",
+                  "id": 711,
+                  "properties": { "actionID": "AgentVM.main.session.project.selected", "listStyle": "sidebar", "listRowSeparator": "hidden", "listRowInsets": { "top": 4, "leading": 8, "bottom": 4, "trailing": 8 } },
+                  "template": {
+                    "type": "VStack",
+                    "properties": { "alignment": "leading", "spacing": 6, "padding": 12, "frame": { "maxWidth": "infinity", "alignment": "leading" }, "foregroundStyle": "white", "background": "$4", "cornerRadius": 12 },
+                    "children": [
+                      { "type": "Image", "properties": { "systemName": "clock.arrow.circlepath", "font": "title2" } },
+                      { "type": "Text", "properties": { "text": "$2", "font": { "size": 17, "weight": "bold" } } },
+                      { "type": "Text", "properties": { "text": "$3", "font": "caption", "opacity": 0.85 } }
+                    ]
+                  }
+                },
+                { "type": "Divider" },
+                { "type": "HStack", "properties": { "spacing": 14.0, "buttonStyle": "borderless", "padding": { "top": 8, "leading": 16, "bottom": 2, "trailing": 12 } }, "children": [
+                  { "type": "Button", "id": 741, "properties": { "systemImage": "arrow.clockwise", "imageScale": "large", "actionID": "AgentVM.main.session.measure", "help": "Measure again what the sessions hold" } },
+                  { "type": "Spacer" }
+                ] },
+                { "type": "VStack", "properties": { "spacing": 4.0, "alignment": "leading", "padding": { "top": 6, "leading": 16, "bottom": 10, "trailing": 12 }, "frame": { "maxWidth": "infinity", "alignment": "leading" } }, "children": [
+                  { "type": "Text", "id": 712, "properties": { "text": "", "font": "caption", "foregroundStyle": "secondary" } },
+                  { "type": "Text", "id": 713, "properties": { "text": "", "font": "caption", "foregroundStyle": "red" } }
+                ] }
+              ]
+            },
+            "detail": {
+              "type": "ZStack",
+              "properties": { "frame": { "maxWidth": "infinity", "minHeight": 0, "maxHeight": "infinity" } },
+              "children": [
+                { "type": "ContentUnavailableView", "id": 719, "properties": { "title": "No Project Selected", "systemImage": "clock.arrow.circlepath", "description": "Select a project to see its sessions." } },
+                { "type": "ContentUnavailableView", "id": 718, "properties": { "hidden": true, "title": "No Sessions", "systemImage": "clock.arrow.circlepath", "description": "A session is a snapshot of a project folder taken before an agent works on it, kept so that what the agent did can be undone. avm takes one when it shares a folder that the box may change, and so does Cadabra.\nA snapshot costs nothing at first, and more as the folder changes: sessions kept for weeks can hold much of the disk. This tab shows what they hold and frees it." } },
+                {
+                  "type": "VStack",
+                  "id": 720,
+                  "properties": { "hidden": true, "alignment": "leading", "spacing": 12, "padding": 20, "frame": { "maxWidth": "infinity", "minHeight": 0, "maxHeight": "infinity", "alignment": "topLeading" } },
+                  "children": [
+                    { "type": "Text", "id": 721, "properties": { "text": "", "font": { "size": 22, "weight": "bold" } } },
+                    { "type": "Text", "id": 722, "properties": { "text": "", "font": "caption", "foregroundStyle": "secondary", "textSelection": "enabled" } },
+                    {
+                      "type": "Form",
+                      "children": [
+                        { "type": "LabeledContent", "properties": { "title": "Space" }, "children": [ { "type": "Text", "id": 751, "properties": { "text": "", "textSelection": "enabled", "help": "What discarding every ended and undone session of this project frees, once macOS has removed its local Time Machine snapshots, which keep deleted data for up to a day.", "frame": { "maxWidth": "infinity", "alignment": "leading" } } } ] },
+                        { "type": "LabeledContent", "properties": { "title": "Sessions" }, "children": [ { "type": "Text", "id": 752, "properties": { "text": "", "textSelection": "enabled", "frame": { "maxWidth": "infinity", "alignment": "leading" } } } ] }
+                      ]
+                    },
+                    { "type": "Table", "id": 730, "properties": {
+                      "columns": ["", "Started", "State", "Ended", "Its own", "Shared", "On disk"],
+                      "columnTypes": [ { "viewType": "Toggle", "style": "checkbox", "actionID": "AgentVM.main.session.tick", "disabledColumn": 9 } ],
+                      "widths": [28, 130, 70, 130, 90, 170, 90],
+                      "minWidths": [28, 90, 50, 90, 60, 80, 60],
+                      "frame": { "maxWidth": "infinity", "minHeight": 140, "maxHeight": "infinity" }
+                    } },
+                    { "type": "Text", "id": 731, "properties": { "text": "", "textSelection": "enabled", "frame": { "maxWidth": "infinity", "alignment": "leading" } } },
+                    { "type": "Text", "id": 723, "properties": { "text": "", "font": "caption", "foregroundStyle": "secondary", "textSelection": "enabled", "frame": { "maxWidth": "infinity", "alignment": "leading" } } }
                   ]
                 }
               ]

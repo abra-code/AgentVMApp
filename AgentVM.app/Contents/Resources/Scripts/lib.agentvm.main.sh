@@ -10,11 +10,12 @@
 # the face: boxes come and go (disposable ones are deleted when they stop), and with an image
 # ready, the Boxes tab is where a box is made.
 #
-# THE STATUS FACE is a TabView: Boxes, Images and Settings. Boxes and Images are each a split
+# THE STATUS FACE is a TabView: Boxes, Images, Sessions and Settings. Boxes and Images are each a split
 # view with a list of cards in the sidebar and the selected card's details beside it. A card
 # carries what is checked at a glance (name, state, image or system, and a "Needs maintenance"
 # mark), and its color says which system it runs as well as its state (MAIN_LINUX_*_COLOR); the
-# detail pane has the rest, including what the maintenance is. Settings shows which
+# detail pane has the rest, including what the maintenance is. Sessions (lib.agentvm.sessions.sh)
+# shows what agent-vm sessions hold on disk, by project. Settings shows which
 # agent-vm runs and what this Mac has room for.
 #
 # A DETAIL PANE IS AN OVERVIEW. What has work of its own opens in a window of its own, one per
@@ -53,6 +54,7 @@
 __AGENTVM_APP_MAIN_LIB=1
 
 . "$OMC_APP_BUNDLE_PATH/Contents/Resources/Scripts/lib.agentvm.ui.sh"
+. "$OMC_APP_BUNDLE_PATH/Contents/Resources/Scripts/lib.agentvm.sessions.sh"
 
 MAIN_GETSTARTED_ID=200
 # Step n of Get started: its symbol 210 + n, its fact 220 + n, its button 230 + n (step 1 has none).
@@ -246,6 +248,16 @@ main_read_status() {
     printf '%s\n' "$_json" | agentvm_status_newest_row | ui_store "$(ui_cache "$1" newest.tsv)"
     printf '%s\n' "$_json" | agentvm_status_vm_row | ui_store "$(ui_cache "$1" vm.tsv)"
     printf '%s\n' "$_json" | agentvm_status_kept_logs_row | ui_store "$(ui_cache "$1" kept.tsv)"
+    local _sessions_was="$(/bin/cat "$(ui_cache "$1" sessions.tsv)" 2>/dev/null)"
+    printf '%s\n' "$_json" | agentvm_status_sessions_row | ui_store "$(ui_cache "$1" sessions.tsv)"
+    printf '%s\n' "$_json" | agentvm_status_restore_row | ui_store "$(ui_cache "$1" restore.tsv)"
+    # Sessions started, ended or discarded since: once the Sessions tab has read the list, the
+    # list follows (cheap; the measurement does not, see lib.agentvm.sessions.sh).
+    local _sessions_now="$(/bin/cat "$(ui_cache "$1" sessions.tsv)" 2>/dev/null)"
+    local _session_list="$(ui_cache "$1" session-list.json)"
+    if [ -f "$_session_list" ] && [ "$_sessions_was" != "$_sessions_now" ]; then
+        ses_read "$1"
+    fi
     printf '%s\n' "$_json" | agentvm_status_kernel_rows | ui_store "$(ui_cache "$1" kernels.tsv)"
     printf '%s\n' "$_json" | agentvm_status_recipe_rows | ui_store "$(ui_cache "$1" recipes.tsv)"
     printf '%s\n' "$_json" | agentvm_status_input_rows | ui_store "$(ui_cache "$1" inputs.tsv)"
@@ -2390,6 +2402,7 @@ main_paint() {
         main_paint_lists "$_uuid"
         main_paint_box_detail "$_uuid"
         main_paint_image_detail "$_uuid"
+        ses_paint "$_uuid"
     else
         ui_show "$_uuid" "$MAIN_STATUS_ID" 0
         ui_show "$_uuid" "$MAIN_GETSTARTED_ID" 1
