@@ -380,5 +380,32 @@ check "session discard --older-than 0 with nothing left: none" "0|0" "$?|$older"
 real_lib agentvm_restore_remove nosuch.ipsw > /dev/null
 check "fetch-ipsw --remove of a restore image the store does not have fails" "1" "$?"
 
+section "snapshot exclusions: scanned, saved, read back"
+# The exclusions window scans a project and saves its list through the library; the Sessions tab
+# reads every project's list. A Swift package in the short folder, with its .build.
+EXPROJECT="$SHORT_DIR/pkg"
+/bin/mkdir -p "$EXPROJECT/.build/debug" "$EXPROJECT/Sources"
+printf '// swift-tools-version:6.0\n' > "$EXPROJECT/Package.swift"
+printf 'x\n' > "$EXPROJECT/.build/debug/pkg"
+EXPROJECT="$(cd "$EXPROJECT" && pwd -P)"
+real_lib agentvm_session_scan "$EXPROJECT" > "$OMCTEST_WORK/scan.json"
+check "session scan of the project, its path given as --project=<path>" "0" "$?"
+check "  .build is a candidate: build output, suggested, not saved" ".build${TAB}build${TAB}true${TAB}false" \
+    "$(lib agentvm_scan_rows < "$OMCTEST_WORK/scan.json" | /usr/bin/awk -F'\t' '$1 == ".build"' | /usr/bin/cut -f1,4-6)"
+check "  eight fields, none absent but inside (field 7, absent for a candidate in no other)" "8|" \
+    "$(lib agentvm_scan_rows < "$OMCTEST_WORK/scan.json" | field_count)|$(lib agentvm_scan_rows < "$OMCTEST_WORK/scan.json" \
+        | /usr/bin/awk -F'\t' '{ for (i = 1; i <= 8; i++) if (i != 7 && $i == "-") printf "%s:%d ", $1, i }')"
+saved="$(real_lib agentvm_session_exclusions_set "$EXPROJECT" .build -dist)"
+check "saving .build and -dist, each as --set=<path>: the list agent-vm saved, sorted" "0|-dist .build" "$?|$(printf '%s\n' "$saved" | /usr/bin/paste -sd ' ' -)"
+check "  every project's list has it" "$EXPROJECT${TAB}2${TAB}-dist, .build" \
+    "$(real_lib agentvm_session_exclusions | lib agentvm_exclusions_rows | /usr/bin/cut -f1-3)"
+check "  and the scan says .build is saved, and the saved list" "true|-dist .build" \
+    "$(real_lib agentvm_session_scan "$EXPROJECT" | lib agentvm_scan_rows | /usr/bin/awk -F'\t' '$1 == ".build" { print $6 }')|$(real_lib agentvm_session_scan "$EXPROJECT" | lib agentvm_scan_excluded | /usr/bin/paste -sd ' ' -)"
+real_lib agentvm_session_exclusions_set "$EXPROJECT" .build .git > /dev/null
+check "a path agent-vm refuses fails, and the list is as it was" "1|-dist, .build" \
+    "$?|$(real_lib agentvm_session_exclusions | lib agentvm_exclusions_rows | /usr/bin/cut -f3)"
+real_lib agentvm_session_exclusions_set "$EXPROJECT" > /dev/null
+check "saving none empties the list: no project has one" "0|" "$?|$(real_lib agentvm_session_exclusions | lib agentvm_exclusions_rows)"
+
 /bin/rm -rf "$SHORT_DIR"
 omctest_end

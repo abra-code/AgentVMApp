@@ -1117,6 +1117,108 @@ agentvm_restore_remove() {
     return 0
 }
 
+# -- Snapshot exclusions -------------------------------------------------------------------------
+# A project's saved exclusions are paths, relative to the project, that its sessions leave out of
+# their snapshots: build output, which is most of what old snapshots hold. What is left out is not
+# protected: undo cannot restore it. `session scan` lists what could be left out, and `session
+# exclusions` keeps the list in agent-vm's store, not in the project.
+
+# agentvm_valid_project <path>  ->  0 when it can be given to agent-vm as a project folder: a full
+# path, with no tab, line break or carriage return (rows are tab-separated, one per line, and
+# agentvm_jq_defs turns all three into spaces). agent-vm checks that the folder exists. The path
+# is passed as --project=<path>, so it is never read as an option.
+agentvm_valid_project() {
+    case "$1" in
+        /*) ;;
+        *) return 1 ;;
+    esac
+    local _tab="$(printf '\t')"
+    local _return="$(printf '\r')"
+    case "$1" in
+        *"$_tab"*|*"$_return"*|*"
+"*) return 1 ;;
+    esac
+    return 0
+}
+
+# agentvm_session_scan <project>  ->  `session scan --json` of that project folder: the folders a
+# session's snapshot could leave out (build output, folders git ignores, large folders), with
+# their sizes, and the project's saved exclusions. It walks the whole project, which can take
+# seconds for a large one; it changes nothing.
+agentvm_session_scan() {
+    agentvm_valid_project "$1" || { _agentvm_refuse 2 "\"$1\" is not a project folder: give its full path."; return 2; }
+    agentvm_json session scan "--project=$1"
+}
+
+# agentvm_scan_rows  <  scan JSON  ->  one row per candidate, in agent-vm's order: path, bytes,
+# files, kind (build, ignored or large), suggested (true when agent-vm finds it plainly
+# rebuildable), excluded (true when it is on the saved list), inside (the candidate it is in, or
+# "-"), and the reasons, joined with "; ". A candidate whose path holds a control character is
+# left out: agent-vm refuses to save such a path, and its row could not be read back.
+agentvm_scan_rows() {
+    /usr/bin/jq -r "$agentvm_jq_defs"' .candidates[]? | select((.path | type) == "string" and (.path | test("[[:cntrl:]]") | not))
+        | [.path, .bytes, .files, .kind, (.suggested == true), (.excluded == true), .inside, ((.reasons // []) | join("; "))] | row'
+}
+
+# agentvm_scan_excluded  <  scan JSON  ->  the project's saved exclusions, one per line. A saved
+# path need not exist, so some may be missing from the candidates.
+agentvm_scan_excluded() {
+    /usr/bin/jq -r '.excluded[]? | select(type == "string" and (test("[[:cntrl:]]") | not))'
+}
+
+# agentvm_scan_notes  <  scan JSON  ->  agent-vm's notes on the scan (a folder it could not read,
+# say), one per line.
+agentvm_scan_notes() {
+    /usr/bin/jq -r '.notes[]? | tostring | gsub("[\t\n\r]"; " ")'
+}
+
+# agentvm_session_exclusions  ->  `session exclusions --json`: every project's saved list.
+# Reads agent-vm's store only.
+agentvm_session_exclusions() {
+    agentvm_json session exclusions
+}
+
+# agentvm_exclusions_rows  <  session exclusions JSON  ->  one row per project with a saved list:
+# project, how many paths, the paths joined with ", ", and when the list was changed (ISO 8601).
+agentvm_exclusions_rows() {
+    /usr/bin/jq -r "$agentvm_jq_defs"' .projects[]? | select((.paths // []) | length > 0)
+        | [.project, (.paths | length), (.paths | join(", ")), .changedAt] | row'
+}
+
+# agentvm_session_exclusions_set <project> [<path>...]  ->  0 once agent-vm saved these paths as
+# the project's list, replacing it (with none, the list is emptied); prints the list it saved,
+# one per line. agent-vm saves them as it keeps them: sorted, "./" and trailing slashes dropped,
+# without repeats or a path inside another listed one, so the list printed can be shorter than
+# the paths given. agent-vm checks every path before it writes anything (no absolute path, no
+# "." or "..", nothing in a git folder), so one it refuses leaves the list as it was; an empty
+# path is refused here. The next session of the project leaves them out; sessions already taken
+# are not changed. Each path is passed as --set=<path>, so one that starts with "-" is never
+# read as an option.
+agentvm_session_exclusions_set() {
+    agentvm_valid_project "$1" || { _agentvm_refuse 2 "\"$1\" is not a project folder: give its full path."; return 2; }
+    local _project="$1"
+    shift
+    local _json _status
+    if [ "$#" -eq 0 ]; then
+        _json="$(agentvm_json session exclusions "--project=$_project" --clear)"
+        _status=$?
+    else
+        local _count=$#
+        local _path
+        for _path in "$@"; do
+            # agent-vm's option parser reads "--set=" as a --set with no value: a usage error.
+            [ -n "$_path" ] || { _agentvm_refuse 2 "An empty path cannot be left out of snapshots: give one relative to the project."; return 2; }
+            set -- "$@" "--set=$_path"
+        done
+        shift "$_count"
+        _json="$(agentvm_json session exclusions "--project=$_project" "$@")"
+        _status=$?
+    fi
+    [ "$_status" -eq 0 ] || return "$_status"
+    printf '%s\n' "$_json" | /usr/bin/jq -r '.paths[]?' 2>/dev/null
+    return 0
+}
+
 
 # -- Jobs ----------------------------------------------------------------------------------------
 # What takes longer than a handler may wait (starting or stopping a box, building or updating an

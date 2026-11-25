@@ -798,6 +798,57 @@ fake_reset
 check "  a path, a hidden file, an option or another kind of file never reaches agent-vm" "2 2 2 2|" \
     "$(for name in ../x.ipsw .x.ipsw --list.ipsw x.dmg; do with_fake agentvm_restore_remove "$name" >/dev/null; printf '%s ' $?; done | /usr/bin/sed 's/ $//')|$(fake_log)"
 
+section "snapshot exclusions: what a project's sessions could leave out, and what they do (session scan, session exclusions)"
+rows="$(lib agentvm_scan_rows < "$FIXTURES_AGENTVM/session-scan.json")"
+check "a row per candidate, in agent-vm's order: .build and .swiftpm suggested, node_modules not" \
+    ".build${TAB}262144${TAB}1${TAB}build${TAB}true${TAB}false${TAB}-${TAB}named as build output; Package.swift beside it|.swiftpm${TAB}4096${TAB}1${TAB}build${TAB}true${TAB}false${TAB}-${TAB}named as build output; Package.swift beside it|node_modules${TAB}4096${TAB}1${TAB}build${TAB}false${TAB}false${TAB}-${TAB}named as build output" \
+    "$(printf '%s\n' "$rows" | /usr/bin/paste -sd '|' -)"
+check "  eight fields each"          "8" "$(printf '%s\n' "$rows" | field_count)"
+check "  nothing saved yet, no notes" "|" \
+    "$(lib agentvm_scan_excluded < "$FIXTURES_AGENTVM/session-scan.json")|$(lib agentvm_scan_notes < "$FIXTURES_AGENTVM/session-scan.json")"
+check "a saved, nested candidate: excluded, and the candidate it is in" "web/node_modules${TAB}10${TAB}2${TAB}large${TAB}false${TAB}true${TAB}web${TAB}-" \
+    "$(printf '%s\n' '{"candidates": [{"path": "web/node_modules", "bytes": 10, "files": 2, "kind": "large", "excluded": true, "inside": "web"}]}' | lib agentvm_scan_rows)"
+check "  a path with a control character is left out of the rows and of the saved list; the rest stay" "ok${TAB}-${TAB}-${TAB}-${TAB}false${TAB}false${TAB}-${TAB}-|z" \
+    "$(printf '%s\n' '{"candidates": [{"path": "a\nb"}, {"path": "c\u007f"}, {"path": 3}, {"path": "ok"}], "excluded": ["x\ty", "z"]}' | lib agentvm_scan_rows)|$(printf '%s\n' '{"excluded": ["x\ty", "z"]}' | lib agentvm_scan_excluded)"
+check "  a note is one line"         "cannot read x y" "$(printf '%s\n' '{"notes": ["cannot read x\ny"]}' | lib agentvm_scan_notes)"
+check "every project's saved list: myapp leaves out .build and .swiftpm" "/Users/you/src/myapp${TAB}2${TAB}.build, .swiftpm" \
+    "$(lib agentvm_exclusions_rows < "$FIXTURES_AGENTVM/session-exclusions.json" | /usr/bin/cut -f1-3)"
+check "  a project with an empty list has no row" "" \
+    "$(printf '%s\n' '{"projects": [{"project": "/p", "paths": []}]}' | lib agentvm_exclusions_rows)"
+projects=""
+for path in /Users/you/src/myapp / "/a b" relative ./x -x "" "/a${TAB}b" "/a
+b" "/a$(printf '\r')b"; do
+    lib agentvm_valid_project "$path" && projects="$projects[$path]"
+done
+check "what can be a project folder: a full path with no tab, line break or carriage return" "[/Users/you/src/myapp][/][/a b]" "$projects"
+
+section "snapshot exclusions: what the library asks agent-vm to do"
+fake_reset
+check "session scan of a project, its path as --project=<path>" "session scan --project=/Users/you/src/my app --json|/Users/you/src/my app" \
+    "$(with_fake agentvm_session_scan "/Users/you/src/my app" >/dev/null; fake_log | /usr/bin/tail -1)|$(/bin/cat "$FAKE_AGENTVM_DIR/scan-project")"
+fake_reset
+check "  a relative path never reaches agent-vm" "2|" "$(with_fake agentvm_session_scan src/myapp >/dev/null; echo $?)|$(fake_log)"
+check "session exclusions --json reads every project's list" "session exclusions --json" \
+    "$(with_fake agentvm_session_exclusions >/dev/null; fake_log | /usr/bin/tail -1)"
+fake_reset
+saved="$(with_fake agentvm_session_exclusions_set /Users/you/src/myapp .build -dist "web/node modules")"
+check "saving three paths: each as --set=<path>, one starting with \"-\" too, and the list agent-vm saved, sorted" \
+    "session exclusions --project=/Users/you/src/myapp --set=.build --set=-dist --set=web/node modules --json|.build -dist web/node modules|-dist|.build|web/node modules" \
+    "$(fake_log | /usr/bin/tail -1)|$(/usr/bin/paste -sd ' ' "$FAKE_AGENTVM_DIR/exclusions-set")|$(printf '%s\n' "$saved" | /usr/bin/paste -sd '|' -)"
+check "  and the list is what the next read gives" "/Users/you/src/myapp${TAB}3${TAB}-dist, .build, web/node modules" \
+    "$(with_fake agentvm_session_exclusions | lib agentvm_exclusions_rows | /usr/bin/cut -f1-3)"
+check "  one project's list, as agent-vm shows it with no change" "-dist .build web/node modules" \
+    "$(AGENTVM_APP_AGENT_VM="$FAKE_AGENTVM" "$FAKE_AGENTVM" session exclusions --project=/Users/you/src/myapp --json | /usr/bin/jq -r '.paths | join(" ")')"
+check "saving none empties the list with --clear" "session exclusions --project=/Users/you/src/myapp --clear --json|" \
+    "$(with_fake agentvm_session_exclusions_set /Users/you/src/myapp >/dev/null; fake_log | /usr/bin/tail -1)|$(with_fake agentvm_session_exclusions | lib agentvm_exclusions_rows)"
+fake_reset
+check "a path agent-vm refuses: its status and its reason, and nothing saved" "1|cannot leave ../x out of snapshots: use a path without . or .. components|no" \
+    "$(with_fake agentvm_session_exclusions_set /Users/you/src/myapp .build ../x >/dev/null; echo $?)|$(lib agentvm_last_error 1)|$([ -f "$FAKE_AGENTVM_DIR/exclusions-set" ] && echo yes || echo no)"
+check "  a relative project never reaches agent-vm" "2|" \
+    "$(fake_reset; with_fake agentvm_session_exclusions_set myapp .build >/dev/null; echo $?)|$(fake_log)"
+check "  nor does an empty path (agent-vm would read --set= as a usage error)" "2|" \
+    "$(fake_reset; with_fake agentvm_session_exclusions_set /Users/you/src/myapp .build "" >/dev/null; echo $?)|$(fake_log)"
+
 section "an empty store (status-empty.json)"
 check "no box rows"                  "" "$(lib agentvm_status_box_rows < "$FIXTURES_AGENTVM/status-empty.json")"
 check "no image rows"                "" "$(lib agentvm_status_image_rows < "$FIXTURES_AGENTVM/status-empty.json")"

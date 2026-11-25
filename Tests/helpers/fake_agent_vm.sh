@@ -51,6 +51,13 @@
 #   discard-older  WRITTEN by `session discard --older-than <days>`: the days; discard-older-count
 #              says how many of the ended and undone sessions it answers as discarded (default 0).
 #   discard-after  WRITTEN by `store sessions --discard-after <days>`: the days.
+#   session-scan.json, session-exclusions.json  what `session scan` and `session exclusions`
+#              answer (else the fixtures); scan-project WRITTEN by `session scan --project=<path>`:
+#              the path. `session exclusions --project=<path> --set=<p>... | --clear` writes the
+#              project to exclusions-project and the paths, one per line, to exclusions-set
+#              (empty for --clear), and the new list into session-exclusions.json, as agent-vm
+#              keeps it (sorted, without repeats); a path with a "." or ".." component is refused
+#              and nothing is written.
 #   removed-ipsw  WRITTEN by `image fetch-ipsw --remove <name>`: the name (one --list does not
 #              have is refused).
 #   job-start-state  when present, the state a job is in as `job start` returns ("failed"), with
@@ -86,7 +93,8 @@
 #   store logs --remove-older-than 0 --json and store logs --hold-days <n> --json (which change
 #   nothing in what status answers: the test changes status.json to match), session list --json,
 #   session usage --json, session discard <id>... --json, session discard --older-than <days>
-#   --json, store sessions --discard-after <days> --json and image fetch-ipsw --remove <name>
+#   --json, store sessions --discard-after <days> --json, session scan --project=<path> --json,
+#   session exclusions [--project=<path> --set=<p>... | --clear] --json and image fetch-ipsw --remove <name>
 #   --json (see their state files above; none changes what status answers),
 #   recipe check <path>... --json (see recipe_check below; recipe-check.json and
 #   recipe-check-status in the state directory replace its answer and status).
@@ -487,6 +495,48 @@ case "$*" in
     "store sessions --discard-after "*" --json")
         printf '%s\n' "$4" > "$state/discard-after"
         /usr/bin/jq -n --arg days "$4" '{discardAfterDays: ($days | tonumber), directory: "/Users/you/Library/Application Support/agent-vm/Sessions"}' ;;
+    "session scan --project="*" --json")
+        printf '%s\n' "${3#--project=}" > "$state/scan-project"
+        answer session-scan ;;
+    "session exclusions --json")
+        answer session-exclusions ;;
+    "session exclusions --project="*" --json")
+        project="${3#--project=}"
+        if [ "$#" -eq 4 ]; then
+            # No change: the project's list, as agent-vm shows it.
+            answer session-exclusions | /usr/bin/jq --arg project "$project" \
+                '([.projects[]? | select(.project == $project)][0] // {project: $project, paths: []})'
+            exit 0
+        fi
+        shift 3
+        paths=""
+        while [ "$#" -gt 1 ]; do
+            case "$1" in
+                --clear) ;;
+                --set=*)
+                    path="${1#--set=}"
+                    case "/$path/" in
+                        */./*|*/../*)
+                            printf 'Error: cannot leave %s out of snapshots: use a path without . or .. components\n' "$path" >&2
+                            exit 1 ;;
+                    esac
+                    paths="$paths$path
+" ;;
+                *)
+                    printf 'Error: fake_agent_vm: session exclusions does not take %s here\n' "$1" >&2
+                    exit 64 ;;
+            esac
+            shift
+        done
+        printf '%s\n' "$project" > "$state/exclusions-project"
+        printf '%s' "$paths" > "$state/exclusions-set"
+        answer session-exclusions | /usr/bin/jq --arg project "$project" --arg paths "$paths" '
+            ($paths | split("\n") | map(select(. != "")) | unique) as $list
+            | .projects = ([.projects[]? | select(.project != $project)]
+                + (if ($list | length) > 0 then [{project: $project, paths: $list, changedAt: "2026-11-25T12:00:00Z"}] else [] end))' \
+            > "$state/session-exclusions.json.new" && /bin/mv "$state/session-exclusions.json.new" "$state/session-exclusions.json"
+        /usr/bin/jq -n --arg project "$project" --arg paths "$paths" '($paths | split("\n") | map(select(. != "")) | unique) as $list
+            | {project: $project, paths: $list} + (if ($list | length) > 0 then {changedAt: "2026-11-25T12:00:00Z"} else {} end)' ;;
     "image fetch-ipsw --remove "*" --json")
         # The name is kept for the test to read, once it is known; the bytes are those --list
         # gives the file.

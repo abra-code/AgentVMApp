@@ -15,7 +15,8 @@
 # With parts named, only those are captured, and every other fixture is left as it is: version,
 # doctor, status (with the image info, box info and rules that follow from it), packs,
 # recipe-check, ipsw (the list and what Apple offers), empty (the empty store's status and the
-# job), sessions (a store with sessions: session-usage, session-list and status-sessions), linux,
+# job), sessions (a store with sessions: session-usage, session-list and status-sessions),
+# exclusions (a project's scan and a saved list: session-scan, session-exclusions), linux,
 # follow (below). The tests name the images and boxes of status.json, so after an
 # agent-vm update that changed nothing in a store's entries the parts that did change are enough.
 # update-agentvmapp.sh runs `version packs recipe-check follow` when the app's
@@ -50,8 +51,8 @@ shift
 parts=" $* "
 for part in "$@"; do
     case "$part" in
-        version|doctor|status|packs|recipe-check|ipsw|empty|sessions|linux|follow) ;;
-        *) fail "\"$part\" is not a part: version, doctor, status, packs, recipe-check, ipsw, empty, sessions, linux, follow" ;;
+        version|doctor|status|packs|recipe-check|ipsw|empty|sessions|exclusions|linux|follow) ;;
+        *) fail "\"$part\" is not a part: version, doctor, status, packs, recipe-check, ipsw, empty, sessions, exclusions, linux, follow" ;;
     esac
 done
 
@@ -282,6 +283,56 @@ if wanted sessions; then
     project_shown="$(printf '%s' "$(cd "$project" && pwd -P)" | /usr/bin/sed "s|^$HOME|/Users/you|")"
     for name in session-usage session-list status-sessions; do
         default_store "$name" "$sessions_home"
+        /usr/bin/jq -S --arg project "$project_shown" \
+            'walk(if type == "string" then split($project) | join("/Users/you/src/myapp") else . end)' \
+            "$fixtures/$name.json" > "$work/$name.project.json"
+        status=$?
+        [ "$status" -eq 0 ] || fail "cannot rewrite the project's folder in $name.json"
+        /bin/mv -f "$work/$name.project.json" "$fixtures/$name.json"
+        status=$?
+        [ "$status" -eq 0 ] || fail "cannot write $fixtures/$name.json"
+    done
+fi
+
+# -- Snapshot exclusions -------------------------------------------------------------------------
+# The exclusions window reads `session scan` of a project and saves with `session exclusions`;
+# the Sessions tab reads every project's list. A store and a project "myapp" in the temporary
+# folder: a Swift package with its .build and .swiftpm (suggested: Package.swift beside them), a
+# node_modules with no package.json (listed, not suggested), and a Private folder its .gitignore
+# names (too small to be listed). session-scan.json is the scan before anything is saved;
+# session-exclusions.json every project's list once .build and .swiftpm are saved. The store's
+# folder is written as the default store's, and the project as ~/src/myapp.
+if wanted exclusions; then
+    exclusions_home="$work/exclusions-store"
+    project="$work/exclusions/myapp"
+    /bin/mkdir -p "$exclusions_home" "$project/Sources" "$project/.build/debug" "$project/.swiftpm" "$project/node_modules/left-pad" "$project/Private"
+    status=$?
+    [ "$status" -eq 0 ] || fail "cannot make an exclusions store in $work"
+    # As agent-vm writes it: the temporary folder through /private, where it really is.
+    exclusions_home="$(cd "$exclusions_home" && pwd -P)"
+    [ -n "$exclusions_home" ] || fail "cannot read the path of $work/exclusions-store"
+    project="$(cd "$project" && pwd -P)"
+    [ -n "$project" ] || fail "cannot read the path of $work/exclusions/myapp"
+    printf '// swift-tools-version:6.0\n' > "$project/Package.swift"
+    printf 'print("hi")\n' > "$project/Sources/main.swift"
+    printf 'Private/\n' > "$project/.gitignore"
+    printf 'notes\n' > "$project/Private/notes.txt"
+    printf '{}\n' > "$project/.swiftpm/configuration.json"
+    printf 'module.exports = 1\n' > "$project/node_modules/left-pad/index.js"
+    /bin/dd if=/dev/urandom of="$project/.build/debug/myapp" bs=4096 count=64 2>/dev/null
+    status=$?
+    [ "$status" -eq 0 ] || fail "cannot write $project/.build/debug/myapp"
+    AGENT_VM_HOME="$exclusions_home" capture session-scan session scan --project "$project" --json
+    AGENT_VM_HOME="$exclusions_home" "$agentvm" session exclusions --project "$project" --set .build --set .swiftpm --json > /dev/null 2> "$work/exclusions.err"
+    status=$?
+    if [ "$status" -ne 0 ]; then
+        /bin/cat "$work/exclusions.err" >&2
+        fail "agent-vm session exclusions --set failed with status $status"
+    fi
+    AGENT_VM_HOME="$exclusions_home" capture session-exclusions session exclusions --json
+    project_shown="$(printf '%s' "$project" | /usr/bin/sed "s|^$HOME|/Users/you|")"
+    for name in session-scan session-exclusions; do
+        default_store "$name" "$exclusions_home"
         /usr/bin/jq -S --arg project "$project_shown" \
             'walk(if type == "string" then split($project) | join("/Users/you/src/myapp") else . end)' \
             "$fixtures/$name.json" > "$work/$name.project.json"

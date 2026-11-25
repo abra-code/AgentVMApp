@@ -1,0 +1,42 @@
+{
+  "candidates": [
+    {
+      "bytes": 262144,
+      "excluded": false,
+      "files": 1,
+      "kind": "build",
+      "path": ".build",
+      "reasons": [
+        "named as build output",
+        "Package.swift beside it"
+      ],
+      "suggested": true
+    },
+    {
+      "bytes": 4096,
+      "excluded": false,
+      "files": 1,
+      "kind": "build",
+      "path": ".swiftpm",
+      "reasons": [
+        "named as build output",
+        "Package.swift beside it"
+      ],
+      "suggested": true
+    },
+    {
+      "bytes": 4096,
+      "excluded": false,
+      "files": 1,
+      "kind": "build",
+      "path": "node_modules",
+      "reasons": [
+        "named as build output"
+      ],
+      "suggested": false
+    }
+  ],
+  "excluded": [],
+  "notes": [],
+  "project": "/Users/you/src/myapp"
+}
