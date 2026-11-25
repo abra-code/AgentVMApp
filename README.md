@@ -44,6 +44,16 @@ What the app leaves to `agent-vm` in Terminal:
 
 The rest is in `Docs/linux-boxes.md` of the [agent-vm](https://github.com/abra-code/agent-vm) repository: the systems, the account and root, the network, the shared folder.
 
+## Sessions
+
+Before an agent works on a project folder, avm (and Cadabra) can take a snapshot of it, a session, so that what the agent did can be undone. A snapshot costs nothing at first and more as the folder changes: build output that is rebuilt, and test files that are deleted, stay in every snapshot taken before, and deleting them from the folder frees nothing while a session holds them. Sessions kept for weeks can hold tens of gigabytes. Since version 1.2 the app shows what they hold and frees it (it needs agent-vm 0.8.13):
+
+- **The Sessions tab** lists projects, the most to free first. A project's pane lists its sessions with what each holds alone and with other sessions: sessions taken from one state of a project often hold nothing alone and a lot together, so the figure to go by is the one for the sessions ticked, shown under the table. Opening the tab measures when the last measurement is more than six hours old or sessions were started since (seconds; more for a large store); the arrow under the cards measures at once.
+- **Discarding** (Discard Ticked..., Discard All Ended..., and Discard Older Than... under the cards) asks first, saying what it frees and that undo is then no longer possible; the sessions' records and reports stay. An active session is never discarded. Afterwards the app says what the disk gained.
+- **The figures count what is freed once macOS has removed its local Time Machine snapshots,** which keep deleted data for up to a day (sooner when space runs short): a discard can seem to free little until then, and the app says so.
+- **Settings** shows what sessions hold, and sets how long agent-vm keeps an ended session before it discards it on its own (14, 30 or 60 days, or Never, the default). This Mac's free disk space says what sessions hold that can be freed, and the macOS restore images agent-vm downloaded (about 27 GB each) can be removed there once the images are built.
+- **A banner** at the bottom of the window says so when sessions hold 10 GB or more that can be freed.
+
 ## Logs
 
 agent-vm records what it started in a box, what the box contacted and what was refused, in files on your Mac that nothing in a box can change. A box's Network and Programs windows show the recent connections and programs; for everything else the app shows where the files are.
