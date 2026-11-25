@@ -1,0 +1,49 @@
+[
+  {
+    "endedAt": "2026-11-25T08:22:08Z",
+    "formatVersion": 1,
+    "id": "20261125-032208-ea1b",
+    "project": "/Users/you/src/myapp",
+    "projectDevice": 16777229,
+    "snapshotPath": "/Users/you/Library/Application Support/agent-vm/Sessions/20261125-032208-ea1b/snapshot",
+    "startNanoseconds": 179890000,
+    "startSeconds": 1795594928,
+    "state": "ended",
+    "usage": {
+      "bytes": 1052672,
+      "measuredAt": "2026-11-25T08:22:08Z",
+      "ownBytes": 0
+    }
+  },
+  {
+    "endedAt": "2026-11-25T08:22:08Z",
+    "formatVersion": 1,
+    "id": "20261125-032208-3540",
+    "project": "/Users/you/src/myapp",
+    "projectDevice": 16777229,
+    "snapshotPath": "/Users/you/Library/Application Support/agent-vm/Sessions/20261125-032208-3540/snapshot",
+    "startNanoseconds": 221946000,
+    "startSeconds": 1795594928,
+    "state": "ended",
+    "usage": {
+      "bytes": 1052672,
+      "measuredAt": "2026-11-25T08:22:08Z",
+      "ownBytes": 0
+    }
+  },
+  {
+    "formatVersion": 1,
+    "id": "20261125-032208-d181",
+    "project": "/Users/you/src/myapp",
+    "projectDevice": 16777229,
+    "snapshotPath": "/Users/you/Library/Application Support/agent-vm/Sessions/20261125-032208-d181/snapshot",
+    "startNanoseconds": 266170000,
+    "startSeconds": 1795594928,
+    "state": "active",
+    "usage": {
+      "bytes": 4096,
+      "measuredAt": "2026-11-25T08:22:08Z",
+      "ownBytes": 0
+    }
+  }
+]

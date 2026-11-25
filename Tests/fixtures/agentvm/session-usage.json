@@ -1,0 +1,53 @@
+{
+  "formatVersion": 1,
+  "held": [
+    {
+      "bytes": 1048576,
+      "sessions": [
+        "20261125-032208-3540",
+        "20261125-032208-ea1b"
+      ]
+    }
+  ],
+  "measuredAt": "2026-11-25T08:22:08Z",
+  "notes": [],
+  "projects": [
+    {
+      "active": 1,
+      "freedBytes": 1048576,
+      "project": "/Users/you/src/myapp",
+      "sessions": [
+        "20261125-032208-ea1b",
+        "20261125-032208-3540"
+      ]
+    }
+  ],
+  "sessions": [
+    {
+      "bytes": 1052672,
+      "id": "20261125-032208-ea1b",
+      "ownBytes": 0,
+      "project": "/Users/you/src/myapp",
+      "state": "ended"
+    },
+    {
+      "bytes": 1052672,
+      "id": "20261125-032208-3540",
+      "ownBytes": 0,
+      "project": "/Users/you/src/myapp",
+      "state": "ended"
+    },
+    {
+      "bytes": 4096,
+      "id": "20261125-032208-d181",
+      "ownBytes": 0,
+      "project": "/Users/you/src/myapp",
+      "state": "active"
+    }
+  ],
+  "totals": {
+    "bytes": 2109440,
+    "freedIfAllDiscardedBytes": 1048576,
+    "sessions": 3
+  }
+}

@@ -15,7 +15,8 @@
 # With parts named, only those are captured, and every other fixture is left as it is: version,
 # doctor, status (with the image info, box info and rules that follow from it), packs,
 # recipe-check, ipsw (the list and what Apple offers), empty (the empty store's status and the
-# job), linux, follow (below). The tests name the images and boxes of status.json, so after an
+# job), sessions (a store with sessions: session-usage, session-list and status-sessions), linux,
+# follow (below). The tests name the images and boxes of status.json, so after an
 # agent-vm update that changed nothing in a store's entries the parts that did change are enough.
 # update-agentvmapp.sh runs `version packs recipe-check follow` when the app's
 # AGENTVM_MIN_VERSION is not the agent-vm of version.json.
@@ -49,8 +50,8 @@ shift
 parts=" $* "
 for part in "$@"; do
     case "$part" in
-        version|doctor|status|packs|recipe-check|ipsw|empty|linux|follow) ;;
-        *) fail "\"$part\" is not a part: version, doctor, status, packs, recipe-check, ipsw, empty, linux, follow" ;;
+        version|doctor|status|packs|recipe-check|ipsw|empty|sessions|linux|follow) ;;
+        *) fail "\"$part\" is not a part: version, doctor, status, packs, recipe-check, ipsw, empty, sessions, linux, follow" ;;
     esac
 done
 
@@ -233,6 +234,64 @@ default_store() {
     status=$?
     [ "$status" -eq 0 ] || fail "cannot write $fixtures/$1.json"
 }
+
+# -- Sessions ------------------------------------------------------------------------------------
+# The Sessions tab reads `session usage`, `session list` and the `sessions` of `status`. The
+# default store may have no session, so a store in the temporary folder gets some: a project
+# "myapp" with a 1 MiB file, two sessions ended, the file deleted from the project (so the two
+# hold it together and neither alone, the case the tab is for), and one session left active.
+# The store's folder is written as the default store's, and the project as ~/src/myapp.
+if wanted sessions; then
+    sessions_home="$work/sessions-store"
+    project="$work/myapp"
+    /bin/mkdir -p "$sessions_home" "$project/Sources" "$project/Private"
+    status=$?
+    [ "$status" -eq 0 ] || fail "cannot make a sessions store in $work"
+    # As agent-vm writes it: the temporary folder through /private, where it really is.
+    sessions_home="$(cd "$sessions_home" && pwd -P)"
+    [ -n "$sessions_home" ] || fail "cannot read the path of $work/sessions-store"
+    # As agent-vm writes it: the temporary folder through /private, where it really is.
+    sessions_home="$(cd "$sessions_home" && pwd -P)"
+    [ -n "$sessions_home" ] || fail "cannot read the path of $work/sessions-store"
+    printf 'print("hi")\n' > "$project/Sources/main.swift"
+    /bin/dd if=/dev/urandom of="$project/Private/big.img" bs=4096 count=256 2>/dev/null
+    status=$?
+    [ "$status" -eq 0 ] || fail "cannot write $project/Private/big.img"
+    for round in 1 2 3; do
+        AGENT_VM_HOME="$sessions_home" "$agentvm" session start --project "$project" --json > "$work/session-$round.json" 2> "$work/session.err"
+        status=$?
+        if [ "$status" -ne 0 ]; then
+            /bin/cat "$work/session.err" >&2
+            fail "agent-vm session start failed with status $status"
+        fi
+        [ "$round" -eq 3 ] && break
+        session_id="$(/usr/bin/jq -r '.id // empty' "$work/session-$round.json")"
+        [ -n "$session_id" ] || fail "agent-vm session start printed no id"
+        AGENT_VM_HOME="$sessions_home" "$agentvm" session end "$session_id" > /dev/null 2> "$work/session.err"
+        status=$?
+        [ "$status" -eq 0 ] || fail "agent-vm session end failed with status $status"
+        if [ "$round" -eq 2 ]; then
+            /bin/rm "$project/Private/big.img"
+            status=$?
+            [ "$status" -eq 0 ] || fail "cannot delete $project/Private/big.img"
+        fi
+    done
+    AGENT_VM_HOME="$sessions_home" capture session-usage session usage --json
+    AGENT_VM_HOME="$sessions_home" capture session-list session list --json
+    AGENT_VM_HOME="$sessions_home" capture status-sessions status --json
+    project_shown="$(printf '%s' "$(cd "$project" && pwd -P)" | /usr/bin/sed "s|^$HOME|/Users/you|")"
+    for name in session-usage session-list status-sessions; do
+        default_store "$name" "$sessions_home"
+        /usr/bin/jq -S --arg project "$project_shown" \
+            'walk(if type == "string" then split($project) | join("/Users/you/src/myapp") else . end)' \
+            "$fixtures/$name.json" > "$work/$name.project.json"
+        status=$?
+        [ "$status" -eq 0 ] || fail "cannot rewrite the project's folder in $name.json"
+        /bin/mv -f "$work/$name.project.json" "$fixtures/$name.json"
+        status=$?
+        [ "$status" -eq 0 ] || fail "cannot write $fixtures/$name.json"
+    done
+fi
 
 if [ -z "$linux_home" ]; then
     if wanted linux; then
