@@ -12,7 +12,7 @@
         "WINDOW_DID_ACTIVATE_SUBCOMMAND_ID": "AgentVM.main.activated",
         "END_CANCEL_SUBCOMMAND_ID": "AgentVM.main.close"
       },
-      "REQUIRED_OMC_VERSION": "5.1",
+      "REQUIRED_OMC_VERSION": "5.6.2",
       "REQUIRED_MAC_OS_MIN_VERSION": "27.0"
     },
     {
