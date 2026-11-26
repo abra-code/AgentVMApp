@@ -1,7 +1,7 @@
 #!/bin/sh
 # lib.agentvm.exclusions.sh
 #
-# The Exclusions window (AgentVM.exclusions.json, the views 5301-5309): which folders of a project
+# The Exclusions window (AgentVM.exclusions.json, the views 5301-5311): which folders of a project
 # its sessions leave out of their snapshots. One window at a time (lib.agentvm.ui.sh, "Box
 # windows", with the kind "exclusions" and the name "window"), opened by Choose... on the
 # Exclusions row of the Sessions tab's project pane (a project with no session yet gets a card,
@@ -16,9 +16,12 @@
 # git ignores of 1 GB or more and any of 5 GB or more near the top, with their sizes, and the
 # project's saved list. The table has a row per candidate and per saved path the scan did not
 # find (a saved path need not exist), each with a checkbox: checked are the saved paths, or, for a
-# project with nothing saved, what agent-vm suggests (plainly rebuildable). Save replaces the
-# saved list with the checked rows; the next session of the project leaves them out, and the
-# sessions already taken are not changed.
+# project with nothing saved, what agent-vm suggests (plainly rebuildable). Add Folder... adds any
+# other folder of the project, chosen in a folder panel that opens in the project (its command's
+# DEFAULT_LOCATION reads the hidden view 5311, which holds the project's path), as a checked row;
+# a folder outside the project is refused. Save replaces the saved list with the checked rows;
+# the next session of the project leaves them out, and the sessions already taken are not
+# changed.
 #
 # LEFT OUT IS NOT PROTECTED: undo cannot restore what a snapshot left out. The window says so above
 # the list, and again under it while a checked folder is not build output (ignored by git, or
@@ -39,6 +42,8 @@ EXCL_STATE_ID=5305
 EXCL_WARN_ID=5306
 EXCL_NOTES_ID=5307
 EXCL_SAVE_ID=5309
+EXCL_ADD_ID=5310
+EXCL_PROJECT_ID=5311
 
 # The project an Exclusions window that opens now is for, as "<app pid> <full path>".
 AGENTVM_EXCLUSIONS_OF_KEY="agentvm_exclusions_of"
@@ -93,7 +98,8 @@ excl_file() {
 # excl_rows <uuid>  ->  the table's rows from the cached scan, one per candidate in agent-vm's
 # order, then one per saved path the scan did not list: tick ("true" or "false"), path, size,
 # why, then, not shown, kind (build, ignored, large, or saved for a saved path the scan did not
-# list). Ticked: the saved paths, or what agent-vm suggests when nothing is saved.
+# list; excl_add adds rows of the kind chosen). Ticked: the saved paths, or what agent-vm
+# suggests when nothing is saved.
 excl_rows() {
     local _scan="$(excl_file "$1" scan.json)"
     local _saved="$(excl_file "$1" saved)"
@@ -125,8 +131,21 @@ excl_rows() {
             printf "%s\t%s\t%s\t%s\t%s\n", tick, $1, size($2), why($4, $8), $4
         }
         END {
-            for (i = 1; i <= count; i++) if (!(order[i] in seen)) printf "true\t%s\t-\tsaved; not found in the project now\tsaved\n", order[i]
-        }'
+            for (i = 1; i <= count; i++) if (!(order[i] in seen)) printf "true\t%s\t-\tsaved\tsaved\n", order[i]
+        }' | excl_saved_rows "$(excl_project "$1")"
+}
+
+# excl_saved_rows <project>  <  rows  ->  the rows, with a saved path the scan did not list said to
+# be saved when it is a folder of the project (one added with Add Folder...), or not found in the
+# project now.
+excl_saved_rows() {
+    local _tick _path _size _why _kind
+    while IFS="$ui_tab" read -r _tick _path _size _why _kind; do
+        if [ "$_kind" = "saved" ] && [ ! -d "$1/$_path" ]; then
+            _why="saved; not found in the project now"
+        fi
+        printf '%s\t%s\t%s\t%s\t%s\n' "$_tick" "$_path" "$_size" "$_why" "$_kind"
+    done
 }
 
 # excl_ticked <uuid>  ->  the paths ticked in the table as painted, one per line.
@@ -159,6 +178,7 @@ excl_paint() {
     local _project="$(excl_project "$_uuid")"
     "$dialog" "$_uuid" "$EXCL_HEAD_ID" "Snapshot exclusions for $(/usr/bin/basename "$_project")"
     "$dialog" "$_uuid" "$EXCL_PATH_ID" "$(agentvm_display_path "$_project")"
+    "$dialog" "$_uuid" "$EXCL_PROJECT_ID" "$_project"
     local _rows="$(excl_file "$_uuid" rows.tsv)"
     if [ -f "$_rows" ]; then
         "$dialog" "$_uuid" "$EXCL_TABLE_ID" omc_table_set_rows_from_stdin < "$_rows"
@@ -171,6 +191,7 @@ excl_paint() {
         "$dialog" "$_uuid" "$EXCL_WARN_ID" ""
         "$dialog" "$_uuid" "$EXCL_NOTES_ID" ""
         ui_enable "$_uuid" "$EXCL_SAVE_ID" 0
+        ui_enable "$_uuid" "$EXCL_ADD_ID" 0
         return 0
     fi
     if [ ! -f "$_rows" ]; then
@@ -178,12 +199,14 @@ excl_paint() {
         "$dialog" "$_uuid" "$EXCL_WARN_ID" ""
         "$dialog" "$_uuid" "$EXCL_NOTES_ID" ""
         ui_enable "$_uuid" "$EXCL_SAVE_ID" 0
+        ui_enable "$_uuid" "$EXCL_ADD_ID" 0
         return 0
     fi
     "$dialog" "$_uuid" "$EXCL_STATE_ID" "$(excl_state_text "$_uuid")"
     "$dialog" "$_uuid" "$EXCL_WARN_ID" "$(excl_warn_text "$_uuid")"
     "$dialog" "$_uuid" "$EXCL_NOTES_ID" "$(agentvm_scan_notes < "$(excl_file "$_uuid" scan.json)")"
     ui_enable "$_uuid" "$EXCL_SAVE_ID" 1
+    ui_enable "$_uuid" "$EXCL_ADD_ID" 1
 }
 
 # excl_scan <uuid>  ->  the window says it is looking, `session scan` runs (seconds for a large
@@ -223,6 +246,58 @@ excl_tick() {
     local _rows="$(excl_file "$_uuid" rows.tsv)"
     [ -f "$_rows" ] || return 0
     /usr/bin/awk -F'\t' -v OFS='\t' -v n="$(( $2 + 1 ))" 'NR == n { $1 = ($1 == "true") ? "false" : "true" } { print }' "$_rows" | ui_store "$_rows"
+    excl_paint "$_uuid"
+}
+
+# excl_relative <project> <folder>  ->  the folder's path in the project ("Build/Products"), or
+# nothing when it is not inside the project (the project itself included). The panel may name the
+# folder by another path to the same place (/tmp for /private/tmp): then both are resolved.
+excl_relative() {
+    local _project="$1"
+    local _folder="$2"
+    case "$_folder" in
+        "$_project"/*) printf '%s\n' "${_folder#"$_project"/}"; return 0 ;;
+    esac
+    local _real_project _real_folder
+    _real_project="$(CDPATH= cd -P -- "$_project" 2>/dev/null && pwd)"
+    _real_folder="$(CDPATH= cd -P -- "$_folder" 2>/dev/null && pwd)"
+    [ -n "$_real_project" ] && [ -n "$_real_folder" ] || return 0
+    case "$_real_folder" in
+        "$_real_project"/*) printf '%s\n' "${_real_folder#"$_real_project"/}" ;;
+    esac
+}
+
+# excl_add <uuid> <folder>  ->  Add Folder...: a folder of the project, chosen in the folder panel,
+# becomes a checked row (or its row is checked when the table has it). A folder outside the
+# project, or the project itself, is refused with an alert. Nothing before the scan answered.
+excl_add() {
+    local _uuid="$1"
+    local _project="$(excl_project "$_uuid")"
+    [ -n "$_project" ] || return 0
+    local _rows="$(excl_file "$_uuid" rows.tsv)"
+    [ -f "$_rows" ] || return 0
+    local _folder="$2"
+    [ -n "$_folder" ] || return 0
+    # The panel may hand the folder over with a trailing "/".
+    case "$_folder" in
+        /) ;;
+        */) _folder="${_folder%/}" ;;
+    esac
+    local _relative=""
+    agentvm_valid_project "$_folder" && _relative="$(excl_relative "$_project" "$_folder")"
+    if [ -z "$_relative" ]; then
+        "$dialog" "$_uuid" omc_window omc_present_alert "Choose a folder inside the project" \
+            "$(agentvm_display_path "$_folder") is not a folder inside $(agentvm_display_path "$_project").
+Only a project's own folders can be excluded from its snapshots." "OK::"
+        return 0
+    fi
+    # The path through the environment: awk -v would read a backslash in it as an escape. It is
+    # made a string first, so "01" and "1" are not compared as numbers.
+    EXCL_PATH="$_relative" /usr/bin/awk -F'\t' -v OFS='\t' '
+        BEGIN { path = ENVIRON["EXCL_PATH"] "" }
+        $2 == path { $1 = "true"; found = 1 }
+        { print }
+        END { if (!found) print "true", path, "-", "chosen by you", "chosen" }' "$_rows" | ui_store "$_rows"
     excl_paint "$_uuid"
 }
 

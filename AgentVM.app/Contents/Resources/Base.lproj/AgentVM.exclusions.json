@@ -28,7 +28,15 @@
         "frame": { "maxWidth": "infinity", "minHeight": 120, "maxHeight": "infinity" }
       }
     },
-    { "type": "Text", "id": 5305, "properties": { "text": "", "textSelection": "enabled", "frame": { "maxWidth": "infinity", "alignment": "leading" } } },
+    {
+      "type": "HStack",
+      "properties": { "spacing": 10 },
+      "children": [
+        { "type": "Text", "id": 5305, "properties": { "text": "", "textSelection": "enabled", "frame": { "maxWidth": "infinity", "alignment": "leading" } } },
+        { "type": "Text", "id": 5311, "properties": { "text": "", "hidden": true, "frame": { "width": 0, "height": 0 } } },
+        { "type": "Button", "id": 5310, "properties": { "title": "Add Folder...", "disabled": true, "actionID": "AgentVM.exclusions.add", "help": "Choose another folder of the project to leave out of its snapshots" } }
+      ]
+    },
     { "type": "Text", "id": 5306, "properties": { "text": "", "foregroundStyle": "orange", "textSelection": "enabled", "frame": { "maxWidth": "infinity", "alignment": "leading" } } },
     { "type": "Text", "id": 5307, "properties": { "text": "", "font": "caption", "foregroundStyle": "secondary", "textSelection": "enabled", "frame": { "maxWidth": "infinity", "alignment": "leading" } } },
     {

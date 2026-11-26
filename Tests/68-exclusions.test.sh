@@ -16,7 +16,7 @@
 import_view_ids "$APP_SCRIPTS/lib.agentvm.main.sh" "$APP_SCRIPTS/lib.agentvm.sessions.sh" "$APP_SCRIPTS/lib.agentvm.exclusions.sh"
 [ -n "$SES_EXCLUSIONS_ID" ] && [ -n "$SES_EXCLUSIONS_CHOOSE_ID" ] && [ -n "$SES_ADD_ID" ] && [ -n "$SES_PROJECTS_ID" ] \
     && [ -n "$EXCL_HEAD_ID" ] && [ -n "$EXCL_PATH_ID" ] && [ -n "$EXCL_TABLE_ID" ] && [ -n "$EXCL_STATE_ID" ] && [ -n "$EXCL_WARN_ID" ] \
-    && [ -n "$EXCL_NOTES_ID" ] && [ -n "$EXCL_SAVE_ID" ] && [ -n "$MAIN_STATUS_ID" ] || {
+    && [ -n "$EXCL_NOTES_ID" ] && [ -n "$EXCL_SAVE_ID" ] && [ -n "$EXCL_ADD_ID" ] && [ -n "$EXCL_PROJECT_ID" ] && [ -n "$MAIN_STATUS_ID" ] || {
     printf '68-exclusions: no view ids imported from the libraries\n' >&2
     exit 1
 }
@@ -242,6 +242,55 @@ tick 3
 omc_run AgentVM.exclusions.save
 check "nothing ticked: the list is emptied" "session exclusions --project=$PROJECT --clear --json" "$(saves)"
 omc_run AgentVM.exclusions.close
+
+section "Add Folder..."
+REAL="$OMCTEST_WORK/projects/realapp"
+/bin/mkdir -p "$REAL/Build/Products" "$OMCTEST_WORK/projects/elsewhere"
+/bin/rm -f "$FAKE_AGENTVM_DIR/session-scan.json"
+no_saved_list
+add_folder() {
+    omc_dialog_answer choose_folder "$1"
+    omc_run AgentVM.exclusions.add
+}
+row_count() {
+    ui_rows "$EXCL_TABLE_ID" | /usr/bin/grep -c .
+}
+open_window "$REAL"
+check "on once the scan answered; the hidden view holds the project's path, where the folder panel starts" \
+    "1|$REAL|__ACTIONUI_VIEW_${EXCL_PROJECT_ID}_VALUE__|Select" \
+    "$(enabled "$EXCL_ADD_ID")|$(ui_value "$EXCL_PROJECT_ID")|$(/usr/bin/jq -r '.COMMAND_LIST[] | select(.COMMAND_ID? == "AgentVM.exclusions.add") | .CHOOSE_FOLDER_DIALOG | "\(.DEFAULT_LOCATION[0])|\(.BUTTON_PROMPT)"' "$APP_RESOURCES/Command.json")"
+add_folder ""
+check "Cancel in the panel adds nothing" "3" "$(row_count)"
+add_folder "$REAL/Build/Products/"
+check "a folder of the project: a ticked row by its path in the project, without the trailing slash" \
+    "4|true${TAB}Build/Products${TAB}-${TAB}chosen by you|3 folders ticked: the next session leaves them out of its snapshot." \
+    "$(row_count)|$(ui_rows "$EXCL_TABLE_ID" | col 1-4 | /usr/bin/sed -n '4p')|$(ui_value "$EXCL_STATE_ID")"
+add_folder "$REAL/Build/Products"
+check "  added again: still one row" "4" "$(row_count)"
+tick 0
+add_folder "$REAL/.build"
+check "a folder the table has: its row is ticked again, no new row" "true|4" \
+    "$(ui_rows "$EXCL_TABLE_ID" | /usr/bin/awk -F'\t' '$2 == ".build" { print $1 }')|$(row_count)"
+alerts_reset
+add_folder "$OMCTEST_WORK/projects/elsewhere"
+check "a folder outside the project: refused with an alert, nothing added" "Choose a folder inside the project|4" "$(ui_alert_title)|$(row_count)"
+alerts_reset
+add_folder "$REAL"
+check "  the project itself too" "Choose a folder inside the project|4" "$(ui_alert_title)|$(row_count)"
+alerts_reset
+add_folder "${REAL}x/Build"
+check "  and a folder whose path only starts with the project's" "Choose a folder inside the project|4" "$(ui_alert_title)|$(row_count)"
+: > "$FAKE_AGENTVM_DIR/log"
+omc_run AgentVM.exclusions.save
+check "Save sends the added folder with the others" "session exclusions --project=$REAL --set=.build --set=.swiftpm --set=Build/Products --json" "$(saves)"
+omc_run AgentVM.exclusions.close
+/usr/bin/jq '.excluded = [".build", "Build/Products", "gone"]' "$FIXTURES_AGENTVM/session-scan.json" > "$FAKE_AGENTVM_DIR/session-scan.json"
+open_window "$REAL"
+check "opened again: a saved folder the scan does not list but the project has is saved; one it has not is not found" \
+    "saved|saved; not found in the project now" \
+    "$(ui_rows "$EXCL_TABLE_ID" | /usr/bin/awk -F'\t' '$2 == "Build/Products" { print $4 }')|$(ui_rows "$EXCL_TABLE_ID" | /usr/bin/awk -F'\t' '$2 == "gone" { print $4 }')"
+omc_run AgentVM.exclusions.close
+/bin/rm -f "$FAKE_AGENTVM_DIR/session-scan.json"
 
 section "a folder that may hold work"
 /usr/bin/jq '.candidates += [{path: "Private", bytes: 28000000000, files: 9, kind: "ignored", reasons: ["ignored by .gitignore"], suggested: false, excluded: false},

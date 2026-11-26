@@ -224,6 +224,17 @@
     },
     {
       "NAME": "AgentVM",
+      "COMMAND_ID": "AgentVM.exclusions.add",
+      "EXECUTION_MODE": "exe_script_file",
+      "ACTIVATION_MODE": "act_always",
+      "CHOOSE_FOLDER_DIALOG": {
+        "MESSAGE": "Choose a folder in the project to exclude from the snapshots",
+        "BUTTON_PROMPT": "Select",
+        "DEFAULT_LOCATION": [ "__ACTIONUI_VIEW_5311_VALUE__" ]
+      }
+    },
+    {
+      "NAME": "AgentVM",
       "COMMAND_ID": "AgentVM.recreate",
       "ACTIVATION_MODE": "act_always",
       "EXECUTION_MODE": "exe_script_file",
