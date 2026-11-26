@@ -23,7 +23,7 @@
 # (agent-vm keeps their records). Remove, the trash button under the cards, takes a project off
 # for good: it is kept in the app's list of removed projects (ses_removed_file) with the time, and
 # comes back with a session started after that, or when added again with the plus button. The
-# sort menu in the toolbar orders them by size, largest "to free" first (the order `session usage`
+# sort menu under the cards orders them by size, largest "to free" first (the order `session usage`
 # gives), or by date, the latest session end first.
 #
 # READING. `session usage` measures (seconds to tens of seconds for a large store), so it runs

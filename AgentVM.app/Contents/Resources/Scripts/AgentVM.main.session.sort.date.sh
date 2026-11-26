@@ -1,8 +1,8 @@
 #!/bin/sh
 # AgentVM.main.session.sort.date.sh
-# Sort by Date, in the sort menu of the Sessions tab's toolbar: the project cards by date, the
-# latest session end first. Picking it when it is already checked unchecks the toggle; the paint
-# checks it again.
+# Sort by Date, in the sort menu under the Sessions tab's project cards: the project cards by
+# date, the latest session end first. Picking it when it is already checked unchecks the toggle;
+# the paint checks it again.
 
 . "$OMC_APP_BUNDLE_PATH/Contents/Resources/Scripts/lib.agentvm.main.sh"
 

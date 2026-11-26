@@ -468,19 +468,6 @@
                           "type": "ToolbarItem",
                           "properties": { "placement": "primaryAction" },
                           "content": {
-                            "type": "Menu",
-                            "properties": { "help": "Sort the projects" },
-                            "label": { "type": "Image", "properties": { "systemName": "arrow.up.arrow.down", "imageScale": "small" } },
-                            "children": [
-                              { "type": "Toggle", "id": 744, "properties": { "title": "Sort by Date", "actionID": "AgentVM.main.session.sort.date", "help": "The project whose last session ended latest first" } },
-                              { "type": "Toggle", "id": 747, "properties": { "title": "Sort by Size", "actionID": "AgentVM.main.session.sort.size", "help": "The project with the most to free first" } }
-                            ]
-                          }
-                        },
-                        {
-                          "type": "ToolbarItem",
-                          "properties": { "placement": "primaryAction" },
-                          "content": {
                             "type": "Button",
                             "id": 745,
                             "properties": { "systemImage": "plus", "help": "Add Project...", "actionID": "AgentVM.main.session.project.add" }
@@ -502,6 +489,10 @@
                       { "type": "Button", "id": 746, "properties": { "systemImage": "folder", "imageScale": "large", "disabled": true, "actionID": "AgentVM.main.session.reveal", "help": "Open the selected project's folder in Finder" } },
                       { "type": "Button", "id": 748, "properties": { "systemImage": "trash", "imageScale": "large", "disabled": true, "actionID": "AgentVM.main.session.remove", "help": "Remove the selected project from the list, discarding its sessions; its folder is not touched..." } },
                       { "type": "Spacer" },
+                      { "type": "Menu", "properties": { "help": "Sort the projects" }, "label": { "type": "Image", "properties": { "systemName": "arrow.up.arrow.down", "imageScale": "large", "foregroundStyle": "secondary" } }, "children": [
+                        { "type": "Toggle", "id": 744, "properties": { "title": "Sort by Date", "actionID": "AgentVM.main.session.sort.date", "help": "The project whose last session ended latest first" } },
+                        { "type": "Toggle", "id": 747, "properties": { "title": "Sort by Size", "actionID": "AgentVM.main.session.sort.size", "help": "The project with the most to free first" } }
+                      ] },
                       { "type": "Button", "id": 741, "properties": { "systemImage": "arrow.clockwise", "imageScale": "large", "actionID": "AgentVM.main.session.measure", "help": "Measure again what the sessions hold" } }
                     ] },
                     { "type": "VStack", "properties": { "spacing": 4.0, "alignment": "leading", "padding": { "top": 6, "leading": 16, "bottom": 10, "trailing": 12 }, "frame": { "maxWidth": "infinity", "alignment": "leading" } }, "children": [

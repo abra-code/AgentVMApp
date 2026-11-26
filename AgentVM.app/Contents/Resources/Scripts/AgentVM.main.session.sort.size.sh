@@ -1,8 +1,8 @@
 #!/bin/sh
 # AgentVM.main.session.sort.size.sh
-# Sort by Size, in the sort menu of the Sessions tab's toolbar: the project cards by size, the
-# most to free first. Picking it when it is already checked unchecks the toggle; the paint checks
-# it again.
+# Sort by Size, in the sort menu under the Sessions tab's project cards: the project cards by
+# size, the most to free first. Picking it when it is already checked unchecks the toggle; the
+# paint checks it again.
 
 . "$OMC_APP_BUNDLE_PATH/Contents/Resources/Scripts/lib.agentvm.main.sh"
 
