@@ -58,6 +58,12 @@
 #              (empty for --clear), and the new list into session-exclusions.json, as agent-vm
 #              keeps it (sorted, without repeats); a path with a "." or ".." component is refused
 #              and nothing is written.
+#   session-report.json, session-report-<id>.json  what `session report <id>` answers: the session's
+#              own when present, else session-report.json, else the fixture; report-ids APPENDED
+#              to: the id. `session undo <id> --path=<p>...` refuses a path that report does not
+#              list, as agent-vm does, and otherwise writes the id to undo-id and the paths, one per
+#              line, to undo-paths, and answers session-undo-<id>.json, else session-undo.json, else
+#              the fixture; it changes no report (the test does, to match).
 #   removed-ipsw  WRITTEN by `image fetch-ipsw --remove <name>`: the name (one --list does not
 #              have is refused).
 #   job-start-state  when present, the state a job is in as `job start` returns ("failed"), with
@@ -94,7 +100,8 @@
 #   nothing in what status answers: the test changes status.json to match), session list --json,
 #   session usage --json, session discard <id>... --json, session discard --older-than <days>
 #   --json, store sessions --discard-after <days> --json, session scan --project=<path> --json,
-#   session exclusions [--project=<path> --set=<p>... | --clear] --json and image fetch-ipsw --remove <name>
+#   session exclusions [--project=<path> --set=<p>... | --clear] --json, session report <id> --json, session undo <id>
+#   --path=<p>... --json and image fetch-ipsw --remove <name>
 #   --json (see their state files above; none changes what status answers),
 #   recipe check <path>... --json (see recipe_check below; recipe-check.json and
 #   recipe-check-status in the state directory replace its answer and status).
@@ -498,6 +505,50 @@ case "$*" in
     "session scan --project="*" --json")
         printf '%s\n' "${3#--project=}" > "$state/scan-project"
         answer session-scan ;;
+    "session report "*" --json")
+        # The id is kept for the test to read; the answer is the session's own when the test left
+        # one (session-report-<id>.json), else session-report.json.
+        printf '%s\n' "$3" >> "$state/report-ids"
+        if [ -f "$state/session-report-$3.json" ]; then
+            /bin/cat "$state/session-report-$3.json"
+        else
+            answer session-report
+        fi ;;
+    "session undo "*" --json")
+        # The paths are kept, one per line, for the test to read. A path the report does not list
+        # is refused before anything moves, as agent-vm refuses it.
+        id="$3"
+        shift 3
+        paths=""
+        while [ "$#" -gt 1 ]; do
+            case "$1" in
+                --path=*) paths="$paths${1#--path=}
+" ;;
+                *)
+                    printf 'Error: fake_agent_vm: session undo does not take %s here\n' "$1" >&2
+                    exit 64 ;;
+            esac
+            shift
+        done
+        if [ -f "$state/session-report-$id.json" ]; then
+            report="$state/session-report-$id.json"
+        elif [ -f "$state/session-report.json" ]; then
+            report="$state/session-report.json"
+        else
+            report="$fixtures/session-report.json"
+        fi
+        unknown="$(printf '%s' "$paths" | /usr/bin/jq -R -r --slurpfile report "$report" 'select(. != "") as $p | select([$report[0].changes[]?.path] | index($p) | not) | $p' | /usr/bin/head -n 1)"
+        if [ -n "$unknown" ]; then
+            printf 'Error: cannot undo %s on its own: it did not change in this session (`agent-vm session report` lists what did)\n' "$unknown" >&2
+            exit 1
+        fi
+        printf '%s\n' "$id" > "$state/undo-id"
+        printf '%s' "$paths" > "$state/undo-paths"
+        if [ -f "$state/session-undo-$id.json" ]; then
+            /bin/cat "$state/session-undo-$id.json"
+        else
+            answer session-undo
+        fi ;;
     "session exclusions --json")
         answer session-exclusions ;;
     "session exclusions --project="*" --json")

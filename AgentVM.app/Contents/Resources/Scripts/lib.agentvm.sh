@@ -1225,6 +1225,131 @@ agentvm_session_exclusions_set() {
     return 0
 }
 
+# -- A session's changes -------------------------------------------------------------------------
+# `session report` lists what changed in the project since the session started, each entry by its
+# path relative to the project, with the flags of what runs code later on this Mac; `session undo
+# --path` puts back the entries given. The Session Changes window (lib.agentvm.changes.sh) shows
+# one and calls the other.
+#
+# A PATH WITH A CONTROL CHARACTER (a tab, a newline) cannot travel in a row, and an agent could
+# name a file so to hide it from a list. Such an entry is kept, with the characters shown as "?"
+# and marked not plain (the last column of its row), so that it is seen; it is never diffed or
+# undone from the app, which would have to pass a path it cannot read back. So is a path with a
+# character that can make it read as another: a line or paragraph separator, or a mark that turns
+# the direction of the text. The flags' reasons and a symlink's target, which the agent chose,
+# are shown the same way.
+
+# jq: what a path or a text of the report shows with "?" in place of those characters (shown), and
+# whether a path has none (plain).
+agentvm_jq_report_defs='def unsafe: "[[:cntrl:]\u2028\u2029\u200e\u200f\u202a-\u202e\u2066-\u2069]";
+def shown: if type == "string" then gsub(unsafe; "?") else . end;
+def plain: type == "string" and (test(unsafe) | not);'
+
+# agentvm_session_report <id>  ->  `session report <id> --json`: what changed in the project since
+# the session started, compared with its snapshot (seconds for a large project), or, for a
+# discarded session, the report saved when it ended (`saved` true). Changes nothing.
+agentvm_session_report() {
+    agentvm_valid_session_id "$1" || { _agentvm_refuse 2 "\"$1\" is not a session id."; return 2; }
+    agentvm_json session report "$1"
+}
+
+# agentvm_report_head  <  report JSON  ->  one row: project, snapshot folder ("-" when the report
+# names none), saved (true for a report read back from the session's folder), scope ("git" for a
+# snapshot of the git folders only, else "-"), the counts of added, deleted, modified, type
+# changed and permission changed entries, of those flagged high and medium, then of the changes in
+# what the snapshot left out and of those flagged high and medium ("-" when nothing was left out),
+# and what was left out, joined with ", ".
+agentvm_report_head() {
+    /usr/bin/jq -r "$agentvm_jq_defs$agentvm_jq_report_defs"' [.project, .snapshotPath, (.saved == true),
+        (if .scope == "gitFolders" then "git" else null end),
+        (.summary.added // 0), (.summary.deleted // 0), (.summary.modified // 0), (.summary.typeChanged // 0),
+        (.summary.metadata // 0), (.summary.flaggedHigh // 0), (.summary.flaggedMedium // 0),
+        .summary.leftOutChanged, .summary.leftOutFlaggedHigh, .summary.leftOutFlaggedMedium,
+        ((.excluded // []) | map(strings | shown) | join(", "))] | row'
+}
+
+# agentvm_report_change_rows  <  report JSON  ->  one row per change, in agent-vm's order (by path):
+# path, kind (added, deleted, modified, typeChanged, metadata), type (file, directory, symlink, ...),
+# size, size before ("-" when there was none), the highest flag (high, medium, info, or "-"), the
+# flags' reasons, highest first, joined with "; ", whether an ancestor's change covers it (true or
+# false), the symlink's target now ("-" for none), how many entries a deleted folder held ("-"),
+# and whether the path is plain (false when it holds a control character, or a separator or
+# direction mark, shown as "?").
+agentvm_report_change_rows() {
+    /usr/bin/jq -r "$agentvm_jq_defs$agentvm_jq_report_defs"'
+        def rank: if . == "high" then 3 elif . == "medium" then 2 elif . == "info" then 1 else 0 end;
+        .changes[]? | select((.path | type) == "string")
+        | ((.flags // []) | sort_by(-(.severity | rank))) as $flags
+        | [(.path | shown), .kind, .type, .size, .previousSize,
+           ($flags[0].severity // null), ($flags | map(.reason | shown) | join("; ")),
+           (.coveredByAncestor == true), (.symlinkTarget | shown),
+           .entriesInside, (.path | plain)] | row'
+}
+
+# agentvm_report_left_out_rows  <  report JSON  ->  one row per flagged change in what the snapshot
+# left out (agent-vm lists only those, high first, at most 200): path, the highest flag, the
+# reasons joined with "; ". None of them can be undone.
+agentvm_report_left_out_rows() {
+    /usr/bin/jq -r "$agentvm_jq_defs$agentvm_jq_report_defs"'
+        def rank: if . == "high" then 3 elif . == "medium" then 2 elif . == "info" then 1 else 0 end;
+        .leftOutChanges[]? | select((.path | type) == "string")
+        | ((.flags // []) | sort_by(-(.severity | rank))) as $flags
+        | [(.path | shown), ($flags[0].severity // null), ($flags | map(.reason | shown) | join("; "))] | row'
+}
+
+# agentvm_report_open_programs  <  report JSON  ->  one row per program agent-vm started for the
+# project while the session was active and that has no exit status: still running, or ended
+# without writing one (its client died). The box, the client's pid on this Mac ("-"), the command
+# line (its arguments joined with spaces), and when it started.
+agentvm_report_open_programs() {
+    /usr/bin/jq -r "$agentvm_jq_defs$agentvm_jq_report_defs"' .programs[]? | select(.program.status == null)
+        | [(.box | shown), .program.hostPid, ((.program.argv // []) | map(tostring) | join(" ") | shown), .program.started] | row'
+}
+
+# agentvm_session_undo <id> <path>...  ->  agent-vm's answer (JSON) once it put back those entries
+# of the session's report and what is under them, as they were when the session started; the rest
+# of the session stays undoable, and the session becomes undone only once nothing changed is left.
+# What the agent left there is moved into the session's folder, never deleted. Every path is one
+# as the report lists it, passed as --path=<path> so that one starting with "-" is never read as
+# an option; an empty one, or one with a control character, is refused here, and agent-vm refuses
+# a path that did not change or that the snapshot left out, before anything moves. A failure to put
+# back one entry does not stop the others: the answer lists it (agentvm_undo_failed_rows) and the
+# status is still 0.
+agentvm_session_undo() {
+    agentvm_valid_session_id "$1" || { _agentvm_refuse 2 "\"$1\" is not a session id."; return 2; }
+    local _id="$1"
+    shift
+    [ "$#" -gt 0 ] || { _agentvm_refuse 2 "No change to undo: name the entries to put back."; return 2; }
+    local _count=$#
+    local _path
+    for _path in "$@"; do
+        [ -n "$_path" ] || { _agentvm_refuse 2 "An empty path cannot be undone: give one as the report lists it."; return 2; }
+        case "$_path" in
+            *[[:cntrl:]]*) _agentvm_refuse 2 "A path with a control character cannot be undone from here: use agent-vm session undo in Terminal."; return 2 ;;
+        esac
+        set -- "$@" "--path=$_path"
+    done
+    shift "$_count"
+    agentvm_json session undo "$_id" "$@"
+}
+
+# agentvm_undo_head  <  undo JSON  ->  one row: the session's state after the undo (active, ended,
+# or undone once nothing changed is left), how many entries were put back, how many could not be,
+# how many changes remain among those named, and the folder of the session that now holds what the
+# agent left in them ("-" when the answer names none).
+agentvm_undo_head() {
+    /usr/bin/jq -r "$agentvm_jq_defs"' [.session.state, ((.restore.restored // []) | length),
+        ((.restore.failed // {}) | length), (.restore.remaining // 0),
+        (if .session.replacedTree and .session.snapshotPath
+         then (.session.snapshotPath | sub("/[^/]*$"; "")) + "/" + .session.replacedTree else null end)] | row'
+}
+
+# agentvm_undo_failed_rows  <  undo JSON  ->  one row per entry that could not be put back: its
+# path and agent-vm's reason.
+agentvm_undo_failed_rows() {
+    /usr/bin/jq -r "$agentvm_jq_defs$agentvm_jq_report_defs"' (.restore.failed // {}) | to_entries[] | [(.key | shown), (.value | shown)] | row'
+}
+
 
 # -- Jobs ----------------------------------------------------------------------------------------
 # What takes longer than a handler may wait (starting or stopping a box, building or updating an

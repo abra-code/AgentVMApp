@@ -16,7 +16,8 @@
 # doctor, status (with the image info, box info and rules that follow from it), packs,
 # recipe-check, ipsw (the list and what Apple offers), empty (the empty store's status and the
 # job), sessions (a store with sessions: session-usage, session-list and status-sessions),
-# exclusions (a project's scan and a saved list: session-scan, session-exclusions), linux,
+# exclusions (a project's scan and a saved list: session-scan, session-exclusions), changes (a
+# session's report and an undo of two of its entries: session-report, session-undo), linux,
 # follow (below). The tests name the images and boxes of status.json, so after an
 # agent-vm update that changed nothing in a store's entries the parts that did change are enough.
 # update-agentvmapp.sh runs `version packs recipe-check follow` when the app's
@@ -51,8 +52,8 @@ shift
 parts=" $* "
 for part in "$@"; do
     case "$part" in
-        version|doctor|status|packs|recipe-check|ipsw|empty|sessions|exclusions|linux|follow) ;;
-        *) fail "\"$part\" is not a part: version, doctor, status, packs, recipe-check, ipsw, empty, sessions, exclusions, linux, follow" ;;
+        version|doctor|status|packs|recipe-check|ipsw|empty|sessions|exclusions|changes|linux|follow) ;;
+        *) fail "\"$part\" is not a part: version, doctor, status, packs, recipe-check, ipsw, empty, sessions, exclusions, changes, linux, follow" ;;
     esac
 done
 
@@ -333,6 +334,83 @@ if wanted exclusions; then
     project_shown="$(printf '%s' "$project" | /usr/bin/sed "s|^$HOME|/Users/you|")"
     for name in session-scan session-exclusions; do
         default_store "$name" "$exclusions_home"
+        /usr/bin/jq -S --arg project "$project_shown" \
+            'walk(if type == "string" then split($project) | join("/Users/you/src/myapp") else . end)' \
+            "$fixtures/$name.json" > "$work/$name.project.json"
+        status=$?
+        [ "$status" -eq 0 ] || fail "cannot rewrite the project's folder in $name.json"
+        /bin/mv -f "$work/$name.project.json" "$fixtures/$name.json"
+        status=$?
+        [ "$status" -eq 0 ] || fail "cannot write $fixtures/$name.json"
+    done
+fi
+
+# -- A session's changes ---------------------------------------------------------------------------
+# The Session Changes window reads `session report` of a session and undoes entries with `session
+# undo --path`. A store and a project "myapp" in the temporary folder, whose .build its sessions
+# leave out, and one session that stays active, during which every kind of change is made: a text
+# file modified and one added, a binary file modified, a folder deleted, a symlink pointed out of
+# the project (flagged high), a script made executable (a permission change, flagged medium), and
+# an executable written in .build (a left-out change, flagged). session-report.json is the report
+# then; session-undo.json the answer to an undo of the modified text file and the deleted folder.
+# The store's folder is written as the default store's, and the project as ~/src/myapp.
+if wanted changes; then
+    changes_home="$work/changes-store"
+    project="$work/changes/myapp"
+    /bin/mkdir -p "$changes_home" "$project/Sources" "$project/Old" "$project/.build/debug"
+    status=$?
+    [ "$status" -eq 0 ] || fail "cannot make a changes store in $work"
+    # As agent-vm writes it: the temporary folder through /private, where it really is.
+    changes_home="$(cd "$changes_home" && pwd -P)"
+    [ -n "$changes_home" ] || fail "cannot read the path of $work/changes-store"
+    project="$(cd "$project" && pwd -P)"
+    [ -n "$project" ] || fail "cannot read the path of $work/changes/myapp"
+    printf 'let a = 1\nlet b = 2\nlet c = 3\n' > "$project/Sources/main.swift"
+    printf 'notes\n' > "$project/Old/notes.txt"
+    printf 'PNG\0\1\2\3' > "$project/icon.png"
+    printf 'echo build\n' > "$project/build.sh"
+    printf 'readme\n' > "$project/README.md"
+    /bin/ln -s README.md "$project/docs"
+    status=$?
+    [ "$status" -eq 0 ] || fail "cannot make the symlink $project/docs"
+    AGENT_VM_HOME="$changes_home" "$agentvm" session exclusions --project "$project" --set .build --json > /dev/null 2> "$work/changes.err"
+    status=$?
+    if [ "$status" -ne 0 ]; then
+        /bin/cat "$work/changes.err" >&2
+        fail "agent-vm session exclusions --set failed with status $status"
+    fi
+    AGENT_VM_HOME="$changes_home" "$agentvm" session start --project "$project" --json > "$work/changes-start.json" 2> "$work/changes.err"
+    status=$?
+    if [ "$status" -ne 0 ]; then
+        /bin/cat "$work/changes.err" >&2
+        fail "agent-vm session start failed with status $status"
+    fi
+    session_id="$(/usr/bin/jq -r '.id // empty' "$work/changes-start.json")"
+    [ -n "$session_id" ] || fail "agent-vm session start printed no id"
+    printf 'let a = 1\nlet b = 20\nlet c = 3\nlet d = 4\n' > "$project/Sources/main.swift"
+    printf 'new\n' > "$project/Sources/added.swift"
+    printf 'PNG\0\1\4\5\6\7' > "$project/icon.png"
+    /bin/rm -r "$project/Old"
+    status=$?
+    [ "$status" -eq 0 ] || fail "cannot delete $project/Old"
+    /bin/rm "$project/docs"
+    status=$?
+    [ "$status" -eq 0 ] || fail "cannot delete $project/docs"
+    /bin/ln -s /etc/hosts "$project/docs"
+    status=$?
+    [ "$status" -eq 0 ] || fail "cannot make the symlink $project/docs"
+    /bin/chmod 755 "$project/build.sh"
+    status=$?
+    [ "$status" -eq 0 ] || fail "cannot make $project/build.sh executable"
+    printf '#!/bin/sh\n' > "$project/.build/debug/tool"
+    /bin/chmod 755 "$project/.build/debug/tool"
+    status=$?
+    [ "$status" -eq 0 ] || fail "cannot make $project/.build/debug/tool executable"
+    AGENT_VM_HOME="$changes_home" capture session-report session report "$session_id" --json
+    AGENT_VM_HOME="$changes_home" capture session-undo session undo "$session_id" --path Sources/main.swift --path Old --json
+    project_shown="$(printf '%s' "$project" | /usr/bin/sed "s|^$HOME|/Users/you|")"
+    for name in session-report session-undo; do
+        default_store "$name" "$changes_home"
         /usr/bin/jq -S --arg project "$project_shown" \
             'walk(if type == "string" then split($project) | join("/Users/you/src/myapp") else . end)' \
             "$fixtures/$name.json" > "$work/$name.project.json"

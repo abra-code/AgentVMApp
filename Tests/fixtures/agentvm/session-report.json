@@ -1,0 +1,118 @@
+{
+  "activityNotes": [],
+  "boxes": [],
+  "changes": [
+    {
+      "coveredByAncestor": false,
+      "entriesInside": 1,
+      "flags": [],
+      "kind": "deleted",
+      "path": "Old",
+      "previousSize": 96,
+      "type": "directory"
+    },
+    {
+      "coveredByAncestor": false,
+      "flags": [],
+      "kind": "added",
+      "path": "Sources/added.swift",
+      "size": 4,
+      "type": "file"
+    },
+    {
+      "coveredByAncestor": false,
+      "flags": [],
+      "kind": "modified",
+      "path": "Sources/main.swift",
+      "previousSize": 30,
+      "size": 41,
+      "type": "file"
+    },
+    {
+      "coveredByAncestor": false,
+      "flags": [
+        {
+          "reason": "executable file added or changed: files written by the agent carry no quarantine attribute, so Gatekeeper will not check them",
+          "rule": "executable",
+          "severity": "medium"
+        }
+      ],
+      "kind": "metadata",
+      "path": "build.sh",
+      "previousSize": 11,
+      "size": 11,
+      "type": "file"
+    },
+    {
+      "coveredByAncestor": false,
+      "flags": [
+        {
+          "reason": "symlink pointing outside the project (/etc/hosts): host tools that follow it read or write elsewhere",
+          "rule": "symlink-escape",
+          "severity": "high"
+        }
+      ],
+      "kind": "modified",
+      "path": "docs",
+      "previousSize": 9,
+      "size": 10,
+      "symlinkTarget": "/etc/hosts",
+      "type": "symlink"
+    },
+    {
+      "coveredByAncestor": false,
+      "flags": [],
+      "kind": "modified",
+      "path": "icon.png",
+      "previousSize": 7,
+      "size": 9,
+      "type": "file"
+    }
+  ],
+  "excluded": [
+    ".build"
+  ],
+  "generatedAt": "2026-11-26T21:45:57Z",
+  "leftOutChanges": [
+    {
+      "coveredByAncestor": false,
+      "flags": [
+        {
+          "reason": "executable file added or changed: files written by the agent carry no quarantine attribute, so Gatekeeper will not check them",
+          "rule": "executable",
+          "severity": "medium"
+        }
+      ],
+      "kind": "added",
+      "path": ".build/debug/tool",
+      "size": 10,
+      "type": "file"
+    }
+  ],
+  "network": {
+    "bytesDown": 0,
+    "bytesUp": 0,
+    "connections": 0,
+    "failed": 0,
+    "hosts": [],
+    "refused": 0
+  },
+  "programs": [],
+  "project": "/Users/you/src/myapp",
+  "session": "20261126-164557-468e",
+  "snapshotPath": "/Users/you/Library/Application Support/agent-vm/Sessions/20261126-164557-468e/snapshot",
+  "startedAt": "2026-11-26T21:45:57Z",
+  "summary": {
+    "added": 1,
+    "deleted": 1,
+    "flaggedHigh": 1,
+    "flaggedMedium": 1,
+    "leftOutChanged": 3,
+    "leftOutFlaggedHigh": 0,
+    "leftOutFlaggedMedium": 1,
+    "metadata": 1,
+    "modified": 3,
+    "typeChanged": 0
+  },
+  "warnings": []
+}

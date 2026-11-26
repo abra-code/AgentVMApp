@@ -849,6 +849,66 @@ check "  a relative project never reaches agent-vm" "2|" \
 check "  nor does an empty path (agent-vm would read --set= as a usage error)" "2|" \
     "$(fake_reset; with_fake agentvm_session_exclusions_set /Users/you/src/myapp .build "" >/dev/null; echo $?)|$(fake_log)"
 
+section "a session's changes: what changed and what can be put back (session report, session undo)"
+CHANGES_ID="$(/usr/bin/jq -r '.session' "$FIXTURES_AGENTVM/session-report.json")"
+CHANGES_SNAPSHOT="/Users/you/Library/Application Support/agent-vm/Sessions/$CHANGES_ID/snapshot"
+check "the head: project, snapshot, not saved, the whole project, the counts, and .build left out with 3 changes, 1 flagged medium" \
+    "/Users/you/src/myapp${TAB}$CHANGES_SNAPSHOT${TAB}false${TAB}-${TAB}1${TAB}1${TAB}3${TAB}0${TAB}1${TAB}1${TAB}1${TAB}3${TAB}0${TAB}1${TAB}.build" \
+    "$(lib agentvm_report_head < "$FIXTURES_AGENTVM/session-report.json")"
+rows="$(lib agentvm_report_change_rows < "$FIXTURES_AGENTVM/session-report.json")"
+check "a row per change, by path: path, kind, type, size, before, highest flag" \
+    "Old deleted directory - 96 -|Sources/added.swift added file 4 - -|Sources/main.swift modified file 41 30 -|build.sh metadata file 11 11 medium|docs modified symlink 10 9 high|icon.png modified file 9 7 -" \
+    "$(printf '%s\n' "$rows" | /usr/bin/cut -f1-6 | /usr/bin/tr '\t' ' ' | /usr/bin/paste -sd '|' -)"
+check "  eleven fields each"         "11" "$(printf '%s\n' "$rows" | field_count)"
+check "  the symlink: its reason, its target now, and a plain path" \
+    "symlink pointing outside the project (/etc/hosts): host tools that follow it read or write elsewhere${TAB}false${TAB}/etc/hosts${TAB}-${TAB}true" \
+    "$(printf '%s\n' "$rows" | /usr/bin/awk -F'\t' '$1 == "docs"' | /usr/bin/cut -f7-11)"
+check "  the deleted folder held one entry" "1" "$(printf '%s\n' "$rows" | /usr/bin/awk -F'\t' '$1 == "Old" { print $10 }')"
+check "  the highest flag first, its reasons highest first" "x${TAB}added${TAB}file${TAB}-${TAB}-${TAB}high${TAB}h; m; i${TAB}true${TAB}-${TAB}-${TAB}true" \
+    "$(printf '%s\n' '{"changes": [{"path": "x", "kind": "added", "type": "file", "coveredByAncestor": true, "flags": [{"severity": "info", "reason": "i"}, {"severity": "high", "reason": "h"}, {"severity": "medium", "reason": "m"}]}]}' | lib agentvm_report_change_rows)"
+check "  a path with a control character is kept, shown with ?, and marked not plain" "a?b${TAB}false|c?d${TAB}false|ok${TAB}true" \
+    "$(printf '%s\n' '{"changes": [{"path": "a\nb"}, {"path": "c\td"}, {"path": 3}, {"path": "ok"}]}' | lib agentvm_report_change_rows | /usr/bin/cut -f1,11 | /usr/bin/paste -sd '|' -)"
+check "  so is one with a line separator or a mark that turns the text's direction; a name in another script is plain" "e?f${TAB}false|g?h${TAB}false|caf$(printf '\303\251')${TAB}true" \
+    "$(printf '%s\n' '{"changes": [{"path": "e\u2028f"}, {"path": "g\u202eh"}, {"path": "caf\u00e9"}]}' | lib agentvm_report_change_rows | /usr/bin/cut -f1,11 | /usr/bin/paste -sd '|' -)"
+check "  a reason or a target the agent chose shows no control character" "a?b${TAB}x?y" \
+    "$(printf '%s\n' '{"changes": [{"path": "p", "symlinkTarget": "x\u001by", "flags": [{"severity": "high", "reason": "a\u001bb"}]}]}' | lib agentvm_report_change_rows | /usr/bin/cut -f7,9)"
+check "what changed in what was left out: the flagged ones, with their reason" \
+    ".build/debug/tool${TAB}medium${TAB}executable file added or changed: files written by the agent carry no quarantine attribute, so Gatekeeper will not check them" \
+    "$(lib agentvm_report_left_out_rows < "$FIXTURES_AGENTVM/session-report.json")"
+check "nothing left out: no left-out counts, nothing named, no list" "-${TAB}-${TAB}-${TAB}-|" \
+    "$(printf '%s\n' '{"summary": {"added": 1}}' | lib agentvm_report_head | /usr/bin/cut -f12-15)|$(printf '%s\n' '{}' | lib agentvm_report_left_out_rows)"
+check "  a saved report, of the git folders only" "true${TAB}git" \
+    "$(printf '%s\n' '{"saved": true, "scope": "gitFolders"}' | lib agentvm_report_head | /usr/bin/cut -f3-4)"
+check "the programs with no exit status: box, client pid, command line, start; one that ended is not among them" \
+    "b${TAB}123${TAB}opencode --yolo${TAB}2026-11-25T20:33:10Z" \
+    "$(printf '%s\n' '{"programs": [{"box": "b", "program": {"argv": ["opencode", "--yolo"], "hostPid": 123, "started": "2026-11-25T20:33:10Z"}}, {"box": "b", "program": {"argv": ["ls"], "status": 0}}]}' | lib agentvm_report_open_programs)"
+check "  the fixture's session ran none" "" "$(lib agentvm_report_open_programs < "$FIXTURES_AGENTVM/session-report.json")"
+check "an undo's answer: still active, 2 put back, none failed, none remaining, and where the agent's versions went" \
+    "active${TAB}2${TAB}0${TAB}0${TAB}/Users/you/Library/Application Support/agent-vm/Sessions/$CHANGES_ID/$(/usr/bin/jq -r '.session.replacedTree' "$FIXTURES_AGENTVM/session-undo.json")|" \
+    "$(lib agentvm_undo_head < "$FIXTURES_AGENTVM/session-undo.json")|$(lib agentvm_undo_failed_rows < "$FIXTURES_AGENTVM/session-undo.json")"
+check "  what could not be put back, with agent-vm's reason" "1|a?b${TAB}in use" \
+    "$(printf '%s\n' '{"restore": {"failed": {"a\nb": "in use"}}}' | lib agentvm_undo_head | col 3)|$(printf '%s\n' '{"restore": {"failed": {"a\nb": "in use"}}}' | lib agentvm_undo_failed_rows)"
+
+section "a session's changes: what the library asks agent-vm to do"
+fake_reset
+check "session report of a session" "session report $CHANGES_ID --json|$CHANGES_ID" \
+    "$(with_fake agentvm_session_report "$CHANGES_ID" >/dev/null; fake_log | /usr/bin/tail -1)|$(/bin/cat "$FAKE_AGENTVM_DIR/report-ids")"
+fake_reset
+check "  what is not a session id never reaches agent-vm" "2|" "$(with_fake agentvm_session_report --json >/dev/null; echo $?)|$(fake_log)"
+fake_reset
+check "undoing two entries: each as --path=<path>, and agent-vm's answer" \
+    "session undo $CHANGES_ID --path=Sources/main.swift --path=Old --json|Sources/main.swift Old|active" \
+    "$(with_fake agentvm_session_undo "$CHANGES_ID" Sources/main.swift Old >/dev/null; fake_log | /usr/bin/tail -1)|$(/usr/bin/paste -sd ' ' "$FAKE_AGENTVM_DIR/undo-paths")|$(with_fake agentvm_session_undo "$CHANGES_ID" Old | lib agentvm_undo_head | col 1)"
+fake_reset
+check "  a path agent-vm refuses: its status and its reason, and nothing undone" \
+    "1|cannot undo Sources/none.swift on its own: it did not change in this session (\`agent-vm session report\` lists what did)|no" \
+    "$(with_fake agentvm_session_undo "$CHANGES_ID" Old Sources/none.swift >/dev/null; echo $?)|$(lib agentvm_last_error 1)|$([ -f "$FAKE_AGENTVM_DIR/undo-paths" ] && echo yes || echo no)"
+fake_reset
+check "  no path, an empty one, one with a control character, or what is not a session id never reach agent-vm" "2 2 2 2|" \
+    "$(with_fake agentvm_session_undo "$CHANGES_ID" >/dev/null; printf '%s ' $?; with_fake agentvm_session_undo "$CHANGES_ID" Old "" >/dev/null; printf '%s ' $?; with_fake agentvm_session_undo "$CHANGES_ID" "a${TAB}b" >/dev/null; printf '%s ' $?; with_fake agentvm_session_undo --whole-tree Old >/dev/null; printf '%s' $?)|$(fake_log)"
+check "  a path starting with \"-\" is a path, not an option" "session undo $CHANGES_ID --path=-x --json" \
+    "$(fake_reset; with_fake agentvm_session_undo "$CHANGES_ID" -x >/dev/null; fake_log | /usr/bin/tail -1)"
+
 section "an empty store (status-empty.json)"
 check "no box rows"                  "" "$(lib agentvm_status_box_rows < "$FIXTURES_AGENTVM/status-empty.json")"
 check "no image rows"                "" "$(lib agentvm_status_image_rows < "$FIXTURES_AGENTVM/status-empty.json")"
@@ -943,6 +1003,14 @@ check "the update fields are there" "revision updatedAt macOSCheckedAt toolsChec
         "$FIXTURES_AGENTVM/status.json" | /usr/bin/tr '\n' ' ')"
 check "the newest macOS is there"    "version build checkedAt " \
     "$(/usr/bin/jq -r '.newestMacOS | keys_unsorted | sort_by(if . == "version" then 0 elif . == "build" then 1 else 2 end)[]' "$FIXTURES_AGENTVM/status.json" | /usr/bin/tr '\n' ' ')"
+check "a report has what the Session Changes window reads" "" \
+    "$(lib agentvm_report_head < "$FIXTURES_AGENTVM/session-report.json" | /usr/bin/awk -F'\t' '
+        BEGIN { n = split("1:project 2:snapshotPath 5:added 6:deleted 7:modified 8:typeChanged 9:metadata 10:flaggedHigh 11:flaggedMedium 12:leftOutChanged 13:leftOutFlaggedHigh 14:leftOutFlaggedMedium 15:excluded", f, " ") }
+        { for (i = 1; i <= n; i++) { split(f[i], p, ":"); if ($p[1] == "-") printf "%s ", p[2] } }')$(/usr/bin/jq -r '[.changes[] | keys[]] | unique as $have
+        | ["path", "kind", "type", "size", "previousSize", "flags", "coveredByAncestor", "symlinkTarget", "entriesInside"][] | select(. as $key | $have | index($key) | not)' "$FIXTURES_AGENTVM/session-report.json" | /usr/bin/tr '\n' ' ')"
+check "  and an undo's answer" "" "$(lib agentvm_undo_head < "$FIXTURES_AGENTVM/session-undo.json" | /usr/bin/awk -F'\t' '
+        BEGIN { n = split("1:state 5:replacedTree", f, " ") }
+        { for (i = 1; i <= n; i++) { split(f[i], p, ":"); if ($p[1] == "-") printf "%s ", p[2] } }')$(/usr/bin/jq -r '.restore | keys - ["failed", "remaining", "restored"] | .[]' "$FIXTURES_AGENTVM/session-undo.json")"
 check "the virtual machine count is there" "0" \
     "$(lib agentvm_status_vm_row < "$FIXTURES_AGENTVM/status.json" | col 1)"
 check "what agent-vm keeps of deleted boxes is there" "bytes count directory holdDays " \

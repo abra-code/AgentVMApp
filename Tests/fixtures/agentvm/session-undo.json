@@ -1,0 +1,24 @@
+{
+  "restore": {
+    "failed": {},
+    "remaining": 0,
+    "restored": [
+      "Old",
+      "Sources/main.swift"
+    ]
+  },
+  "session": {
+    "excluded": [
+      ".build"
+    ],
+    "formatVersion": 3,
+    "id": "20261126-164557-468e",
+    "project": "/Users/you/src/myapp",
+    "projectDevice": 16777229,
+    "replacedTree": "replaced-20261126-164557",
+    "snapshotPath": "/Users/you/Library/Application Support/agent-vm/Sessions/20261126-164557-468e/snapshot",
+    "startNanoseconds": 397623000,
+    "startSeconds": 1795729557,
+    "state": "active"
+  }
+}

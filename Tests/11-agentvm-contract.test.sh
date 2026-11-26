@@ -407,5 +407,42 @@ check "a path agent-vm refuses fails, and the list is as it was" "1|-dist, .buil
 real_lib agentvm_session_exclusions_set "$EXPROJECT" > /dev/null
 check "saving none empties the list: no project has one" "0|" "$?|$(real_lib agentvm_session_exclusions | lib agentvm_exclusions_rows)"
 
+section "a session's changes: reported, then put back one entry at a time"
+# The Session Changes window reads `session report` and undoes chosen entries through the
+# library. A project in the short folder with a text file and a folder; during one session the
+# file is changed, the folder deleted and a file added.
+CHPROJECT="$SHORT_DIR/changes"
+/bin/mkdir -p "$CHPROJECT/Old"
+printf 'a\nb\n' > "$CHPROJECT/main.txt"
+printf 'old\n' > "$CHPROJECT/Old/notes.txt"
+CHPROJECT="$(cd "$CHPROJECT" && pwd -P)"
+change_id="$(AGENT_VM_HOME="$STORE" "$real" session start --project "$CHPROJECT" --json 2>/dev/null | /usr/bin/jq -r '.id // empty')"
+check "a session made" "0" "$(lib agentvm_valid_session_id "$change_id"; echo $?)"
+printf 'a\nB\nc\n' > "$CHPROJECT/main.txt"
+/bin/rm -r "$CHPROJECT/Old"
+printf 'new\n' > "$CHPROJECT/added.txt"
+real_lib agentvm_session_report "$change_id" > "$OMCTEST_WORK/report.json"
+check "session report of it" "0" "$?"
+check "  the head: the project, not saved, 1 added, 1 deleted, 1 modified, nothing left out" "$CHPROJECT${TAB}false${TAB}1${TAB}1${TAB}1${TAB}-" \
+    "$(lib agentvm_report_head < "$OMCTEST_WORK/report.json" | /usr/bin/cut -f1,3,5-7,12)"
+check "  the snapshot holds the file as it was" "a b" \
+    "$(/usr/bin/paste -sd ' ' "$(lib agentvm_report_head < "$OMCTEST_WORK/report.json" | col 2)/main.txt")"
+check "  a row per change: added, deleted folder of one entry, modified" \
+    "Old deleted directory 1|added.txt added file -|main.txt modified file -" \
+    "$(lib agentvm_report_change_rows < "$OMCTEST_WORK/report.json" | /usr/bin/cut -f1-3,10 | /usr/bin/tr '\t' ' ' | /usr/bin/paste -sd '|' -)"
+real_lib agentvm_session_undo "$change_id" main.txt Old > "$OMCTEST_WORK/undo.json"
+check "undoing the file and the folder: 2 put back, none failed, the session still active" "0|active${TAB}2${TAB}0${TAB}0" \
+    "$?|$(lib agentvm_undo_head < "$OMCTEST_WORK/undo.json" | /usr/bin/cut -f1-4)"
+check "  the file is as it was, the folder is back, the added file stays" "a b|old|new" \
+    "$(/usr/bin/paste -sd ' ' "$CHPROJECT/main.txt")|$(/bin/cat "$CHPROJECT/Old/notes.txt")|$(/bin/cat "$CHPROJECT/added.txt")"
+check "  the agent's version is kept in the session's folder" "a B c" \
+    "$(/usr/bin/paste -sd ' ' "$(lib agentvm_undo_head < "$OMCTEST_WORK/undo.json" | col 5)/main.txt")"
+real_lib agentvm_session_undo "$change_id" main.txt > /dev/null
+check "  an entry put back already is refused: it did not change" "1" "$?"
+real_lib agentvm_session_undo "$change_id" added.txt > "$OMCTEST_WORK/undo.json"
+check "undoing the last change: the session is undone" "0|undone${TAB}1|no" \
+    "$?|$(lib agentvm_undo_head < "$OMCTEST_WORK/undo.json" | /usr/bin/cut -f1,2)|$([ -e "$CHPROJECT/added.txt" ] && echo yes || echo no)"
+real_lib agentvm_session_discard "$change_id" > /dev/null
+
 /bin/rm -rf "$SHORT_DIR"
 omctest_end
