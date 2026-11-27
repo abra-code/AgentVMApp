@@ -66,6 +66,7 @@ SES_REVEAL_ID=746
 SES_REMOVE_ID=748
 SES_DISCARD_ID=732
 SES_DISCARD_ALL_ID=733
+SES_CHANGES_ID=734
 SES_DISCARD_WINDOW_ID=742
 SES_RESTORE_ID=761
 SES_RESTORE_SHOW_ID=762
@@ -822,8 +823,15 @@ ses_tick() {
 }
 
 # ses_paint_buttons <uuid> <project>  ->  Discard Ticked... on while a session of the project is
-# ticked, Discard All Ended... while it has an ended or undone session.
+# ticked, Discard All Ended... while it has an ended or undone session, Changes... while one of
+# its sessions is selected (a selection the table no longer shows is forgotten).
 ses_paint_buttons() {
+    if [ -n "$(ses_selected_session "$1")" ]; then
+        ui_enable "$1" "$SES_CHANGES_ID" 1
+    else
+        ui_set session-selected "$1" ""
+        ui_enable "$1" "$SES_CHANGES_ID" 0
+    fi
     if [ -n "$(ses_ticked_ids "$1")" ]; then
         ui_enable "$1" "$SES_DISCARD_ID" 1
     else
@@ -834,6 +842,41 @@ ses_paint_buttons() {
     else
         ui_enable "$1" "$SES_DISCARD_ALL_ID" 0
     fi
+}
+
+# ses_selected_session <uuid>  ->  the id of the session selected in the table, while the table as
+# painted has it, or nothing.
+ses_selected_session() {
+    local _id="$(ui_get session-selected "$1")"
+    agentvm_valid_session_id "$_id" || return 0
+    local _row="$(SES_ID="$_id" /usr/bin/awk -F'\t' '$8 == ENVIRON["SES_ID"]' "$(ses_cache "$1" session-table.tsv)" 2>/dev/null)"
+    [ -n "$_row" ] && printf '%s\n' "$_id"
+    return 0
+}
+
+# ses_select_session <uuid> <id, or nothing>  ->  that session is the one selected in the table
+# (Changes... follows), or none is.
+ses_select_session() {
+    if agentvm_valid_session_id "$2"; then
+        ui_set session-selected "$1" "$2"
+    else
+        ui_set session-selected "$1" ""
+    fi
+    ses_paint_buttons "$1" "$(ui_get session-project "$1")"
+}
+
+# ses_changes <uuid> <row index, or nothing for the selected session> <command guid>  ->  the
+# Session Changes window of that row's session (a double-click hands the row), or of the selected
+# one (Changes...).
+ses_changes() {
+    local _id=""
+    case "$2" in
+        '') _id="$(ses_selected_session "$1")" ;;
+        *[!0123456789]*) return 0 ;;
+        *) _id="$(/usr/bin/awk -F'\t' -v n="$(( $2 + 1 ))" 'NR == n { print $8 }' "$(ses_cache "$1" session-table.tsv)" 2>/dev/null)" ;;
+    esac
+    agentvm_valid_session_id "$_id" || return 0
+    ui_item_open changes "$_id" "$3"
 }
 
 # ses_ticked_ids <uuid>  ->  the ids ticked in the table as painted, separated by spaces.

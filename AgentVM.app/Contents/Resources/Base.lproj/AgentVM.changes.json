@@ -1,0 +1,92 @@
+{
+  "type": "VStack",
+  "properties": {
+    "alignment": "leading",
+    "spacing": 8,
+    "padding": 16,
+    "frame": { "minWidth": 820, "idealWidth": 1040, "minHeight": 520, "idealHeight": 680 }
+  },
+  "children": [
+    { "type": "Text", "id": 5501, "properties": { "text": "", "font": "headline" } },
+    { "type": "Text", "id": 5502, "properties": { "text": "", "font": "caption", "foregroundStyle": "secondary", "textSelection": "enabled" } },
+    { "type": "Text", "id": 5503, "properties": { "text": "", "textSelection": "enabled", "frame": { "maxWidth": "infinity", "alignment": "leading" } } },
+    {
+      "type": "HSplitView",
+      "properties": { "frame": { "maxWidth": "infinity", "minHeight": 260, "maxHeight": "infinity" } },
+      "children": [
+        {
+          "type": "Table",
+          "id": 5504,
+          "properties": {
+            "columns": [ "", "Change", "Path", "Size", "Flag" ],
+            "columnTypes": [ { "viewType": "Toggle", "style": "checkbox", "actionID": "AgentVM.changes.tick", "disabledColumn": 7 } ],
+            "widths": [ 24, 92, 180, 116, 52 ],
+            "minWidths": [ 24, 60, 90, 60, 44 ],
+            "actionID": "AgentVM.changes.selected",
+            "frame": { "minWidth": 360, "idealWidth": 480, "maxWidth": "infinity", "maxHeight": "infinity" }
+          }
+        },
+        {
+          "type": "VStack",
+          "properties": { "alignment": "leading", "spacing": 6, "padding": { "leading": 8 }, "frame": { "minWidth": 360, "idealWidth": 560, "maxWidth": "infinity", "maxHeight": "infinity", "alignment": "topLeading" } },
+          "children": [
+            { "type": "Text", "id": 5506, "properties": { "text": "", "font": "headline", "textSelection": "enabled", "frame": { "maxWidth": "infinity", "alignment": "leading" } } },
+            { "type": "Text", "id": 5507, "properties": { "text": "", "textSelection": "enabled", "frame": { "maxWidth": "infinity", "alignment": "leading" } } },
+            {
+              "type": "ZStack",
+              "properties": { "alignment": "topLeading", "frame": { "maxWidth": "infinity", "maxHeight": "infinity", "alignment": "topLeading" } },
+              "children": [
+                {
+                  "type": "ScrollView",
+                  "id": 5509,
+                  "properties": { "hidden": true, "axis": "vertical", "frame": { "maxWidth": "infinity", "maxHeight": "infinity", "alignment": "topLeading" } },
+                  "content": { "type": "Diff", "id": 5510, "properties": { "contextLines": 3, "maxRenderedLines": 2000, "frame": { "maxWidth": "infinity", "alignment": "topLeading" } } }
+                },
+                {
+                  "type": "HStack",
+                  "id": 5511,
+                  "properties": { "hidden": true, "alignment": "top", "spacing": 8, "frame": { "maxWidth": "infinity", "maxHeight": "infinity" } },
+                  "children": [
+                    {
+                      "type": "VStack",
+                      "id": 5514,
+                      "properties": { "alignment": "leading", "spacing": 4, "frame": { "maxWidth": "infinity", "maxHeight": "infinity" } },
+                      "children": [
+                        { "type": "Text", "id": 5515, "properties": { "text": "At the start", "font": "caption", "foregroundStyle": "secondary" } },
+                        { "type": "QuickLook", "id": 5512, "properties": { "filePath": "", "frame": { "maxWidth": "infinity", "maxHeight": "infinity" } } }
+                      ]
+                    },
+                    {
+                      "type": "VStack",
+                      "id": 5516,
+                      "properties": { "alignment": "leading", "spacing": 4, "frame": { "maxWidth": "infinity", "maxHeight": "infinity" } },
+                      "children": [
+                        { "type": "Text", "id": 5517, "properties": { "text": "Now", "font": "caption", "foregroundStyle": "secondary" } },
+                        { "type": "QuickLook", "id": 5513, "properties": { "filePath": "", "frame": { "maxWidth": "infinity", "maxHeight": "infinity" } } }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    { "type": "Text", "id": 5520, "properties": { "text": "", "foregroundStyle": "orange", "textSelection": "enabled", "frame": { "maxWidth": "infinity", "alignment": "leading" } } },
+    { "type": "Text", "id": 5521, "properties": { "text": "", "font": "caption", "foregroundStyle": "secondary", "textSelection": "enabled", "frame": { "maxWidth": "infinity", "alignment": "leading" } } },
+    {
+      "type": "HStack",
+      "properties": { "spacing": 8 },
+      "children": [
+        { "type": "Button", "id": 5522, "properties": { "title": "Show in Finder", "disabled": true, "actionID": "AgentVM.changes.show", "help": "Show the selected item in Finder" } },
+        { "type": "Button", "id": 5523, "properties": { "title": "Show Agent's Versions", "disabled": true, "actionID": "AgentVM.changes.kept", "help": "Open the session's folder, where undo moved the agent's versions" } },
+        { "type": "Button", "id": 5524, "properties": { "title": "Compare Again", "disabled": true, "actionID": "AgentVM.changes.refresh", "help": "Compare the project with the snapshot again" } },
+        { "type": "Spacer" },
+        { "type": "Text", "id": 5525, "properties": { "text": "", "foregroundStyle": "secondary" } },
+        { "type": "Button", "id": 5526, "properties": { "title": "Close", "role": "cancel", "actionID": "AgentVM.changes.cancel" } },
+        { "type": "Button", "id": 5527, "properties": { "title": "Undo Checked...", "buttonStyle": "borderedProminent", "disabled": true, "actionID": "AgentVM.changes.undo", "help": "Restore the checked items to how they were when the session started" } }
+      ]
+    }
+  ]
+}

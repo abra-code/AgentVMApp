@@ -530,10 +530,13 @@
                           "columnTypes": [ { "viewType": "Toggle", "style": "checkbox", "actionID": "AgentVM.main.session.tick", "disabledColumn": 9 } ],
                           "widths": [24, 92, 64, 92, 70, 140],
                           "minWidths": [24, 70, 44, 70, 50, 80],
+                          "actionID": "AgentVM.main.session.selected",
+                          "doubleClickActionID": "AgentVM.main.session.changes",
                           "frame": { "maxWidth": "infinity", "minHeight": 140, "maxHeight": "infinity" }
                         } },
                         { "type": "HStack", "properties": { "spacing": 10 }, "children": [
                           { "type": "Text", "id": 731, "properties": { "text": "", "textSelection": "enabled", "frame": { "maxWidth": "infinity", "alignment": "leading" } } },
+                          { "type": "Button", "id": 734, "properties": { "title": "Changes...", "disabled": true, "actionID": "AgentVM.main.session.changes", "help": "Review and undo the selected session's changes" } },
                           { "type": "Button", "id": 732, "properties": { "title": "Discard Ticked...", "disabled": true, "actionID": "AgentVM.main.session.discard", "help": "Delete the snapshots of the sessions ticked. Undo is then no longer possible for them; their records and reports stay." } },
                           { "type": "Button", "id": 733, "properties": { "title": "Discard All Ended...", "disabled": true, "actionID": "AgentVM.main.session.discard.all", "help": "Delete the snapshots of all this project's ended and undone sessions. Undo is then no longer possible for them; their records and reports stay." } }
                         ] },

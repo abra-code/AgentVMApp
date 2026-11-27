@@ -220,7 +220,8 @@ ui_size_text() {
 # window (lib.agentvm.keys.sh), with the kind "keys", and the How to Use a Box window
 # (lib.agentvm.howto.sh), with the kind "howto", the Rename window (lib.agentvm.rename.sh),
 # with the kind "rename", and the Exclusions window (lib.agentvm.exclusions.sh), with the kind
-# "exclusions".
+# "exclusions". A session's Session Changes window (lib.agentvm.changes.sh) is one per session: its
+# kind is "changes", and the name is the session's id.
 
 # The request key of a kind is this, an underscore and the kind.
 AGENTVM_OPEN_REQUEST_KEY="agentvm_open_request"
