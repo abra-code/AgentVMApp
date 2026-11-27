@@ -123,7 +123,7 @@ recreate_picked() {
 # the window said it, with the sentence on the logs agent-vm keeps.
 recreate_what_text() {
     local _kept="$(main_box_logs_kept_text "$1" "$(recreate_box "$1")")"
-    printf 'The box is made again from the image chosen below, as the image is now, with the same name, processors, memory and network rules. Everything installed or saved in the box, logins included, is deleted.%s This cannot be undone.\n' "${_kept:+ $_kept}"
+    printf 'The box is made again from the image below, keeping its name, processors, memory and network rules. Everything installed or saved in it is deleted.%s You can'"'"'t undo this action.\n' "${_kept:+ $_kept}"
 }
 
 # recreate_image_rows <uuid>  ->  the rows of the image table: New Box's rows (newbox_image_rows)
@@ -153,21 +153,21 @@ recreate_own_text() {
         local _image_system="macOS"
         [ "$(printf '%s\n' "$_row" | /usr/bin/cut -f13)" = "linux" ] && _image_system="Linux"
         if [ -z "$_row" ]; then
-            _fact="Image $_own, which the box was made from, was deleted."
+            _fact="Its image $_own was deleted."
         elif [ "$_image_system" != "$_system" ]; then
-            _fact="Image $_own, which the box was made from, is a $_image_system image now."
+            _fact="Its image $_own is a $_image_system image now."
         else
-            _fact="Image $_own, which the box was made from, is not ready."
+            _fact="Its image $_own is not ready."
             _advice="Choose another image, or wait until it is ready."
         fi
     fi
     if [ -z "$(printf '%s\n' "$_rows" | /usr/bin/awk 'NF')" ]; then
         # Its own image is only not ready (being built, most likely): waiting for it comes first.
         if [ "$_advice" != "Choose another image." ]; then
-            printf '%s There is no other ready %s image, so wait until it is ready, or use New Image... to build another.\n' "$_fact" "$_system"
+            printf '%s No other %s image is ready: wait, or build one with New Image...\n' "$_fact" "$_system"
             return 0
         fi
-        printf '%sThere is no other ready %s image to make the box from. New Image... builds one.\n' "${_fact:+$_fact }" "$_system"
+        printf '%sNo other %s image is ready: build one with New Image...\n' "${_fact:+$_fact }" "$_system"
     elif [ -z "$_fact" ]; then
         printf 'Choose the image the box is made from.\n'
     else
@@ -190,7 +190,7 @@ recreate_blocker() {
         return 0
     fi
     if ! main_box_askable "$1" "$_box" recreate; then
-        printf 'Box %s can be recreated once it is stopped and nothing else is changing it.\n' "$_box"
+        printf 'Box %s must be stopped, with nothing else changing it.\n' "$_box"
         return 0
     fi
     local _picked="$(recreate_picked "$1")"

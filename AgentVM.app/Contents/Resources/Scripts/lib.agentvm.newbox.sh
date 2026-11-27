@@ -242,7 +242,7 @@ newbox_image_blocker() {
     elif [ "$(printf '%s\n' "$_row" | /usr/bin/cut -f2)" != "ready" ]; then
         printf 'Image %s is not ready, so no box can be made from it.\n' "$_image"
     elif [ "$(printf '%s\n' "$_row" | /usr/bin/cut -f3)" = "true" ]; then
-        printf 'Another command is changing image %s. A box can be made from it when that has ended.\n' "$_image"
+        printf 'Another command is changing image %s. Try again when it ends.\n' "$_image"
     fi
 }
 
@@ -306,7 +306,7 @@ newbox_selection_text() {
         return 0
     fi
     if newbox_needs_access "$1" "$2"; then
-        printf "Image %s has no Full Disk Access. A box made from it works: only a program that opens the box account's Desktop, Documents or Downloads waits, on a question macOS asks on the box's screen. Set Up... grants it, once, on the image.\n" "$2"
+        printf "Image %s has no Full Disk Access: programs in its boxes wait on a macOS question when they open Desktop, Documents or Downloads.\n" "$2"
         return 0
     fi
     local _row="$(newbox_image_row "$1" "$2")"
@@ -441,9 +441,9 @@ newbox_agents_text() {
     local _image="$(newbox_image "$1")"
     local _names="$(newbox_agent_names "$1" "$_image")"
     if [ -n "$_names" ]; then
-        printf 'What the box may reach. Image %s holds %s: what they need is allowed already.\n' "$_image" "$_names"
+        printf 'What the box may reach. Allowed already for %s.\n' "$_names"
     else
-        printf 'What the box may reach. No agent is known in image %s, so nothing is allowed yet.\n' "$_image"
+        printf 'What the box may reach. Nothing is allowed yet.\n'
     fi
     local _error="$(/bin/cat "$(ui_cache "$1" packs-error)" 2>/dev/null)"
     [ -n "$_error" ] && printf 'The packs could not be read: %s\n' "$_error"
@@ -455,11 +455,11 @@ newbox_network_text() {
     local _rules="$(newbox_rules "$1")"
     case "$(newbox_mode "$1")" in
         off)  printf 'Network: off. Every connection is refused.\n' ;;
-        open) printf 'Network: open. The box reaches the internet and your local network, and its connections are not logged.\n' ;;
+        open) printf 'Network: open, unlogged, your local network included.\n' ;;
         *)    if [ -n "$_rules" ]; then
                   printf 'Network: only %s.\n' "$(ui_lines_text "$_rules")"
               else
-                  printf 'Network: nothing is allowed yet. Rules can be added later in the Network window of the box.\n'
+                  printf 'Network: nothing allowed yet.\n'
               fi ;;
     esac
 }
@@ -550,7 +550,7 @@ newbox_starts() {
 newbox_sizes_blocker() {
     local _max="$(newbox_max_name_length "$1")"
     if [ "$_max" = "0" ]; then
-        printf 'No box can be made in this store: the path of its folder leaves no room for a box name in the path of a box'"'"'s control socket, which macOS limits. Use a store in a folder with a shorter path.\n'
+        printf 'The store folder path is too long for any box name. Use a store with a shorter path.\n'
         return 0
     fi
     local _name="$(ui_get name "$1")"
@@ -563,7 +563,7 @@ newbox_sizes_blocker() {
         return 0
     fi
     if [ -n "$_max" ] && [ "${#_name}" -gt "$_max" ]; then
-        printf 'A box name can have at most %s characters in this store, and %s has %s: macOS limits the path of a box'"'"'s control socket, which is in the store'"'"'s folder.\n' "$_max" "$_name" "${#_name}"
+        printf 'A box name can have at most %s characters in this store; %s has %s.\n' "$_max" "$_name" "${#_name}"
         return 0
     fi
     local _taken="$(newbox_taken_name "$1" "$_name")"
@@ -572,7 +572,7 @@ newbox_sizes_blocker() {
         return 0
     fi
     if [ -n "$_taken" ]; then
-        printf 'A box named %s is there already; names that differ in case only cannot both be used.\n' "$_taken"
+        printf 'A box named %s is there already (names differing only in case count as the same).\n' "$_taken"
         return 0
     fi
     local _cpus="$(ui_get cpus "$1")"
@@ -586,14 +586,14 @@ newbox_sizes_blocker() {
     if ! wizard_number "$_memory" || [ "$_memory" -gt "$NBOX_MAX_MEMORY" ]; then
         printf 'Memory: a whole number of GB, from %s to %s.\n' "$_least" "$NBOX_MAX_MEMORY"
     elif [ "$_memory" -lt "$_least" ]; then
-        printf 'Memory: a macOS box needs at least %s GB. With less, macOS does not finish starting.\n' "$_least"
+        printf 'A macOS box needs at least %s GB of memory.\n' "$_least"
     fi
     return 0
 }
 
 # newbox_size_text <uuid>  ->  the line under the size fields.
 newbox_size_text() {
-    printf 'These start as image %s has them. The disk of a box is the image'"'"'s, and takes room only for what the box writes.\n' "$(newbox_image "$1")"
+    printf 'As in image %s. The disk takes room only for what the box writes.\n' "$(newbox_image "$1")"
 }
 
 # -- Making the box ------------------------------------------------------------------------------
@@ -640,7 +640,7 @@ newbox_blocker() {
     newbox_starts "$1" || return 0
     newbox_linux "$1" && return 0
     main_macos_vms "$1" | /usr/bin/awk -F'\t' '$1 >= $2 {
-        printf "%s of %s macOS virtual machines are running, so the box cannot be started now. Stop a macOS box first, or go back and choose not to start it.\n", $1, $2 }'
+        printf "%s of %s macOS virtual machines are running: stop a macOS box first, or do not start this one.\n", $1, $2 }'
 }
 
 # newbox_summary_text <uuid>  ->  what Create makes, in words.
@@ -662,20 +662,20 @@ newbox_summary_text() {
 newbox_advice_text() {
     local _image="$(newbox_image "$1")"
     if newbox_needs_access "$1" "$_image"; then
-        printf "Image %s has no Full Disk Access, so the box has none either. It works without it: only a program that opens the box account's Desktop, Documents or Downloads waits, on a question macOS asks on the box's screen. Set Up... on the first step grants it; a box made before that gets it when it is recreated.\n" "$_image"
+        printf "Image %s has no Full Disk Access, so the box has none either: programs in it wait on a macOS question when they open Desktop, Documents or Downloads.\n" "$_image"
     fi
     # A Linux box has a screen when its image has a desktop (column 15 of the image's row).
     if newbox_linux "$1" && [ "$(newbox_field "$1" 15)" = "true" ]; then
-        printf 'The box has the desktop of image %s: View shows it while the box runs. Connect opens a shell in it, and Run an Agent starts an agent in it.\n' "$_image"
+        printf 'The box has the desktop of image %s: View shows it.\n' "$_image"
         # agent-vm notes such a box as small when it is made, in words the window does not show.
         local _memory="$(ui_get memory "$1")"
         if wizard_number "$_memory" && [ "$_memory" -lt "$NBOX_DESKTOP_MEMORY" ]; then
-            printf 'With %s GB of memory, the desktop leaves little free, and a box has no swap: %s GB or more suits a desktop and an agent.\n' "$_memory" "$NBOX_DESKTOP_MEMORY"
+            printf '%s GB of memory leaves little for a desktop and an agent: %s GB or more is better.\n' "$_memory" "$NBOX_DESKTOP_MEMORY"
         fi
     elif newbox_linux "$1"; then
-        printf 'Image %s has no desktop, so the box has no screen: it is used through Connect, which opens a shell in it, and Run an Agent.\n' "$_image"
+        printf 'Image %s has no desktop: use the box with Connect or Run an Agent.\n' "$_image"
     fi
-    printf 'The box is kept until it is deleted. What is installed or written in it stays in the box, and its network can be changed later in its Network window.\n'
+    printf 'The box is kept until you delete it.\n'
 }
 
 # -- Painting ------------------------------------------------------------------------------------

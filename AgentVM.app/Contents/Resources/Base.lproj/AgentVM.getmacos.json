@@ -15,7 +15,7 @@
     {
       "type": "Text",
       "properties": {
-        "text": "A macOS restore file is what a first image is built from: macOS is installed from it. agent-vm downloads the newest one this Mac can run, about 27 GB, into its store.",
+        "text": "macOS images are built from a restore file: the newest macOS this Mac can run, about 27 GB.",
         "frame": {
           "maxWidth": "infinity",
           "alignment": "leading"
@@ -131,7 +131,7 @@
     {
       "type": "Text",
       "properties": {
-        "text": "The download runs as a job: it goes on when this window, or the app, is closed. One that is stopped keeps what it got, and the next goes on from there.",
+        "text": "The download goes on if you close this window, and resumes if stopped.",
         "font": "caption",
         "foregroundStyle": "secondary",
         "frame": {
@@ -165,7 +165,7 @@
           "properties": {
             "title": "Check Again",
             "actionID": "AgentVM.getmacos.check",
-            "help": "Ask Apple again for the newest macOS this Mac can run. Nothing is downloaded."
+            "help": "Check again for the newest macOS"
           }
         },
         {
@@ -175,7 +175,7 @@
             "title": "Progress...",
             "disabled": true,
             "actionID": "AgentVM.getmacos.progress",
-            "help": "Show the download that is running: how far it is, its log, and Stop."
+            "help": "Show the download's progress"
           }
         },
         {
@@ -189,7 +189,7 @@
             "disabled": true,
             "buttonStyle": "borderedProminent",
             "actionID": "AgentVM.getmacos.download",
-            "help": "Start the download as a job, and open its progress window."
+            "help": "Start the download and show its progress"
           }
         }
       ]

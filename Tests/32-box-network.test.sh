@@ -170,7 +170,7 @@ section "the Activity tab"
 check "the connections, one row per host, port and result, refused first" \
     "registry.yarnpkg.com 443 refused 3|raw.example.org 80 refused 1|plain.example.org 80 refused 1|203.0.113.9 443 refused 1|models.example.dev 443 failed 1|api.anthropic.com 443 reached 2|registry.npmjs.org 443 reached 1" \
     "$(ui_rows "$NET_CONNECTIONS_ID" | /usr/bin/awk -F'\t' '{ print $1 " " $2 " " $3 " " $4 }' | /usr/bin/paste -sd '|' -)"
-check "  with what the tab says about them" "The last 200 connections, one row per host, port and result." \
+check "  with what the tab says about them" "The last 200 connections." \
     "$(ui_value "$NET_NOTE_ID")"
 check "Allow Selected Host is off until a row is selected" "0" "$(enabled "$NET_ALLOW_ID")"
 
@@ -335,7 +335,7 @@ omc_run AgentVM.network.activated
 check "a stopped box: the picker on, and what the mode lets through" "1|$ALLOWLIST_TEXT" "$(enabled "$NET_MODE_ID")|$(ui_value "$NET_MODE_NOTE_ID")"
 mode 2
 check "  off wanted"             "Not applied yet: mode off." "$(ui_value "$NET_CHANGES_ID")"
-check "  and what off means"     "No network: every connection is refused, whatever the rules say." "$(ui_value "$NET_MODE_NOTE_ID")"
+check "  and what off means"     "No network: every connection is refused." "$(ui_value "$NET_MODE_NOTE_ID")"
 ui_reset
 mode 2
 check "the app's own setting of the picker (the value wanted): nothing painted" "0" "$(ui_calls "$NET_CHANGES_ID")"
@@ -345,13 +345,13 @@ check "  the picker on Off"      "2" "$(ui_value "$NET_MODE_ID")"
 store '(.boxes[] | select(.box.name == "cadabra-spike")).state = "running"'
 omc_run AgentVM.network.activated
 check "the box started meanwhile: coming back to the window turns the picker off" \
-    "0|No network: every connection is refused, whatever the rules say. $RUNNING_TEXT" \
+    "0|No network: every connection is refused. $RUNNING_TEXT" \
     "$(enabled "$NET_MODE_ID")|$(ui_value "$NET_MODE_NOTE_ID")"
 store '.'
 omc_run AgentVM.network.activated
 mode 3
 check "open wanted, and what open means" \
-    "Not applied yet: mode open.|Any host, your local network included, and no connection is logged; the rules are kept for later." \
+    "Not applied yet: mode open.|Any host, your local network included, unlogged. The rules are kept." \
     "$(ui_value "$NET_CHANGES_ID")|$(ui_value "$NET_MODE_NOTE_ID")"
 pack homebrew
 # The box starts, and the window is not told: Apply reads the box's state itself.
@@ -408,7 +408,7 @@ check "the rule added at once, then read again" "box network s3 --allow registry
 check "  listed, applied"        "registry.yarnpkg.com${TAB}" "$(ui_rows "$NET_HOSTS_ID" | row_named registry.yarnpkg.com)"
 check "  the other edit stays"   "Not applied yet: allow pack:swiftpm." "$(ui_value "$NET_CHANGES_ID")"
 check "  and the note says what it did" \
-    "Allowed registry.yarnpkg.com. Its next connection gets through; earlier refusals stay listed until Refresh." "$(ui_value "$NET_NOTE_ID")"
+    "Allowed registry.yarnpkg.com." "$(ui_value "$NET_NOTE_ID")"
 : > "$FAKE_AGENTVM_DIR/log"
 omc_run AgentVM.network.allow.confirmed
 check "a second confirmation allows nothing" "" "$(fake_log)"
@@ -446,14 +446,14 @@ check "  the Settings tab does not: the rules are still shown" "$ALLOWLIST_TEXT 
     "$(ui_value "$NET_MODE_NOTE_ID")|$(cell anthropic)"
 printf '[]\n' > "$FAKE_AGENTVM_DIR/box-netlog-s3.json"
 omc_run AgentVM.network.refresh
-check "an empty log says so"     "No connections logged yet. A connection is listed from the moment it opens." \
+check "an empty log says so"     "No connections logged yet." \
     "$(ui_value "$NET_NOTE_ID")"
 /bin/rm -f "$FAKE_AGENTVM_DIR/box-netlog-s3.json"
 printf 'the rules are unreadable\n' > "$FAKE_AGENTVM_DIR/fail-box-network"
 omc_run AgentVM.network.refresh
 /bin/rm -f "$FAKE_AGENTVM_DIR/fail-box-network"
 check "rules that cannot be read: the Settings tab says why, the Activity tab does not" \
-    "the rules are unreadable|The last 200 connections, one row per host, port and result." \
+    "the rules are unreadable|The last 200 connections." \
     "$(ui_value "$NET_MODE_NOTE_ID")|$(ui_value "$NET_NOTE_ID")"
 check "  the rules last read stay" "checkmark.square.fill primary" "$(cell anthropic)"
 

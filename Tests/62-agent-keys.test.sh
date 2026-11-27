@@ -243,7 +243,7 @@ check "the field is emptied" "1" "$(ui_calls "^${UUID}${TAB}${KEYS_FIELD_ID}${TA
 check "the row says Stored, and stays selected" "Stored|$API" "$(ui_rows "$KEYS_TABLE_ID" | /usr/bin/sed -n '2p' | col 3)|$("$PB" "agentvm_key_$UUID" get)"
 check "the window says so, and Remove... is on" \
     "$API, for Claude Code|Stored $API in your login Keychain.|11" "$(ui_value "$KEYS_TITLE_ID")|$(ui_value "$KEYS_NOTE_ID")|$(enabled "$KEYS_STORE_ID")$(enabled "$KEYS_REMOVE_ID")"
-check "  and what Stored means" "1" "$(ui_value "$KEYS_HINT_ID" | /usr/bin/grep -c '^Stored in your login Keychain\. Store replaces it\.')"
+check "  and what Stored means" "1" "$(ui_value "$KEYS_HINT_ID" | /usr/bin/grep -c '^Stored\.')"
 
 section "Store while another Store is worked on, and just after the selection changed"
 type_key "$TYPED"
@@ -347,7 +347,7 @@ open_window
 check "the row says macOS asks" "Stored, macOS asks" "$(ui_rows "$KEYS_TABLE_ID" | /usr/bin/sed -n '1p' | col 3)"
 select_key "$TOKEN" claude
 check "the window says why, and what to do; it can be stored again, or removed" "1|11" \
-    "$(ui_value "$KEYS_HINT_ID" | /usr/bin/grep -c '^Stored by another copy of agent-vm, so macOS asks before this one reads it: answer Always Allow then, or store the key again here\.')|$(enabled "$KEYS_STORE_ID")$(enabled "$KEYS_REMOVE_ID")"
+    "$(ui_value "$KEYS_HINT_ID" | /usr/bin/grep -c '^Stored by another copy of agent-vm: macOS asks before reading it (choose Always Allow, or store it again)\.')|$(enabled "$KEYS_STORE_ID")$(enabled "$KEYS_REMOVE_ID")"
 agents '.'
 printf '%s' "$TYPED" > "$FAKE_AGENTVM_DIR/secret-value-$TOKEN"
 : > "$FAKE_AGENTVM_DIR/log"

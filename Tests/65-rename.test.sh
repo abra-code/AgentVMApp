@@ -166,7 +166,7 @@ check_status "the init handler exits cleanly" 0
 check "takes the request and the box, once" "|" "$(request)|$(handed)"
 check "becomes the Rename window, for that box" "$APP_PID $UUID|box:s3" "$(registered)|$(target)"
 check "its title, and what it says" "Rename Box|Rename box s3" "$(ui_title)|$(ui_value "$RENAME_HEAD_ID")"
-check "what a box keeps" "1" "$(ui_value "$RENAME_WHAT_ID" | /usr/bin/grep -c '^The box keeps what it holds, its network rules and its logs')"
+check "what a box keeps" "1" "$(ui_value "$RENAME_WHAT_ID" | /usr/bin/grep -c '^The box keeps its contents, network rules and logs')"
 check "the field holds the name as it is" "s3" "$(ui_value "$RENAME_NAME_ID")"
 check "the window asks agent-vm only the longest box name the store allows" "version --json" "$(fake_log)"
 check "  and says it under the field" "Letters, digits, \".\", \"_\" and \"-\", starting with a letter or a digit, at most $(/usr/bin/jq -r .maxBoxNameLength "$FIXTURES_AGENTVM/version.json") characters." \
@@ -226,12 +226,12 @@ check "the window stays, and Rename was not turned off" "0|0" "$(closed "$UUID")
 : > "$FAKE_AGENTVM_DIR/log"
 apply "LongerName"
 check "a box name longer than the store allows, read at Rename: refused, with the limit" \
-    "A box name can have at most 8 characters in this store, and LongerName has 10: macOS limits the path of a box's control socket, which is in the store's folder.|version --json" \
+    "A box name can have at most 8 characters in this store; LongerName has 10.|version --json" \
     "$(note)|$(fake_log | /usr/bin/paste -sd ' ' -)"
 /usr/bin/jq '.maxBoxNameLength = 0' "$FIXTURES_AGENTVM/version.json" > "$FAKE_AGENTVM_DIR/version.json"
 apply "a"
 check "  a store that leaves room for none: said so, whatever the name" \
-    "No box name fits in this store: the path of its folder leaves no room for one in the path of a box's control socket, which macOS limits.|0" "$(note)|$(renames)"
+    "The store folder path is too long for any box name.|0" "$(note)|$(renames)"
 /bin/rm -f "$FAKE_AGENTVM_DIR/version.json"
 printf 'the store is locked\n' > "$FAKE_AGENTVM_DIR/fail-box-rename"
 : > "$FAKE_AGENTVM_DIR/log"
@@ -295,7 +295,7 @@ select_image dev-acp
 open_rename image dev-acp
 check "its title, what it says, and its name in the field" "Rename Image|Rename image dev-acp|dev-acp" \
     "$(ui_title)|$(ui_value "$RENAME_HEAD_ID")|$(ui_value "$RENAME_NAME_ID")"
-check "what follows an image" "1" "$(ui_value "$RENAME_WHAT_ID" | /usr/bin/grep -c '^The boxes made from the image and the images built from it follow at once')"
+check "what follows an image" "1" "$(ui_value "$RENAME_WHAT_ID" | /usr/bin/grep -c '^Boxes and images made from it follow the new name')"
 check "  every name's rule under the field, with no box's limit" "Letters, digits, \".\", \"_\" and \"-\", starting with a letter or a digit, at most 63 characters." "$(ui_value "$RENAME_RULE_ID")"
 /usr/bin/jq '.maxBoxNameLength = 8' "$FIXTURES_AGENTVM/version.json" > "$FAKE_AGENTVM_DIR/version.json"
 printf 'stop here\n' > "$FAKE_AGENTVM_DIR/fail-image-rename"

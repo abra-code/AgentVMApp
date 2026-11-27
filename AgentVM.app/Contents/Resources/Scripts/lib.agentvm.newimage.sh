@@ -427,7 +427,7 @@ newimage_start_blocker() {
             elif [ "$(printf '%s\n' "$_row" | /usr/bin/cut -f2)" != "ready" ]; then
                 printf 'Image %s is not ready, so nothing can be built from it.\n' "$_name"
             elif [ "$(printf '%s\n' "$_row" | /usr/bin/cut -f3)" = "true" ]; then
-                printf 'Another command is changing image %s. A build can start from it when that has ended.\n' "$_name"
+                printf 'Another command is changing image %s. Try again when it ends.\n' "$_name"
             fi ;;
         linux)
             [ -n "$(newimage_release_row "$1" "$_name")" ] || printf 'This agent-vm builds no Linux system named %s. Choose another start.\n' "$_name" ;;
@@ -614,7 +614,7 @@ newimage_add_own() {
     # The row holds the path as text on one line. A path that does not come back as it went in
     # (a tab or a line break in it) would be looked up later as another path.
     if [ "${_row##*"$ui_tab"}" != "$2" ]; then
-        printf 'The path of that file has a tab or a line break in it. Rename the file or its folder to add this recipe.\n'
+        printf 'Its path has a tab or a line break: rename the file or its folder to add it.\n'
         return 0
     fi
     # The guest agent-vm read in the file says which starts the recipe is listed for.
@@ -649,9 +649,9 @@ newimage_add_own() {
     _there="$(printf '%s\n' "$_all" | /usr/bin/awk -F'\t' -v name="$_name" '$1 "" == name { print "=" $6; exit }')"
     if [ -n "$_there" ]; then
         if newimage_offered "${_there#=}" "$_now"; then
-            printf 'A recipe named %s is in the list already. A recipe is named by its folder, or by its file when that is not recipe.json: rename one to add this recipe.\n' "$_name"
+            printf 'A recipe named %s is in the list already: rename the folder or file of this one to add it.\n' "$_name"
         else
-            printf 'A recipe named %s is there already, for %s. A recipe is named by its folder, or by its file when that is not recipe.json: rename one to add this recipe.\n' \
+            printf 'A recipe named %s is there already, for %s: rename the folder or file of this one to add it.\n' \
                 "$_name" "$(newimage_images_words "${_there#=}")"
         fi
         return 0
@@ -872,17 +872,17 @@ newimage_tools_warning() {
     newimage_holds_nothing "$1" && return 0
     local _first="$(newimage_missing "$1" | /usr/bin/sed -n '1p')"
     [ -n "$_first" ] || return 0
-    printf '%s needs %s. Check %s too, unless image %s already has it: the build stops at its first step when it does not.\n' \
+    printf '%s needs %s. Check %s too, unless image %s already has it.\n' \
         "${_first%%"$ui_tab"*}" "${_first#*"$ui_tab"}" "${_first#*"$ui_tab"}" "$(newimage_start_name "$1")"
 }
 
 # newimage_tools_text <uuid>  ->  the line above the recipes.
 newimage_tools_text() {
     if [ -z "$(newimage_recipe_names "$1")" ]; then
-        printf 'No recipes were found beside this agent-vm, so the new image is %s as it is.\n' "$(newimage_start_text "$1")"
+        printf 'No recipes found: the new image is %s as it is.\n' "$(newimage_start_text "$1")"
         return 0
     fi
-    printf 'Check the tools to install on top of %s. They are installed in the order listed. With nothing checked, the new image is the start as it is.\n' \
+    printf 'Check the tools to install on top of %s, in the order listed.\n' \
         "$(newimage_start_text "$1")"
 }
 
@@ -1014,9 +1014,9 @@ EOF
 newimage_options_text() {
     local _count="$(newimage_option_rows "$1" | /usr/bin/awk 'END { print NR }')"
     if [ "$_count" -gt "$NEW_OPTION_SLOTS" ]; then
-        printf 'What the tools you checked ask for. The first %s are here; the other %s keep their defaults.\n' "$NEW_OPTION_SLOTS" "$((_count - NEW_OPTION_SLOTS))"
+        printf 'Options of the checked tools. The first %s are shown; the other %s keep their defaults.\n' "$NEW_OPTION_SLOTS" "$((_count - NEW_OPTION_SLOTS))"
     else
-        printf 'What the tools you checked ask for. A parameter left as it is keeps its default.\n'
+        printf 'Options of the checked tools. Unchanged ones keep their defaults.\n'
     fi
 }
 
@@ -1216,21 +1216,21 @@ newimage_size_text() {
     local _growth="$(newimage_disk_growth "$1")"
     local _least="$(newimage_size "$1" "$(newimage_guest "$1")" 5)"
     if [ "$(newimage_start_kind "$1")" = "image" ]; then
-        printf "These start as image %s has them. The disk is a sparse file, which takes only what is written to it" "$(newimage_start_name "$1")"
+        printf "As in image %s. The disk takes only the space written to it" "$(newimage_start_name "$1")"
         if newimage_number "$_growth"; then
-            printf "; the disk of a copy stays as it is or grows by at least %s GB.\n" "$_growth"
+            printf ", and can stay as it is or grow by at least %s GB.\n" "$_growth"
         else
-            printf "; the disk of a copy stays as it is or grows.\n"
+            printf ", and can stay as it is or grow.\n"
         fi
     else
-        printf "These start as the defaults of agent-vm for a %s image. The disk is a sparse file, which takes only what is written to it" "$(newimage_system_word "$(newimage_guest "$1")")"
+        printf "agent-vm's defaults for a %s image. The disk takes only the space written to it" "$(newimage_system_word "$(newimage_guest "$1")")"
         if newimage_number "$_least"; then
-            printf "; it cannot be smaller than %s GB.\n" "$_least"
+            printf ", at least %s GB.\n" "$_least"
         else
             printf ".\n"
         fi
     fi
-    newimage_listed xcode "$(newimage_ticks "$1")" && printf 'Xcode takes about 4 GB and each simulator runtime about 8 GB: %s GB or more is a good disk for it.\n' "$NEW_XCODE_DISK"
+    newimage_listed xcode "$(newimage_ticks "$1")" && printf 'For Xcode and its simulators, %s GB or more.\n' "$NEW_XCODE_DISK"
     return 0
 }
 
@@ -1320,7 +1320,7 @@ newimage_blocker() {
     fi
     [ "$(newimage_guest "$1")" = "linux" ] && return 0
     main_macos_vms "$1" | /usr/bin/awk -F'\t' '$1 >= $2 {
-        printf "%s of %s macOS virtual machines are running, and the build of a macOS image needs one. Stop a macOS box first.\n", $1, $2 }'
+        printf "%s of %s macOS virtual machines are running: stop a macOS box first.\n", $1, $2 }'
 }
 
 # newimage_summary_text <uuid>  ->  what Build makes, in words.
@@ -1329,7 +1329,7 @@ newimage_summary_text() {
     local _ticks="$(newimage_ticks "$1")"
     case "$(newimage_start_kind "$1")" in
         image) printf 'Image %s, built as a copy of %s.\n' "$_name" "$(newimage_start_text "$1")" ;;
-        linux) printf 'Image %s, %s, built from its cloud image, which agent-vm downloads and checks.\n' "$_name" "$(newimage_start_text "$1")" ;;
+        linux) printf 'Image %s, %s, built from its cloud image.\n' "$_name" "$(newimage_start_text "$1")" ;;
         *)     printf 'Image %s, with macOS installed from %s.\n' "$_name" "$(newimage_start_text "$1")" ;;
     esac
     if [ -n "$_ticks" ]; then
@@ -1349,12 +1349,12 @@ newimage_advice_text() {
     case "$(newimage_guest "$1"):$(newimage_start_kind "$1"):$(newimage_base "$1" 11)" in
         linux:*) ;;
         *:ipsw:*)
-            printf 'An image built from a restore file has no Full Disk Access yet: Set Up... in its pane grants it, once, after the build.\n' ;;
+            printf 'Grant Full Disk Access once after the build: Set Up... in the pane of the image.\n' ;;
         *full-disk-access*)
-            printf 'Image %s has no Full Disk Access, so the new image will have none either. Set Up... in the pane of either grants it.\n' "$_name" ;;
+            printf 'Image %s has no Full Disk Access, so the new image will not have it either.\n' "$_name" ;;
         *)  printf 'The new image keeps the Full Disk Access of image %s.\n' "$_name" ;;
     esac
-    printf 'The build runs as a job. Its progress window opens, and the build goes on when the windows, or the app, are closed.\n'
+    printf 'The build goes on if you close its progress window or quit the app.\n'
 }
 
 # -- Painting ------------------------------------------------------------------------------------

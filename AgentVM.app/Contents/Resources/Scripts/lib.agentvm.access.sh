@@ -171,13 +171,13 @@ access_blocker() {
         return 0
     fi
     if [ "$(printf '%s\n' "$_row" | /usr/bin/cut -f12)" = "linux" ]; then
-        printf 'Image %s runs Linux: there is no Full Disk Access to grant in it, and nothing in its boxes waits for one.\n' "$2"
+        printf 'Image %s runs Linux: there is no Full Disk Access to grant.\n' "$2"
         return 0
     fi
     [ -z "$(access_job "$1" "$2")" ] || return 0
     local _job="$(main_job "$1" image "$2")"
     if [ -n "$_job" ]; then
-        printf 'A job holds this image now (%s). It can be opened when the job ends.\n' "$(main_job_text "$_job")"
+        printf 'Busy: %s. Try again when it ends.\n' "$(main_job_text "$_job")"
         return 0
     fi
     local _state="$(printf '%s\n' "$_row" | /usr/bin/cut -f2)"
@@ -187,11 +187,11 @@ access_blocker() {
         return 0
     fi
     if main_image_busy "$1" "$2"; then
-        printf 'Another agent-vm command is changing this image now. It can be opened when that ends.\n'
+        printf 'Another agent-vm command is changing this image. Try again when it ends.\n'
         return 0
     fi
     main_macos_vms "$1" | /usr/bin/awk -F'\t' '$1 >= $2 {
-        printf "%s of %s macOS virtual machines are running, and the image needs one to start: stop a macOS box, or wait for a macOS build to end.\n", $1, $2 }'
+        printf "%s of %s macOS virtual machines are running: stop a macOS box, or wait for a build to end.\n", $1, $2 }'
 }
 
 # access_state_text <uuid> <name> <phase>  ->  the line under the title: whether the guest daemon
@@ -222,9 +222,9 @@ access_status_text() {
                   return 0 ;;
         boot)     echo "Starting the image. Its window opens in about a minute."
                   return 0 ;;
-        window)   echo "The image's window is open. Do steps 2 to 4 in it: a note at its top says when the grant is seen."
+        window)   echo "The image's window is open: do steps 2 to 4 in it."
                   return 0 ;;
-        shutdown) echo "The image is shutting down, and agent-vm records whether the grant was made."
+        shutdown) echo "The image is shutting down."
                   return 0 ;;
         needed|granted) ;;
         *)        return 0 ;;
@@ -238,13 +238,13 @@ access_status_text() {
             return 0 ;;
         done|canceled)
             if [ "$3" = "granted" ]; then
-                printf 'Granted. Boxes made from %s from now on have it.\n' "$2"
+                printf 'Granted for new boxes made from %s.\n' "$2"
             else
                 echo "Not granted yet. Open the Image starts again."
             fi
             return 0 ;;
     esac
-    [ "$3" = "granted" ] && echo "Nothing is left to do. Open the Image still shows its screen, for any other one-time step."
+    [ "$3" = "granted" ] && echo "Nothing left to do."
     return 0
 }
 
@@ -253,16 +253,16 @@ access_status_text() {
 # before it, and are named; once it is granted, which were made before is not known here.
 access_after_text() {
     if [ "$3" = "granted" ]; then
-        printf 'Boxes made from it since the grant have it. A box made earlier gets it when it is recreated.\n'
-        printf 'Images built from it since the grant have it too. An image built earlier is set up by itself.\n'
+        printf 'New boxes have it; older ones get it when recreated.\n'
+        printf 'New images built from it have it too.\n'
     else
         printf 'Boxes and images made from it after the grant have it.\n'
         local _boxes="$(main_rows "$1" boxes | /usr/bin/awk -F'\t' -v name="$2" '$3 "" == name && $13 != "true" { print $1 }')"
-        [ -n "$_boxes" ] && printf 'Boxes made from it so far (%s) get it when they are recreated.\n' "$(ui_lines_text "$_boxes")"
+        [ -n "$_boxes" ] && printf 'Its boxes (%s) get it when recreated.\n' "$(ui_lines_text "$_boxes")"
         local _derived="$(main_rows "$1" images | /usr/bin/awk -F'\t' -v name="$2" '$6 "" == name { print $1 }')"
-        [ -n "$_derived" ] && printf 'Images built from it so far (%s) do not get it: each is set up by itself.\n' "$(ui_lines_text "$_derived")"
+        [ -n "$_derived" ] && printf 'Images built from it (%s) need their own setup.\n' "$(ui_lines_text "$_derived")"
     fi
-    printf "An update that replaces the image's guest daemon may take the grant away; the image then says that it needs it again.\n"
+    printf "An update of the guest daemon may remove it again.\n"
 }
 
 # access_paint <uuid>  ->  the window from its cache.

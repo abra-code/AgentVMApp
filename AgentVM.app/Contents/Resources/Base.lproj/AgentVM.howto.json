@@ -15,7 +15,7 @@
     {
       "type": "Text",
       "properties": {
-        "text": "A box is where an agent works: a Mac of its own, with one folder of yours shared into it. An image is only the template a box is made from. avm, in Terminal, takes you into a box.",
+        "text": "A box is where an agent works, with one of your folders shared into it. avm in Terminal takes you into a box.",
         "frame": {
           "maxWidth": "infinity",
           "alignment": "leading"
@@ -66,7 +66,7 @@
             "title": "Copy",
             "controlSize": "small",
             "actionID": "AgentVM.howto.copy",
-            "help": "Copy this line, to paste it into Terminal."
+            "help": "Copy this command"
           }
         },
         {
@@ -114,7 +114,7 @@
             "title": "Copy",
             "controlSize": "small",
             "actionID": "AgentVM.howto.copy",
-            "help": "Copy this line, to paste it into Terminal."
+            "help": "Copy this command"
           }
         },
         {
@@ -162,7 +162,7 @@
             "title": "Copy",
             "controlSize": "small",
             "actionID": "AgentVM.howto.copy",
-            "help": "Copy this line, to paste it into Terminal."
+            "help": "Copy this command"
           }
         },
         {
@@ -210,7 +210,7 @@
             "title": "Copy",
             "controlSize": "small",
             "actionID": "AgentVM.howto.copy",
-            "help": "Copy this line, to paste it into Terminal."
+            "help": "Copy this command"
           }
         },
         {
@@ -258,7 +258,7 @@
             "title": "Copy",
             "controlSize": "small",
             "actionID": "AgentVM.howto.copy",
-            "help": "Copy this line, to paste it into Terminal."
+            "help": "Copy this command"
           }
         },
         {
@@ -308,7 +308,7 @@
         {
           "type": "Text",
           "properties": {
-            "text": "Your logins on this Mac are not visible in a box. Store the agent's key or token once, and avm hands it to the agent it starts.",
+            "text": "Store the agent's key once; avm hands it to the agent in the box.",
             "frame": {
               "maxWidth": "infinity",
               "alignment": "leading"
@@ -321,7 +321,7 @@
           "properties": {
             "title": "Agent Keys...",
             "actionID": "AgentVM.keys.open",
-            "help": "See which keys the agents can use and which are stored; store or remove one."
+            "help": "Manage the keys agents use"
           }
         }
       ]
@@ -345,7 +345,7 @@
         {
           "type": "Text",
           "properties": {
-            "text": "agent-vm keeps a record of what ran in a box and what it contacted, as files on this Mac, where nothing in the box can change them.",
+            "text": "agent-vm logs what ran in a box and what it contacted, out of the box's reach.",
             "frame": {
               "maxWidth": "infinity",
               "alignment": "leading"
@@ -358,7 +358,7 @@
           "properties": {
             "title": "Where the Logs Are...",
             "actionID": "AgentVM.logs.open",
-            "help": "See which files hold what a box ran and contacted, why a build failed, and what a deleted box did, with their folders."
+            "help": "Show where the logs are"
           }
         }
       ]

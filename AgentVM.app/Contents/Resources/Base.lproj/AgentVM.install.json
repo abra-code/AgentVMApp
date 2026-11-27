@@ -15,14 +15,14 @@
     {
       "type": "Text",
       "properties": {
-        "text": "agent-vm is the program that makes and runs boxes; AgentVM, Terminal and Cadabra all run the same one. It comes from github.com/abra-code/agent-vm as a package signed by its developer and notarized by Apple, which AgentVM checks before installing it.",
+        "text": "agent-vm makes and runs boxes. AgentVM downloads it from GitHub and checks its signature before installing it.",
         "frame": { "maxWidth": "infinity", "alignment": "leading" }
       }
     },
     {
       "type": "Text",
       "properties": {
-        "text": "It is installed for you only, and no password is asked: the programs go into ~/.local/share/agent-vm, in a folder for each version, and ~/.local/bin gets the links agent-vm and avm.",
+        "text": "It is installed for you only, in ~/.local/bin, with no password.",
         "foregroundStyle": "secondary",
         "frame": { "maxWidth": "infinity", "alignment": "leading" }
       }
@@ -31,9 +31,9 @@
       "type": "Toggle",
       "id": 4203,
       "properties": {
-        "title": "Add ~/.local/bin to my shell's PATH, so that avm and agent-vm are found in Terminal",
+        "title": "Add ~/.local/bin to my shell's PATH",
         "style": "checkbox",
-        "help": "Adds a marked block of lines to your shell's startup file (~/.zprofile for zsh). Nothing is added when the file already names ~/.local/bin."
+        "help": "Adds it to your shell's startup file, such as ~/.zprofile, so Terminal finds avm"
       }
     },
     {
@@ -64,7 +64,7 @@
             "disabled": true,
             "buttonStyle": "borderedProminent",
             "actionID": "AgentVM.install.start",
-            "help": "Download the newest agent-vm, check its signature, and install it."
+            "help": "Download, check and install the newest agent-vm"
           }
         }
       ]

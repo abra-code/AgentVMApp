@@ -88,10 +88,10 @@ rename_take() {
 # rename_what_text <box|image>  ->  what a rename keeps and what follows it.
 rename_what_text() {
     if [ "$1" = "box" ]; then
-        printf 'The box keeps what it holds, its network rules and its logs, and avm goes on using it for the folders it was used for. The name inside the box (its host name) stays as it is.\n'
+        printf 'The box keeps its contents, network rules and logs. Its host name inside stays the same.\n'
         return 0
     fi
-    printf 'The boxes made from the image and the images built from it follow at once: each names its image by the new name. So does what avm remembers per folder.\n'
+    printf 'Boxes and images made from it follow the new name.\n'
 }
 
 # rename_max_box_name_length  ->  the longest box name the store agent-vm uses allows (0 to 63),
@@ -149,9 +149,9 @@ rename_blocker() {
     fi
     [ "$1" = "box" ] && [ -n "${4:-}" ] || return 0
     if [ "$4" = "0" ]; then
-        printf 'No box name fits in this store: the path of its folder leaves no room for one in the path of a box'"'"'s control socket, which macOS limits.\n'
+        printf 'The store folder path is too long for any box name.\n'
     elif [ "${#3}" -gt "$4" ]; then
-        printf 'A box name can have at most %s characters in this store, and %s has %s: macOS limits the path of a box'"'"'s control socket, which is in the store'"'"'s folder.\n' "$4" "$3" "${#3}"
+        printf 'A box name can have at most %s characters in this store; %s has %s.\n' "$4" "$3" "${#3}"
     fi
     return 0
 }

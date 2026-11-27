@@ -342,8 +342,8 @@ net_mode_text() {
     local _text=""
     case "$1" in
         allowlist) _text="Only what the packs and hosts below allow." ;;
-        off)       _text="No network: every connection is refused, whatever the rules say." ;;
-        open)      _text="Any host, your local network included, and no connection is logged; the rules are kept for later." ;;
+        off)       _text="No network: every connection is refused." ;;
+        open)      _text="Any host, your local network included, unlogged. The rules are kept." ;;
     esac
     [ "$2" = "stopped" ] || _text="${_text:+$_text }The mode changes only while the box is stopped."
     printf '%s\n' "$_text"
@@ -429,9 +429,9 @@ net_paint_activity() {
     elif [ ! -f "$_connections" ]; then
         "$dialog" "$_uuid" "$NET_NOTE_ID" "The connections have not been read yet."
     elif [ ! -s "$_connections" ]; then
-        "$dialog" "$_uuid" "$NET_NOTE_ID" "No connections logged yet. A connection is listed from the moment it opens."
+        "$dialog" "$_uuid" "$NET_NOTE_ID" "No connections logged yet."
     else
-        "$dialog" "$_uuid" "$NET_NOTE_ID" "The last $NET_NETLOG_LAST connections, one row per host, port and result."
+        "$dialog" "$_uuid" "$NET_NOTE_ID" "The last $NET_NETLOG_LAST connections."
     fi
 }
 

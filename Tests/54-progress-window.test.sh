@@ -150,7 +150,7 @@ check "how long so far"              "Elapsed 12 s" "$(ui_value "$PROGRESS_ELAPS
 check "the step, which is where it is" "Starting=running" "$(steps)"
 check "no fraction: no bar"          "0" "$(shown "$PROGRESS_BAR_ID")"
 check "no log, no notice"            "|" "$(ui_value "$PROGRESS_LOG_ID")|$(ui_value "$PROGRESS_NOTICE_ID")"
-check "the footer names the job and says the window can go" "Job $START. You can close this window: the job goes on." "$(ui_value "$PROGRESS_FOOTER_ID")"
+check "the footer names the job and says the window can go" "Job $START. It goes on if you close this window." "$(ui_value "$PROGRESS_FOOTER_ID")"
 check "Stop... is on"                "1" "$(enabled "$PROGRESS_STOP_ID")"
 check "the poll loop is started"     "1" "$(chain_asked AgentVM.progress.poll)"
 
@@ -576,7 +576,7 @@ check "the shutdown in the middle is a step like another, and the build goes on"
     "[3/14] kernel with 16 KiB pages (linux-image-arm64-16k)=done|Shutting down=running|Shutting down" \
     "$(steps | /usr/bin/tr '|' '\n' | /usr/bin/tail -2 | /usr/bin/paste -sd '|' -)|$(ui_value "$PROGRESS_STATUS_ID")"
 check "  Stop is on, and the window says the job goes on" "1|yes" \
-    "$(enabled "$PROGRESS_STOP_ID")|$(ui_value "$PROGRESS_FOOTER_ID" | /usr/bin/grep -q 'the job goes on' && echo yes)"
+    "$(enabled "$PROGRESS_STOP_ID")|$(ui_value "$PROGRESS_FOOTER_ID" | /usr/bin/grep -q 'It goes on if you close this window' && echo yes)"
 kernel_log 11
 omc_run AgentVM.progress.activated
 check "the boot on the new kernel, and the setup steps go on where they stopped" \

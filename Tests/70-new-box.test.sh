@@ -363,14 +363,14 @@ check "selecting an image: what a box made from it gets, and its agents" \
 pick dev
 check "an image with no agent"       "Image dev: 4 CPUs, 8 GB of memory, Full Disk Access granted." "$(ui_value "$NBOX_IMAGE_NOTE_ID")"
 pick dev-acp
-check "an image another command is changing" "Another command is changing image dev-acp. A box can be made from it when that has ended.|0" \
+check "an image another command is changing" "Another command is changing image dev-acp. Try again when it ends.|0" \
     "$(ui_value "$NBOX_IMAGE_NOTE_ID")|$(enabled "$NBOX_ACCESS_ID")"
 next
-check "  Continue: the step stays, and says why" "Step 1 of 4 - Image|Another command is changing image dev-acp. A box can be made from it when that has ended.|" \
+check "  Continue: the step stays, and says why" "Step 1 of 4 - Image|Another command is changing image dev-acp. Try again when it ends.|" \
     "$(ui_value "$NBOX_HEADER_ID")|$(note)|$(kept image)"
 pick dev-node
 check "an image without Full Disk Access: what that means, and Set Up... is on" \
-    "Image dev-node has no Full Disk Access. A box made from it works: only a program that opens the box account's Desktop, Documents or Downloads waits, on a question macOS asks on the box's screen. Set Up... grants it, once, on the image.|1" \
+    "Image dev-node has no Full Disk Access: programs in its boxes wait on a macOS question when they open Desktop, Documents or Downloads.|1" \
     "$(ui_value "$NBOX_IMAGE_NOTE_ID")|$(enabled "$NBOX_ACCESS_ID")"
 chains_reset
 : > "$FAKE_AGENTVM_DIR/log"
@@ -412,7 +412,7 @@ check "Continue: status and the longest box name are read again, the image is ke
 # -----------------------------------------------------------------------------------------------
 section "step 2: the network"
 check "what the image's agents need is allowed already, each rule as agent-vm reads it" "pack:anthropic pack:openai opencode.ai models.opencode.ai" "$(rules)"
-check "the line above says whose"    "What the box may reach. Image dev-agents holds Claude Code, Codex and opencode: what they need is allowed already." "$(ui_value "$NBOX_AGENTS_TEXT_ID")"
+check "the line above says whose"    "What the box may reach. Allowed already for Claude Code, Codex and opencode." "$(ui_value "$NBOX_AGENTS_TEXT_ID")"
 check "the mode: allowlist, and what it lets through" "1|$ALLOWLIST_TEXT" "$(ui_value "$NBOX_MODE_ID")|$(ui_value "$NBOX_MODE_NOTE_ID")"
 check "the packs, in agent-vm's order" "anthropic|anthropic-connectors|apple-updates|debian|github|homebrew|npm|openai|pypi|swiftpm|ubuntu" \
     "$(ui_rows "$NBOX_PACKS_ID" | col 2 | /usr/bin/paste -sd '|' -)"
@@ -467,7 +467,7 @@ check "Remove with nothing selected does nothing" "pack:openai opencode.ai model
 omc_control "$NBOX_MODE_ID" "3"
 omc_trigger "$NBOX_MODE_ID"
 omc_run AgentVM.newbox.mode
-check "the mode picked: open, and what that means" "open|Any host, your local network included, and no connection is logged; the rules are kept for later." \
+check "the mode picked: open, and what that means" "open|Any host, your local network included, unlogged. The rules are kept." \
     "$(kept mode)|$(ui_value "$NBOX_MODE_NOTE_ID")"
 omc_control "$NBOX_MODE_ID" "7"
 omc_run AgentVM.newbox.mode
@@ -484,11 +484,11 @@ next
 check "the rules: the old agents' are gone, the new one's first, what is not a rule left out, the user's kept" \
     "pack:npm pack:github *.example.org:8443" "$(rules)"
 check "the line above: an agent found by a word of the description, not of its advice" \
-    "What the box may reach. Image dev-node holds A Rule That Is None: what they need is allowed already." "$(ui_value "$NBOX_AGENTS_TEXT_ID")"
+    "What the box may reach. Allowed already for A Rule That Is None." "$(ui_value "$NBOX_AGENTS_TEXT_ID")"
 back
 pick dev
 next
-check "an image with no agent: only the user's rules" "pack:github *.example.org:8443|What the box may reach. No agent is known in image dev, so nothing is allowed yet." \
+check "an image with no agent: only the user's rules" "pack:github *.example.org:8443|What the box may reach. Nothing is allowed yet." \
     "$(rules)|$(ui_value "$NBOX_AGENTS_TEXT_ID")"
 back
 pick dev-acp
@@ -501,7 +501,7 @@ section "step 3: name and size"
 next
 check "step 3"                       "Step 3 of 4 - Name and size|3|ddnt" "$(step_shown)"
 check "a free name, and the image's sizes" "work|4|8" "$(ui_value "$NBOX_NAME_ID")|$(ui_value "$NBOX_CPUS_ID")|$(ui_value "$NBOX_MEMORY_ID")"
-check "the line under them"          "These start as image dev-acp has them. The disk of a box is the image's, and takes room only for what the box writes." "$(ui_value "$NBOX_SIZE_TEXT_ID")"
+check "the line under them"          "As in image dev-acp. The disk takes room only for what the box writes." "$(ui_value "$NBOX_SIZE_TEXT_ID")"
 check "the start checkbox is not set by the window" "0" "$(ui_calls "${UUID}${TAB}${NBOX_START_ID}")"
 sizes "" 4 8 true
 next
@@ -514,7 +514,7 @@ next
 check "a name that is taken"         "A box named s3 is there already." "$(note)"
 sizes "S3" 4 8 true
 next
-check "  in other case: the box listed is named, and why" "A box named s3 is there already; names that differ in case only cannot both be used." "$(note)"
+check "  in other case: the box listed is named, and why" "A box named s3 is there already (names differing only in case count as the same)." "$(note)"
 sizes "work" 0 8 true
 next
 check "processors that are not a number" "Processors: a whole number from 1 to 256." "$(note)"
@@ -526,7 +526,7 @@ next
 check "memory that is not a number"  "Memory: a whole number of GB, from 3 to 4096." "$(note)"
 sizes "work" 4 2 true
 next
-check "less memory than a macOS box needs" "Memory: a macOS box needs at least 3 GB. With less, macOS does not finish starting." "$(note)"
+check "less memory than a macOS box needs" "A macOS box needs at least 3 GB of memory." "$(note)"
 sizes "work" 4 3 true
 next
 check "  3 GB is enough"              "Step 4 of 4 - Check|3" "$(ui_value "$NBOX_HEADER_ID")|$(kept memory)"
@@ -541,7 +541,7 @@ section "step 4: check"
 check "Create is there, Continue is not" "1|0" "$(shown "$NBOX_CREATE_ID")|$(shown "$NBOX_NEXT_ID")"
 check "what is made"                 "Box tools, a copy of image dev-acp (macOS 27.0).|6 CPUs, 12 GB of memory.|Network: only pack:anthropic, pack:openai, opencode.ai, models.opencode.ai, pack:github and *.example.org:8443.|It is started once made, and runs until it is stopped." \
     "$(ui_value "$NBOX_SUMMARY_ID" | /usr/bin/paste -sd '|' -)"
-check "the advice"                   "The box is kept until it is deleted. What is installed or written in it stays in the box, and its network can be changed later in its Network window." "$(ui_value "$NBOX_ADVICE_ID")"
+check "the advice"                   "The box is kept until you delete it." "$(ui_value "$NBOX_ADVICE_ID")"
 EXPECTED="tools --image dev-acp --cpus 6 --memory-gb 12 --allow pack:anthropic --allow pack:openai --allow opencode.ai --allow models.opencode.ai --allow pack:github --allow *.example.org:8443"
 check "the commands: the sizes that are not the image's, every rule, and the start" \
     "agent-vm box create tools --image dev-acp --cpus 6 --memory-gb 12 --allow pack:anthropic --allow pack:openai --allow opencode.ai --allow models.opencode.ai --allow pack:github --allow '*.example.org:8443'|agent-vm box start tools" \
@@ -570,7 +570,7 @@ section "what stands in the way"
 store '.runningVMs.count = 2'
 omc_run AgentVM.newbox.activated
 check "no place for a macOS virtual machine is free, and the box is to be started: Create is off, and says why" \
-    "2 of 2 macOS virtual machines are running, so the box cannot be started now. Stop a macOS box first, or go back and choose not to start it.|0" "$(note)|$(enabled "$NBOX_CREATE_ID")"
+    "2 of 2 macOS virtual machines are running: stop a macOS box first, or do not start this one.|0" "$(note)|$(enabled "$NBOX_CREATE_ID")"
 store '.runningVMs = {count: 3, limit: 2, linuxBoxes: 1, linuxImages: 1}'
 omc_run AgentVM.newbox.activated
 check "  three machines run, two of them Linux: a place is free, and nothing stands in the way" "|1" "$(note)|$(enabled "$NBOX_CREATE_ID")"
@@ -581,18 +581,18 @@ omc_run AgentVM.newbox.create
 check "  Create, clicked anyway, makes nothing" "0" "$(created)"
 store '(.images[] | select(.name == "dev-acp")).updating = true'
 omc_run AgentVM.newbox.activated
-check "the image is being changed"   "Another command is changing image dev-acp. A box can be made from it when that has ended.|0" "$(note)|$(enabled "$NBOX_CREATE_ID")"
+check "the image is being changed"   "Another command is changing image dev-acp. Try again when it ends.|0" "$(note)|$(enabled "$NBOX_CREATE_ID")"
 store '.boxes += [.boxes[0] | .box.name = "tools"]'
 omc_run AgentVM.newbox.activated
 check "the name was taken meanwhile" "A box named tools is there already.|0" "$(note)|$(enabled "$NBOX_CREATE_ID")"
 store '.boxes += [.boxes[0] | .box.name = "TOOLS"]'
 omc_run AgentVM.newbox.activated
-check "  or in other case"            "A box named TOOLS is there already; names that differ in case only cannot both be used.|0" "$(note)|$(enabled "$NBOX_CREATE_ID")"
+check "  or in other case"            "A box named TOOLS is there already (names differing only in case count as the same).|0" "$(note)|$(enabled "$NBOX_CREATE_ID")"
 store '.'
 /usr/bin/jq '.maxBoxNameLength = 4' "$FIXTURES_AGENTVM/version.json" > "$FAKE_AGENTVM_DIR/version.json"
 omc_run AgentVM.newbox.activated
 check "the store allows only shorter names now: read again on activation" \
-    "A box name can have at most 4 characters in this store, and tools has 5: macOS limits the path of a box's control socket, which is in the store's folder.|0" "$(note)|$(enabled "$NBOX_CREATE_ID")"
+    "A box name can have at most 4 characters in this store; tools has 5.|0" "$(note)|$(enabled "$NBOX_CREATE_ID")"
 /bin/rm -f "$FAKE_AGENTVM_DIR/version.json"
 printf 'the store is locked\n' > "$FAKE_AGENTVM_DIR/fail-status"
 omc_run AgentVM.newbox.activated
@@ -649,7 +649,7 @@ check "  and the image is the row selected, should the user go back" "dev-node" 
 omc_control "$NBOX_MODE_ID" "2"
 omc_trigger "$NBOX_MODE_ID"
 omc_run AgentVM.newbox.mode
-check "the mode picked: off"         "off|No network: every connection is refused, whatever the rules say." "$(kept mode)|$(ui_value "$NBOX_MODE_NOTE_ID")"
+check "the mode picked: off"         "off|No network: every connection is refused." "$(kept mode)|$(ui_value "$NBOX_MODE_NOTE_ID")"
 next
 check "a free name"                  "work" "$(ui_value "$NBOX_NAME_ID")"
 sizes work 4 8 false
@@ -657,7 +657,7 @@ next
 check "what is made"                 "Box work, a copy of image dev-node (macOS 27.0).|4 CPUs, 8 GB of memory.|Network: off. Every connection is refused.|Its rules (pack:npm) are kept for when the mode is allowlist.|It is not started." \
     "$(ui_value "$NBOX_SUMMARY_ID" | /usr/bin/paste -sd '|' -)"
 check "an image without Full Disk Access: the advice says what that means for the box" \
-    "Image dev-node has no Full Disk Access, so the box has none either. It works without it: only a program that opens the box account's Desktop, Documents or Downloads waits, on a question macOS asks on the box's screen. Set Up... on the first step grants it; a box made before that gets it when it is recreated." \
+    "Image dev-node has no Full Disk Access, so the box has none either: programs in it wait on a macOS question when they open Desktop, Documents or Downloads." \
     "$(ui_value "$NBOX_ADVICE_ID" | /usr/bin/sed -n '1p')"
 check "the command: sizes that are the image's are left out, the mode is named, no start" "agent-vm box create work --image dev-node --net off --allow pack:npm" "$(ui_value "$NBOX_COMMAND_ID")"
 check "a box that is not started needs no virtual machine slot" "|1" "$(note)|$(enabled "$NBOX_CREATE_ID")"
@@ -761,11 +761,11 @@ next
 check "the name offered is free in any case: Work is there, so work2" "Step 3 of 4 - Name and size|work2" "$(ui_value "$NBOX_HEADER_ID")|$(ui_value "$NBOX_NAME_ID")"
 sizes "work" 4 8 false
 next
-check "work: taken as Work"           "A box named Work is there already; names that differ in case only cannot both be used." "$(note)"
+check "work: taken as Work"           "A box named Work is there already (names differing only in case count as the same)." "$(note)"
 sizes "LongerName" 4 8 false
 next
 check "a name over the store's limit: what it allows, and the name's length" \
-    "Step 3 of 4 - Name and size|A box name can have at most 8 characters in this store, and LongerName has 10: macOS limits the path of a box's control socket, which is in the store's folder." \
+    "Step 3 of 4 - Name and size|A box name can have at most 8 characters in this store; LongerName has 10." \
     "$(ui_value "$NBOX_HEADER_ID")|$(note)"
 sizes "MyBox-12" 4 8 false
 next
@@ -782,18 +782,18 @@ next
 sizes "a" 4 8 false
 next
 check "a store whose folder leaves room for no name: said for the store, whatever the name" \
-    "No box can be made in this store: the path of its folder leaves no room for a box name in the path of a box's control socket, which macOS limits. Use a store in a folder with a shorter path." "$(note)"
+    "The store folder path is too long for any box name. Use a store with a shorter path." "$(note)"
 sizes "" 4 8 false
 next
 check "  even before a name is typed" \
-    "No box can be made in this store: the path of its folder leaves no room for a box name in the path of a box's control socket, which macOS limits. Use a store in a folder with a shorter path." "$(note)"
+    "The store folder path is too long for any box name. Use a store with a shorter path." "$(note)"
 /bin/rm -f "$FAKE_AGENTVM_DIR/version.json"
 printf 'version is broken\n' > "$FAKE_AGENTVM_DIR/fail-version"
 omc_run AgentVM.newbox.activated
 sizes "a" 4 8 false
 next
-check "  a version that fails keeps the number read before" "Step 3 of 4 - Name and size|No box can be made in this store" \
-    "$(ui_value "$NBOX_HEADER_ID")|$(note | /usr/bin/cut -d: -f1)"
+check "  a version that fails keeps the number read before" "Step 3 of 4 - Name and size|The store folder path is too long for any box name" \
+    "$(ui_value "$NBOX_HEADER_ID")|$(note | /usr/bin/cut -d. -f1)"
 /bin/rm -f "$FAKE_AGENTVM_DIR/fail-version"
 omc_run AgentVM.newbox.activated
 next
@@ -851,7 +851,7 @@ sizes "penguin" 4 1 true
 next
 check "  1 GB is enough"              "Step 4 of 4 - Check|1" "$(ui_value "$NBOX_HEADER_ID")|$(kept memory)"
 check "  but with a desktop the advice says what suits it, which agent-vm notes in words the window does not show" \
-    "With 1 GB of memory, the desktop leaves little free, and a box has no swap: 4 GB or more suits a desktop and an agent." \
+    "1 GB of memory leaves little for a desktop and an agent: 4 GB or more is better." \
     "$(ui_value "$NBOX_ADVICE_ID" | /usr/bin/sed -n 2p)"
 back
 sizes "penguin" 4 4 true
@@ -859,7 +859,7 @@ next
 check "what is made, with the system in short" "Box penguin, a copy of image deb-agents (Debian 13).|4 CPUs, 4 GB of memory." \
     "$(ui_value "$NBOX_SUMMARY_ID" | /usr/bin/sed -n '1,2p' | /usr/bin/paste -sd '|' -)"
 check "the advice says the box has its image's desktop, and how it is used" \
-    "The box has the desktop of image deb-agents: View shows it while the box runs. Connect opens a shell in it, and Run an Agent starts an agent in it.|The box is kept until it is deleted. What is installed or written in it stays in the box, and its network can be changed later in its Network window." \
+    "The box has the desktop of image deb-agents: View shows it.|The box is kept until you delete it." \
     "$(ui_value "$NBOX_ADVICE_ID" | /usr/bin/paste -sd '|' -)"
 check "both macOS places are taken and the box is to be started: nothing stands in the way of a Linux box" "|1" \
     "$(note)|$(enabled "$NBOX_CREATE_ID")"
@@ -880,7 +880,7 @@ next
 sizes "plain" 4 4 false
 next
 check "a Linux image with no desktop: the advice says the box has no screen, and how it is used" \
-    "Image deb has no desktop, so the box has no screen: it is used through Connect, which opens a shell in it, and Run an Agent.|The box is kept until it is deleted. What is installed or written in it stays in the box, and its network can be changed later in its Network window." \
+    "Image deb has no desktop: use the box with Connect or Run an Agent.|The box is kept until you delete it." \
     "$(ui_value "$NBOX_ADVICE_ID" | /usr/bin/paste -sd '|' -)"
 omc_run AgentVM.newbox.close
 # The same counts, and a macOS image: the box cannot be started.
@@ -892,7 +892,7 @@ next
 sizes "apple" 4 8 true
 next
 check "a macOS box in that store is held back, and says what is taken" \
-    "2 of 2 macOS virtual machines are running, so the box cannot be started now. Stop a macOS box first, or go back and choose not to start it.|0" \
+    "2 of 2 macOS virtual machines are running: stop a macOS box first, or do not start this one.|0" \
     "$(note)|$(enabled "$NBOX_CREATE_ID")"
 omc_run AgentVM.newbox.close
 

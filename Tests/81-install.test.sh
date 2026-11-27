@@ -204,7 +204,7 @@ close_window
 section "an agent-vm that is installed"
 tools_reset
 open_window
-check "the newest: nothing to install" "agent-vm $NEWEST is installed, and it is the newest.|0|Boxes that are running keep the agent-vm they were started with until they are stopped." "$(head)|$(button)|$(note)"
+check "the newest: nothing to install" "agent-vm $NEWEST is installed, and it is the newest.|0|Running boxes keep their agent-vm until they stop." "$(head)|$(button)|$(note)"
 close_window
 printf '%s\n' "$NEWER" > "$FAKE_INSTALL_DIR/newest"
 open_window

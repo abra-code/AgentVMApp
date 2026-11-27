@@ -62,17 +62,17 @@ howto_line_rows() {
         _box="work"
         _box_note=" No kept box exists yet: work stands for one you make."
     fi
-    printf '1\tavm\tChoose a box, then what to run in it: an agent, a shell or a command. Current working directory is shared into the box and any changes there can be undone afterwards.\n'
-    printf '2\tavm new %s\tRun in a new temporary box from the image "%s", used once and deleted when you leave it.%s\n' "$_image" "$_image" "$_image_note"
-    printf '3\tavm new %s --name work\tRun in a new box named "work" from the image "%s". The box is preserved.%s\n' "$_image" "$_image" "$_image_note"
-    printf '4\tavm %s\tRun avm in existing box "%s". It is started if needed, and afterwards avm asks whether to stop it.%s\n' "$_box" "$_box" "$_box_note"
-    printf '5\t~/.local/bin/avm\tFull path to avm tool.\n'
+    printf '1\tavm\tChoose a box and what to run: an agent, a shell or a command. The current folder is shared, and its changes can be undone.\n'
+    printf '2\tavm new %s\tA temporary box from image "%s", deleted when you leave it.%s\n' "$_image" "$_image" "$_image_note"
+    printf '3\tavm new %s --name work\tA new box named "work" from image "%s", kept.%s\n' "$_image" "$_image" "$_image_note"
+    printf '4\tavm %s\tThe existing box "%s", started if needed.%s\n' "$_box" "$_box" "$_box_note"
+    printf '5\t~/.local/bin/avm\tThe full path, if Terminal does not find avm.\n'
 }
 
 # howto_note_text  ->  whether avm is where the installer puts it.
 howto_note_text() {
     if [ -x "$(howto_avm)" ]; then
-        printf 'avm is installed in ~/.local/bin/. If Terminal cannot find it, that directory is not in your shell'"'"'s PATH list: use the full path.\n'
+        printf 'If Terminal does not find avm, use its full path.\n'
     else
         printf 'avm is not in ~/.local/bin/ on this Mac. It comes with agent-vm'"'"'s installer, beside agent-vm.\n'
     fi

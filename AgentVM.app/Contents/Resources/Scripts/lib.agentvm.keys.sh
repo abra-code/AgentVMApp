@@ -142,8 +142,8 @@ keys_hint_text() {
         IFS="$ui_tab" read -r _name _state _label _agent _agent_name _needed _login _note
         local _text=""
         case "$_state" in
-            set)     _text="Stored in your login Keychain. Store replaces it." ;;
-            asks)    _text="Stored by another copy of agent-vm, so macOS asks before this one reads it: answer Always Allow then, or store the key again here." ;;
+            set)     _text="Stored." ;;
+            asks)    _text="Stored by another copy of agent-vm: macOS asks before reading it (choose Always Allow, or store it again)." ;;
             missing) _text="Not stored." ;;
         esac
         case "$_state:$_needed" in

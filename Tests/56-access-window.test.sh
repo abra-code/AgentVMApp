@@ -180,7 +180,7 @@ check "it does not have the grant"   "agent-vm-guest does not have Full Disk Acc
 check "all four steps are to do"     "todo todo todo todo" "$(marks)"
 check "nothing happens yet"          "" "$(ui_value "$ACCESS_STATUS_ID")"
 check "afterwards: the images built from it so far are named" \
-    "Boxes and images made from it after the grant have it.|Images built from it so far (dev-acp and dev-agents) do not get it: each is set up by itself.|An update that replaces the image's guest daemon may take the grant away; the image then says that it needs it again." \
+    "Boxes and images made from it after the grant have it.|Images built from it (dev-acp and dev-agents) need their own setup.|An update of the guest daemon may remove it again." \
     "$(ui_value "$ACCESS_AFTER_ID" | /usr/bin/paste -sd '|' -)"
 check "the command it would run"     "agent-vm image setup dev-node" "$(ui_value "$ACCESS_COMMAND_ID")"
 check "nothing stands in the way: no note, Open the Image is on, and there is no job to show" "|1|0" \
@@ -252,12 +252,12 @@ poll_once
 check "the loop waits 2 seconds, then reads status" "2|status --json" "$(/bin/cat "$FAKE_SLEEP_LOG")|$(fake_log)"
 check "the image's window is open: step 1 is done, the other three are the person's" "done now now now" "$(marks)"
 check "  and the guide says where to do them" \
-    "The image's window is open. Do steps 2 to 4 in it: a note at its top says when the grant is seen." "$(ui_value "$ACCESS_STATUS_ID")"
+    "The image's window is open: do steps 2 to 4 in it." "$(ui_value "$ACCESS_STATUS_ID")"
 check "  the image's record does not have the grant yet" "agent-vm-guest does not have Full Disk Access in this image yet." "$(ui_value "$ACCESS_STATE_ID")"
 job_step "$FIRST" shutdown
 poll_once
 check "the window was closed: only the last step is known to be happening" "done todo todo now" "$(marks)"
-check "  and the guide says so"      "The image is shutting down, and agent-vm records whether the grant was made." "$(ui_value "$ACCESS_STATUS_ID")"
+check "  and the guide says so"      "The image is shutting down." "$(ui_value "$ACCESS_STATUS_ID")"
 check "Open the Image stays off while the setup runs" "0" "$(enabled "$ACCESS_OPEN_ID")"
 
 section "the grant was made"
@@ -265,10 +265,10 @@ job_end "$FIRST" done
 store "$GRANTED"
 poll_once
 check "all four steps are done"      "done done done done" "$(marks)"
-check "the guide says so, and for whom" "Granted. Boxes made from dev-node from now on have it." "$(ui_value "$ACCESS_STATUS_ID")"
+check "the guide says so, and for whom" "Granted for new boxes made from dev-node." "$(ui_value "$ACCESS_STATUS_ID")"
 check "  the image's record has it"  "agent-vm-guest has Full Disk Access in this image." "$(ui_value "$ACCESS_STATE_ID")"
 check "afterwards: which of its boxes and images were made before is not known now" \
-    "Boxes made from it since the grant have it. A box made earlier gets it when it is recreated.|Images built from it since the grant have it too. An image built earlier is set up by itself." \
+    "New boxes have it; older ones get it when recreated.|New images built from it have it too." \
     "$(ui_value "$ACCESS_AFTER_ID" | /usr/bin/sed -n '1,2p' | /usr/bin/paste -sd '|' -)"
 check "Open the Image is on again, and Progress... stays, for the job's log" "1|1" "$(enabled "$ACCESS_OPEN_ID")|$(ui_visible "$ACCESS_PROGRESS_ID")"
 : > "$FAKE_SLEEP_LOG"
@@ -327,7 +327,7 @@ section "an image that has the grant"
 open_access dev-acp
 check "its record says so"           "agent-vm-guest has Full Disk Access in this image." "$(ui_value "$ACCESS_STATE_ID")"
 check "all four steps are done, and nothing is left" \
-    "done done done done|Nothing is left to do. Open the Image still shows its screen, for any other one-time step." \
+    "done done done done|Nothing left to do." \
     "$(marks)|$(ui_value "$ACCESS_STATUS_ID")"
 check "Open the Image is on all the same, with no job to show" "1|0" "$(enabled "$ACCESS_OPEN_ID")|$(ui_visible "$ACCESS_PROGRESS_ID")"
 chains_reset
@@ -344,7 +344,7 @@ check "  with the poll loop, Progress..., and Open the Image off" "1|1|0" \
     "$(chain_asked AgentVM.access.poll)|$(ui_visible "$ACCESS_PROGRESS_ID")|$(enabled "$ACCESS_OPEN_ID")"
 check "  and no note: the steps say what holds the image" "" "$(ui_value "$ACCESS_NOTE_ID")"
 check "afterwards: the image built from it so far" \
-    "Images built from it so far (dev-xcode-ios) do not get it: each is set up by itself." "$(ui_value "$ACCESS_AFTER_ID" | /usr/bin/sed -n '2p')"
+    "Images built from it (dev-xcode-ios) need their own setup." "$(ui_value "$ACCESS_AFTER_ID" | /usr/bin/sed -n '2p')"
 : > "$FAKE_AGENTVM_DIR/log"
 omc_run AgentVM.access.open
 check "Open the Image, clicked anyway, starts nothing" "" "$(started)"
@@ -367,7 +367,7 @@ chains_reset
 omc_run AgentVM.access.activated
 check "status is read again"         "status --json" "$(fake_log)"
 check "a grant made meanwhile, in Terminal, is shown, with no setup of this window's to speak of" \
-    "done done done done|Nothing is left to do. Open the Image still shows its screen, for any other one-time step." \
+    "done done done done|Nothing left to do." \
     "$(marks)|$(ui_value "$ACCESS_STATUS_ID")"
 check "no setup runs: no poll loop"  "0" "$(chain_asked AgentVM.access.poll)"
 store '.'
@@ -400,21 +400,21 @@ section "what stands in the way"
 store '.runningVMs.count = 2'
 omc_run AgentVM.access.activated
 check "no place for a macOS virtual machine is free" \
-    "2 of 2 macOS virtual machines are running, and the image needs one to start: stop a macOS box, or wait for a macOS build to end.|0" \
+    "2 of 2 macOS virtual machines are running: stop a macOS box, or wait for a build to end.|0" \
     "$(ui_value "$ACCESS_NOTE_ID")|$(enabled "$ACCESS_OPEN_ID")"
 : > "$FAKE_AGENTVM_DIR/log"
 omc_run AgentVM.access.open
 check "  Open the Image, clicked anyway, starts nothing" "" "$(started)"
 store '(.images[] | select(.name == "dev-node")).updating = true'
 omc_run AgentVM.access.activated
-check "another command is changing the image" "Another agent-vm command is changing this image now. It can be opened when that ends.|0" \
+check "another command is changing the image" "Another agent-vm command is changing this image. Try again when it ends.|0" \
     "$(ui_value "$ACCESS_NOTE_ID")|$(enabled "$ACCESS_OPEN_ID")"
 store '.'
 /usr/bin/jq -n '[{id: "20260930-120000-0000e1", command: ["image", "update", "dev-node", "--guest", "--json"], targets: ["image:dev-node"],
     state: "running", createdAt: "2026-09-30T12:00:00Z", startedAt: "2026-09-30T12:00:00Z"}]' > "$JOBS"
 chains_reset
 omc_run AgentVM.access.activated
-check "a job of another kind holds the image" "A job holds this image now (Updating, elapsed 12 s). It can be opened when the job ends.|0" \
+check "a job of another kind holds the image" "Busy: Updating, elapsed 12 s. Try again when it ends.|0" \
     "$(ui_value "$ACCESS_NOTE_ID")|$(enabled "$ACCESS_OPEN_ID")"
 check "  the steps are to do, it is not followed, and no loop runs for it" "todo todo todo todo|0|0" \
     "$(marks)|$(ui_visible "$ACCESS_PROGRESS_ID")|$(chain_asked AgentVM.access.poll)"
@@ -679,7 +679,7 @@ fake_reset
 "$PB" agentvm_window_access_dev-node set ""
 open_access deb-agents
 check "the guide says what the image runs, and why there is nothing to do" \
-    "This image runs Linux.|Image deb-agents runs Linux: there is no Full Disk Access to grant in it, and nothing in its boxes waits for one." \
+    "This image runs Linux.|Image deb-agents runs Linux: there is no Full Disk Access to grant." \
     "$(ui_value "$ACCESS_STATE_ID")|$(ui_value "$ACCESS_NOTE_ID")"
 check "  no step is marked done or under way, nothing is said of a grant, and Open the Image is off" "todo todo todo todo||0" \
     "$(marks)|$(ui_value "$ACCESS_AFTER_ID")|$(enabled "$ACCESS_OPEN_ID")"
@@ -698,7 +698,7 @@ check "  three machines run, two of them Linux: a place is free, and Open the Im
 /usr/bin/jq '.runningVMs = {count: 3, limit: 2, linuxBoxes: 1, linuxImages: 0}' "$FIXTURES_AGENTVM/status-mixed.json" > "$FAKE_AGENTVM_DIR/status.json"
 omc_run AgentVM.access.activated
 check "  three machines run, one of them Linux: both places are taken" \
-    "2 of 2 macOS virtual machines are running, and the image needs one to start: stop a macOS box, or wait for a macOS build to end.|0" \
+    "2 of 2 macOS virtual machines are running: stop a macOS box, or wait for a build to end.|0" \
     "$(ui_value "$ACCESS_NOTE_ID")|$(enabled "$ACCESS_OPEN_ID")"
 "$PB" agentvm_window_access_dev-node set ""
 

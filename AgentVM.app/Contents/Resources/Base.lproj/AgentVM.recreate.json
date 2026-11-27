@@ -106,7 +106,7 @@
             "buttonStyle": "borderedProminent",
             "disabled": true,
             "actionID": "AgentVM.recreate.apply",
-            "help": "Delete the box and make it again from the image chosen, at once."
+            "help": "Make the box again from the chosen image"
           }
         }
       ]

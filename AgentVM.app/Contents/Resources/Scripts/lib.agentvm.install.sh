@@ -350,8 +350,8 @@ install_paint() {
     local _note=""
     case "$(agentvm_origin)" in
         developer)
-            _note="AgentVM is set to run a developer agent-vm ($(agentvm_display_path "$(agentvm_bin)")) and keeps doing so. The one installed here is the one Terminal and Cadabra run." ;;
-        *)  [ -n "$(install_installed_version)" ] && _note="Boxes that are running keep the agent-vm they were started with until they are stopped." ;;
+            _note="AgentVM is set to run a developer agent-vm ($(agentvm_display_path "$(agentvm_bin)")) and keeps using it. This installs the one Terminal and Cadabra use." ;;
+        *)  [ -n "$(install_installed_version)" ] && _note="Running boxes keep their agent-vm until they stop." ;;
     esac
     "$dialog" "$1" "$INSTALL_NOTE_ID" "$_note"
 }

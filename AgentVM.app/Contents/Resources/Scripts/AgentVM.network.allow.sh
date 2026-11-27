@@ -17,5 +17,5 @@ rule="$(net_allowable "$window_uuid" "$OMC_ACTIONUI_TABLE_613_COLUMN_1_VALUE" "$
 [ -n "$rule" ] || exit 0
 ui_set net_allow "$window_uuid" "$box $rule"
 "$dialog" "$window_uuid" omc_window omc_present_alert "Allow $rule in box $box?" \
-    "Programs in the box can then connect to $rule, unless it resolves to an address on this Mac or your local network, which stays refused. The rule applies at once, even while the box runs, and stays with the box until it is removed." \
+    "Programs in the box can connect to $rule at once, but never to this Mac or your local network. The rule stays until you remove it." \
     "Cancel:cancel:" "Allow::AgentVM.network.allow.confirmed"

@@ -315,8 +315,8 @@ EOF
         [ $? -eq 0 ] || continue
         [ -n "$(update_chosen "$1" "$_input")" ] && continue
         if [ "$_where" = "-" ] || [ ! -f "$_where" ] || [ ! -r "$_where" ]; then
-            printf 'The recipe %s runs again with its other files too, and the one for %s (%s) is not where it was. Give all of its files in Terminal: agent-vm image update %s --tools, with --input <name>=<path> for each.\n' \
-                "$_recipe" "$_input" "$_was" "$2"
+            printf 'The file for %s of recipe %s (%s) is not where it was. Give all its files in Terminal: agent-vm image update %s --tools --input <name>=<path>.\n' \
+                "$_input" "$_recipe" "$_was" "$2"
             return 0
         fi
     done <<EOF
@@ -346,7 +346,7 @@ update_blocker() {
     local _state="$(printf '%s\n' "$_row" | /usr/bin/cut -f2)"
     local _job="$(main_job "$1" image "$2")"
     if [ -n "$_job" ]; then
-        printf 'A job holds this image now (%s). It can be updated when the job ends.\n' "$(main_job_text "$_job")"
+        printf 'Busy: %s. Try again when it ends.\n' "$(main_job_text "$_job")"
         return 0
     fi
     if [ "$_state" != "ready" ]; then
@@ -355,7 +355,7 @@ update_blocker() {
         return 0
     fi
     if main_image_busy "$1" "$2"; then
-        printf 'Another agent-vm command is changing this image now. It can be updated when that ends.\n'
+        printf 'Another agent-vm command is changing this image. Try again when it ends.\n'
         return 0
     fi
     update_input_problem "$1" "$2"
@@ -367,7 +367,7 @@ update_blocker() {
 update_warning() {
     update_linux "$1" "$2" && return 0
     main_macos_vms "$1" | /usr/bin/awk -F'\t' '$1 >= $2 {
-        printf "No virtual machine slot is free now (%s of %s macOS virtual machines running), and an update needs one: it fails at once until a macOS box or build stops.\n", $1, $2 }'
+        printf "No macOS virtual machine is free (%s of %s running): the update fails until one stops.\n", $1, $2 }'
 }
 
 # update_state_text <uuid> <name>  ->  the line under the title: what the image runs (a macOS
@@ -402,15 +402,15 @@ update_system_text() {
         local _of=""
         [ "$_short" != "-" ] && _of=" of $_short"
         local _looked="$(ui_date_text "$(update_field "$1" updates "$2" 4)")"
-        printf 'Installs the package updates%s, which takes seconds to minutes. When they bring a new kernel, the image is started once more to check it before the update is kept.%s\n' \
-            "$_of" "${_looked:+ Its packages were last looked at on $_looked.}"
+        printf 'Installs the package updates%s, in seconds to minutes.%s\n' \
+            "$_of" "${_looked:+ Last checked $_looked.}"
         return 0
     fi
     local _version="$(update_field "$1" updates "$2" 6)"
     if [ "$_version" != "-" ]; then
         local _learned="$(ui_date_text "$(update_field "$1" updates "$2" 8)")"
-        printf 'macOS %s (%s) is available%s. Installing it takes about 15 minutes, and about 15 GB of disk that the image then no longer shares with its older boxes. Newer Command Line Tools are installed with it.\n' \
-            "$_version" "$(update_field "$1" updates "$2" 7)" "${_learned:+, as Apple said on $_learned}"
+        printf 'macOS %s (%s) is available%s: about 15 minutes and 15 GB of disk.\n' \
+            "$_version" "$(update_field "$1" updates "$2" 7)" "${_learned:+ (as of $_learned)}"
         return 0
     fi
     local _newest="$(update_newest "$1" 1)"
@@ -420,16 +420,16 @@ update_system_text() {
     local _within="macOS $_major"
     [ "$_major" = "-" ] && _within="the image's major version"
     if [ "$_newest" = "-" ]; then
-        printf "Apple has not been asked which macOS is the newest: Check Now asks. The update asks too, and installs what Apple offers within %s.\n" "$_within"
+        printf "Not checked yet. The update installs what Apple offers within %s.\n" "$_within"
         return 0
     fi
     local _asked="$(ui_date_text "$(update_newest "$1" 3)")"
     if [ "$_major" != "-" ] && [ "${_newest%%.*}" != "$_major" ]; then
-        printf 'The newest macOS is %s%s, a new major version, which an update does not install: the image is built again for that. The update still asks Apple for what it offers within macOS %s.\n' \
+        printf 'The newest macOS is %s%s, a new major version: build a new image for it. The update installs what Apple offers within macOS %s.\n' \
             "$_newest" "${_asked:+ (as of $_asked)}" "$_major"
         return 0
     fi
-    printf 'No newer macOS is known for this image: the newest is %s (%s)%s. The update asks Apple again, and installs what is offered.\n' \
+    printf 'Up to date: %s (%s) is the newest%s. The update checks again.\n' \
         "$_newest" "$(update_newest "$1" 2)" "${_asked:+, as of $_asked}"
 }
 
@@ -448,22 +448,16 @@ update_tools_when() {
 update_tools_text() {
     local _recipes="$(update_field "$1" updates "$2" 9)"
     if [ "$_recipes" = "-" ]; then
-        printf 'This image keeps no recipes, so it has no tools an update can refresh.\n'
+        printf 'No recipes: nothing to update.\n'
         return 0
     fi
     # The inputs the second step has a button for: the first of each recipe in a slot.
     local _inputs="$(update_input_rows "$1" "$2" | /usr/bin/awk -F'\t' -v slots="$UPDATE_SLOTS" '$5 + 0 <= slots + 0 && !seen[$5]++ { print $1 }')"
     local _given="$(update_inputs_given "$1" "$2" | /usr/bin/sed 's/=.*//')"
-    local _lists="Checking it adds a step that lists them"
-    [ "$(update_choices "$1" "$2" | /usr/bin/cut -d' ' -f2)" = "1" ] && _lists="Continue lists them"
-    local _next="$_lists."
-    [ -n "$_inputs" ] && _next="$_lists, and takes a newer file for $(ui_lines_text "$_inputs")."
-    if [ -n "$_given" ]; then
-        _next="$_lists, with the new file for $(ui_lines_text "$_given")."
-        [ "$(printf '%s\n' "$_given" | /usr/bin/awk 'END { print NR }')" -gt 1 ] \
-            && _next="$_lists, with the new files for $(ui_lines_text "$_given")."
-    fi
-    printf "Runs the update steps of the recipes this image keeps (%s), then every recipe's checks. %s %s\n" \
+    local _next=""
+    [ -n "$_inputs" ] && _next=" The next step takes a newer file for $(ui_lines_text "$_inputs")."
+    [ -n "$_given" ] && _next=" With the new file for $(ui_lines_text "$_given")."
+    printf "Updates the tools of its recipes (%s). %s%s\n" \
         "$(printf '%s' "$_recipes" | /usr/bin/sed 's/,/, /g')" "$(update_tools_when "$1" "$2")" "$_next"
 }
 
@@ -472,11 +466,11 @@ update_tools_text() {
 # recipe again takes. Which kept recipes agent-vm would replace by newer ones of its own is not
 # known beforehand: the job's log names them.
 update_recipes_text() {
-    printf "The tools update runs the update steps of these recipes, in this order, then every recipe's checks. A recipe that came with agent-vm is first replaced by the installed version, when that is newer. %s\n" \
+    printf "Recipes updated, in this order. %s\n" \
         "$(update_tools_when "$1" "$2")"
     local _count="$(update_recipe_rows "$1" "$2" | /usr/bin/awk 'END { print NR }')"
     if [ "$_count" -gt "$UPDATE_SLOTS" ]; then
-        printf 'The image keeps %s recipes, and the last %s are not listed: a newer file for one of them is given in Terminal.\n' \
+        printf '%s recipes; the last %s are not listed (give a newer file for those in Terminal).\n' \
             "$_count" "$((_count - UPDATE_SLOTS))"
     fi
     [ -n "$(update_inputs_given "$1" "$2")" ] && printf 'Running a recipe again needs about 10 GB free, as a build does.\n'
@@ -498,23 +492,23 @@ update_recipe_text() {
         [ -n "$_input" ] || continue
         wizard_listed "$_input" "$_names" || continue
         if [ "$_at" != "$3" ]; then
-            printf 'A newer file for %s goes to the %s recipe listed after this one.\n' "$_input" "$_recipe"
+            printf 'A newer file for %s goes to the %s recipe below.\n' "$_input" "$_recipe"
             continue
         fi
         _built="$_was"
         [ "$_was" = "-" ] && _built="a file not on record"
         if [ "$_first" -eq 0 ]; then
-            printf 'Built with %s for %s. A newer one is given in Terminal: agent-vm image update %s --tools --input %s=<path>.\n' \
+            printf 'Built with %s for %s. Give a newer one in Terminal: agent-vm image update %s --tools --input %s=<path>.\n' \
                 "$_built" "$_input" "$2" "$_input"
             continue
         fi
         _first=0
         _chosen="$(update_chosen "$1" "$_input")"
         if [ -n "$_chosen" ]; then
-            printf 'Runs again with %s in place of %s: what it installs is installed from the new file, instead of by its update steps.\n' \
+            printf 'Runs again with %s in place of %s.\n' \
                 "${_chosen##*/}" "$_built"
         else
-            printf 'Built with %s. Choose %s... gives it a newer file, and the recipe then runs again with it.\n' "$_built" "$_input"
+            printf 'Built with %s. Choose %s... to give a newer file.\n' "$_built" "$_input"
         fi
     done <<EOF
 $_rows
@@ -528,7 +522,7 @@ update_guest_text() {
     local _guest="$(update_field "$1" images "$2" 9)"
     local _mine="$(main_agentvm_line "$1" 2)"
     if ! update_guest_differs "$1" "$2"; then
-        printf 'The image has agent-vm-guest %s, as this agent-vm does. It is replaced only if the two still differ.\n' "$_guest"
+        printf 'agent-vm-guest %s, the same as this agent-vm.\n' "$_guest"
         return 0
     fi
     local _missing="$(update_field "$1" updates "$2" 11)"
@@ -537,9 +531,9 @@ update_guest_text() {
     local _theirs="The image's agent-vm-guest $_guest"
     [ "$_guest" = "-" ] && _theirs="The image's agent-vm-guest, whose version is not on record,"
     # macOS ties a Full Disk Access grant to the daemon it was made for; a Linux image has none.
-    local _access=" Its Full Disk Access may have to be granted again afterwards; the image's pane says so then."
+    local _access=" Full Disk Access may need to be granted again afterwards."
     update_linux "$1" "$2" && _access=""
-    printf "%s is replaced by this agent-vm's, %s%s.%s With another part checked too, the daemon is replaced first, and stays even if that part fails.\n" \
+    printf "%s is replaced by this agent-vm's, %s%s.%s\n" \
         "$_theirs" "$_mine" "$_adds" "$_access"
 }
 
@@ -550,15 +544,15 @@ update_guest_text() {
 # versions), so the line holds either way.
 update_after_text() {
     local _boxes="$(main_rows "$1" boxes | /usr/bin/awk -F'\t' -v name="$2" '$3 "" == name && $13 != "true" { print $1 }')"
-    [ -n "$_boxes" ] && printf 'Boxes made from it (%s) keep what they have until they are recreated.\n' "$(ui_lines_text "$_boxes")"
+    [ -n "$_boxes" ] && printf 'Its boxes (%s) change only when recreated.\n' "$(ui_lines_text "$_boxes")"
     local _derived="$(main_rows "$1" images | /usr/bin/awk -F'\t' -v name="$2" '$6 "" == name { print $1 }')"
-    [ -n "$_derived" ] && printf 'Images built from it (%s) are not updated with it: each is updated by itself.\n' "$(ui_lines_text "$_derived")"
-    printf 'The image can be used meanwhile: a box made during the update gets the image as it was.\n'
+    [ -n "$_derived" ] && printf 'Images built from it (%s) are updated separately.\n' "$(ui_lines_text "$_derived")"
+    printf 'The image can be used meanwhile.\n'
     case "$(update_choices "$1" "$2")" in
         "1 "[01]" 1"|[01]" 1 1")
-            printf 'An update that fails or is stopped leaves the image as it is now, except for its guest daemon once that is replaced.\n' ;;
+            printf 'If the update fails or is stopped, the image stays as it is, except for a replaced guest daemon.\n' ;;
         *)
-            printf 'An update that fails or is stopped leaves the image as it is now.\n' ;;
+            printf 'If the update fails or is stopped, the image stays as it is.\n' ;;
     esac
 }
 

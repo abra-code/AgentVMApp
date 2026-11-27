@@ -154,11 +154,11 @@ check "it scanned the project, once" "1|session scan --project=$PROJECT --json" 
 check "a row per folder, ticked as agent-vm suggests when nothing is saved: its size and why" \
     "true${TAB}.build${TAB}under 1 MB${TAB}build output (Package.swift beside it)|true${TAB}.swiftpm${TAB}under 1 MB${TAB}build output (Package.swift beside it)|false${TAB}node_modules${TAB}under 1 MB${TAB}build output" \
     "$(rows)"
-check "the line under it; no warning, no notes; Save on" "2 folders checked: the next session leaves them out of its snapshot.||" \
+check "the line under it; no warning, no notes; Save on" "2 folders checked.||" \
     "$(ui_value "$EXCL_STATE_ID")|$(ui_value "$EXCL_WARN_ID")|$(ui_value "$EXCL_NOTES_ID")"
 check "  Save on" "1" "$(enabled "$EXCL_SAVE_ID")"
 check "the window says what leaving out gives up" "1" \
-    "$(/usr/bin/jq -r '.. | objects | select(.id? == 5303) | .properties.text' "$APP_RESOURCES/Base.lproj/AgentVM.exclusions.json" | /usr/bin/grep -c 'undo does not restore them')"
+    "$(/usr/bin/jq -r '.. | objects | select(.id? == 5303) | .properties.text' "$APP_RESOURCES/Base.lproj/AgentVM.exclusions.json" | /usr/bin/grep -c 'Changes in left-out folders cannot be undone')"
 
 "$PB" agentvm_open_request_exclusions set "$APP_PID exclusions:window"
 "$PB" agentvm_exclusions_of set "$APP_PID /Users/you/src/other"
@@ -201,12 +201,12 @@ check "for the same project: the open window comes to the front, and no other is
 section "ticks"
 in_window "$UUID"
 tick 2
-check "node_modules ticked: three, and the rows keep the tick" "true|3 folders checked: the next session leaves them out of its snapshot." \
+check "node_modules ticked: three, and the rows keep the tick" "true|3 folders checked." \
     "$(ui_rows "$EXCL_TABLE_ID" | /usr/bin/awk -F'\t' 'NR == 3 { print $1 }')|$(ui_value "$EXCL_STATE_ID")"
 tick 0
 tick 1
 tick 2
-check "all off: the whole project" "Nothing checked: the snapshots take the whole project." "$(ui_value "$EXCL_STATE_ID")"
+check "all off: the whole project" "Nothing checked: the whole project is snapshotted." "$(ui_value "$EXCL_STATE_ID")"
 tick 9
 tick x
 check "  a row that is not there, or no row: nothing changes" "false|false|false" "$(ui_rows "$EXCL_TABLE_ID" | col 1 | /usr/bin/paste -sd '|' -)"
@@ -263,7 +263,7 @@ add_folder ""
 check "Cancel in the panel adds nothing" "3" "$(row_count)"
 add_folder "$REAL/Build/Products/"
 check "a folder of the project: a ticked row by its path in the project, without the trailing slash" \
-    "4|true${TAB}Build/Products${TAB}-${TAB}chosen by you|3 folders checked: the next session leaves them out of its snapshot." \
+    "4|true${TAB}Build/Products${TAB}-${TAB}chosen by you|3 folders checked." \
     "$(row_count)|$(ui_rows "$EXCL_TABLE_ID" | col 1-4 | /usr/bin/sed -n '4p')|$(ui_value "$EXCL_STATE_ID")"
 add_folder "$REAL/Build/Products"
 check "  added again: still one row" "4" "$(row_count)"

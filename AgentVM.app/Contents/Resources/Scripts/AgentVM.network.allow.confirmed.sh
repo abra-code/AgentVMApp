@@ -22,4 +22,4 @@ fi
 net_read "$window_uuid" "$box" rules
 net_add_rule "$window_uuid" "$box" "$rule"
 net_paint "$window_uuid"
-"$dialog" "$window_uuid" "$NET_NOTE_ID" "Allowed $rule. Its next connection gets through; earlier refusals stay listed until Refresh."
+"$dialog" "$window_uuid" "$NET_NOTE_ID" "Allowed $rule."

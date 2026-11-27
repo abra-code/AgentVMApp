@@ -22,6 +22,6 @@ case "$(printf '%s\n' "$row" | /usr/bin/cut -f2)" in
 esac
 ui_set key_remove "$window_uuid" "$name"
 "$dialog" "$window_uuid" omc_window omc_present_alert "Remove $name?" \
-    "The key is deleted from your login Keychain. An agent started with it after that does not get it. The app cannot show a key, so keep a copy elsewhere if you may need it again." \
+    "The key is deleted from your login Keychain. AgentVM cannot show it, so keep a copy elsewhere if you need it again." \
     "Cancel:cancel:" "Remove:destructive:AgentVM.keys.remove.confirmed"
 exit 0

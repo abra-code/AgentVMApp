@@ -125,7 +125,7 @@ prog_notices_text() {
     local _needs="$(main_row "$1" images "$_image" | /usr/bin/cut -f8)"
     case ",$_needs," in
         *,full-disk-access,*)
-            printf 'Image %s has no Full Disk Access: until it has, programs in its boxes are asked before they open Desktop, Documents or Downloads.\n' "$_image" ;;
+            printf 'Image %s has no Full Disk Access: programs here wait on a macOS question when they open Desktop, Documents or Downloads.\n' "$_image" ;;
     esac
     return 0
 }
@@ -166,7 +166,7 @@ prog_paint() {
     elif [ ! -s "$_rows" ]; then
         "$dialog" "$_uuid" "$PROG_NOTE_ID" "No program has run in this box yet."
     else
-        "$dialog" "$_uuid" "$PROG_NOTE_ID" "The last $PROG_EXECLOG_LAST programs that agent-vm exec and box shell ran. The log stays on this Mac, out of the box's reach."
+        "$dialog" "$_uuid" "$PROG_NOTE_ID" "The last $PROG_EXECLOG_LAST programs run in the box."
     fi
 }
 

@@ -36,7 +36,7 @@ OTHER_UUID="OMCTEST-other-recreate-$$"
 TAB="$(printf '\t')"
 BOX=cadabra-spike
 KEPT='(.boxes[] | select(.box.name == "cadabra-spike")).box.disposable = false'
-WHAT="The box is made again from the image chosen below, as the image is now, with the same name, processors, memory and network rules. Everything installed or saved in the box, logins included, is deleted."
+WHAT="The box is made again from the image below, keeping its name, processors, memory and network rules. Everything installed or saved in it is deleted."
 
 in_window() {
     OMC_ACTIONUI_WINDOW_UUID="$1"
@@ -125,7 +125,7 @@ check_status "the init handler exits cleanly" 0
 check "takes the request and the box, once" "|" "$(request)|$(handed)"
 check "becomes the Recreate window, for that box" "$APP_PID $UUID|$BOX" "$(registered)|$(target)"
 check "its title and head" "Recreate Box|Recreate box $BOX" "$(ui_title)|$(ui_value "$RECREATE_HEAD_ID")"
-check "what goes, as the question said it" "$WHAT This cannot be undone." "$(ui_value "$RECREATE_WHAT_ID")"
+check "what goes, as the question said it" "$WHAT You can't undo this action." "$(ui_value "$RECREATE_WHAT_ID")"
 check "reads agent-vm's lists, and nothing else" "status --json" "$(fake_log | /usr/bin/paste -sd '|' -)"
 check "lists the ready images, as New Box does (not the failed one)" "dev,dev-acp,dev-agents,dev-node,dev-xcode,dev-xcode-ios" "$(listed)"
 check "  each with its system, what it holds and its state, and its name as the row's key" "5" \
@@ -194,7 +194,7 @@ store 'del(.images[] | select(.name == "dev-agents"))'
 open_recreate "$BOX"
 check "nothing is chosen, and no row is selected" "|" "$(picked)|$(selected)"
 check "the line says the image was deleted, in orange, and Recreate is off" \
-    "Image dev-agents, which the box was made from, was deleted. Choose another image.|orange|0" \
+    "Its image dev-agents was deleted. Choose another image.|orange|0" \
     "$(note)|$(note_color)|$(enabled "$RECREATE_APPLY_ID")"
 choose dev
 check "another image chosen: Recreate is on" "The box was made from image dev-agents, and is made from image dev now.|1" \
@@ -206,7 +206,7 @@ section "the box's own image is not ready"
 store '(.images[] | select(.name == "dev-agents")).state = "provisioning"'
 open_recreate "$BOX"
 check "not listed, nothing chosen, and the line says why" \
-    "0||Image dev-agents, which the box was made from, is not ready. Choose another image, or wait until it is ready.|0" \
+    "0||Its image dev-agents is not ready. Choose another image, or wait until it is ready.|0" \
     "$(listed | /usr/bin/tr ',' '\n' | /usr/bin/grep -c '^dev-agents$')|$(picked)|$(note)|$(enabled "$RECREATE_APPLY_ID")"
 omc_run AgentVM.recreate.cancel
 close_recreate
@@ -221,7 +221,7 @@ omc_run AgentVM.recreate.apply
 check_status "the handler exits cleanly" 0
 check "the box started meanwhile: the lists are read, nothing is recreated" "status --json|0" "$(fake_log | /usr/bin/paste -sd '|' -)|$(recreates)"
 check "  the line says why, and Recreate is off; the window stays" \
-    "Box $BOX can be recreated once it is stopped and nothing else is changing it.|0|0" "$(note)|$(enabled "$RECREATE_APPLY_ID")|$(closed "$UUID")"
+    "Box $BOX must be stopped, with nothing else changing it.|0|0" "$(note)|$(enabled "$RECREATE_APPLY_ID")|$(closed "$UUID")"
 store 'del(.boxes[] | select(.box.name == "cadabra-spike"))'
 omc_run AgentVM.recreate.apply
 check "the box was deleted meanwhile" "Box $BOX is not there any more.|0" "$(note)|$(recreates)"
@@ -234,7 +234,7 @@ store '(.images[] | select(.name == "dev-node")).updating = true'
 omc_run AgentVM.recreate.activated
 choose dev-node
 check "an image another command is changing: said, and Recreate is off" \
-    "Another command is changing image dev-node. A box can be made from it when that has ended.|0" "$(note)|$(enabled "$RECREATE_APPLY_ID")"
+    "Another command is changing image dev-node. Try again when it ends.|0" "$(note)|$(enabled "$RECREATE_APPLY_ID")"
 store
 printf 'the store is locked\n' > "$FAKE_AGENTVM_DIR/fail-status"
 choose dev
@@ -377,26 +377,26 @@ close_recreate
 mixed 'del(.images[] | select(.name == "deb"))'
 open_recreate lb
 check "its own image deleted: the line says so, then to choose another" \
-    "Image deb, which the box was made from, was deleted. Choose another image." "$(note)"
+    "Its image deb was deleted. Choose another image." "$(note)"
 omc_run AgentVM.recreate.cancel
 close_recreate
 mixed '(.images[] | select(.name == "deb") | .guest) = "macos"'
 open_recreate lb
 check "its own image's name now a macOS image's: not chosen, and the line says so" \
-    "deb-agents,ub,ub-agents||Image deb, which the box was made from, is a macOS image now. Choose another image." \
+    "deb-agents,ub,ub-agents||Its image deb is a macOS image now. Choose another image." \
     "$(listed)|$(picked)|$(note)"
 omc_run AgentVM.recreate.cancel
 close_recreate
 mixed 'del(.images[] | select(.guest == "linux" and .name != "deb")) | (.images[] | select(.name == "deb")).state = "provisioning"'
 open_recreate lb
 check "its own image not ready, and no other of its system: the line says to wait first" \
-    "Image deb, which the box was made from, is not ready. There is no other ready Linux image, so wait until it is ready, or use New Image... to build another." "$(note)"
+    "Its image deb is not ready. No other Linux image is ready: wait, or build one with New Image..." "$(note)"
 omc_run AgentVM.recreate.cancel
 close_recreate
 mixed 'del(.images[] | select(.guest == "linux"))'
 open_recreate lb
 check "and no other image of its system: the line says so, and how to get one" \
-    "|Image deb, which the box was made from, was deleted. There is no other ready Linux image to make the box from. New Image... builds one.|0" \
+    "|Its image deb was deleted. No other Linux image is ready: build one with New Image...|0" \
     "$(listed)|$(note)|$(enabled "$RECREATE_APPLY_ID")"
 omc_run AgentVM.recreate.cancel
 close_recreate
@@ -409,13 +409,13 @@ box_folder="$OMCTEST_WORK/Boxes/$BOX"
 : > "$box_folder/supervisor.log"
 store "(.boxes[] | select(.box.name == \"$BOX\")).path = \"$box_folder\" | .keptLogs = {count: 0, bytes: 0, holdDays: 30, directory: \"/x/Logs\"}"
 open_recreate "$BOX"
-check "a box that has logs: the window says they are kept, and for how long" "$WHAT Its logs are kept for 30 days. This cannot be undone." \
+check "a box that has logs: the window says they are kept, and for how long" "$WHAT Its logs are kept for 30 days. You can't undo this action." \
     "$(ui_value "$RECREATE_WHAT_ID")"
 omc_run AgentVM.recreate.cancel
 close_recreate
 /bin/rm -f "$box_folder/supervisor.log"
 open_recreate "$BOX"
-check "a box that has logged nothing: nothing is promised" "$WHAT This cannot be undone." "$(ui_value "$RECREATE_WHAT_ID")"
+check "a box that has logged nothing: nothing is promised" "$WHAT You can't undo this action." "$(ui_value "$RECREATE_WHAT_ID")"
 omc_run AgentVM.recreate.cancel
 close_recreate
 

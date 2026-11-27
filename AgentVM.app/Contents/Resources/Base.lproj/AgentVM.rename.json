@@ -110,7 +110,7 @@
             "title": "Rename",
             "buttonStyle": "borderedProminent",
             "actionID": "AgentVM.rename.apply",
-            "help": "Give it the new name, at once."
+            "help": "Rename it"
           }
         }
       ]

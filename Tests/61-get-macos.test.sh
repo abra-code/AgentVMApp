@@ -192,34 +192,34 @@ fake_reset
 offered '.state = "partial" | .partialBytes = 12800000000'
 open_window
 check "a download begun before: how far it got, that it goes on, that the rest fits; Download is on" \
-    "macOS 27.0.1 (26A434), 26.6 GB|48% downloaded (12.8 GB of 26.6 GB). Download goes on from there.|111.9 GB free on the volume of the store: it fits.||101" "$(said)"
+    "macOS 27.0.1 (26A434), 26.6 GB|48% downloaded (12.8 GB of 26.6 GB).|111.9 GB free on the volume of the store: it fits.||101" "$(said)"
 offered '.fits = false | .freeBytes = 20000000000'
 : > "$FAKE_AGENTVM_DIR/log"
 omc_run AgentVM.getmacos.check
 check "Check Again reads status, the files and what Apple offers" "status --json|image fetch-ipsw --list --json|image fetch-ipsw --check --json" \
     "$(fake_log | /usr/bin/paste -sd '|' -)"
 check "no room: the line says how much is free and what must stay, Download is off, and the note says what to do" \
-    "macOS 27.0.1 (26A434), 26.6 GB|Not downloaded yet.|20.0 GB free on the volume of the store: not enough. At least 10 GB must stay free after the download.|There is not enough room for the download. Free some space on the volume of the store, then Check Again.|001" "$(said)"
+    "macOS 27.0.1 (26A434), 26.6 GB|Not downloaded yet.|20.0 GB free on the volume of the store: not enough (10 GB must stay free).|Not enough room for the download: free some space, then Check Again.|001" "$(said)"
 : > "$FAKE_AGENTVM_DIR/log"
 omc_run AgentVM.getmacos.download
 check "  Download, clicked anyway, starts nothing" "0" "$(started)"
 offered '.state = "ready"'
 omc_run AgentVM.getmacos.check
 check "downloaded: no line about room, Download is off" \
-    "macOS 27.0.1 (26A434), 26.6 GB|Downloaded. The New Image window lists it as a start.||The newest macOS is downloaded already.|001" "$(said)"
+    "macOS 27.0.1 (26A434), 26.6 GB|Downloaded.||The newest macOS is downloaded already.|001" "$(said)"
 offered 'del(.macOSVersion) | del(.macOSBuild) | del(.totalBytes) | del(.freeBytes) | del(.fits)'
 omc_run AgentVM.getmacos.check
 check "an answer without the version, the size or the room: said as far as it is known" \
     "The newest restore file for this Mac|Not downloaded yet.|||101" "$(said)"
 offered '.state = "partial" | .partialBytes = 40000000000'
 omc_run AgentVM.getmacos.check
-check "more got so far than the file has: no percentage is made of it" "Partly downloaded. Download goes on from there." "$(ui_value "$GETMACOS_STATE_ID")"
+check "more got so far than the file has: no percentage is made of it" "Partly downloaded." "$(ui_value "$GETMACOS_STATE_ID")"
 offered '.state = "partial" | .partialBytes = 5 | .totalBytes = 0'
 omc_run AgentVM.getmacos.check
-check "  nor of a file of no size" "Partly downloaded. Download goes on from there." "$(ui_value "$GETMACOS_STATE_ID")"
+check "  nor of a file of no size" "Partly downloaded." "$(ui_value "$GETMACOS_STATE_ID")"
 offered '.state = "partial" | .partialBytes = 12800000000 | .totalBytes = "many"'
 omc_run AgentVM.getmacos.check
-check "a size that is no number: not shown, and no percentage" "macOS 27.0.1 (26A434)|Partly downloaded. Download goes on from there." \
+check "a size that is no number: not shown, and no percentage" "macOS 27.0.1 (26A434)|Partly downloaded." \
     "$(ui_value "$GETMACOS_LATEST_ID")|$(ui_value "$GETMACOS_STATE_ID")"
 offered 'del(.state)'
 omc_run AgentVM.getmacos.check
@@ -228,7 +228,7 @@ check "an answer without the state: what Apple offers is said, and the window do
 offered '[]'
 omc_run AgentVM.getmacos.check 2>/dev/null
 check "an answer that says nothing: the window says so, and does not go on saying it is asking" \
-    "agent-vm did not say which macOS Apple offers. Check Again asks once more.||||101" "$(said)"
+    "agent-vm did not say which macOS Apple offers.||||101" "$(said)"
 printf 'The Internet connection appears to be offline.\n' > "$FAKE_AGENTVM_DIR/fail-image-fetch-ipsw"
 omc_run AgentVM.getmacos.check
 check "Apple cannot be asked: the window says why in agent-vm's words, and the answer before is not shown" \
@@ -253,7 +253,7 @@ running="$(with_fake agentvm_job_fetch_ipsw)"
 offered '.state = "partial" | .partialBytes = 12800000000'
 open_window
 check "the note says so; Download is off, Progress... is on" \
-    "A download is running. Progress... shows how far it is, and has Stop.|011" "$(said | /usr/bin/cut -d'|' -f4-5)"
+    "A download is running.|011" "$(said | /usr/bin/cut -d'|' -f4-5)"
 : > "$FAKE_AGENTVM_DIR/log"
 omc_run AgentVM.getmacos.download
 check "Download, clicked anyway, starts no second one" "0" "$(started)"
@@ -266,7 +266,7 @@ omc_run AgentVM.getmacos.activated
 : > "$FAKE_AGENTVM_DIR/log"
 omc_run AgentVM.getmacos.download
 check "a download that waits its turn: the same, and Download starts no second one" \
-    "A download is running. Progress... shows how far it is, and has Stop.|011|0" "$(said | /usr/bin/cut -d'|' -f4-5)|$(started)"
+    "A download is running.|011|0" "$(said | /usr/bin/cut -d'|' -f4-5)|$(started)"
 /usr/bin/jq 'map(. + {state: "canceled", endedAt: "2026-09-30T12:05:00Z", error: "canceled"})' "$JOBS" > "$JOBS.new" && /bin/mv "$JOBS.new" "$JOBS"
 omc_run AgentVM.getmacos.activated
 check "the download was stopped: Download is on again, Progress... is off" "|101" "$(said | /usr/bin/cut -d'|' -f4-5)"

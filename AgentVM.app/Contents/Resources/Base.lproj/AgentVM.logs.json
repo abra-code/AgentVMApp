@@ -15,7 +15,7 @@
     {
       "type": "Text",
       "properties": {
-        "text": "agent-vm keeps these records as files on this Mac, where nothing in a box can change them. The app shows the last of each.",
+        "text": "agent-vm keeps these logs on this Mac, out of the boxes' reach.",
         "frame": {
           "maxWidth": "infinity",
           "alignment": "leading"
@@ -322,7 +322,7 @@
             "title": "Copy",
             "controlSize": "small",
             "actionID": "AgentVM.logs.copy",
-            "help": "Copy this line, to paste it into Terminal."
+            "help": "Copy this command"
           }
         },
         {
@@ -369,7 +369,7 @@
             "title": "Copy",
             "controlSize": "small",
             "actionID": "AgentVM.logs.copy",
-            "help": "Copy this line, to paste it into Terminal."
+            "help": "Copy this command"
           }
         },
         {
@@ -416,7 +416,7 @@
             "title": "Copy",
             "controlSize": "small",
             "actionID": "AgentVM.logs.copy",
-            "help": "Copy this line, to paste it into Terminal."
+            "help": "Copy this command"
           }
         },
         {
@@ -463,7 +463,7 @@
             "title": "Copy",
             "controlSize": "small",
             "actionID": "AgentVM.logs.copy",
-            "help": "Copy this line, to paste it into Terminal."
+            "help": "Copy this command"
           }
         },
         {
@@ -499,7 +499,7 @@
     {
       "type": "Text",
       "properties": {
-        "text": "Not logged: the connections of a box whose network is open, and what a program does in a box once agent-vm started it.",
+        "text": "Not logged: connections of a box with an open network, and what programs do once started.",
         "foregroundStyle": "secondary",
         "frame": {
           "maxWidth": "infinity",

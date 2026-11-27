@@ -25,7 +25,7 @@
           {
             "type": "Text",
             "properties": {
-              "text": "Until agent-vm-guest has Full Disk Access, macOS asks before a program in a box opens the box account's Desktop, Documents or Downloads. Nobody sees that question in a box, and the program waits. Only a person can grant it, on the image's own screen.",
+              "text": "Without Full Disk Access, programs in a box wait on an unseen macOS question when they open Desktop, Documents or Downloads. Grant it once, by hand, on the image's screen.",
               "frame": { "maxWidth": "infinity", "alignment": "leading" }
             }
           },
@@ -46,7 +46,7 @@
                       { "type": "Image", "id": 931, "properties": { "systemName": "checkmark.circle.fill", "foregroundStyle": "green", "hidden": true } }
                     ]
                   },
-                  { "type": "Text", "properties": { "text": "1. Open the Image starts the image and shows its screen in a window, with System Settings on Full Disk Access and agent-vm-guest shown in Finder.", "frame": { "maxWidth": "infinity", "alignment": "leading" } } }
+                  { "type": "Text", "properties": { "text": "1. Open the Image shows its screen, with System Settings at Full Disk Access and agent-vm-guest in Finder.", "frame": { "maxWidth": "infinity", "alignment": "leading" } } }
                 ]
               },
               {
@@ -61,7 +61,7 @@
                       { "type": "Image", "id": 932, "properties": { "systemName": "checkmark.circle.fill", "foregroundStyle": "green", "hidden": true } }
                     ]
                   },
-                  { "type": "Text", "properties": { "text": "2. In that window, drag agent-vm-guest from the Finder window into the list in System Settings, and turn it on.", "frame": { "maxWidth": "infinity", "alignment": "leading" } } }
+                  { "type": "Text", "properties": { "text": "2. Drag agent-vm-guest from Finder into the list in System Settings, and turn it on.", "frame": { "maxWidth": "infinity", "alignment": "leading" } } }
                 ]
               },
               {
@@ -76,7 +76,7 @@
                       { "type": "Image", "id": 933, "properties": { "systemName": "checkmark.circle.fill", "foregroundStyle": "green", "hidden": true } }
                     ]
                   },
-                  { "type": "Text", "properties": { "text": "3. When macOS asks for the administrator's password, press Type Password at the top of the window. You never need to know the password.", "frame": { "maxWidth": "infinity", "alignment": "leading" } } }
+                  { "type": "Text", "properties": { "text": "3. When asked for the password, click Type Password at the top of the window.", "frame": { "maxWidth": "infinity", "alignment": "leading" } } }
                 ]
               },
               {
@@ -91,7 +91,7 @@
                       { "type": "Image", "id": 934, "properties": { "systemName": "checkmark.circle.fill", "foregroundStyle": "green", "hidden": true } }
                     ]
                   },
-                  { "type": "Text", "properties": { "text": "4. Close the image's window. The image shuts down, and agent-vm records whether the grant was made.", "frame": { "maxWidth": "infinity", "alignment": "leading" } } }
+                  { "type": "Text", "properties": { "text": "4. Close the image's window.", "frame": { "maxWidth": "infinity", "alignment": "leading" } } }
                 ]
               }
             ]
@@ -122,9 +122,9 @@
       "type": "HStack",
       "properties": { "spacing": 8.0 },
       "children": [
-        { "type": "Button", "id": 951, "properties": { "title": "Progress...", "hidden": true, "actionID": "AgentVM.access.progress", "help": "Open the progress window of the image's setup: its log, and Stop." } },
+        { "type": "Button", "id": 951, "properties": { "title": "Progress...", "hidden": true, "actionID": "AgentVM.access.progress", "help": "Show the setup's progress" } },
         { "type": "Spacer" },
-        { "type": "Button", "id": 953, "properties": { "title": "Open the Image", "disabled": true, "buttonStyle": "borderedProminent", "actionID": "AgentVM.access.open", "help": "Start the image and show its screen in a window, as a job. It needs one of this Mac's virtual machine slots." } }
+        { "type": "Button", "id": 953, "properties": { "title": "Open the Image", "disabled": true, "buttonStyle": "borderedProminent", "actionID": "AgentVM.access.open", "help": "Start the image and show its screen" } }
       ]
     }
   ]

@@ -13,7 +13,7 @@
       "type": "Text",
       "id": 5303,
       "properties": {
-        "text": "Folders left out of the snapshot are not protected: undo does not restore them, and what an agent changes in them is listed in the report but cannot be undone. Leave out only what can be made again, such as build output.",
+        "text": "Changes in left-out folders cannot be undone. Leave out only what can be rebuilt, such as build output.",
         "frame": { "maxWidth": "infinity", "alignment": "leading" }
       }
     },
@@ -34,7 +34,7 @@
       "children": [
         { "type": "Text", "id": 5305, "properties": { "text": "", "textSelection": "enabled", "frame": { "maxWidth": "infinity", "alignment": "leading" } } },
         { "type": "Text", "id": 5311, "properties": { "text": "", "hidden": true, "frame": { "width": 0, "height": 0 } } },
-        { "type": "Button", "id": 5310, "properties": { "title": "Add Folder...", "disabled": true, "actionID": "AgentVM.exclusions.add", "help": "Choose another folder of the project to leave out of its snapshots" } }
+        { "type": "Button", "id": 5310, "properties": { "title": "Add Folder...", "disabled": true, "actionID": "AgentVM.exclusions.add", "help": "Add another folder of the project" } }
       ]
     },
     { "type": "Text", "id": 5306, "properties": { "text": "", "foregroundStyle": "orange", "textSelection": "enabled", "frame": { "maxWidth": "infinity", "alignment": "leading" } } },
@@ -43,10 +43,10 @@
       "type": "HStack",
       "properties": { "spacing": 8 },
       "children": [
-        { "type": "Text", "properties": { "text": "The next session of the project follows the list; sessions already taken are not changed.", "font": "caption", "foregroundStyle": "secondary" } },
+        { "type": "Text", "properties": { "text": "Applies from the next session.", "font": "caption", "foregroundStyle": "secondary" } },
         { "type": "Spacer" },
         { "type": "Button", "id": 5308, "properties": { "title": "Cancel", "role": "cancel", "actionID": "AgentVM.exclusions.cancel" } },
-        { "type": "Button", "id": 5309, "properties": { "title": "Save", "buttonStyle": "borderedProminent", "disabled": true, "actionID": "AgentVM.exclusions.save", "help": "Save the checked folders as what this project's sessions leave out" } }
+        { "type": "Button", "id": 5309, "properties": { "title": "Save", "buttonStyle": "borderedProminent", "disabled": true, "actionID": "AgentVM.exclusions.save", "help": "Leave the checked folders out of the next sessions" } }
       ]
     }
   ]

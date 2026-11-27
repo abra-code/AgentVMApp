@@ -123,7 +123,7 @@ getmacos_latest_text() {
         return 0
     fi
     if [ -z "$(main_rows "$1" check)" ]; then
-        printf 'agent-vm did not say which macOS Apple offers. Check Again asks once more.\n'
+        printf 'agent-vm did not say which macOS Apple offers.\n'
         return 0
     fi
     local _version="$(getmacos_field "$1" 2)"
@@ -141,7 +141,7 @@ getmacos_state_text() {
     local _partial="$(getmacos_field "$1" 5)"
     case "$(getmacos_field "$1" 1)" in
         ready)
-            printf 'Downloaded. The New Image window lists it as a start.\n' ;;
+            printf 'Downloaded.\n' ;;
         partial)
             # A percentage only of two numbers that can be one: a size that is known, and no more
             # got so far than the file has.
@@ -151,10 +151,10 @@ getmacos_state_text() {
                 *)  _percent="$(/usr/bin/awk -v p="$_partial" -v t="$_total" 'BEGIN { if (t > 0 && p <= t) printf "%d", p * 100 / t }')" ;;
             esac
             if [ -n "$_percent" ]; then
-                printf '%s%% downloaded (%s of %s). Download goes on from there.\n' \
+                printf '%s%% downloaded (%s of %s).\n' \
                     "$_percent" "$(ui_size_text "$_partial")" "$(ui_size_text "$_total")"
             else
-                printf 'Partly downloaded. Download goes on from there.\n'
+                printf 'Partly downloaded.\n'
             fi ;;
         missing)
             printf 'Not downloaded yet.\n' ;;
@@ -173,7 +173,7 @@ getmacos_room_text() {
     [ -n "$_free" ] && _have="$_free free on the volume of the store: "
     case "$(getmacos_field "$1" 7)" in
         true)  printf '%sit fits.\n' "$_have" ;;
-        false) printf '%snot enough. At least 10 GB must stay free after the download.\n' "$_have" ;;
+        false) printf '%snot enough (10 GB must stay free).\n' "$_have" ;;
     esac
 }
 
@@ -201,13 +201,13 @@ getmacos_blocker() {
         return 0
     fi
     if [ -n "$(getmacos_job "$1")" ]; then
-        printf 'A download is running. Progress... shows how far it is, and has Stop.\n'
+        printf 'A download is running.\n'
         return 0
     fi
     case "$(getmacos_field "$1" 1)" in
         ready) printf 'The newest macOS is downloaded already.\n' ;;
         partial|missing)
-            [ "$(getmacos_field "$1" 7)" = "false" ] && printf 'There is not enough room for the download. Free some space on the volume of the store, then Check Again.\n' ;;
+            [ "$(getmacos_field "$1" 7)" = "false" ] && printf 'Not enough room for the download: free some space, then Check Again.\n' ;;
     esac
     return 0
 }

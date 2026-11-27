@@ -158,8 +158,8 @@ excl_state_text() {
     /usr/bin/awk -F'\t' '
         $1 == "true" { n++ }
         END {
-            if (n == 0) { print "Nothing checked: the snapshots take the whole project."; exit }
-            printf "%d %s checked: the next session leaves %s out of its snapshot.\n", n, (n == 1 ? "folder" : "folders"), (n == 1 ? "it" : "them")
+            if (n == 0) { print "Nothing checked: the whole project is snapshotted."; exit }
+            printf "%d %s checked.\n", n, (n == 1 ? "folder" : "folders")
         }' "$(excl_file "$1" rows.tsv)" 2>/dev/null
 }
 

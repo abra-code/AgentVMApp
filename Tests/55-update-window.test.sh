@@ -178,16 +178,16 @@ check "asks agent-vm which it is, and reads status once" "--version|status --jso
 check "the title names the image"    "Update image dev-acp|Update image dev-acp" "$(ui_title)|$(ui_value "$UPDATE_TITLE_ID")"
 check "its macOS, and that it was never updated" "macOS 27.0 (26A428). Not updated since it was built." "$(ui_value "$UPDATE_STATE_ID")"
 check "macOS: what is available, when that was learned, and what it costs" \
-    "macOS 27.0.1 (26A434) is available, as Apple said on Sep 29, 2026. Installing it takes about 15 minutes, and about 15 GB of disk that the image then no longer shares with its older boxes. Newer Command Line Tools are installed with it." \
+    "macOS 27.0.1 (26A434) is available (as of Sep 29, 2026): about 15 minutes and 15 GB of disk." \
     "$(ui_value "$UPDATE_SYSTEM_TEXT_ID")"
 check "the tools: the recipes it keeps" \
-    "Runs the update steps of the recipes this image keeps (dev-acp), then every recipe's checks. Not run since the image was built. Continue lists them." \
+    "Updates the tools of its recipes (dev-acp). Not run since the image was built." \
     "$(ui_value "$UPDATE_TOOLS_TEXT_ID")"
 check "the guest daemon: another version, replaced by this agent-vm's" \
-    "The image's agent-vm-guest 0.2.18 is replaced by this agent-vm's, $VERSION. Its Full Disk Access may have to be granted again afterwards; the image's pane says so then. With another part checked too, the daemon is replaced first, and stays even if that part fails." \
+    "The image's agent-vm-guest 0.2.18 is replaced by this agent-vm's, $VERSION. Full Disk Access may need to be granted again afterwards." \
     "$(ui_value "$UPDATE_GUEST_TEXT_ID")"
 check "afterwards: its box, and what a failure leaves: the guest daemon, which goes first when another part is ticked" \
-    "Boxes made from it (s3) keep what they have until they are recreated.|The image can be used meanwhile: a box made during the update gets the image as it was.|An update that fails or is stopped leaves the image as it is now, except for its guest daemon once that is replaced." \
+    "Its boxes (s3) change only when recreated.|The image can be used meanwhile.|If the update fails or is stopped, the image stays as it is, except for a replaced guest daemon." \
     "$(ui_value "$UPDATE_AFTER_ID" | /usr/bin/paste -sd '|' -)"
 check "all three have something to do: all three ticked" "true true true|1 1 1" "$(ticks)"
 check "the command it would run"     "agent-vm image update dev-acp --system --tools --guest" "$(ui_value "$UPDATE_COMMAND_ID")"
@@ -224,19 +224,19 @@ open_update dev-acp
 tick true false false
 check "macOS alone"                  "1 0 0|agent-vm image update dev-acp --system|1" \
     "$("$PB" "agentvm_choices_$UUID" get)|$(ui_value "$UPDATE_COMMAND_ID")|$(enabled "$UPDATE_START_ID")"
-check "  one part: a failure leaves the image as it is" "An update that fails or is stopped leaves the image as it is now." "$(after_failure)"
+check "  one part: a failure leaves the image as it is" "If the update fails or is stopped, the image stays as it is." "$(after_failure)"
 tick false true true
 check "the tools and the guest daemon" "0 1 1|agent-vm image update dev-acp --tools --guest" \
     "$("$PB" "agentvm_choices_$UUID" get)|$(ui_value "$UPDATE_COMMAND_ID")"
 check "  the daemon goes first, so a failure may leave it replaced" \
-    "An update that fails or is stopped leaves the image as it is now, except for its guest daemon once that is replaced." "$(after_failure)"
+    "If the update fails or is stopped, the image stays as it is, except for a replaced guest daemon." "$(after_failure)"
 tick true true false
-check "macOS and the tools are one update: a failure leaves the image as it is" "An update that fails or is stopped leaves the image as it is now." "$(after_failure)"
+check "macOS and the tools are one update: a failure leaves the image as it is" "If the update fails or is stopped, the image stays as it is." "$(after_failure)"
 tick false false true
-check "the guest daemon alone is one update too" "An update that fails or is stopped leaves the image as it is now." "$(after_failure)"
+check "the guest daemon alone is one update too" "If the update fails or is stopped, the image stays as it is." "$(after_failure)"
 tick true false true
 check "macOS and the guest daemon: the daemon goes first" \
-    "An update that fails or is stopped leaves the image as it is now, except for its guest daemon once that is replaced." "$(after_failure)"
+    "If the update fails or is stopped, the image stays as it is, except for a replaced guest daemon." "$(after_failure)"
 tick false false false
 check "nothing ticked: no command, and Update is off" "0 0 0|Check what to update.|0" \
     "$("$PB" "agentvm_choices_$UUID" get)|$(ui_value "$UPDATE_COMMAND_ID")|$(enabled "$UPDATE_START_ID")"
@@ -250,16 +250,16 @@ check "a click's handler does not set the checkboxes" "0" "$(ui_calls "${UUID}${
 section "an image that keeps no recipes, with a guest daemon that lacks a feature"
 store "$BEHIND"
 open_update dev-node
-check "the tools: nothing to refresh" "This image keeps no recipes, so it has no tools an update can refresh." "$(ui_value "$UPDATE_TOOLS_TEXT_ID")"
+check "the tools: nothing to refresh" "No recipes: nothing to update." "$(ui_value "$UPDATE_TOOLS_TEXT_ID")"
 check "  the checkbox is off and cannot be ticked" "false|0" "$(ui_value "$UPDATE_TOOLS_ID")|$(enabled "$UPDATE_TOOLS_ID")"
 check "macOS: not behind what Apple last said" \
-    "No newer macOS is known for this image: the newest is 27.0.1 (26A434), as of Sep 29, 2026. The update asks Apple again, and installs what is offered." \
+    "Up to date: 27.0.1 (26A434) is the newest, as of Sep 29, 2026. The update checks again." \
     "$(ui_value "$UPDATE_SYSTEM_TEXT_ID")"
 check "the guest daemon: what the new one adds" \
-    "The image's agent-vm-guest 0.2.18 is replaced by this agent-vm's, $VERSION, which adds terminal-pixels. Its Full Disk Access may have to be granted again afterwards; the image's pane says so then. With another part checked too, the daemon is replaced first, and stays even if that part fails." \
+    "The image's agent-vm-guest 0.2.18 is replaced by this agent-vm's, $VERSION, which adds terminal-pixels. Full Disk Access may need to be granted again afterwards." \
     "$(ui_value "$UPDATE_GUEST_TEXT_ID")"
 check "afterwards: the images built from it" \
-    "Images built from it (dev-acp and dev-agents) are not updated with it: each is updated by itself." \
+    "Images built from it (dev-acp and dev-agents) are updated separately." \
     "$(ui_value "$UPDATE_AFTER_ID" | /usr/bin/sed -n '1p')"
 check "only the guest daemon is ticked" "false false true|0 0 1" "$(ticks)"
 check "the command"                  "agent-vm image update dev-node --guest" "$(ui_value "$UPDATE_COMMAND_ID")"
@@ -274,20 +274,20 @@ open_update dev-agents
 check "nothing is ticked, and Update is off until something is" "false false false|0 0 0|Check what to update.|0" \
     "$(ticks)|$(ui_value "$UPDATE_COMMAND_ID")|$(enabled "$UPDATE_START_ID")"
 check "the guest daemon is this agent-vm's" \
-    "The image has agent-vm-guest $VERSION, as this agent-vm does. It is replaced only if the two still differ." "$(ui_value "$UPDATE_GUEST_TEXT_ID")"
+    "agent-vm-guest $VERSION, the same as this agent-vm." "$(ui_value "$UPDATE_GUEST_TEXT_ID")"
 omc_run AgentVM.update.close
 
 section "Apple was never asked"
 store '.'
 open_update dev-agents
 check "macOS says so, and is ticked: the update asks" \
-    "Apple has not been asked which macOS is the newest: Check Now asks. The update asks too, and installs what Apple offers within macOS 27.|true" \
+    "Not checked yet. The update installs what Apple offers within macOS 27.|true" \
     "$(ui_value "$UPDATE_SYSTEM_TEXT_ID")|$(ui_value "$UPDATE_SYSTEM_ID")"
 omc_run AgentVM.update.close
 store '.newestMacOS = {version: "28.0", build: "27A100", checkedAt: "2026-09-29T09:00:00Z"}'
 open_update dev-agents
 check "a new major version is not what an update installs" \
-    "The newest macOS is 28.0 (as of Sep 29, 2026), a new major version, which an update does not install: the image is built again for that. The update still asks Apple for what it offers within macOS 27.|false" \
+    "The newest macOS is 28.0 (as of Sep 29, 2026), a new major version: build a new image for it. The update installs what Apple offers within macOS 27.|false" \
     "$(ui_value "$UPDATE_SYSTEM_TEXT_ID")|$(ui_value "$UPDATE_SYSTEM_ID")"
 omc_run AgentVM.update.close
 
@@ -296,7 +296,7 @@ store "$BEHIND"' | (.images[] | select(.name == "dev")).recipes = [{name: "homeb
 open_update dev
 check "when it was last updated"     "macOS 27.0 (26A428). Last updated on Sep 30, 2026." "$(ui_value "$UPDATE_STATE_ID")"
 check "the recipes in order, and when their update steps last ran" \
-    "Runs the update steps of the recipes this image keeps (homebrew, node), then every recipe's checks. Last run on Sep 30, 2026. Continue lists them." \
+    "Updates the tools of its recipes (homebrew, node). Last run on Sep 30, 2026." \
     "$(ui_value "$UPDATE_TOOLS_TEXT_ID")"
 omc_run AgentVM.update.close
 
@@ -338,19 +338,19 @@ section "no virtual machine slot is free"
 store "$BEHIND"' | .runningVMs.count = 2'
 omc_run AgentVM.update.activated
 check "the window warns, and Update stays on: a slot may be free by the click" \
-    "No virtual machine slot is free now (2 of 2 macOS virtual machines running), and an update needs one: it fails at once until a macOS box or build stops.|1" \
+    "No macOS virtual machine is free (2 of 2 running): the update fails until one stops.|1" \
     "$(ui_value "$UPDATE_NOTE_ID")|$(enabled "$UPDATE_START_ID")"
 
 section "what stands in the way"
 store "$BEHIND"' | (.images[] | select(.name == "dev-acp")).updating = true'
 omc_run AgentVM.update.activated
-check "another command is changing the image" "Another agent-vm command is changing this image now. It can be updated when that ends.|0" \
+check "another command is changing the image" "Another agent-vm command is changing this image. Try again when it ends.|0" \
     "$(ui_value "$UPDATE_NOTE_ID")|$(enabled "$UPDATE_START_ID")"
 store "$BEHIND"
 /usr/bin/jq -n '[{id: "20260930-120000-0000e1", command: ["image", "setup", "dev-acp", "--json"], targets: ["image:dev-acp"],
     state: "running", createdAt: "2026-09-30T12:00:00Z", startedAt: "2026-09-30T12:00:00Z"}]' > "$JOBS"
 omc_run AgentVM.update.activated
-check "a job holds the image"        "A job holds this image now (Setting up, elapsed 12 s). It can be updated when the job ends.|0" \
+check "a job holds the image"        "Busy: Setting up, elapsed 12 s. Try again when it ends.|0" \
     "$(ui_value "$UPDATE_NOTE_ID")|$(enabled "$UPDATE_START_ID")"
 : > "$FAKE_AGENTVM_DIR/log"
 omc_run AgentVM.update.start
@@ -496,16 +496,16 @@ store "$BEHIND"' | (.images[] | select(.name == "dev-agents")) |= del(.macOSVers
 open_update dev-agents
 check "the state line does not show a placeholder" "Its macOS version is not known. Not updated since it was built." "$(ui_value "$UPDATE_STATE_ID")"
 check "macOS: the newest is not called a new major version" \
-    "No newer macOS is known for this image: the newest is 27.0.1 (26A434), as of Sep 29, 2026. The update asks Apple again, and installs what is offered." \
+    "Up to date: 27.0.1 (26A434) is the newest, as of Sep 29, 2026. The update checks again." \
     "$(ui_value "$UPDATE_SYSTEM_TEXT_ID")"
 check "the guest daemon: replaced, without a version to name" \
-    "The image's agent-vm-guest, whose version is not on record, is replaced by this agent-vm's, $VERSION. Its Full Disk Access may have to be granted again afterwards; the image's pane says so then. With another part checked too, the daemon is replaced first, and stays even if that part fails." \
+    "The image's agent-vm-guest, whose version is not on record, is replaced by this agent-vm's, $VERSION. Full Disk Access may need to be granted again afterwards." \
     "$(ui_value "$UPDATE_GUEST_TEXT_ID")"
 omc_run AgentVM.update.close
 store '(.images[] | select(.name == "dev-agents")) |= del(.macOSVersion, .macOSBuild)'
 open_update dev-agents
 check "Apple never asked: no major version to name either" \
-    "Apple has not been asked which macOS is the newest: Check Now asks. The update asks too, and installs what Apple offers within the image's major version." \
+    "Not checked yet. The update installs what Apple offers within the image's major version." \
     "$(ui_value "$UPDATE_SYSTEM_TEXT_ID")"
 omc_run AgentVM.update.close
 
@@ -590,13 +590,13 @@ open_update deb-agents
 check "its system in agent-vm's words, and that it was not updated" \
     "Debian GNU/Linux 13 (trixie). Not updated since it was built." "$(ui_value "$UPDATE_STATE_ID")"
 check "the system's part: the package updates of its distribution, and when they were last looked for" \
-    "Installs the package updates of Debian 13, which takes seconds to minutes. When they bring a new kernel, the image is started once more to check it before the update is kept. Its packages were last looked at on Oct 7, 2026." \
+    "Installs the package updates of Debian 13, in seconds to minutes. Last checked Oct 7, 2026." \
     "$(ui_value "$UPDATE_SYSTEM_TEXT_ID")"
 check "the system is ticked, though nobody can say beforehand that it needs doing; the tools for its recipes; the guest daemon, which is another version" \
     "true true true|1 1 1" "$(ticks)"
 check "Check Now is not shown: Apple has nothing to say of a Linux image" "0" "$(ui_visible "$UPDATE_CHECK_ID")"
 check "the guest daemon's part says nothing of Full Disk Access" \
-    "The image's agent-vm-guest 0.7.9 is replaced by this agent-vm's, $VERSION. With another part checked too, the daemon is replaced first, and stays even if that part fails." "$(ui_value "$UPDATE_GUEST_TEXT_ID")"
+    "The image's agent-vm-guest 0.7.9 is replaced by this agent-vm's, $VERSION." "$(ui_value "$UPDATE_GUEST_TEXT_ID")"
 check "the command it would run: the system's part is --system" \
     "agent-vm image update deb-agents --system --tools --guest|1" "$(ui_value "$UPDATE_COMMAND_ID")|$(enabled "$UPDATE_START_ID")"
 mixed '.runningVMs = {count: 2, limit: 2, linuxBoxes: 0, linuxImages: 0}'
@@ -629,7 +629,7 @@ check "  three machines run, two of them Linux: a place is free for a macOS upda
 mixed '.runningVMs = {count: 3, limit: 2, linuxBoxes: 1, linuxImages: 0}'
 omc_run AgentVM.update.activated
 check "  three machines run, one of them Linux: both places are taken" \
-    "No virtual machine slot is free now (2 of 2 macOS virtual machines running), and an update needs one: it fails at once until a macOS box or build stops." \
+    "No macOS virtual machine is free (2 of 2 running): the update fails until one stops." \
     "$(ui_value "$UPDATE_NOTE_ID")"
 "$PB" agentvm_window_update_dev-acp set ""
 
@@ -671,7 +671,7 @@ open_update dev-acp
 tick true false false
 check "without the tools: one step, with Update" "1|0|0|1|0" "$(step)"
 check "  the tools part names what ticking it adds" \
-    "Runs the update steps of the recipes this image keeps (dev-acp, xcode), then every recipe's checks. Not run since the image was built. Checking it adds a step that lists them, and takes a newer file for xcode." \
+    "Updates the tools of its recipes (dev-acp, xcode). Not run since the image was built. The next step takes a newer file for xcode." \
     "$(ui_value "$UPDATE_TOOLS_TEXT_ID")"
 omc_run AgentVM.update.next
 check "  Continue, however it came to run, has no second step to show" "1|0|0|1|0" "$(step)"
@@ -687,11 +687,11 @@ check "  the recipes in the order they run, each with its name; the slots past t
 check "  a recipe without inputs: its description" \
     "ACP agents: Claude Agent ACP, Codex ACP and opencode (needs Node: build from an image with Recipes/homebrew-node)" "$(slot_text 1)"
 check "  the recipe with an input: the file it was built with, and its button" \
-    "Xcode from a .xip|Built with Xcode_27.xip. Choose xcode... gives it a newer file, and the recipe then runs again with it.|Choose xcode..." \
+    "Xcode from a .xip|Built with Xcode_27.xip. Choose xcode... to give a newer file.|Choose xcode..." \
     "$(slot_text 2)|$(ui_prop $((UPDATE_CHOOSE_BASE + 2)) title)"
 check "  which input each slot's button is for" "- xcode - - - - - - - - - -" "$("$PB" "agentvm_inputs_$UUID" get)"
 check "  what the tools update does with them" \
-    "The tools update runs the update steps of these recipes, in this order, then every recipe's checks. A recipe that came with agent-vm is first replaced by the installed version, when that is newer. Not run since the image was built." \
+    "Recipes updated, in this order. Not run since the image was built." \
     "$(ui_value "$UPDATE_RECIPES_TEXT_ID")"
 check "  Update is on, and the command is the step's" "1|agent-vm image update dev-acp --system --tools" "$(enabled "$UPDATE_START_ID")|$(ui_value "$UPDATE_COMMAND_ID")"
 choose_input 2 ""
@@ -701,7 +701,7 @@ check_status "exits cleanly" 0
 check "a file chosen: the command gives it, and Clear is shown" \
     "agent-vm image update dev-acp --system --tools --input 'xcode=$NEW_XIP'|1|xcode|1|1" "$(ui_value "$UPDATE_COMMAND_ID")|$(slot 2)"
 check "  the slot says the recipe runs again with it" \
-    "Xcode from a .xip|Runs again with Xcode 27.1.xip in place of Xcode_27.xip: what it installs is installed from the new file, instead of by its update steps." \
+    "Xcode from a .xip|Runs again with Xcode 27.1.xip in place of Xcode_27.xip." \
     "$(slot_text 2)"
 check "  and the step says what that takes" "Running a recipe again needs about 10 GB free, as a build does." \
     "$(ui_value "$UPDATE_RECIPES_TEXT_ID" | /usr/bin/tail -1)"
@@ -717,7 +717,7 @@ check "  a Clear of a slot without an input changes nothing" "yes" "$(chosen_kep
 omc_run AgentVM.update.back
 check "Back: the first step, with Continue" "1|0|1|0|0" "$(step)"
 check "  the file stays, and the tools part names it" \
-    "agent-vm image update dev-acp --system --tools --input 'xcode=$NEW_XIP'|Runs the update steps of the recipes this image keeps (dev-acp, xcode), then every recipe's checks. Not run since the image was built. Continue lists them, with the new file for xcode." \
+    "agent-vm image update dev-acp --system --tools --input 'xcode=$NEW_XIP'|Updates the tools of its recipes (dev-acp, xcode). Not run since the image was built. With the new file for xcode." \
     "$(ui_value "$UPDATE_COMMAND_ID")|$(ui_value "$UPDATE_TOOLS_TEXT_ID")"
 tick true false false
 check "unticking the tools forgets the file" "agent-vm image update dev-acp --system|no|1|0|0|1|0" \
@@ -758,14 +758,14 @@ store "$BEHIND"' | (.images[] | select(.name == "dev-acp")).recipes += [
     {name: "mine", folder: "4-mine", inputs: [{name: "kit", file: "kit.zip"}, {name: "data", file: "data.bin"}]}]'
 open_update dev-acp
 tick false true false
-check "the tools part names only the inputs the next step has a button for" "Continue lists them, and takes a newer file for xcode and kit." \
+check "the tools part names only the inputs the next step has a button for" "The next step takes a newer file for xcode and kit." \
     "$(ui_value "$UPDATE_TOOLS_TEXT_ID" | /usr/bin/sed 's/^.*built. //')"
 omc_run AgentVM.update.next
 check "a recipe kept twice: the later one takes the file, and the earlier one says so" \
-    "1|xcode|0|0 1|xcode|1|0|A newer file for xcode goes to the xcode recipe listed after this one.|Built with Xcode_27.1.xip. Choose xcode... gives it a newer file, and the recipe then runs again with it." \
+    "1|xcode|0|0 1|xcode|1|0|A newer file for xcode goes to the xcode recipe below.|Built with Xcode_27.1.xip. Choose xcode... to give a newer file." \
     "$(slot 2) $(slot 3)|$(slot_text 2)|$(slot_text 3)"
 check "two inputs: the button is for the first, and the second is given in Terminal" \
-    "Choose kit...|Built with kit.zip. Choose kit... gives it a newer file, and the recipe then runs again with it.|Built with data.bin for data. A newer one is given in Terminal: agent-vm image update dev-acp --tools --input data=<path>." \
+    "Choose kit...|Built with kit.zip. Choose kit... to give a newer file.|Built with data.bin for data. Give a newer one in Terminal: agent-vm image update dev-acp --tools --input data=<path>." \
     "$(ui_prop $((UPDATE_CHOOSE_BASE + 4)) title)|$(slot_text 4)"
 check "  the inputs of the slots" "- - xcode kit - - - - - - - -" "$("$PB" "agentvm_inputs_$UUID" get)"
 choose_input 3 "$NEW_XIP"
@@ -777,7 +777,7 @@ choose_input 4 "$OMCTEST_WORK/kit2.zip"
 check "  choosing again replaces the file" "--input 'xcode=$NEW_XIP' --input kit=$OMCTEST_WORK/kit2.zip" \
     "$(ui_value "$UPDATE_COMMAND_ID" | /usr/bin/sed "s/^.* --tools //")"
 check "  the recipe's other input has no file on record: said, and Update is off" \
-    "The recipe mine runs again with its other files too, and the one for data (data.bin) is not where it was. Give all of its files in Terminal: agent-vm image update dev-acp --tools, with --input <name>=<path> for each.|0" \
+    "The file for data of recipe mine (data.bin) is not where it was. Give all its files in Terminal: agent-vm image update dev-acp --tools --input <name>=<path>.|0" \
     "$(ui_value "$UPDATE_NOTE_ID")|$(enabled "$UPDATE_START_ID")"
 clear_input 4
 check "  Clear of that input: nothing stands in the way" "|1" "$(ui_value "$UPDATE_NOTE_ID")|$(enabled "$UPDATE_START_ID")"
@@ -796,7 +796,7 @@ check "the other input's file is where it was: nothing stands in the way" "1" "$
 /bin/rm -f "$OMCTEST_WORK/data.bin"
 omc_run AgentVM.update.activated
 check "  and once it is gone, the note names it" \
-    "The recipe mine runs again with its other files too, and the one for data (data.bin) is not where it was. Give all of its files in Terminal: agent-vm image update dev-acp --tools, with --input <name>=<path> for each.|0" \
+    "The file for data of recipe mine (data.bin) is not where it was. Give all its files in Terminal: agent-vm image update dev-acp --tools --input <name>=<path>.|0" \
     "$(ui_value "$UPDATE_NOTE_ID")|$(enabled "$UPDATE_START_ID")"
 omc_run AgentVM.update.back
 tick false false false
@@ -809,7 +809,7 @@ open_update dev-acp
 tick false true false
 omc_run AgentVM.update.next
 check "fourteen recipes: twelve slots, and the last two named in the step's line" \
-    "1|r12|0|0|The image keeps 14 recipes, and the last 2 are not listed: a newer file for one of them is given in Terminal." \
+    "1|r12|0|0|14 recipes; the last 2 are not listed (give a newer file for those in Terminal)." \
     "$(slot 12)|$(ui_value "$UPDATE_RECIPES_TEXT_ID" | /usr/bin/tail -1)"
 omc_run AgentVM.update.close
 /bin/rm -f "$NEW_XIP"

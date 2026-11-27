@@ -375,7 +375,7 @@ progress_paint() {
     "$dialog" "$_uuid" "$PROGRESS_NOTICE_ID" "$_notice"
     if progress_moving "$_uuid"; then
         ui_enable "$_uuid" "$PROGRESS_STOP_ID" 1
-        "$dialog" "$_uuid" "$PROGRESS_FOOTER_ID" "Job $_id. You can close this window: the job goes on."
+        "$dialog" "$_uuid" "$PROGRESS_FOOTER_ID" "Job $_id. It goes on if you close this window."
     else
         ui_enable "$_uuid" "$PROGRESS_STOP_ID" 0
         "$dialog" "$_uuid" "$PROGRESS_FOOTER_ID" "Job $_id"
@@ -451,7 +451,7 @@ progress_stop_question() {
         "image fetch-ipsw")
             _text="$_text What was downloaded is kept for the next time." ;;
         "image view")
-            _text="Closing the image's window does the same: the image shuts down, and what was done in it is kept." ;;
+            _text="Closing the image's window does the same; its changes are kept." ;;
         "box start")
             _text="$_text The box is left stopped." ;;
     esac

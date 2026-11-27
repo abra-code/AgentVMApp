@@ -10,7 +10,7 @@
     {
       "type": "Text",
       "properties": {
-        "text": "An agent in a box needs a key or a token of its own: your logins on this Mac are not visible there. Keys are kept in your login Keychain on this Mac. A box gets one only when an agent is run in it with that key, by avm or Cadabra. A stored key is never shown.",
+        "text": "Agents in boxes cannot see your logins on this Mac: store their keys here, in your login Keychain. A box gets a key only when avm or Cadabra runs an agent with it.",
         "frame": { "maxWidth": "infinity", "alignment": "leading" }
       }
     },
@@ -53,12 +53,12 @@
         {
           "type": "Button",
           "id": 4004,
-          "properties": { "title": "Store", "disabled": true, "actionID": "AgentVM.keys.store", "help": "Keep what the field holds in the login Keychain as the selected key, replacing an older value." }
+          "properties": { "title": "Store", "disabled": true, "actionID": "AgentVM.keys.store", "help": "Store the key in your login Keychain" }
         },
         {
           "type": "Button",
           "id": 4005,
-          "properties": { "title": "Remove...", "disabled": true, "actionID": "AgentVM.keys.remove", "help": "Delete the selected key from the login Keychain. Asks first." }
+          "properties": { "title": "Remove...", "disabled": true, "actionID": "AgentVM.keys.remove", "help": "Delete the key from your login Keychain" }
         }
       ]
     },

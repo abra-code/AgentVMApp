@@ -21,7 +21,7 @@
     {
       "type": "Text",
       "properties": {
-        "text": "Discarding a session deletes its snapshot, and what an undo kept: undo is then no longer possible for it. Its record and report stay in agent-vm session list. Active sessions are never discarded.",
+        "text": "Discarded sessions can no longer be undone. Active sessions are never discarded.",
         "foregroundStyle": "secondary",
         "frame": {
           "maxWidth": "infinity",
@@ -64,7 +64,7 @@
             "displayStyle": "stepperField",
             "displayedComponents": "date",
             "valueChangeActionID": "AgentVM.discard.date",
-            "help": "Sessions that ended before this day are discarded; a session that never ended counts from its start",
+            "help": "Discard sessions that ended before this day",
             "labelsHidden": true
           }
         }

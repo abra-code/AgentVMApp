@@ -123,7 +123,7 @@ check "the prompts, newest first" \
     "Sep 30 09:20:00  /usr/bin/open /Users/agent/Documents waited on a permission prompt: the Documents folder.|Sep 30 09:03:00  /bin/sh -c 'exec \"\$SHELL\" -l' waited on a permission prompt: the Downloads folder; the Desktop folder." \
     "$(ui_value "$PROG_NOTICES_ID" | /usr/bin/paste -sd '|' -)"
 check "the note says what the window shows" \
-    "The last 200 programs that agent-vm exec and box shell ran. The log stays on this Mac, out of the box's reach." \
+    "The last 200 programs run in the box." \
     "$(ui_value "$PROG_NOTE_ID")"
 
 section "a second Details... on the same box, and windows nobody asked for"
@@ -167,7 +167,7 @@ section "the Full Disk Access line"
 store '(.images[] | select(.name == "dev-acp")).needs = [{kind: "full-disk-access", reason: "not-granted"}]'
 omc_run AgentVM.programs.refresh
 check "the box's image needs it: said under the prompts" \
-    "Image dev-acp has no Full Disk Access: until it has, programs in its boxes are asked before they open Desktop, Documents or Downloads." \
+    "Image dev-acp has no Full Disk Access: programs here wait on a macOS question when they open Desktop, Documents or Downloads." \
     "$(ui_value "$PROG_NOTICES_ID" | /usr/bin/tail -1)"
 printf '[]\n' > "$FAKE_AGENTVM_DIR/box-execlog-s3.json"
 omc_run AgentVM.programs.refresh

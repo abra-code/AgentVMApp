@@ -72,7 +72,7 @@
               "spacing": 6,
               "padding": 2,
               "actionID": "AgentVM.network.public",
-              "help": "Any host name that resolves to a public address, logged like every connection. Never an IP address, a local name, this Mac or your local network."
+              "help": "Any public host name, logged; never an IP address, a local name or your local network"
             },
             "children": [
               { "type": "Image", "id": 609, "properties": { "systemName": "square" } },

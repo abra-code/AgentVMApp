@@ -487,7 +487,7 @@ store '(.images[] | select(.name == "dev")).updating = true'
 pick "image dev" dev
 next
 check "an image another command is changing: the step stays, and says why" \
-    "Step 1 of 5 - Start from|Another command is changing image dev. A build can start from it when that has ended." "$(step_shown | /usr/bin/cut -d'|' -f1)|$(note)"
+    "Step 1 of 5 - Start from|Another command is changing image dev. Try again when it ends." "$(step_shown | /usr/bin/cut -d'|' -f1)|$(note)"
 store 'del(.images[] | select(.name == "dev"))'
 next
 check "an image that is gone"        "Image dev is not there any more. Choose another start." "$(note)"
@@ -514,7 +514,7 @@ check "status and the restore files are read again" "status --json|image fetch-i
 check "step 2: its panel, step 1 done" "Step 2 of 5 - Tools|2|dnttt" "$(step_shown)"
 check "Back is on"                   "1" "$(enabled "$NEW_BACK_ID")"
 check "the line above them names the start" \
-    "Check the tools to install on top of image dev (macOS 27.0). They are installed in the order listed. With nothing checked, the new image is the start as it is." \
+    "Check the tools to install on top of image dev (macOS 27.0), in the order listed." \
     "$(ui_value "$NEW_TOOLS_TEXT_ID")"
 names=""
 slot=0
@@ -543,7 +543,7 @@ next
 check "step 4, with the steps before it done" "Step 4 of 5 - Name and size|4|dddnt" "$(step_shown)"
 check "a name from the start, and the start's sizes" "dev-tools|4|8|64" \
     "$(ui_value "$NEW_NAME_ID")|$(ui_value "$NEW_CPUS_ID")|$(ui_value "$NEW_MEMORY_ID")|$(ui_value "$NEW_DISK_ID")"
-check "the line under them"          "These start as image dev has them. The disk is a sparse file, which takes only what is written to it; the disk of a copy stays as it is or grows by at least 8 GB." \
+check "the line under them"          "As in image dev. The disk takes only the space written to it, and can stay as it is or grow by at least 8 GB." \
     "$(ui_value "$NEW_SIZE_TEXT_ID")"
 seen "$NEW_NAME_ID" "$NEW_CPUS_ID" "$NEW_MEMORY_ID" "$NEW_DISK_ID"
 back
@@ -597,7 +597,7 @@ check "the last step: Build in place of Continue, and on" "Step 5 of 5 - Check|5
 check "what is built"                "Image mine, built as a copy of image dev (macOS 27.0).|No tools are added.|6 CPUs, 16 GB of memory, a disk of 72 GB." \
     "$(ui_value "$NEW_SUMMARY_ID" | /usr/bin/paste -sd '|' -)"
 check "the advice: Full Disk Access, and that it is a job" \
-    "The new image keeps the Full Disk Access of image dev.|The build runs as a job. Its progress window opens, and the build goes on when the windows, or the app, are closed." \
+    "The new image keeps the Full Disk Access of image dev.|The build goes on if you close its progress window or quit the app." \
     "$(ui_value "$NEW_ADVICE_ID" | /usr/bin/paste -sd '|' -)"
 check "the command: only the sizes that differ from the start's" "agent-vm image create mine --from dev --cpus 6 --memory-gb 16 --disk-gb 72" "$(ui_value "$NEW_COMMAND_ID")"
 # A name kept that is more than one line (a pasteboard is not a trusted place) would become more
@@ -639,7 +639,7 @@ check "  and unticked, the image has it again" "dev-node has it" "$(ui_value $((
 ticked agent-clis python xcode-platforms
 omc_run AgentVM.newimage.tick
 check "a need the image lists no recipe for: a warning, since its list may be short" \
-    "needs xcode|xcode-platforms needs xcode. Check xcode too, unless image dev-node already has it: the build stops at its first step when it does not." \
+    "needs xcode|xcode-platforms needs xcode. Check xcode too, unless image dev-node already has it." \
     "$(ui_value $((R_NOTE + 7)))|$(note)"
 next
 check "  and Continue goes on"       "Step 3 of 5 - Options" "$(ui_value "$NEW_HEADER_ID")"
@@ -660,14 +660,14 @@ store '.'
 open_new dev-node
 ticked agent-clis
 omc_run AgentVM.newimage.tick
-check "a warning, not a refusal"     "needs node|agent-clis needs node. Check node too, unless image dev-node already has it: the build stops at its first step when it does not." \
+check "a warning, not a refusal"     "needs node|agent-clis needs node. Check node too, unless image dev-node already has it." \
     "$(ui_value $((R_NOTE + 4)))|$(note)"
 next
 check "Continue goes on, past Options" "Step 4 of 5 - Name and size|dev-node-agent-clis" "$(ui_value "$NEW_HEADER_ID")|$(ui_value "$NEW_NAME_ID")"
 seen "$NEW_NAME_ID" "$NEW_CPUS_ID" "$NEW_MEMORY_ID" "$NEW_DISK_ID"
 next
 check "the advice repeats it, and says what Full Disk Access will be" \
-    "agent-clis needs node. Check node too, unless image dev-node already has it: the build stops at its first step when it does not.|Image dev-node has no Full Disk Access, so the new image will have none either. Set Up... in the pane of either grants it." \
+    "agent-clis needs node. Check node too, unless image dev-node already has it.|Image dev-node has no Full Disk Access, so the new image will not have it either." \
     "$(ui_value "$NEW_ADVICE_ID" | /usr/bin/sed -n '1,2p' | /usr/bin/paste -sd '|' -)"
 check "the command"                  "agent-vm image create dev-node-agent-clis --from dev-node --recipe $RECIPES/agent-clis/recipe.json" "$(ui_value "$NEW_COMMAND_ID")"
 omc_run AgentVM.newimage.close
@@ -683,7 +683,7 @@ ticked homebrew node acp-agents xcode xcode-platforms
 omc_run AgentVM.newimage.tick
 next
 check "step 3"                       "Step 3 of 5 - Options|3|ddntt" "$(step_shown)"
-check "the line above them"          "What the tools you checked ask for. A parameter left as it is keeps its default." "$(ui_value "$NEW_OPTIONS_TEXT_ID")"
+check "the line above them"          "Options of the checked tools. Unchanged ones keep their defaults." "$(ui_value "$NEW_OPTIONS_TEXT_ID")"
 labels=""
 slot=0
 while [ "$slot" -lt 8 ]; do
@@ -765,7 +765,7 @@ check "  nor does a click that came from no slot" "$XIP" "$(/usr/bin/awk -F'\t' 
 omc_control "$((O_FIELD + 6))" ""
 next
 check "with the file: step 4, and a disk for Xcode" "Step 4 of 5 - Name and size|dev-tools|128" "$(ui_value "$NEW_HEADER_ID")|$(ui_value "$NEW_NAME_ID")|$(ui_value "$NEW_DISK_ID")"
-check "  the line under the sizes says why" "Xcode takes about 4 GB and each simulator runtime about 8 GB: 128 GB or more is a good disk for it." \
+check "  the line under the sizes says why" "For Xcode and its simulators, 128 GB or more." \
     "$(ui_value "$NEW_SIZE_TEXT_ID" | /usr/bin/sed -n '2p')"
 seen "$NEW_NAME_ID" "$NEW_CPUS_ID" "$NEW_MEMORY_ID" "$NEW_DISK_ID"
 back
@@ -788,7 +788,7 @@ check "nothing stands in the way"    "|1" "$(note)|$(enabled "$NEW_BUILD_ID")"
 section "what stands in the way of a build"
 store '.runningVMs.count = 2'
 omc_run AgentVM.newimage.activated
-check "both places for a macOS virtual machine are taken: Build is off, and says why" "2 of 2 macOS virtual machines are running, and the build of a macOS image needs one. Stop a macOS box first.|0" "$(note)|$(enabled "$NEW_BUILD_ID")"
+check "both places for a macOS virtual machine are taken: Build is off, and says why" "2 of 2 macOS virtual machines are running: stop a macOS box first.|0" "$(note)|$(enabled "$NEW_BUILD_ID")"
 : > "$FAKE_AGENTVM_DIR/log"
 omc_run AgentVM.newimage.build
 check "  Build, clicked anyway, starts nothing" "0" "$(started)"
@@ -797,7 +797,7 @@ omc_run AgentVM.newimage.activated
 check "one of the two machines is a Linux box: a place for a macOS build is free" "|1" "$(note)|$(enabled "$NEW_BUILD_ID")"
 store '(.images[] | select(.name == "dev")).updating = true'
 omc_run AgentVM.newimage.activated
-check "the start is being changed"  "Another command is changing image dev. A build can start from it when that has ended.|0" "$(note)|$(enabled "$NEW_BUILD_ID")"
+check "the start is being changed"  "Another command is changing image dev. Try again when it ends.|0" "$(note)|$(enabled "$NEW_BUILD_ID")"
 store '.images += [.images[0] | .name = "dev-tools"]'
 omc_run AgentVM.newimage.activated
 check "the name was taken meanwhile" "An image named dev-tools is there already. Give the new image another name.|0" "$(note)|$(enabled "$NEW_BUILD_ID")"
@@ -850,7 +850,7 @@ pick "ipsw $IPSW" "$IPSW"
 next
 check "the restore file is the start" "ipsw $IPSW|Step 2 of 5 - Tools" "$(kept start)|$(ui_value "$NEW_HEADER_ID")"
 check "the line above the tools names it" \
-    "Check the tools to install on top of the restore file $IPSW (macOS 27.0). They are installed in the order listed. With nothing checked, the new image is the start as it is." \
+    "Check the tools to install on top of the restore file $IPSW (macOS 27.0), in the order listed." \
     "$(ui_value "$NEW_TOOLS_TEXT_ID")"
 ticked python
 omc_run AgentVM.newimage.tick
@@ -860,13 +860,13 @@ next
 check "the name: dev is taken, so dev2; agent-vm's default sizes" "Step 4 of 5 - Name and size|dev2|4|8|64" \
     "$(ui_value "$NEW_HEADER_ID")|$(ui_value "$NEW_NAME_ID")|$(ui_value "$NEW_CPUS_ID")|$(ui_value "$NEW_MEMORY_ID")|$(ui_value "$NEW_DISK_ID")"
 check "the line under the sizes: whose defaults they are, and the smallest disk agent-vm builds" \
-    "These start as the defaults of agent-vm for a macOS image. The disk is a sparse file, which takes only what is written to it; it cannot be smaller than 40 GB." "$(ui_value "$NEW_SIZE_TEXT_ID")"
+    "agent-vm's defaults for a macOS image. The disk takes only the space written to it, at least 40 GB." "$(ui_value "$NEW_SIZE_TEXT_ID")"
 check "a disk smaller than that"     "Step 4 of 5 - Name and size|Disk: 40 GB or more for a new macOS image." "$(size_try base 4 8 39)"
 check "the smallest disk is taken"   "Step 5 of 5 - Check|" "$(size_try base 4 8 40)"
 check "what is built"                "Image base, with macOS installed from the restore file $IPSW (macOS 27.0).|Tools, installed in this order: homebrew and python.|4 CPUs, 8 GB of memory, a disk of 40 GB." \
     "$(ui_value "$NEW_SUMMARY_ID" | /usr/bin/paste -sd '|' -)"
 check "the advice: Full Disk Access comes after the build" \
-    "An image built from a restore file has no Full Disk Access yet: Set Up... in its pane grants it, once, after the build." "$(ui_value "$NEW_ADVICE_ID" | /usr/bin/sed -n '1p')"
+    "Grant Full Disk Access once after the build: Set Up... in the pane of the image." "$(ui_value "$NEW_ADVICE_ID" | /usr/bin/sed -n '1p')"
 omc_run AgentVM.newimage.build
 check "the job: the restore file by its full path, as agent-vm listed it, and all three sizes" \
     "image|create|base|--ipsw|$IPSW_PATH|--recipe|$RECIPES/homebrew/recipe.json|--recipe|$RECIPES/python/recipe.json|--cpus|4|--memory-gb|8|--disk-gb|40" "$(job_args | /usr/bin/paste -sd '|' -)"
@@ -1005,7 +1005,7 @@ add_own "$RECIPES/node/recipe.json"
 check "one of agent-vm's own recipes" "That is the recipe node, which is in the list already." "$(note)"
 add_own "$OWN/node/recipe.json"
 check "another recipe of a name in the list" \
-    "A recipe named node is in the list already. A recipe is named by its folder, or by its file when that is not recipe.json: rename one to add this recipe.|$SHIPPED team-tools|1" "$(note)|$(listed)"
+    "A recipe named node is in the list already: rename the folder or file of this one to add it.|$SHIPPED team-tools|1" "$(note)|$(listed)"
 add_own "$OWN/broken.json"
 check "a file agent-vm does not accept as a recipe: its reason" "agent-vm does not accept $OWN/broken.json as a recipe: it is not valid JSON: the data is not in the correct format.|$SHIPPED team-tools|1" "$(note)|$(listed)"
 add_own "$OWN/none.json"
@@ -1199,10 +1199,10 @@ open_new dev
 ticked
 add_own "$OWN/tab${TAB}name.json"
 check "a path with a tab in it is refused, and the file whose path has a space there is not taken for it" \
-    "The path of that file has a tab or a line break in it. Rename the file or its folder to add this recipe.|$SHIPPED|1" "$(note)|$(listed)"
+    "Its path has a tab or a line break: rename the file or its folder to add it.|$SHIPPED|1" "$(note)|$(listed)"
 add_own "$OWN/cr${CR}name.json"
 check "so is a path with a line break in it" \
-    "The path of that file has a tab or a line break in it. Rename the file or its folder to add this recipe.|$SHIPPED|1" "$(note)|$(listed)"
+    "Its path has a tab or a line break: rename the file or its folder to add it.|$SHIPPED|1" "$(note)|$(listed)"
 add_own "$OWN/1.json"
 add_own "$OWN/1.0.json"
 check "two names that are the same number are two recipes" "$SHIPPED 1 1.0|1|The 1, from $OWN/1.json|The 1.0, from $OWN/1.0.json" \
@@ -1273,7 +1273,7 @@ check "  one built with recipes holds them" "linux-node, agent-clis" "$(ui_rows 
 pick "image deb" deb
 next
 check "step 2, and the line above the tools names the start with its system" \
-    "Step 2 of 5 - Tools|Check the tools to install on top of image deb (Debian 13). They are installed in the order listed. With nothing checked, the new image is the start as it is." \
+    "Step 2 of 5 - Tools|Check the tools to install on top of image deb (Debian 13), in the order listed." \
     "$(ui_value "$NEW_HEADER_ID")|$(ui_value "$NEW_TOOLS_TEXT_ID")"
 check "the recipes for Linux images and for both, in the order they are applied; no recipe for macOS images" \
     "linux-node/1 linux-python/1 agent-clis/1 acp-agents/1 linux-sudo/1 $(unused 5)" "$(slots)"
@@ -1308,13 +1308,13 @@ next
 check "the name, and the sizes of the Linux image: 4 CPUs, 4 GB, a 32 GB disk" "Step 4 of 5 - Name and size|deb-tools|4|4|32" \
     "$(ui_value "$NEW_HEADER_ID")|$(ui_value "$NEW_NAME_ID")|$(ui_value "$NEW_CPUS_ID")|$(ui_value "$NEW_MEMORY_ID")|$(ui_value "$NEW_DISK_ID")"
 check "the line under them: a Linux copy's disk grows by 1 GB or more" \
-    "These start as image deb has them. The disk is a sparse file, which takes only what is written to it; the disk of a copy stays as it is or grows by at least 1 GB." "$(ui_value "$NEW_SIZE_TEXT_ID")"
+    "As in image deb. The disk takes only the space written to it, and can stay as it is or grow by at least 1 GB." "$(ui_value "$NEW_SIZE_TEXT_ID")"
 check "a smaller disk"               "Step 4 of 5 - Name and size|The disk can stay at 32 GB, as in image deb, or grow to 33 GB or more. It cannot shrink." "$(size_try deb-node 4 4 16)"
 check "one GB more is growth enough" "Step 5 of 5 - Check|" "$(size_try deb-node 4 4 33)"
 check "what is built"                "Image deb-node, built as a copy of image deb (Debian 13).|Tools, installed in this order: linux-node and agent-clis.|4 CPUs, 4 GB of memory, a disk of 33 GB." \
     "$(ui_value "$NEW_SUMMARY_ID" | /usr/bin/paste -sd '|' -)"
 check "the advice says nothing of Full Disk Access: only that the build is a job" \
-    "The build runs as a job. Its progress window opens, and the build goes on when the windows, or the app, are closed." "$(ui_value "$NEW_ADVICE_ID")"
+    "The build goes on if you close its progress window or quit the app." "$(ui_value "$NEW_ADVICE_ID")"
 LINUX_EXPECTED="deb-node|--from|deb|--recipe|$RECIPES/linux-node/recipe.json|--recipe|$RECIPES/agent-clis/recipe.json|--set|major=26|--disk-gb|33"
 check "the command: the recipes in order, the parameter that is not at its default, the disk that grew" \
     "agent-vm image create $(printf '%s\n' "$LINUX_EXPECTED" | /usr/bin/tr '|' '\n' | lib agentvm_args_text)" "$(ui_value "$NEW_COMMAND_ID")"
@@ -1341,7 +1341,7 @@ check "what the ACP agents need is in the image: nothing is missing" "acp-agents
 omc_run AgentVM.newimage.close
 
 section "a build from a Linux system"
-JOB_TEXT="The build runs as a job. Its progress window opens, and the build goes on when the windows, or the app, are closed."
+JOB_TEXT="The build goes on if you close its progress window or quit the app."
 fake_reset
 mixed '.'
 open_new
@@ -1352,7 +1352,7 @@ check "a row: agent-vm's name for the system, that it is a Linux built from its 
 pick "linux debian-13" "Debian 13"
 next
 check "it is the start, and the line above the tools names it" \
-    "linux debian-13|Step 2 of 5 - Tools|Check the tools to install on top of a new Debian 13 system. They are installed in the order listed. With nothing checked, the new image is the start as it is." \
+    "linux debian-13|Step 2 of 5 - Tools|Check the tools to install on top of a new Debian 13 system, in the order listed." \
     "$(kept start)|$(ui_value "$NEW_HEADER_ID")|$(ui_value "$NEW_TOOLS_TEXT_ID")"
 check "the recipes for Linux images and for both; no recipe for macOS images" "linux-node/1 linux-python/1 agent-clis/1 acp-agents/1 linux-sudo/1 $(unused 5)" "$(slots)"
 ticked_linux agent-clis
@@ -1368,10 +1368,10 @@ next
 check "the name is the distribution's; the sizes are what agent-vm gives a new Linux image" "Step 4 of 5 - Name and size|debian|4|4|32" \
     "$(ui_value "$NEW_HEADER_ID")|$(ui_value "$NEW_NAME_ID")|$(ui_value "$NEW_CPUS_ID")|$(ui_value "$NEW_MEMORY_ID")|$(ui_value "$NEW_DISK_ID")"
 check "the line under them: whose defaults they are, and the smallest disk of a Linux image" \
-    "These start as the defaults of agent-vm for a Linux image. The disk is a sparse file, which takes only what is written to it; it cannot be smaller than 8 GB." "$(ui_value "$NEW_SIZE_TEXT_ID")"
+    "agent-vm's defaults for a Linux image. The disk takes only the space written to it, at least 8 GB." "$(ui_value "$NEW_SIZE_TEXT_ID")"
 check "a disk smaller than that"     "Step 4 of 5 - Name and size|Disk: 8 GB or more for a new Linux image." "$(size_try debian 2 4 7)"
 check "the smallest disk is taken"   "Step 5 of 5 - Check|" "$(size_try debian 2 4 8)"
-check "what is built"                "Image debian, a new Debian 13 system, built from its cloud image, which agent-vm downloads and checks.|Tools, installed in this order: linux-node and agent-clis.|2 CPUs, 4 GB of memory, a disk of 8 GB." \
+check "what is built"                "Image debian, a new Debian 13 system, built from its cloud image.|Tools, installed in this order: linux-node and agent-clis.|2 CPUs, 4 GB of memory, a disk of 8 GB." \
     "$(ui_value "$NEW_SUMMARY_ID" | /usr/bin/paste -sd '|' -)"
 check "the advice says nothing of Full Disk Access: only that the build is a job" "$JOB_TEXT" "$(ui_value "$NEW_ADVICE_ID")"
 SYSTEM_EXPECTED="debian|--linux|debian-13|--recipe|$RECIPES/linux-node/recipe.json|--recipe|$RECIPES/agent-clis/recipe.json|--cpus|2|--memory-gb|4|--disk-gb|8"
@@ -1420,7 +1420,7 @@ check "no tools: Options is skipped; an image has the distribution's name, so a 
 seen "$NEW_NAME_ID" "$NEW_CPUS_ID" "$NEW_MEMORY_ID" "$NEW_DISK_ID"
 next
 check "what is built: the system as agent-vm builds it" \
-    "Image debian2, a new Debian 13 system, built from its cloud image, which agent-vm downloads and checks.|No tools are added.|4 CPUs, 4 GB of memory, a disk of 32 GB." \
+    "Image debian2, a new Debian 13 system, built from its cloud image.|No tools are added.|4 CPUs, 4 GB of memory, a disk of 32 GB." \
     "$(ui_value "$NEW_SUMMARY_ID" | /usr/bin/paste -sd '|' -)"
 check "the command: all three sizes, though they are agent-vm's own" "agent-vm image create debian2 --linux debian-13 --cpus 4 --memory-gb 4 --disk-gb 32" "$(ui_value "$NEW_COMMAND_ID")"
 # The start kept is a system this agent-vm does not list (a pasteboard is not a trusted place):
@@ -1438,7 +1438,7 @@ check "back on step 1"               "Step 1 of 5 - Start from|1|ntttt" "$(step_
 pick "linux alpine-3.22" "Alpine 3.22"
 next
 check "another system: the line above the tools names it" \
-    "Check the tools to install on top of a new Alpine 3.22 system. They are installed in the order listed. With nothing checked, the new image is the start as it is." "$(ui_value "$NEW_TOOLS_TEXT_ID")"
+    "Check the tools to install on top of a new Alpine 3.22 system, in the order listed." "$(ui_value "$NEW_TOOLS_TEXT_ID")"
 next
 check "  and the name follows it"    "alpine" "$(ui_value "$NEW_NAME_ID")"
 seen "$NEW_NAME_ID" "$NEW_CPUS_ID" "$NEW_MEMORY_ID" "$NEW_DISK_ID"
@@ -1485,7 +1485,7 @@ ticked
 next
 check "a build from a restore file: no size is suggested" "Step 4 of 5 - Name and size|-|-|" "$(ui_value "$NEW_HEADER_ID")|$(ui_value "$NEW_CPUS_ID")|$(ui_value "$NEW_MEMORY_ID")|$(ui_value "$NEW_DISK_ID")"
 check "  and the line under the fields names no smallest disk" \
-    "These start as the defaults of agent-vm for a macOS image. The disk is a sparse file, which takes only what is written to it." "$(ui_value "$NEW_SIZE_TEXT_ID")"
+    "agent-vm's defaults for a macOS image. The disk takes only the space written to it." "$(ui_value "$NEW_SIZE_TEXT_ID")"
 check "  a size left as it is refused, one typed is taken, whatever its disk" "Step 4 of 5 - Name and size|Processors: a whole number, 1 or more.|Step 5 of 5 - Check|" \
     "$(size_try base - - 1)|$(size_try base 4 8 1)"
 back
@@ -1496,7 +1496,7 @@ next
 ticked_linux
 next
 check "a copy: its image's sizes, and the line under them says no number for the growth" \
-    "4|4|32|These start as image deb has them. The disk is a sparse file, which takes only what is written to it; the disk of a copy stays as it is or grows." \
+    "4|4|32|As in image deb. The disk takes only the space written to it, and can stay as it is or grow." \
     "$(ui_value "$NEW_CPUS_ID")|$(ui_value "$NEW_MEMORY_ID")|$(ui_value "$NEW_DISK_ID")|$(ui_value "$NEW_SIZE_TEXT_ID")"
 check "  a smaller disk is refused all the same, and any growth is left to agent-vm" \
     "Step 4 of 5 - Name and size|The disk can stay at 32 GB, as in image deb, or grow to 33 GB or more. It cannot shrink.|Step 5 of 5 - Check|" \
@@ -1579,7 +1579,7 @@ add_own "$RECIPES/linux-node/recipe.json"
 check "one of agent-vm's own recipes for Linux images" "That is the recipe linux-node, which is for Linux images: it is listed when the start is a Linux image or a new Linux system." "$(note)"
 add_own "$OWN/linux-sudo/recipe.json"
 check "another recipe of a name that is not listed now" \
-    "A recipe named linux-sudo is there already, for Linux images. A recipe is named by its folder, or by its file when that is not recipe.json: rename one to add this recipe.|$SHIPPED|1" "$(note)|$(listed)"
+    "A recipe named linux-sudo is there already, for Linux images: rename the folder or file of this one to add it.|$SHIPPED|1" "$(note)|$(listed)"
 add_own "$OWN/for-both/recipe.json"
 check "a recipe for both systems is listed now" "for-both is in the list now. Check it to install it.|$SHIPPED for-both|1" "$(note)|$(listed)"
 omc_control "$((R_TICK + 8))" "true"
