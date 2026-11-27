@@ -190,7 +190,7 @@ ses_exclusions_text() {
     # The project through the environment: awk -v would read a backslash in it as an escape.
     local _row="$(SES_PROJECT="$2" /usr/bin/awk -F'\t' '$1 == ENVIRON["SES_PROJECT"]' "$_file")"
     if [ -z "$_row" ]; then
-        printf 'none: the snapshots take the whole project\n'
+        printf 'none\n'
         return 0
     fi
     printf '%s\n' "$_row" | /usr/bin/awk -F'\t' '{
@@ -200,7 +200,7 @@ ses_exclusions_text() {
         text = ""
         for (i = 1; i <= n && i <= 3; i++) text = text (i > 1 ? ", " : "") paths[i]
         if (n > 3) text = text " and " (n - 3) " more"
-        printf "%s left out of the snapshots\n", text
+        printf "%s\n", text
     }'
 }
 
@@ -490,7 +490,7 @@ ses_picked_text() {
     local _uuid="$1"
     local _ids="$(/usr/bin/awk -F'\t' '$1 == "true" { print $8 }' "$(ses_cache "$_uuid" session-table.tsv)" 2>/dev/null | /usr/bin/paste -sd ' ' -)"
     if [ -z "$_ids" ]; then
-        printf 'Check the sessions to discard; what they free together is shown here.\n'
+        printf 'Check sessions to see what discarding them frees.\n'
         return 0
     fi
     local _count="$(printf '%s\n' "$_ids" | /usr/bin/awk '{ print NF }')"
@@ -501,7 +501,7 @@ ses_picked_text() {
     fi
     local _freed="$(printf '%s\n' "$_held" | agentvm_held_freed "$_ids")"
     if [ "$_freed" = "0" ]; then
-        printf '%s checked: discarding them frees nothing now; what they hold is held by other sessions or by the project too.\n' "$(main_count_text "$_count" session)"
+        printf '%s checked: nothing to free (shared with other sessions or the project).\n' "$(main_count_text "$_count" session)"
     else
         printf '%s checked: about %s to free.\n' "$(main_count_text "$_count" session)" "$(ui_size_text "$_freed")"
     fi
@@ -666,9 +666,9 @@ ses_space_text() {
     fi
     local _freed="$(ses_held_rows "$1" | agentvm_held_freed "$_ids")"
     if [ "$_freed" = "0" ]; then
-        printf 'nothing to free by discarding its ended and undone sessions\n'
+        printf 'nothing to free\n'
     else
-        printf 'about %s if all its ended and undone sessions are discarded\n' "$(ui_size_text "$_freed")"
+        printf 'about %s to free\n' "$(ui_size_text "$_freed")"
     fi
 }
 
@@ -677,7 +677,7 @@ ses_hint_text() {
     local _at="$(ses_measured_at "$1")"
     local _measured=""
     [ -n "$_at" ] && _measured=" Measured $(main_time_text_of "$_at")."
-    printf '%s\n' "Deleting files from a project frees nothing while a session still holds them. The figures count what is freed once macOS has removed its local Time Machine snapshots, which keep deleted data for up to a day.$_measured"
+    printf '%s\n' "Files deleted from a project stay on disk while a session holds them.$_measured"
 }
 
 # ses_open <uuid>  ->  the tab was opened: measure when the kept measurement is stale, else read
@@ -718,7 +718,7 @@ ses_remove_refused() {
     local _active="$(ses_session_rows "$1" | SES_PROJECT="$2" /usr/bin/awk -F'\t' '$2 == ENVIRON["SES_PROJECT"] && $3 == "active"' | /usr/bin/awk 'END { print NR }')"
     [ "$_active" -gt 0 ] || return 1
     main_alert "$1" "$(/usr/bin/basename "$2") cannot be removed while a session is active" \
-        "An agent may still be working on the project. Remove it from the list once its $(if [ "$_active" -eq 1 ]; then printf 'session has'; else printf 'sessions have'; fi) ended."
+        "An agent may still be working on it. Remove it once no session is active."
     return 0
 }
 
@@ -743,8 +743,8 @@ ses_remove_ask() {
     local _ids="$(ses_ended_ids "$_uuid" "$_project")"
     local _text=""
     [ -n "$_ids" ] && _text="$(ses_question "$_uuid" "$_ids" "$_name") "
-    ses_has_exclusions "$_uuid" "$_project" && _text="${_text}Its list of folders left out of snapshots is cleared. "
-    _text="${_text}The project folder itself is not touched. The project comes back to the list with its next session."
+    ses_has_exclusions "$_uuid" "$_project" && _text="${_text}Its exclusions are cleared. "
+    _text="${_text}The project folder is not touched."
     ui_set session-remove "$_uuid" "$_project"
     "$dialog" "$_uuid" omc_window omc_present_alert "Remove $_name from the list?" "$_text" \
         "Cancel:cancel:" "Remove:destructive:AgentVM.main.session.remove.confirmed"
@@ -916,11 +916,11 @@ ses_space_phrase() {
     local _unmeasured=""
     [ -f "$_usage" ] && _unmeasured="$(/usr/bin/jq -r --arg ids "$2" '([.sessions[]?.id] + [.held[]?.sessions[]?]) as $known | $ids | split(" ") | map(select(. != "" and (. as $id | $known | index($id) | not))) | .[]' "$_usage" 2>/dev/null)"
     if [ ! -f "$_usage" ] || [ -n "$_unmeasured" ]; then
-        printf 'what they hold only together is not known: they were not measured\n'
+        printf 'How much this frees is not known (not measured yet).\n'
     elif [ "$_freed" = "0" ]; then
-        printf 'this frees nothing now: what they hold is held by other sessions or by the project too\n'
+        printf 'This frees nothing now: other sessions or the project hold the same files.\n'
     else
-        printf 'this frees about %s once macOS has removed its local Time Machine snapshots\n' "$(ui_size_text "$_freed")"
+        printf 'This frees about %s.\n' "$(ui_size_text "$_freed")"
     fi
 }
 
@@ -928,8 +928,8 @@ ses_space_phrase() {
 # what it frees, and that undo ends for them.
 ses_question() {
     local _count="$(printf '%s\n' "$2" | /usr/bin/awk '{ print NF }')"
-    printf '%s of %s: their snapshots, and what an undo kept, are deleted; %s. Undo is no longer possible for them; their records and reports stay in agent-vm session list.\n' \
-        "$(main_count_text "$_count" session)" "$3" "$(ses_space_phrase "$1" "$2")"
+    printf '%s of %s %s discarded and can no longer be undone. %s\n' \
+        "$(main_count_text "$_count" session)" "$3" "$([ "$_count" = "1" ] && printf 'is' || printf 'are')" "$(ses_space_phrase "$1" "$2")"
 }
 
 # ses_ask <uuid> <ids> <whose>  ->  the question before discarding those sessions; Discard goes on
@@ -959,7 +959,7 @@ ses_freed_text() {
         ''|*[!0123456789]*) ;;
         *)
             if [ "$3" -gt 100000000 ] && [ "$_gained" -lt $(( $3 / 2 )) ]; then
-                _text="$_text macOS has not given all of it back yet: local Time Machine snapshots keep deleted data for up to a day, and macOS removes them sooner when it needs the space."
+                _text="$_text The rest comes back when macOS removes its local Time Machine snapshots, within a day."
             fi ;;
     esac
     printf '%s\n' "$_text"
@@ -1107,7 +1107,7 @@ ses_expiry_text() {
     case "$1" in
         0) printf 'kept until discarded\n' ;;
         ''|-) printf '\n' ;;
-        *) printf 'an ended session goes %s days after it ends, at the end of a later session\n' "$1" ;;
+        *) printf '%s days after a session ends\n' "$1" ;;
     esac
 }
 
@@ -1119,7 +1119,7 @@ ses_disk_text() {
         ''|*[!0123456789]*) return 0 ;;
     esac
     [ "$_freed" -ge 1000000000 ] || return 0
-    printf '; agent-vm sessions hold about %s you can free\n' "$(ui_size_text "$_freed")"
+    printf '; sessions hold about %s you can free\n' "$(ui_size_text "$_freed")"
 }
 
 # ses_restore_text <uuid>  ->  the macOS restore images kept: "1, 25.6 GB", with an interrupted
@@ -1175,14 +1175,12 @@ ses_expiry_question() {
     local _ids="$(ses_older_ids "$1" "$2" undo)"
     [ -n "$_ids" ] || return 0
     local _count="$(printf '%s\n' "$_ids" | /usr/bin/awk '{ print NF }')"
-    local _were="were"
-    [ "$_count" = "1" ] && _were="was"
-    local _text="At the end of the next session, agent-vm discards the $(main_count_text "$_count" session) that ended, or $_were undone, $2 days ago or earlier"
+    local _text="At the end of the next session, agent-vm discards $(main_count_text "$_count" session) older than $2 days"
     local _usage="$(ses_cache "$1" session-usage.json)"
     if [ -f "$_usage" ]; then
         _text="$_text (about $(ui_size_text "$(ses_held_rows "$1" | agentvm_held_freed "$_ids")") to free)"
     fi
-    printf '%s, and from then on each one %s days after it ends. Undo is then no longer possible for them. It is a setting of the store, for Terminal and Cadabra too.\n' "$_text" "$2"
+    printf '%s, then each session %s days after it ends. Discarded sessions can no longer be undone.\n' "$_text" "$2"
 }
 
 # ses_expiry_apply <uuid> <days>  ->  the store's expiry set, status read again, Settings painted;
@@ -1197,11 +1195,8 @@ ses_expiry_apply() {
 
 # ses_restore_question <uuid> <names>  ->  the question before removing the restore images named.
 ses_restore_question() {
-    local _count="$(printf '%s\n' "$2" | /usr/bin/awk '{ print NF }')"
-    local _what="it"
-    [ "$_count" = "1" ] || _what="them"
-    printf '%s. A new macOS image needs a restore image again: Get macOS... downloads one (about 27 GB). Images and boxes made from %s are not touched.\n' \
-        "$(printf '%s\n' "$2" | /usr/bin/tr ' ' '\n' | /usr/bin/paste -sd ',' - | /usr/bin/sed 's/,/, /g')" "$_what"
+    printf '%s. Images and boxes are not affected; a new macOS image needs another download (about 27 GB).\n' \
+        "$(printf '%s\n' "$2" | /usr/bin/tr ' ' '\n' | /usr/bin/paste -sd ',' - | /usr/bin/sed 's/,/, /g')"
 }
 
 # -- The banner below the tabs ------------------------------------------------------------------
@@ -1255,7 +1250,7 @@ ses_paint_nudge() {
         ses_nudge_show "$1" 0
         return 0
     fi
-    "$dialog" "$1" "$SES_NUDGE_TEXT_ID" "agent-vm sessions hold about $(ui_size_text "$_bytes") that only their undo needs; discarding them frees it."
+    "$dialog" "$1" "$SES_NUDGE_TEXT_ID" "Sessions hold about $(ui_size_text "$_bytes") you can free."
     ses_nudge_show "$1" 1
 }
 

@@ -109,7 +109,7 @@ no_saved_list
 section "the project pane's Exclusions row"
 open_main
 check "the tab reads every project's list with the sessions" "1" "$(fake_log | /usr/bin/grep -c '^session exclusions --json$')"
-check "nothing saved: the snapshots take the whole project" "none: the snapshots take the whole project" "$(ui_value "$SES_EXCLUSIONS_ID")"
+check "nothing saved: the snapshots take the whole project" "none" "$(ui_value "$SES_EXCLUSIONS_ID")"
 check "the row is in the pane's form, with Choose... beside it, which runs its handler" "AgentVM.main.session.exclusions|Choose..." \
     "$(/usr/bin/jq -r --argjson id "$SES_EXCLUSIONS_CHOOSE_ID" '.. | objects | select(.id? == $id) | .properties | "\(.actionID)|\(.title)"' "$APP_RESOURCES/Base.lproj/AgentVM.json")"
 check "the project list's toolbar: Add Project... (with its folder panel), then Discard Sessions..." "745,742|AgentVM.main.session.project.add" \
@@ -120,10 +120,10 @@ check "the bar under the project list: the folder and Remove at its left; the so
     "$(/usr/bin/jq -r '[.. | objects | select(.type? == "HStack") | select([.children[]?.id?] | index(748)) | [.children[] | (.id // .type) | tostring] | join(",")][0]' "$APP_RESOURCES/Base.lproj/AgentVM.json")|$(/usr/bin/jq -r '.. | objects | select(.id? == 746) | .properties.actionID' "$APP_RESOURCES/Base.lproj/AgentVM.json")|$(/usr/bin/jq -r '.. | objects | select(.id? == 748) | .properties.actionID' "$APP_RESOURCES/Base.lproj/AgentVM.json")|$(/usr/bin/jq -r '[.. | objects | select(.type? == "HStack") | select([.children[]?.id?] | index(748)) | .children[] | select(.type == "Menu") | .children[] | "\(.type):\(.properties.title):\(.properties.actionID)"] | join(",")' "$APP_RESOURCES/Base.lproj/AgentVM.json")"
 fake_reset
 open_main
-check "a saved list: its paths" ".build, .swiftpm left out of the snapshots" "$(ui_value "$SES_EXCLUSIONS_ID")"
+check "a saved list: its paths" ".build, .swiftpm" "$(ui_value "$SES_EXCLUSIONS_ID")"
 printf '{"projects": [{"project": "%s", "paths": ["a", "b", "c", "d", "e"]}]}\n' "$PROJECT" > "$FAKE_AGENTVM_DIR/session-exclusions.json"
 open_main
-check "  the first three of a long one, and how many more" "a, b, c and 2 more left out of the snapshots" "$(ui_value "$SES_EXCLUSIONS_ID")"
+check "  the first three of a long one, and how many more" "a, b, c and 2 more" "$(ui_value "$SES_EXCLUSIONS_ID")"
 printf 'cannot read the list\n' > "$FAKE_AGENTVM_DIR/fail-session-exclusions"
 open_main
 check "  a list agent-vm cannot read: said, and the sessions are still shown" "could not be read|$PROJECT" \
@@ -223,7 +223,7 @@ omc_run AgentVM.exclusions.save
 check_status "Save exits cleanly" 0
 check "one call, with every ticked path" "session exclusions --project=$PROJECT --set=.build --set=.swiftpm --json" "$(saves)"
 check "the window closes" "1" "$(closed "$UUID")"
-check "the main window reads every list again, and its row says the list" "1|.build, .swiftpm left out of the snapshots" \
+check "the main window reads every list again, and its row says the list" "1|.build, .swiftpm" \
     "$(fake_log | /usr/bin/grep -c '^session exclusions --json$')|$(ui_value "$SES_EXCLUSIONS_ID" "$MAIN_UUID")"
 omc_run AgentVM.exclusions.close
 check "its close handler lets go of it" "|" "$(registered)|$(project_of "$UUID")"

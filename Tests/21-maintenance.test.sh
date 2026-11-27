@@ -98,7 +98,7 @@ open_with "$QUIET"' | (.images[] | select(.name == "dev-node")) |= (.needs = [{k
     | .macOSUpdate = {version: "27.0.1", build: "26A434", checkedAt: "2026-09-29T09:00:00Z"})'
 check "marked" "$MARK" "$(image_mark dev-node)"
 check "the newer macOS, and nothing about Full Disk Access" \
-    "Needs maintenance|macOS 27.0.1 is available. Update... installs it, in about 15 minutes." \
+    "Needs maintenance|macOS 27.0.1 is available (about 15 minutes to install)." \
     "$(image_lines dev-node)"
 
 section "an image whose base changed since it was made from it (agent-vm 0.7.59)"
@@ -109,13 +109,13 @@ open_with "$QUIET"' | (.images[] | select(.name == "dev-acp")).needs = [{kind: "
     | (.images[] | select(.name == "latest-test")) |= (.state = "failed" | .failure = "the build was canceled")'
 check "marked"                       "$MARK|$MARK" "$(image_mark dev-acp)|$(image_mark dev-agents)"
 check "  its base was built again"   \
-    "Needs maintenance|Its base image dev-node was built again since it was made from it. Build Again... makes it again from it." \
+    "Needs maintenance|Base image dev-node was built again." \
     "$(image_lines dev-acp)"
 check "  its base has other tools"   \
-    "Needs maintenance|Its base image dev-node has other tools than when it was made from it. Build Again... makes it again from it." \
+    "Needs maintenance|Base image dev-node has different tools now." \
     "$(image_lines dev-agents)"
 check "  a reason this app has no words for" \
-    "Needs maintenance|Its base image dev-xcode changed since it was made from it. Build Again... makes it again from it." \
+    "Needs maintenance|Base image dev-xcode changed." \
     "$(image_lines dev-xcode-ios)"
 check "a failed image is still not marked" "$TAB|" "$(image_mark latest-test)|$(image_lines latest-test)"
 
@@ -128,19 +128,19 @@ RECREATE='[{kind: "recreate", reason: "image-updated", macOSBuild: "26A434"}]'
 open_with "$QUIET"' | (.boxes[] | select(.box.name == "s3" or .box.name == "cadabra-spike")).needs = '"$RECREATE"
 check "marked" "$MARK" "$(box_mark s3)"
 check "which image, and what recreating costs" \
-    "Needs maintenance|Made before image dev-acp was updated. Recreate it to get the update; what was changed inside it is lost." \
+    "Needs maintenance|Made before image dev-acp was updated. Recreate to get the update; changes made in the box are lost." \
     "$(box_lines s3)"
 open_with "$QUIET"' | (.boxes[] | select(.box.name == "s3")).needs = [{kind: "recreate", reason: "guest-update", guestVersion: "'"$FIXTURES_AGENTVM_VERSION"'"}]'
 check "the image's guest daemon was replaced" \
-    "Needs maintenance|Made before image dev-acp had its guest daemon replaced. Recreate it to get the new one; what was changed inside it is lost." \
+    "Needs maintenance|Made before image dev-acp had its guest daemon replaced. Recreate to get the new one; changes made in the box are lost." \
     "$(box_lines s3)"
 open_with "$QUIET"' | (.boxes[] | select(.box.name == "s3")).needs = [{kind: "recreate", reason: "image-rebuilt", macOSBuild: "26A434"}]'
 check "the image was built again" \
-    "Needs maintenance|Made before image dev-acp was built again. Recreate it to get the new image; what was changed inside it is lost." \
+    "Needs maintenance|Made before image dev-acp was built again. Recreate to get the new image; changes made in the box are lost." \
     "$(box_lines s3)"
 open_with "$QUIET"' | (.boxes[] | select(.box.name == "s3")).needs = [{kind: "recreate"}]'
 check "a reason this app does not know is not guessed at" \
-    "Needs maintenance|Made before image dev-acp changed. Recreate it to get the image as it is now; what was changed inside it is lost." \
+    "Needs maintenance|Made before image dev-acp changed. Recreate to get the image as it is now; changes made in the box are lost." \
     "$(box_lines s3)"
 open_with "$QUIET"' | (.boxes[] | select(.box.name == "s3" or .box.name == "cadabra-spike")).needs = '"$RECREATE"
 check "a disposable box is not marked: it is deleted when it stops" "$TAB" "$(box_mark cadabra-spike)"
@@ -152,7 +152,7 @@ GONE='(.boxes[] | select(.box.name == "cadabra-spike")).box.disposable = false |
 open_with "$QUIET | $GONE"
 check "marked" "$MARK" "$(box_mark cadabra-spike)"
 check "which image, and that Recreate makes it again from another" \
-    "Needs maintenance|Image dev-agents, which it was made from, was deleted. It works as it is; Recreate makes it again from another image, and what was changed inside it is lost." \
+    "Needs maintenance|Its image dev-agents was deleted. Recreate uses another image; changes made in the box are lost." \
     "$(box_lines cadabra-spike)"
 check "  its Image row says the image is deleted" "1" "$(ui_value "$MAIN_BOX_IMAGE_ID" | /usr/bin/grep -c '^dev-agents (macOS [^)]*); image deleted$')"
 check "a box whose image is there is not marked for it" "$TAB|" "$(box_mark try1)|$(box_lines try1 | /usr/bin/grep -c 'was deleted' | /usr/bin/sed 's/^0$//')"
@@ -160,14 +160,14 @@ check "  and its Image row says nothing of it" "0" "$(ui_value "$MAIN_BOX_IMAGE_
 open_with "$QUIET"' | del(.images[] | select(.name == "dev-agents"))'
 check "a disposable box is not marked: it is deleted when it stops" "$TAB|" "$(box_mark cadabra-spike)|$(box_lines cadabra-spike)"
 open_with "$QUIET"' | del(.images[] | select(.name == "dev-acp")) | (.boxes[] | select(.box.name == "s3")).supervisorVersion = "0.3.12"'
-check "with another need: both, the deleted image first" "3|Image dev-acp" \
-    "$(box_lines s3 | /usr/bin/tr '|' '\n' | /usr/bin/awk 'END { print NR }')|$(box_lines s3 | /usr/bin/cut -d'|' -f2 | /usr/bin/cut -c1-13)"
+check "with another need: both, the deleted image first" "3|Its image dev-acp" \
+    "$(box_lines s3 | /usr/bin/tr '|' '\n' | /usr/bin/awk 'END { print NR }')|$(box_lines s3 | /usr/bin/cut -d'|' -f2 | /usr/bin/cut -c1-17)"
 
 section "a running box whose supervisor is another agent-vm version"
 open_with "$QUIET"' | (.boxes[] | select(.box.name == "s3")).supervisorVersion = "0.3.12"'
 check "marked" "$MARK" "$(box_mark s3)"
 check "says which, and how to move it" \
-    "Needs maintenance|Runs agent-vm 0.3.12. Stop it and start it again to move it to $VERSION." "$(box_lines s3)"
+    "Needs maintenance|Runs agent-vm 0.3.12. Restart it to use $VERSION." "$(box_lines s3)"
 open_with "$QUIET"' | (.boxes[] | select(.box.name == "try1")).supervisorVersion = "0.3.12"'
 check "an unresponsive box too: its supervisor still runs" "$MARK" "$(box_mark try1)"
 open_with "$QUIET"' | (.boxes[] | select(.box.name == "s3")) |= (.state = "stopped" | .supervisorVersion = "0.3.12")'
@@ -182,10 +182,10 @@ section "a running box nobody uses"
 IDLE="$QUIET"' | (.boxes[] | select(.box.name == "s3")) |= (del(.ownerPid) | .activeExecs = 0)'
 open_with "$IDLE"
 check "no owner, no program, three hours: the state line says so" \
-    "Running for 3 h 2 min. No program runs in it now." "$(box_state s3 $((S3_STARTED + 3 * 3600 + 100)))"
+    "Running for 3 h 2 min, idle" "$(box_state s3 $((S3_STARTED + 3 * 3600 + 100)))"
 check "  and it is not maintenance" "$TAB" "$(box_mark s3)"
 check "exactly two hours is enough" \
-    "Running for 2 h 0 min. No program runs in it now." "$(box_state s3 $((S3_STARTED + 2 * 3600)))"
+    "Running for 2 h 0 min, idle" "$(box_state s3 $((S3_STARTED + 2 * 3600)))"
 check "a minute less is not" "Running for 1 h 59 min" "$(box_state s3 $((S3_STARTED + 2 * 3600 - 60)))"
 open_with "$QUIET"' | (.boxes[] | select(.box.name == "s3")).activeExecs = 0'
 check "with an owner (a Cadabra chat) it is not idle" "Running for 5 h 0 min" "$(box_state s3 $((S3_STARTED + 5 * 3600)))"
@@ -206,7 +206,7 @@ omc_control_defaults AgentVM
 omc_run AgentVM.main.init
 check "a Linux box made before its image was updated is marked, as a macOS one is" "$MARK" "$(box_mark lb)"
 check "  with what to do" \
-    "Needs maintenance|Made before image deb was updated. Recreate it to get the update; what was changed inside it is lost." "$(box_lines lb)"
+    "Needs maintenance|Made before image deb was updated. Recreate to get the update; changes made in the box are lost." "$(box_lines lb)"
 check "a Linux image that needs a guest update is marked" "$MARK" "$(image_mark ub)"
 check "  with what to do" "Needs maintenance|Needs a guest update for agent-vm $VERSION." "$(image_lines ub)"
 check "a newer macOS is nothing to do for a Linux image" "${TAB}|" "$(image_mark deb)|$(image_lines deb)"

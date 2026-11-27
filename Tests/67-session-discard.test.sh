@@ -80,7 +80,7 @@ section "Discard Checked...: one ended session alone"
 omc_run AgentVM.main.session.discard
 check "asks, naming how many" "Discard 1 session?" "$(ui_alert_title)"
 check "  and says it frees nothing now, and that undo ends" \
-    "1 session of myapp: their snapshots, and what an undo kept, are deleted; this frees nothing now: what they hold is held by other sessions or by the project too. Undo is no longer possible for them; their records and reports stay in agent-vm session list." \
+    "1 session of myapp is discarded and can no longer be undone. This frees nothing now: other sessions or the project hold the same files." \
     "$(ui_alert_message)"
 check "  Discard goes on, and nothing is discarded yet" "AgentVM.main.session.discard.confirmed|" "$(ui_alert_action Discard)|$(discards)"
 
@@ -90,7 +90,7 @@ printf '20000000\n21024000\n' > "$FAKE_DF_FILE"
 : > "$FAKE_DF_LOG"
 omc_run AgentVM.main.session.discard.all
 check "asks about the two ended sessions, which free about 1 MB" "Discard 2 sessions?|1" \
-    "$(ui_alert_title)|$(ui_alert_message | /usr/bin/grep -c 'this frees about 1 MB once macOS')"
+    "$(ui_alert_title)|$(ui_alert_message | /usr/bin/grep -c 'This frees about 1 MB\.$')"
 omc_run AgentVM.main.session.discard.confirmed
 check "one call with both ids" "session discard $ENDED1 $ENDED2 --json" "$(discards)"
 check "  the free space read before and after, on the store's volume" "2" "$(/usr/bin/awk 'END { print NR }' "$FAKE_DF_LOG")"
@@ -100,7 +100,7 @@ check "  a toast says what the volume gained" "1" \
 # window's measurement no longer holds them.
 tick 0
 tick 1
-check "  the window's measurement no longer has them" "1" "$(ui_value "$SES_PICKED_ID" | /usr/bin/grep -c 'frees nothing now')"
+check "  the window's measurement no longer has them" "1" "$(ui_value "$SES_PICKED_ID" | /usr/bin/grep -c 'nothing to free')"
 check "  nothing measured again for it; the list and status are read again" "1|1" \
     "$(fake_log | /usr/bin/grep -c '^session usage')|$(fake_log | /usr/bin/sed -n '/^session discard/,$p' | /usr/bin/grep -c '^session list --json$')"
 check "  the question's ids are forgotten: a second Discard does nothing" "1" \
@@ -122,11 +122,11 @@ omc_run AgentVM.main.session.measure
 alerts_reset
 printf '20000000\n20001000\n' > "$FAKE_DF_FILE"
 omc_run AgentVM.main.session.discard.all
-check "the question says about 30 GB" "1" "$(ui_alert_message | /usr/bin/grep -c 'this frees about 30.0 GB')"
+check "the question says about 30 GB" "1" "$(ui_alert_message | /usr/bin/grep -c 'This frees about 30.0 GB')"
 alerts_reset
 omc_run AgentVM.main.session.discard.confirmed
 check "an alert explains: local Time Machine snapshots keep deleted data" "The sessions are discarded|1" \
-    "$(ui_alert_title)|$(ui_alert_message | /usr/bin/grep -c 'local Time Machine snapshots keep deleted data for up to a day')"
+    "$(ui_alert_title)|$(ui_alert_message | /usr/bin/grep -c 'when macOS removes its local Time Machine snapshots, within a day')"
 
 section "a refusal"
 open_project
@@ -195,16 +195,16 @@ check "it opens on the sessions that ended before a day 30 days ago, of which th
     "$(closed "$UUID")|$(ui_value "$DSC_CHOICE_ID")|$(ui_value "$DSC_DATE_ID")|$(on "$DSC_DATE_ID")|$(ui_value "$DSC_SUMMARY_ID")|$(on "$DSC_GO_ID")"
 choose all
 check "all: both ended sessions of the one project, never the active one; the day is off" \
-    "2 sessions of 1 project: this frees about 1 MB once macOS has removed its local Time Machine snapshots.|1|0" \
+    "2 sessions of 1 project. This frees about 1 MB.|1|0" \
     "$(ui_value "$DSC_SUMMARY_ID")|$(on "$DSC_GO_ID")|$(on "$DSC_DATE_ID")"
 choose before
 day 2026-11-25
 check "ended before the day they ended: none" "No session ended before Nov 25 2026.|0" "$(ui_value "$DSC_SUMMARY_ID")|$(on "$DSC_GO_ID")"
 day 2026-11-26T00:00:00
 check "ended before the day after: both (a date and time is taken as its day)" "2 sessions of 1 project|1" \
-    "$(ui_value "$DSC_SUMMARY_ID" | /usr/bin/cut -d: -f1)|$(on "$DSC_GO_ID")"
+    "$(ui_value "$DSC_SUMMARY_ID" | /usr/bin/cut -d. -f1)|$(on "$DSC_GO_ID")"
 day "not a day"
-check "  what is not a day changes nothing" "2 sessions of 1 project" "$(ui_value "$DSC_SUMMARY_ID" | /usr/bin/cut -d: -f1)"
+check "  what is not a day changes nothing" "2 sessions of 1 project" "$(ui_value "$DSC_SUMMARY_ID" | /usr/bin/cut -d. -f1)"
 open_discard "$OTHER_UUID"
 check "a second window while one is open: the open one comes to the front, the new one closes" "1|1" \
     "$(ui_calls "${UUID}${TAB}omc_window${TAB}omc_select")|$(closed "$OTHER_UUID")"
@@ -213,7 +213,7 @@ in_window "$UUID"
 : > "$FAKE_AGENTVM_DIR/log"
 omc_run AgentVM.discard.go
 check "Discard takes only the sessions the line counted: none of them left, nothing is discarded, the window stays and is painted again" \
-    "0||2 sessions of 1 project" "$(closed "$UUID")|$(discards)|$(ui_value "$DSC_SUMMARY_ID" | /usr/bin/cut -d: -f1)"
+    "0||2 sessions of 1 project" "$(closed "$UUID")|$(discards)|$(ui_value "$DSC_SUMMARY_ID" | /usr/bin/cut -d. -f1)"
 printf '20000000\n21024000\n' > "$FAKE_DF_FILE"
 : > "$FAKE_AGENTVM_DIR/log"
 omc_run AgentVM.discard.go

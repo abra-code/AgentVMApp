@@ -476,7 +476,7 @@ main_job_outcome() {
                                   printf 'Image %s is up to date\n' "$_name" ;;
             "image rebuild")      printf 'Image %s was built again\n' "$_name" ;;
             "image setup")        printf 'The setup of image %s is done\n' "$_name" ;;
-            "image view")         printf 'Image %s is shut down; what was done in its window is kept\n' "$_name" ;;
+            "image view")         printf 'Image %s is shut down; its changes are kept\n' "$_name" ;;
             "image fetch-ipsw")   printf 'The macOS restore file is downloaded\n' ;;
             *)                    printf '%s is done (%s)\n' "$_what" "$_target" ;;
         esac
@@ -488,7 +488,7 @@ main_job_outcome() {
         "image create")       printf 'Image %s was not built\n' "$_name" ;;
         "image update"|"image update-guest")
                               printf 'Image %s was not updated\n' "$_name" ;;
-        "image rebuild")      printf 'Image %s was not built again, and is as it was\n' "$_name" ;;
+        "image rebuild")      printf 'Image %s was not built again\n' "$_name" ;;
         "image setup")        printf 'The setup of image %s did not finish\n' "$_name" ;;
         "image view")
             # A view that ended at its window or after it did open the image: what failed came
@@ -619,7 +619,7 @@ main_offer_access() {
     agentvm_valid_name "$_name" || return 0
     ui_set access_offer "$1" "$_name"
     "$dialog" "$1" omc_window omc_present_alert "Image $_name lost Full Disk Access in its update" \
-        "agent-vm-guest had the grant in this image before the update, and does not have it now: macOS ties the grant to the daemon it was made for. Until it is granted again, programs in boxes made from $_name from now on wait, when they open Desktop, Documents or Downloads, on a question macOS asks on the box's screen. The boxes work without it otherwise." \
+        "Until it is granted again, programs in new boxes made from $_name wait on a macOS question when they open Desktop, Documents or Downloads." \
         "Later:cancel:" "Grant It Again...::AgentVM.main.image.access.offered"
 }
 
@@ -787,7 +787,7 @@ main_image_console_log() {
 # that the row's buttons fit beside it.
 main_image_logs_text() {
     if [ -z "$1" ]; then
-        printf 'No build log: agent-vm keeps one for a week\n'
+        printf 'No build log (kept for a week)\n'
         return 0
     fi
     local _what="build"
@@ -988,7 +988,7 @@ main_paint_kept() {
 # main_kept_remove_question <uuid>  ->  the message of the Remove All... question: what goes.
 main_kept_remove_question() {
     local _size="$(main_kept_size_text "$(main_kept_logs "$1" 2)")"
-    printf 'What they ran and what they contacted is deleted from this Mac%s. The logs of boxes that exist are not touched. This cannot be undone.\n' "${_size:+ ($_size)}"
+    printf 'Their records of programs and connections are deleted%s. You can'"'"'t undo this action.\n' "${_size:+ ($_size)}"
 }
 
 # main_kept_hold_question <uuid> <days>  ->  the message of the question a new time is asked with,
@@ -1001,9 +1001,9 @@ main_kept_hold_question() {
     [ -n "$_now" ] || return 0
     local _kept="$(main_kept_boxes_text "$_count")"
     if [ "$2" = "0" ]; then
-        printf 'The logs of %s are kept now: agent-vm removes them the next time it tidies the store, and a box deleted from now on leaves none.\n' "$_kept"
+        printf 'The logs of %s will be removed, and boxes deleted from now on leave none.\n' "$_kept"
     elif [ "$_now" -gt 0 ] && [ "$2" -lt "$_now" ]; then
-        printf 'The logs of %s are kept now: agent-vm removes the ones of boxes deleted more than %s days ago the next time it tidies the store.\n' "$_kept" "$2"
+        printf 'The logs of boxes deleted more than %s days ago will be removed.\n' "$2"
     fi
 }
 
@@ -1132,7 +1132,7 @@ main_paint_settings() {
 # macOS asks about on behalf of the app that started the build. The app cannot read whether it
 # has the permission, so the line is always the same. It is not said of a Linux build, which
 # makes no connection from the Mac to its virtual machine.
-MAIN_LOCAL_NETWORK_TEXT="macOS asks whether AgentVM may find devices on local networks: allow it, since that is how the build reaches the new virtual machine on this Mac. If it was declined before, turn AgentVM on in System Settings > Privacy & Security > Local Network"
+MAIN_LOCAL_NETWORK_TEXT="allow AgentVM to find devices on local networks (System Settings > Privacy & Security > Local Network)"
 
 # main_stage_rows <uuid>  ->  the six steps of Get started, a row each:
 #    1 the step's number   2 its state (done; todo; running, while a job does it; failed;
@@ -1148,8 +1148,6 @@ main_stage_rows() {
     local _uuid="$1"
     if [ "$(main_agentvm_line "$_uuid" 1)" != "0" ]; then
         local _why="$(main_agentvm_line "$_uuid" 2)"
-        # Only for the installed one: a broken developer override is fixed in the setting.
-        [ "$(main_agentvm_line "$_uuid" 3)" = "installed" ] && _why="$_why AgentVM runs the agent-vm installed in ~/.local/bin, the one Terminal and Cadabra run."
         # Install... or Update...: only the installed one is put right by installing.
         local _install=0
         case "$(main_agentvm_line "$_uuid" 1)" in
@@ -1183,9 +1181,9 @@ main_stage_rows() {
     elif [ -n "$_download" ]; then
         printf '3\trunning\t%s\t%s\n' "$(main_download_text "$_download")" "$_can"
     elif [ -n "$_ready" ]; then
-        printf '3\ttodo\tnone downloaded; one is needed only for a macOS image built from nothing\t%s\n' "$_can"
+        printf '3\ttodo\tnone; needed only for a new macOS image\t%s\n' "$_can"
     else
-        printf '3\ttodo\tnone downloaded yet: one is needed only for a macOS image (about 27 GB). A Linux image is built without one\t%s\n' "$_can"
+        printf '3\ttodo\tnone yet; needed only for a macOS image (about 27 GB)\t%s\n' "$_can"
     fi
     local _build="$(main_rows "$_uuid" jobs | /usr/bin/awk -F'\t' '$3 ~ /^image:/ && $4 == "image create" && ($2 == "running" || ($2 == "queued" && !running)) { row = $0; running = ($2 == "running") } END { if (row != "") print row }')"
     # New Image... needs nothing but a Mac that can run boxes: a Linux image is built from nothing.
@@ -1201,16 +1199,16 @@ main_stage_rows() {
         if [ "$(printf '%s\n' "$_build" | /usr/bin/cut -f17)" = "linux" ]; then
             printf '4\trunning\t%s: %s\t%s\n' "${_target#image:}" "$(main_job_text "$_build")" "$_button"
         else
-            printf '4\trunning\t%s: %s. %s\t%s\n' "${_target#image:}" "$(main_job_text "$_build")" "$MAIN_LOCAL_NETWORK_TEXT" "$_button"
+            printf '4\trunning\t%s: %s. When macOS asks, %s\t%s\n' "${_target#image:}" "$(main_job_text "$_build")" "$MAIN_LOCAL_NETWORK_TEXT" "$_button"
         fi
     elif [ -n "$_building" ]; then
-        printf '4\trunning\t%s: being built by a command outside this app\t%s\n' "$(main_some_names "$_building")" "$_button"
+        printf '4\trunning\t%s: building outside this app\t%s\n' "$(main_some_names "$_building")" "$_button"
     elif [ -n "$_broken" ]; then
-        printf '4\tattention\tnone ready: %s appears not ready, and agent-vm reports a failed build. Delete... removes such an image and frees its space; New Image... builds another\t%s\n' "$(main_some_names "$_broken")" "$_button"
+        printf '4\tattention\tnone ready: the build of %s failed\t%s\n' "$(main_some_names "$_broken")" "$_button"
     elif [ -n "$_files" ]; then
-        printf '4\ttodo\tnone ready yet: New Image... builds a Linux image, in a few minutes on a fast connection (its system is downloaded), or a macOS image in about 10. For a macOS image, %s\t%s\n' "$MAIN_LOCAL_NETWORK_TEXT" "$_button"
+        printf '4\ttodo\tnone yet; a Linux image takes a few minutes, a macOS image about 10. For macOS, when asked, %s\t%s\n' "$MAIN_LOCAL_NETWORK_TEXT" "$_button"
     else
-        printf '4\ttodo\tnone ready yet: New Image... builds a Linux image, in a few minutes on a fast connection (its system is downloaded). A macOS image needs the restore file of the step above first, and about 10 minutes\t%s\n' "$_button"
+        printf '4\ttodo\tnone yet; a Linux image takes a few minutes. A macOS image needs a restore file first\t%s\n' "$_button"
     fi
     # Full Disk Access is a permission of macOS: only the macOS images are asked about it.
     local _macos="$(main_rows "$_uuid" images | /usr/bin/awk -F'\t' '$2 == "ready" && $12 != "linux" { print $1 }')"
@@ -1219,11 +1217,11 @@ main_stage_rows() {
     _button=0
     [ -n "$_lacking" ] && _button="$_can"
     if [ -z "$_ready" ]; then
-        printf '5\ttodo\toptional: granted once, by hand, on the screen of a macOS image. Boxes work without it\t0\n'
+        printf '5\ttodo\toptional; granted by hand in a macOS image\t0\n'
     elif [ -z "$_macos" ]; then
-        printf '5\tdone\tnot needed: no image here runs macOS, and a Linux image has no such permission\t0\n'
+        printf '5\tdone\tnot needed for Linux images\t0\n'
     elif [ -z "$_granted" ]; then
-        printf "5\ttodo\toptional, and no macOS image has it (%s). Boxes work without it: only a program that opens the box account's Desktop, Documents or Downloads waits, on a question macOS asks on the box's screen\t%s\n" "$(main_some_names "$_lacking")" "$_button"
+        printf '5\ttodo\toptional; not granted in %s\t%s\n' "$(main_some_names "$_lacking")" "$_button"
     elif [ -n "$_lacking" ]; then
         printf '5\tdone\t%s; not yet: %s\t%s\n' "$(main_some_names "$_granted")" "$(main_some_names "$_lacking")" "$_button"
     else
@@ -1235,7 +1233,7 @@ main_stage_rows() {
     if [ -n "$_boxes" ]; then
         printf '6\tdone\t%s\t%s\n' "$(main_some_names "$_boxes")" "$_button"
     else
-        printf '6\ttodo\tnone yet. A box is a working copy of an image, made in seconds, and it is what runs: keep one for your own work, or let avm or Cadabra make throw-away ones\t%s\n' "$_button"
+        printf '6\ttodo\tnone yet\t%s\n' "$_button"
     fi
 }
 
@@ -1329,22 +1327,22 @@ main_maintenance() {
         boxes)
             main_rows "$1" boxes | /usr/bin/awk -F'\t' -v current="$_version" -v images=" $(main_rows "$1" images | /usr/bin/cut -f1 | /usr/bin/tr '\n' ' ')" '
                 $13 != "true" && $3 != "-" && !index(images, " " $3 " ") {
-                    printf "%s\tImage %s, which it was made from, was deleted. It works as it is; Recreate makes it again from another image, and what was changed inside it is lost.\n", $1, $3 }
+                    printf "%s\tIts image %s was deleted. Recreate uses another image; changes made in the box are lost.\n", $1, $3 }
                 $13 != "true" && (","$18",") ~ /,recreate,/ {
                     what = "changed"; gets = "the image as it is now"
                     if ($22 == "guest-update")  { what = "had its guest daemon replaced"; gets = "the new one" }
                     if ($22 == "image-updated") { what = "was updated"; gets = "the update" }
                     if ($22 == "image-rebuilt") { what = "was built again"; gets = "the new image" }
-                    printf "%s\tMade before image %s %s. Recreate it to get %s; what was changed inside it is lost.\n", $1, $3, what, gets }
+                    printf "%s\tMade before image %s %s. Recreate to get %s; changes made in the box are lost.\n", $1, $3, what, gets }
                 ($2 == "running" || $2 == "unresponsive") && $12 != "-" && $12 != current {
-                    printf "%s\tRuns agent-vm %s. Stop it and start it again to move it to %s.\n", $1, $12, current }' ;;
+                    printf "%s\tRuns agent-vm %s. Restart it to use %s.\n", $1, $12, current }' ;;
         images)
             main_rows "$1" images | /usr/bin/awk -F'\t' -v current="$_version" '
                 $2 == "failed" { next }
                 (","$8",") ~ /,guest-update,/ {
                     printf "%s\tNeeds a guest update for agent-vm %s.\n", $1, current }'
             main_rows "$1" updates | /usr/bin/awk -F'\t' '
-                $6 != "-" { printf "%s\tmacOS %s is available. Update... installs it, in about 15 minutes.\n", $1, $6 }'
+                $6 != "-" { printf "%s\tmacOS %s is available (about 15 minutes to install).\n", $1, $6 }'
             main_rebuild_lines "$1" ;;
     esac
 }
@@ -1361,11 +1359,11 @@ main_rebuild_lines() {
         esac
         case "$_reason" in
             base-rebuilt)
-                printf '%s\tIts base image %s was built again since it was made from it. Build Again... makes it again from it.\n' "$_name" "$_base" ;;
+                printf '%s\tBase image %s was built again.\n' "$_name" "$_base" ;;
             base-recipes-changed)
-                printf '%s\tIts base image %s has other tools than when it was made from it. Build Again... makes it again from it.\n' "$_name" "$_base" ;;
+                printf '%s\tBase image %s has different tools now.\n' "$_name" "$_base" ;;
             *)
-                printf '%s\tIts base image %s changed since it was made from it. Build Again... makes it again from it.\n' "$_name" "$_base" ;;
+                printf '%s\tBase image %s changed.\n' "$_name" "$_base" ;;
         esac
     done
 }
@@ -1537,7 +1535,7 @@ main_box_state_text() {
             fi
             if [ -n "$_seconds" ] && [ "$3" = "-" ] && [ "$_seconds" -ge $((MAIN_IDLE_BOX_HOURS * 3600)) ]; then
                 case "$4" in
-                    -|0) _text="$_text. No program runs in it now." ;;
+                    -|0) _text="$_text, idle" ;;
                 esac
             fi
             printf '%s\n' "$_text" ;;
@@ -1667,7 +1665,7 @@ main_paint_box_detail() {
         elif [ "$_state" = "stopped" ]; then
             _text="-"
         else
-            _text="nobody: it runs until it is stopped"
+            _text="nobody (runs until stopped)"
         fi
         "$dialog" "$_uuid" "$MAIN_BOX_OWNER_ID" "$_text"
 
@@ -1678,9 +1676,9 @@ main_paint_box_detail() {
         main_paint_box_memory "$_uuid" "$_name" "$_state" always
 
         if [ "$_disposable" = "true" ]; then
-            _text="no: it is deleted when it stops"
+            _text="no, deleted when it stops"
         else
-            _text="yes, until it is deleted"
+            _text="yes"
         fi
         "$dialog" "$_uuid" "$MAIN_BOX_KEPT_ID" "$_text"
 
@@ -1739,15 +1737,13 @@ main_paint_box_detail() {
 # main_box_delete_question <uuid> <name>  ->  the confirmation's message: what deleting frees, that
 # the image it was made from stays, and that agent-vm keeps the box's logs for some days.
 main_box_delete_question() {
-    local _text="The box's folder and disk are deleted, with everything installed or saved in it"
+    local _text="Everything installed or saved in the box is deleted"
     local _size="$(ui_size_text "$(main_info "$1" box "$2" | /usr/bin/cut -f28)")"
-    [ -n "$_size" ] && _text="$_text, which frees about $_size"
+    [ -n "$_size" ] && _text="$_text, freeing about $_size"
     _text="$_text."
-    local _image="$(main_row "$1" boxes "$2" | /usr/bin/cut -f3)"
-    [ -n "$_image" ] && [ "$_image" != "-" ] && _text="$_text The image it was made from, $_image, is kept."
     local _kept="$(main_box_logs_kept_text "$1" "$2")"
     [ -n "$_kept" ] && _text="$_text $_kept"
-    printf '%s This cannot be undone.\n' "$_text"
+    printf '%s You can'"'"'t undo this action.\n' "$_text"
 }
 
 # main_box_askable <uuid> <name> <recreate|delete|start|stop>  ->  0 when that can be done to the
@@ -1836,7 +1832,7 @@ main_image_state_text() {
     case "$1" in
         ready)
             if [ "${3:-}" = "busy" ]; then
-                echo "Ready, and being updated or set up by another agent-vm command"
+                echo "Ready; in use by another agent-vm command"
             else
                 echo "Ready"
             fi ;;
@@ -2028,7 +2024,7 @@ main_space_text() {
     if [ -n "$_size" ]; then
         local _own="$(ui_size_text "$2")"
         if [ -n "$_own" ]; then
-            printf '%s; %s its own (what Delete frees)\n' "$_size" "$_own"
+            printf '%s; Delete frees %s\n' "$_size" "$_own"
         else
             printf '%s\n' "$_size"
         fi
@@ -2154,7 +2150,7 @@ main_paint_image_detail() {
         # A Linux image has no such permission to grant, and the row says so in place of a state.
         local _date="$(ui_date_text "$_checked")"
         case "$_kind:,$_needs,:$_fda" in
-            linux:*)                          _text="not needed: a Linux image has no such permission" ;;
+            linux:*)                          _text="not needed (Linux)" ;;
             *,full-disk-access,*:not-granted) _text="not granted${_date:+ (checked $_date)}" ;;
             *,full-disk-access,*)             _text="not granted" ;;
             *:granted)                        _text="granted${_date:+ (checked $_date)}" ;;
@@ -2315,16 +2311,16 @@ main_image_rebuildable() {
 # does, and what it means for the image's boxes and for the images built from it.
 main_image_rebuild_question() {
     local _base="$(main_rows "$1" rebuilds | /usr/bin/awk -F'\t' -v name="$2" '$1 "" == name { print $3; exit }')"
-    local _text="A fresh copy of image $_base is made, and the recipes $2 added run on it again, as when it was built. $2 stays as it is, and can be used, until the new one is ready; a failure or Stop leaves it as it was."
+    local _text="A fresh copy of $_base gets the recipes of $2 again. $2 stays usable until the new one is ready, and stays as it is if the build fails or is stopped."
     local _boxes="$(main_rows "$1" boxes | /usr/bin/awk -F'\t' -v name="$2" '$3 "" == name && $13 != "true" { print $1 }')"
-    [ -n "$_boxes" ] && _text="$_text Boxes made from it ($(ui_lines_text "$_boxes")) keep what they have until they are recreated."
+    [ -n "$_boxes" ] && _text="$_text Its boxes change only when recreated."
     local _derived="$(main_rows "$1" images | /usr/bin/awk -F'\t' -v name="$2" '$6 "" == name { print $1 }')"
-    [ -n "$_derived" ] && _text="$_text Images built from it ($(ui_lines_text "$_derived")) are not built again with it."
+    [ -n "$_derived" ] && _text="$_text Images built from it are not rebuilt."
     # A macOS rebuild boots the new image, and agent-vm waits for no place: said, not refused, as
     # the update window does, since a place may be free by the click.
     if [ "$(main_guest "$1" images "$2")" != "linux" ]; then
         _text="$_text$(main_macos_vms "$1" | /usr/bin/awk -F'\t' '$1 >= $2 {
-            printf " No virtual machine slot is free now (%s of %s macOS virtual machines running), and the rebuild needs one: it fails at once until a macOS box or build stops.", $1, $2 }')"
+            printf " No macOS virtual machine is free (%s of %s running): the build fails until one stops.", $1, $2 }')"
     fi
     printf '%s\n' "$_text"
 }
@@ -2351,15 +2347,16 @@ main_image_rebuild() {
 # and what it means for what was made from the image (they are clones and keep working; a box
 # can then be recreated only from another image).
 main_image_delete_question() {
-    local _text="The image's folder and disk are deleted"
+    local _text="The image is deleted"
     local _size="$(ui_size_text "$(main_info "$1" image "$2" | /usr/bin/cut -f25)")"
-    [ -n "$_size" ] && _text="$_text, which frees about $_size"
+    [ -n "$_size" ] && _text="$_text, freeing about $_size"
     _text="$_text."
     local _boxes="$(main_rows "$1" boxes | /usr/bin/awk -F'\t' -v name="$2" '$3 "" == name { print $1 }')"
-    [ -n "$_boxes" ] && _text="$_text Boxes made from it ($(ui_lines_text "$_boxes")) keep working; they can be recreated from another image only."
     local _derived="$(main_rows "$1" images | /usr/bin/awk -F'\t' -v name="$2" '$6 "" == name { print $1 }')"
-    [ -n "$_derived" ] && _text="$_text Images built from it ($(ui_lines_text "$_derived")) keep working."
-    printf '%s This cannot be undone.\n' "$_text"
+    if [ -n "$_boxes" ] || [ -n "$_derived" ]; then
+        _text="$_text What was made from it keeps working."
+    fi
+    printf '%s You can'"'"'t undo this action.\n' "$_text"
 }
 
 # main_unready_image_question <uuid> <name>  ->  the confirmation's message for an image that is
@@ -2369,7 +2366,7 @@ main_image_delete_question() {
 main_unready_image_question() {
     local _row="$(main_row "$1" images "$2")"
     local _failure="$(printf '%s\n' "$_row" | /usr/bin/cut -f3)"
-    local _text="It appears not ready: its build did not finish, or still runs outside this app."
+    local _text="Its build did not finish, or is still running outside this app."
     if [ "$(printf '%s\n' "$_row" | /usr/bin/cut -f2)" = "failed" ]; then
         _text="agent-vm reports that its build failed."
         [ -n "$_failure" ] && [ "$_failure" != "-" ] && _text="agent-vm reports that its build failed: ${_failure%.}."

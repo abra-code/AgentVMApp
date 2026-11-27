@@ -164,7 +164,7 @@ store "$BEHIND"
 omc_run AgentVM.main.activated
 check "the card is marked"           "Needs maintenance" "$(ui_rows "$MAIN_IMAGES_ID" | row_named dev-acp | col 4)"
 check "the pane says which, and what installs it" \
-    "Needs maintenance|macOS 27.0.1 is available. Update... installs it, in about 15 minutes." \
+    "Needs maintenance|macOS 27.0.1 is available (about 15 minutes to install)." \
     "$(ui_value "$MAIN_IMAGE_MAINTENANCE_ID" | /usr/bin/paste -sd '|' -)"
 check "an image that is not behind is not marked" "" "$(ui_rows "$MAIN_IMAGES_ID" | row_named dev-agents | col 4)"
 

@@ -93,7 +93,7 @@ dsc_summary() {
     fi
     local _count="$(printf '%s\n' "$3" | /usr/bin/awk '{ print NF }')"
     local _projects="$(ses_session_rows "$2" | DSC_IDS=" $3 " /usr/bin/awk -F'\t' 'index(ENVIRON["DSC_IDS"], " " $1 " ") && !seen[$2]++' | /usr/bin/awk 'END { print NR }')"
-    printf '%s of %s: %s.\n' "$(main_count_text "$_count" session)" "$(main_count_text "$_projects" project)" "$(ses_space_phrase "$2" "$3")"
+    printf '%s of %s. %s\n' "$(main_count_text "$_count" session)" "$(main_count_text "$_projects" project)" "$(ses_space_phrase "$2" "$3")"
 }
 
 # dsc_paint <uuid>  ->  the date picker on while the choice is a day, the line above the buttons,

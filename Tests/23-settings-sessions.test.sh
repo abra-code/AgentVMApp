@@ -68,7 +68,7 @@ check "kept now: three sessions, 31.7 GB to free" "3 sessions, about 31.7 GB to 
 check "  the expiry picker at Never, on, and what it means" "0|1|kept until discarded" \
     "$(ui_value "$SES_EXPIRY_ID")|$(on "$SES_EXPIRY_ID")|$(ui_value "$SES_EXPIRY_TEXT_ID")"
 check "the free disk space says what sessions hold that can be freed" "1" \
-    "$(ui_value "$MAIN_DISK_ID" | /usr/bin/grep -c '; agent-vm sessions hold about 31.7 GB you can free$')"
+    "$(ui_value "$MAIN_DISK_ID" | /usr/bin/grep -c '; sessions hold about 31.7 GB you can free$')"
 fake_reset
 status_with 1048576 0 1
 open_window
@@ -77,7 +77,7 @@ check "  not under 1 GB" "0|3 sessions, about 1 MB to free" \
 fake_reset
 status_with null 30 1
 open_window
-check "never measured: said so; an expiry of 30 days shown" "3 sessions, not measured yet|30|an ended session goes 30 days after it ends, at the end of a later session" \
+check "never measured: said so; an expiry of 30 days shown" "3 sessions, not measured yet|30|30 days after a session ends" \
     "$(ui_value "$SES_KEPT_ID")|$(ui_value "$SES_EXPIRY_ID")|$(ui_value "$SES_EXPIRY_TEXT_ID")"
 
 section "Show"
@@ -94,7 +94,7 @@ export AGENTVM_APP_NOW
 open_window
 pick 14
 check "14 days, with two sessions ended 20 days ago: asks, saying what goes (no size: this window never measured)" "Discard ended sessions 14 days after they end?|1|" \
-    "$(ui_alert_title)|$(ui_alert_message | /usr/bin/grep -c 'At the end of the next session, agent-vm discards the 2 sessions that ended, or were undone, 14 days ago or earlier, and from then on each one 14 days after it ends')|$(/bin/cat "$FAKE_AGENTVM_DIR/discard-after" 2>/dev/null)"
+    "$(ui_alert_title)|$(ui_alert_message | /usr/bin/grep -c 'At the end of the next session, agent-vm discards 2 sessions older than 14 days, then each session 14 days after it ends')|$(/bin/cat "$FAKE_AGENTVM_DIR/discard-after" 2>/dev/null)"
 check "  Set confirms, Cancel puts the picker back" "AgentVM.main.session.expiry.confirmed|AgentVM.main.session.expiry.canceled" \
     "$(ui_alert_action Set)|$(ui_alert_action Cancel)"
 omc_run AgentVM.main.session.expiry.confirmed
@@ -109,7 +109,7 @@ open_window
 alerts_reset
 pick 14
 check "  an undone session counts from its undo, as agent-vm's expiry does: one of the two goes" "1" \
-    "$(ui_alert_message | /usr/bin/grep -c 'agent-vm discards the 1 session that ended, or was undone, 14 days ago or earlier')"
+    "$(ui_alert_message | /usr/bin/grep -c 'agent-vm discards 1 session older than 14 days')"
 fake_reset
 status_with 1048576 0 1
 open_window
@@ -152,7 +152,7 @@ check "Show in Finder opens their folder" "$IPSW_FOLDER" "$(/bin/cat "$FAKE_OPEN
 alerts_reset
 omc_run AgentVM.main.restore.remove
 check "Remove... asks, naming them and the download a new image then needs" "1|1" \
-    "$(ui_alert_title | /usr/bin/grep -c '^Remove [0-9]* restore image')|$(ui_alert_message | /usr/bin/grep -c "^$RESTORE.*Get macOS... downloads one (about 27 GB)")"
+    "$(ui_alert_title | /usr/bin/grep -c '^Remove [0-9]* restore image')|$(ui_alert_message | /usr/bin/grep -c "^$RESTORE.*a new macOS image needs another download (about 27 GB)")"
 omc_run AgentVM.main.restore.remove.confirmed
 check "  Remove: each one removed through agent-vm" "1" "$(fake_log | /usr/bin/grep -c "^image fetch-ipsw --remove $RESTORE --json$")"
 fake_reset

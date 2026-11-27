@@ -1743,7 +1743,7 @@ check "reads status and the restore files, and measures the image, first" "statu
     "$(fake_log | /usr/bin/paste -sd '|' -)"
 check "asks" "Delete image macos-27?" "$(ui_alert_title)"
 check "  why it is not ready, where it is, what deleting frees, and that it is final" \
-    "agent-vm reports that its build failed: the virtual machine did not answer within 600 s. It is in ~/store/images/macos-27. The image's folder and disk are deleted, which frees about 1.7 GB. This cannot be undone." \
+    "agent-vm reports that its build failed: the virtual machine did not answer within 600 s. It is in ~/store/images/macos-27. The image is deleted, freeing about 1.7 GB. You can't undo this action." \
     "$(ui_alert_message)"
 check "  Delete confirms, Cancel does nothing" "AgentVM.newimage.delete.confirmed|" "$(ui_alert_action Delete)|$(ui_alert_action Cancel)"
 check "  nothing is deleted yet, and the image asked about is kept" "0|macos-27" "$(fake_log | /usr/bin/grep -c '^image delete')|$(kept delete)"

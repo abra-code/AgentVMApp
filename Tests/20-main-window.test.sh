@@ -13,7 +13,7 @@
 . "$OMCTEST_TESTS/lib.test.agentvm.sh"
 
 # What the image step of Get started says about Local Network access while no image is ready.
-LOCAL_NETWORK="macOS asks whether AgentVM may find devices on local networks: allow it, since that is how the build reaches the new virtual machine on this Mac. If it was declined before, turn AgentVM on in System Settings > Privacy & Security > Local Network"
+LOCAL_NETWORK="allow AgentVM to find devices on local networks (System Settings > Privacy & Security > Local Network)"
 
 import_view_ids "$APP_SCRIPTS/lib.agentvm.main.sh"
 [ -n "$MAIN_BOXES_ID" ] && [ -n "$MAIN_IMAGES_ID" ] && [ -n "$MAIN_GETSTARTED_ID" ] && [ -n "$MAIN_BOX_DETAIL_ID" ] || {
@@ -238,7 +238,7 @@ check_status "the init handler exits cleanly" 0
 check "Get started is shown" "1" "$(visible "$MAIN_GETSTARTED_ID")"
 check "Status is not"        "0" "$(visible "$MAIN_STATUS_ID")"
 check "the first step is red, and says where it looked" \
-    "xmark.circle.fill|agent-vm is not installed: there is nothing at ~/.local/bin/agent-vm. AgentVM runs the agent-vm installed in ~/.local/bin, the one Terminal and Cadabra run." \
+    "xmark.circle.fill|agent-vm is not installed: there is nothing at ~/.local/bin/agent-vm." \
     "$(ui_prop $((STAGE_SYMBOL + 1)) systemName)|$(fact 1)"
 check "agent-vm never ran"   "" "$(fake_log)"
 check "the poll loop is still chained, to notice an install" "1" "$(chain_asked AgentVM.main.poll)"
@@ -262,7 +262,7 @@ check "Get started is shown" "1" "$(visible "$MAIN_GETSTARTED_ID")"
 check "the version and where it is" \
     "$VERSION, test agent-vm at $FAKE_AGENTVM" "$(fact 1)"
 check "what exists and what does not" \
-    "none ready yet: New Image... builds a Linux image, in a few minutes on a fast connection (its system is downloaded), or a macOS image in about 10. For a macOS image, $LOCAL_NETWORK|none yet. A box is a working copy of an image, made in seconds, and it is what runs: keep one for your own work, or let avm or Cadabra make throw-away ones" "$(fact 4)|$(fact 6)"
+    "none yet; a Linux image takes a few minutes, a macOS image about 10. For macOS, when asked, $LOCAL_NETWORK|none yet" "$(fact 4)|$(fact 6)"
 
 section "images but no box: Status, and the Boxes tab says what a box is"
 /usr/bin/jq '.boxes = []' "$FIXTURES_AGENTVM/status.json" > "$FAKE_AGENTVM_DIR/status.json"
@@ -270,7 +270,7 @@ open_window
 check "Status is shown: a box does not decide the face" "0|1" "$(visible "$MAIN_GETSTARTED_ID")|$(visible "$MAIN_STATUS_ID")"
 check "the Boxes tab shows the placeholder for no box at all, not the one for no selection" "1 0" "$(visible "$MAIN_NO_BOXES_ID") $(visible "$MAIN_BOX_NONE_ID")"
 check "  which says what a box is, and the ways to make one" "No Boxes Yet|1" \
-    "$(/usr/bin/jq -r --argjson id "$MAIN_NO_BOXES_ID" '.. | objects | select(.id? == $id) | .properties.title' "$APP_RESOURCES/Base.lproj/AgentVM.json")|$(/usr/bin/jq -r --argjson id "$MAIN_NO_BOXES_ID" '.. | objects | select(.id? == $id) | .properties.description' "$APP_RESOURCES/Base.lproj/AgentVM.json" | /usr/bin/tr '\n' ' ' | /usr/bin/grep -c 'A box is a working .* of an image.*An image is the template.*plus button.*avm.*Cadabra')"
+    "$(/usr/bin/jq -r --argjson id "$MAIN_NO_BOXES_ID" '.. | objects | select(.id? == $id) | .properties.title' "$APP_RESOURCES/Base.lproj/AgentVM.json")|$(/usr/bin/jq -r --argjson id "$MAIN_NO_BOXES_ID" '.. | objects | select(.id? == $id) | .properties.description' "$APP_RESOURCES/Base.lproj/AgentVM.json" | /usr/bin/tr '\n' ' ' | /usr/bin/grep -c 'A box is a working copy of an image.*plus button')"
 
 
 section "a doctor failure: Get started, with doctor's detail"
@@ -353,7 +353,7 @@ check "the project folder"     "/Users/you/src/app" "$(ui_value "$MAIN_BOX_PROJE
 check "the programs in it"     "2" "$(ui_value "$MAIN_BOX_PROGRAMS_ID")"
 check "the program that owns it, by name" "Cadabra (812)" "$(ui_value "$MAIN_BOX_OWNER_ID")"
 check "processors and memory"  "4 CPUs, 8 GB" "$(ui_value "$MAIN_BOX_HARDWARE_ID")"
-check "kept"                   "yes, until it is deleted" "$(ui_value "$MAIN_BOX_KEPT_ID")"
+check "kept"                   "yes" "$(ui_value "$MAIN_BOX_KEPT_ID")"
 check "the day it was made"    "Sep 26, 2026" "$(ui_value "$MAIN_BOX_CREATED_ID")"
 check "its folder"             "/Users/you/Library/Application Support/agent-vm/Boxes/s3" "$(ui_value "$MAIN_BOX_FOLDER_ID")"
 
@@ -362,14 +362,14 @@ select_box try1
 check "not responding, and why" "Not responding: no answer from the supervisor within 5 s" "$(ui_value "$MAIN_BOX_STATE_ID")"
 check "  a running box's actions, since it may still hold its VM" "1 0" "$(visible "$MAIN_RUNNING_BOX_ACTIONS_ID") $(visible "$MAIN_STOPPED_BOX_ACTIONS_ID")"
 check "  no network record: open" "open" "$(ui_value "$MAIN_BOX_NETWORK_ID")"
-check "  no owner"             "nobody: it runs until it is stopped" "$(ui_value "$MAIN_BOX_OWNER_ID")"
+check "  no owner"             "nobody (runs until stopped)" "$(ui_value "$MAIN_BOX_OWNER_ID")"
 check "  no program"           "none" "$(ui_value "$MAIN_BOX_PROGRAMS_ID")"
 
 section "a stopped disposable box's details"
 select_box cadabra-spike
 check "stopped"                "Stopped" "$(ui_value "$MAIN_BOX_STATE_ID")"
 check "  a stopped box's actions" "0 1" "$(visible "$MAIN_RUNNING_BOX_ACTIONS_ID") $(visible "$MAIN_STOPPED_BOX_ACTIONS_ID")"
-check "  not kept"             "no: it is deleted when it stops" "$(ui_value "$MAIN_BOX_KEPT_ID")"
+check "  not kept"             "no, deleted when it stops" "$(ui_value "$MAIN_BOX_KEPT_ID")"
 check "  no owner while stopped" "-" "$(ui_value "$MAIN_BOX_OWNER_ID")"
 check "  no project"           "none" "$(ui_value "$MAIN_BOX_PROJECT_ID")"
 check "  4 GB"                 "4 CPUs, 4 GB" "$(ui_value "$MAIN_BOX_HARDWARE_ID")"

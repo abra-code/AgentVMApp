@@ -184,7 +184,7 @@ poll 1
 check "the pane shows the image ready" "Ready" "$(ui_value "$MAIN_IMAGE_STATE_ID")"
 check "  with its buttons back"  "1 1 1" "$(held)"
 check "a toast says the image is shut down and what was done is kept" "1" \
-    "$(ui_calls 'omc_present_toast.*Image dev-acp is shut down; what was done in its window is kept\.')"
+    "$(ui_calls 'omc_present_toast.*Image dev-acp is shut down; its changes are kept\.')"
 check "  no alert"               "" "$(ui_alert_title)"
 
 # -----------------------------------------------------------------------------------------------
@@ -232,7 +232,7 @@ job_end done
 clear_alerts
 poll 1
 check "closed: the toast says the image is shut down and what was done is kept" "1|" \
-    "$(ui_calls 'omc_present_toast.*Image deb-agents is shut down; what was done in its window is kept\.')|$(ui_alert_title)"
+    "$(ui_calls 'omc_present_toast.*Image deb-agents is shut down; its changes are kept\.')|$(ui_alert_title)"
 
 section "a Linux image's view that fails after its window opened"
 # Before the shutdown agent-vm checks the image again as its build sealed it; one that no longer

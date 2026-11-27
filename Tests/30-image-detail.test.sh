@@ -104,7 +104,7 @@ check "the guest daemon and its features" \
 check "Full Disk Access, and when it was checked" "granted (checked Oct 2, 2026)" "$(ui_value "$MAIN_IMAGE_FDA_ID")"
 check "processors and memory"   "4 CPUs, 8 GB" "$(ui_value "$MAIN_IMAGE_HARDWARE_ID")"
 check "the space: all, its own, and what it added over its base" \
-    "38.8 GB; 1.7 GB its own (what Delete frees); 1.7 GB added over dev-node" "$(ui_value "$MAIN_IMAGE_SPACE_ID")"
+    "38.8 GB; Delete frees 1.7 GB; 1.7 GB added over dev-node" "$(ui_value "$MAIN_IMAGE_SPACE_ID")"
 check "the day it was made, and how long the build took" "Sep 26, 2026, built in 2 min" "$(ui_value "$MAIN_IMAGE_CREATED_ID")"
 check "the box made from it"    "s3 (running)" "$(ui_value "$MAIN_IMAGE_BOXES_ID")"
 check "Delete is enabled"       "1" "$(enabled "$MAIN_IMAGE_DELETE_ID")"
@@ -226,7 +226,7 @@ check "reads status and measures the image again first" "status --json|image inf
     "$(fake_log | /usr/bin/paste -sd '|' -)"
 check "asks" "Delete image dev-acp?" "$(ui_alert_title)"
 check "  what it frees, the box made from it, and that it is final" \
-    "The image's folder and disk are deleted, which frees about 1.7 GB. Boxes made from it (s3) keep working; they can be recreated from another image only. This cannot be undone." \
+    "The image is deleted, freeing about 1.7 GB. What was made from it keeps working. You can't undo this action." \
     "$(ui_alert_message)"
 check "  Delete confirms" "AgentVM.main.image.delete.confirmed" "$(ui_alert_action Delete)"
 check "  Cancel does nothing" "" "$(ui_alert_action Cancel)"
@@ -236,7 +236,7 @@ select_image dev-node
 alerts_reset
 omc_run AgentVM.main.image.delete
 check "an image others were built from says they keep working, and one not measured says no size" \
-    "The image's folder and disk are deleted. Images built from it (dev-acp and dev-agents) keep working. This cannot be undone." \
+    "The image is deleted. What was made from it keeps working. You can't undo this action." \
     "$(ui_alert_message)"
 
 section "Delete: the image asked about is the one deleted"
@@ -364,20 +364,20 @@ check "its tools: its recipes and the compiler" \
     "Node and npm from nodejs.org, for Linux images; Claude Code, Codex and opencode (needs Node: put Recipes/node, or Recipes/linux-node in a Linux image, before it); build-essential 12.12" \
     "$(ui_value "$MAIN_IMAGE_TOOLS_ID")"
 check "the guest daemon and its three features" "0.7.9: terminal, time-sync, terminal-pixels" "$(ui_value "$MAIN_IMAGE_GUEST_ID")"
-check "Full Disk Access is not needed, and the row says so" "not needed: a Linux image has no such permission" "$(ui_value "$MAIN_IMAGE_FDA_ID")"
+check "Full Disk Access is not needed, and the row says so" "not needed (Linux)" "$(ui_value "$MAIN_IMAGE_FDA_ID")"
 check "  with no Set Up..., shown or on" "0 0" "$(ui_visible "$MAIN_IMAGE_ACCESS_ID") $(enabled "$MAIN_IMAGE_ACCESS_ID")"
 check "View is shown and on: a recipe gave this one a desktop" "1 1" "$(visible "$MAIN_IMAGE_VIEW_ID") $(enabled "$MAIN_IMAGE_VIEW_ID")"
 check "Update, New Image and New Box are on" "1 1 1" \
     "$(enabled "$MAIN_IMAGE_UPDATE_ID") $(enabled "$MAIN_IMAGE_DERIVE_ID") $(enabled "$MAIN_IMAGE_BOX_ID")"
 check "processors and memory"   "4 CPUs, 4 GB" "$(ui_value "$MAIN_IMAGE_HARDWARE_ID")"
 check "the space: all, its own, and what it added over its base" \
-    "3.6 GB; 1.7 GB its own (what Delete frees); 1.7 GB added over deb" "$(ui_value "$MAIN_IMAGE_SPACE_ID")"
+    "3.6 GB; Delete frees 1.7 GB; 1.7 GB added over deb" "$(ui_value "$MAIN_IMAGE_SPACE_ID")"
 check "the day it was made, and how long the build took" "Oct 7, 2026, built in 24 s" "$(ui_value "$MAIN_IMAGE_CREATED_ID")"
 select_image deb
 check "one built from no image, before agent-vm measured it: a cloud image, and nothing known of its tools" \
     "a cloud image|the system only" "$(ui_value "$MAIN_IMAGE_BASE_ID")|$(ui_value "$MAIN_IMAGE_TOOLS_ID")"
 check "  Full Disk Access is not needed whether it was measured or not" \
-    "not needed: a Linux image has no such permission" "$(ui_value "$MAIN_IMAGE_FDA_ID")"
+    "not needed (Linux)" "$(ui_value "$MAIN_IMAGE_FDA_ID")"
 check "  the box made from it, and the image built from it" "lb (stopped)|deb-agents" \
     "$(ui_value "$MAIN_IMAGE_BOXES_ID")|$(ui_value "$MAIN_IMAGE_DERIVED_ID")"
 check "  no View: it has no desktop, so no screen" "0 0" "$(ui_visible "$MAIN_IMAGE_VIEW_ID") $(enabled "$MAIN_IMAGE_VIEW_ID")"
@@ -470,7 +470,7 @@ opened() {
 listed() {
     fake_log | /usr/bin/grep -c '^job list --json$'
 }
-NONE="No build log: agent-vm keeps one for a week"
+NONE="No build log (kept for a week)"
 fake_reset
 deb_folder="$OMCTEST_WORK/logs store/Images/deb"
 /bin/mkdir -p "$deb_folder" "$JOB_FOLDERS"

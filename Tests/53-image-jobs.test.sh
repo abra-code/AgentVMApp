@@ -156,7 +156,7 @@ job_edit 'map(select(.state != "running" and .state != "queued"))'
 select_image dev-acp
 poll 1
 check "its card is drawn as one being built, and says Busy" "hammer.fill${TAB}Busy - macOS 27.0 - from dev-node" "$(card dev-acp)"
-check "the pane says who holds it" "Ready, and being updated or set up by another agent-vm command" "$(ui_value "$MAIN_IMAGE_STATE_ID")"
+check "the pane says who holds it" "Ready; in use by another agent-vm command" "$(ui_value "$MAIN_IMAGE_STATE_ID")"
 check "  no job, so no Progress..., and Delete is off" "0|0" "$(ui_visible "$MAIN_IMAGE_PROGRESS_ID")|$(enabled "$MAIN_IMAGE_DELETE_ID")"
 : > "$FAKE_SLEEP_LOG"
 poll 1
@@ -181,7 +181,7 @@ check "running" "Starting|Stopping|Building|Updating|Updating|Building again|Set
 check "waiting" "Waiting to start|Waiting to stop|Waiting to be built|Waiting to be updated|Waiting to be built again|Waiting to be set up|Waiting: image fetch-ipsw" \
     "$(words "box start" queued)|$(words "box stop" queued)|$(words "image create" queued)|$(words "image update" queued)|$(words "image rebuild" queued)|$(words "image setup" queued)|$(words "image fetch-ipsw" queued)"
 outcome() { ( . "$APP_SCRIPTS/lib.agentvm.main.sh" >/dev/null 2>&1; main_job_outcome "x${TAB}$1${TAB}image:dev${TAB}image rebuild" ); }
-check "an image built again, and one that was not" "Image dev was built again|Image dev was not built again, and is as it was" "$(outcome done)|$(outcome failed)"
+check "an image built again, and one that was not" "Image dev was built again|Image dev was not built again" "$(outcome done)|$(outcome failed)"
 # A rebuild on the card of the image it replaces.
 job_edit ". + [{id: \"20260930-120030-0000b5\", command: [\"image\", \"rebuild\", \"dev-acp\", \"--json\"], targets: [\"image:dev-acp\"], state: \"running\", createdAt: \"2026-09-30T12:00:00Z\", startedAt: \"2026-09-30T12:00:00Z\"}]"
 poll 1

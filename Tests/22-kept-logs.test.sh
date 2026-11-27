@@ -155,7 +155,7 @@ check_status "exits cleanly" 0
 check "reads status again first, and changes nothing" "status --json|" "$(fake_log | /usr/bin/paste -sd '|' -)|$(asked_agentvm)"
 check "asks, naming how many"        "Remove the logs of 14 deleted boxes?" "$(ui_alert_title)"
 check "  what goes, and what does not" \
-    "What they ran and what they contacted is deleted from this Mac (3.2 MB). The logs of boxes that exist are not touched. This cannot be undone." "$(ui_alert_message)"
+    "Their records of programs and connections are deleted (3.2 MB). You can't undo this action." "$(ui_alert_message)"
 check "  Remove All confirms, and the question is kept as asked" "AgentVM.main.logs.remove.confirmed|1" "$(ui_alert_action "Remove All")|$(pending remove)"
 
 section "Remove All: done, refused, and nothing to ask about"
@@ -222,7 +222,7 @@ clear_alerts
 pick 7
 check "a shorter time, with logs kept: nothing is changed yet" "|7" "$(asked_agentvm)|$(pending hold)"
 check "  the question says what goes, and when" \
-    "Keep the logs of deleted boxes for 7 days?|The logs of 5 deleted boxes are kept now: agent-vm removes the ones of boxes deleted more than 7 days ago the next time it tidies the store." \
+    "Keep the logs of deleted boxes for 7 days?|The logs of boxes deleted more than 7 days ago will be removed." \
     "$(ui_alert_title)|$(ui_alert_message)"
 check "  Change confirms, and Cancel puts the picker back" "AgentVM.main.logs.hold.confirmed|AgentVM.main.logs.hold.canceled" \
     "$(ui_alert_action Change)|$(ui_alert_action Cancel)"
@@ -234,7 +234,7 @@ check "  a confirmation after it changes nothing" "" "$(asked_agentvm)"
 clear_alerts
 pick 0
 check "Never, with logs kept: the question says they all go" \
-    "Keep no logs of deleted boxes?|The logs of 5 deleted boxes are kept now: agent-vm removes them the next time it tidies the store, and a box deleted from now on leaves none.|0" \
+    "Keep no logs of deleted boxes?|The logs of 5 deleted boxes will be removed, and boxes deleted from now on leave none.|0" \
     "$(ui_alert_title)|$(ui_alert_message)|$(pending hold)"
 # The picker moves on while the question is open: the time asked about is the one applied.
 omc_control "$MAIN_KEPT_HOLD_ID" "90"

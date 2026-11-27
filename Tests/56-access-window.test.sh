@@ -591,7 +591,7 @@ chains_reset
 check "the update's end is said as any job's" "1" "$(ui_calls 'omc_present_toast Image dev-acp is up to date. 5')"
 check "and the window asks about the grant it took" "Image dev-acp lost Full Disk Access in its update" "$(ui_alert_title)"
 check "  saying what that means" \
-    "agent-vm-guest had the grant in this image before the update, and does not have it now: macOS ties the grant to the daemon it was made for. Until it is granted again, programs in boxes made from dev-acp from now on wait, when they open Desktop, Documents or Downloads, on a question macOS asks on the box's screen. The boxes work without it otherwise." \
+    "Until it is granted again, programs in new boxes made from dev-acp wait on a macOS question when they open Desktop, Documents or Downloads." \
     "$(ui_alert_message)"
 check "  Later does nothing, and Grant It Again... has its handler" "|AgentVM.main.image.access.offered" \
     "$(ui_alert_action Later)|$(ui_alert_action 'Grant It Again...')"

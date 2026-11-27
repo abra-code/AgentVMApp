@@ -107,7 +107,7 @@ check "nothing selected at opening: nothing measured" "0" "$(asks)"
 select_box cadabra-spike
 check_status "the handler exits cleanly" 0
 check "agent-vm measures the selected box once" "box info cadabra-spike --json" "$(fake_log | /usr/bin/grep '^box info')"
-check "its space, and its own"  "40.2 GB; 2.1 GB its own (what Delete frees)" "$(ui_value "$MAIN_BOX_SPACE_ID")"
+check "its space, and its own"  "40.2 GB; Delete frees 2.1 GB" "$(ui_value "$MAIN_BOX_SPACE_ID")"
 
 section "the poll loop does not measure again; activation does"
 : > "$FAKE_AGENTVM_DIR/log"
@@ -371,7 +371,7 @@ check "reads status and measures the box again first" "status --json|box info ca
     "$(fake_log | /usr/bin/paste -sd '|' -)"
 check "asks"                    "Delete box cadabra-spike?" "$(ui_alert_title)"
 check "  what it frees, and that its image stays" \
-    "The box's folder and disk are deleted, with everything installed or saved in it, which frees about 2.1 GB. The image it was made from, dev-agents, is kept. This cannot be undone." \
+    "Everything installed or saved in the box is deleted, freeing about 2.1 GB. You can't undo this action." \
     "$(ui_alert_message)"
 check "  Delete confirms"       "AgentVM.main.box.delete.confirmed" "$(ui_alert_action Delete)"
 check "  the box asked about is kept" "cadabra-spike" "$(pending delete)"
@@ -469,7 +469,7 @@ check "  a box with the Mac's page size says that, whatever its image has" \
 /usr/bin/jq '(.boxes[] | select(.box.name == "lb")).box.linux |= del(.pageSize)' "$FAKE_AGENTVM_DIR/status.json" > "$FAKE_AGENTVM_DIR/status.new" \
     && /bin/mv "$FAKE_AGENTVM_DIR/status.new" "$FAKE_AGENTVM_DIR/status.json"
 poll 1
-check "its space, and its own"  "2.0 GB; 160 MB its own (what Delete frees)" "$(ui_value "$MAIN_BOX_SPACE_ID")"
+check "its space, and its own"  "2.0 GB; Delete frees 160 MB" "$(ui_value "$MAIN_BOX_SPACE_ID")"
 check "it runs: Stop and Connect are on" "1 1" "$(enabled "$MAIN_BOX_STOP_ID") $(enabled "$MAIN_BOX_SHELL_ID")"
 check "  and View is shown and on: the box has a screen, from its image's desktop" "1 1" "$(visible "$MAIN_BOX_VIEW_ID") $(enabled "$MAIN_BOX_VIEW_ID")"
 alerts_reset
@@ -582,24 +582,24 @@ asked() {
     ui_alert_message
 }
 KEPT_FOLDER="$OMCTEST_WORK/logs store/Logs"
-DELETE_TEXT="The box's folder and disk are deleted, with everything installed or saved in it. The image it was made from, dev-acp, is kept."
+DELETE_TEXT="Everything installed or saved in the box is deleted."
 fake_reset
 /bin/rm -rf "$mac_folder/exec.jsonl"
 : > "$mac_folder/supervisor.log"
 kept_store "{count: 0, bytes: 0, holdDays: 30, directory: \"$KEPT_FOLDER\"}"
 open_window
 select_box s3
-check "a box that has logs: the Delete question says they are kept, and for how long" "$DELETE_TEXT Its logs are kept for 30 days. This cannot be undone." \
+check "a box that has logs: the Delete question says they are kept, and for how long" "$DELETE_TEXT Its logs are kept for 30 days. You can't undo this action." \
     "$(asked AgentVM.main.box.delete)"
 kept_store '{count: 0, bytes: 0, holdDays: 1, directory: "/x/Logs"}'
-check "a store that keeps them for one day" "$DELETE_TEXT Its logs are kept for 1 day. This cannot be undone." "$(asked AgentVM.main.box.delete)"
+check "a store that keeps them for one day" "$DELETE_TEXT Its logs are kept for 1 day. You can't undo this action." "$(asked AgentVM.main.box.delete)"
 kept_store '{count: 3, bytes: 4096, holdDays: 0, directory: "/x/Logs"}'
-check "a store that keeps none: the question does not say they are kept" "$DELETE_TEXT This cannot be undone." "$(asked AgentVM.main.box.delete)"
+check "a store that keeps none: the question does not say they are kept" "$DELETE_TEXT You can't undo this action." "$(asked AgentVM.main.box.delete)"
 kept_store 'null'
-check "an agent-vm that says nothing of kept logs: nothing is promised" "$DELETE_TEXT This cannot be undone." "$(asked AgentVM.main.box.delete)"
+check "an agent-vm that says nothing of kept logs: nothing is promised" "$DELETE_TEXT You can't undo this action." "$(asked AgentVM.main.box.delete)"
 kept_store "{count: 0, bytes: 0, holdDays: 30, directory: \"$KEPT_FOLDER\"}"
 /bin/rm -f "$mac_folder/supervisor.log"
-check "a box that has logged nothing leaves none: nothing is promised" "$DELETE_TEXT This cannot be undone." "$(asked AgentVM.main.box.delete)"
+check "a box that has logged nothing leaves none: nothing is promised" "$DELETE_TEXT You can't undo this action." "$(asked AgentVM.main.box.delete)"
 check "nothing is kept yet: Show in Finder, in Settings, is off" "0" "$(enabled "$MAIN_KEPT_SHOW_ID")"
 # The delete: agent-vm moves the logs and says where; the store then holds one box's logs.
 : > "$mac_folder/supervisor.log"

@@ -99,7 +99,7 @@ check "opening it again within the hours a measurement holds measures nothing mo
 section "a project's sessions"
 select_project "$PROJECT"
 check "its pane: the name, the path, what all its ended sessions free" \
-    "1|myapp|$PROJECT|about 1 MB if all its ended and undone sessions are discarded" \
+    "1|myapp|$PROJECT|about 1 MB to free" \
     "$(shown "$SES_DETAIL_ID")|$(ui_value "$SES_NAME_ID")|$(ui_value "$SES_PATH_ID")|$(ui_value "$SES_SPACE_ID")"
 rows="$(ui_rows "$SES_TABLE_ID")"
 check "a row per session, none ticked: two ended, one active" "false ended|false ended|false active" \
@@ -108,12 +108,12 @@ check "  each holds nothing of its own, and the ended ones 1 MB with one other" 
     "$(printf '%s\n' "$rows" | col 5-6 | /usr/bin/paste -sd '|' -)"
 check "  the active session's checkbox is disabled; the hidden column has the id" "false|false|true|$ACTIVE" \
     "$(printf '%s\n' "$rows" | col 9 | /usr/bin/paste -sd '|' -)|$(printf '%s\n' "$rows" | /usr/bin/awk -F'\t' 'NR == 3 { print $8 }')"
-check "  nothing ticked yet" "Check the sessions to discard; what they free together is shown here." "$(ui_value "$SES_PICKED_ID")"
+check "  nothing ticked yet" "Check sessions to see what discarding them frees." "$(ui_value "$SES_PICKED_ID")"
 
 section "ticking sessions"
 tick 0
 check "one ended session alone frees nothing: the other holds the same data" \
-    "1 session checked: discarding them frees nothing now; what they hold is held by other sessions or by the project too." \
+    "1 session checked: nothing to free (shared with other sessions or the project)." \
     "$(ui_value "$SES_PICKED_ID")"
 check "  its row is ticked" "true" "$(ui_rows "$SES_TABLE_ID" | /usr/bin/awk -F'\t' 'NR == 1 { print $1 }')"
 tick 1
@@ -123,7 +123,7 @@ tick 2
 check "the active one cannot be ticked" "false|2 sessions checked: about 1 MB to free." \
     "$(ui_rows "$SES_TABLE_ID" | /usr/bin/awk -F'\t' 'NR == 3 { print $1 }')|$(ui_value "$SES_PICKED_ID")"
 tick 0
-check "unticking one leaves the other" "true|1 session checked: discarding them frees nothing now; what they hold is held by other sessions or by the project too." \
+check "unticking one leaves the other" "true|1 session checked: nothing to free (shared with other sessions or the project)." \
     "$(ui_rows "$SES_TABLE_ID" | /usr/bin/awk -F'\t' 'NR == 2 { print $1 }')|$(ui_value "$SES_PICKED_ID")"
 tick 99
 check "a row the table does not have changes nothing" "true" "$(ui_rows "$SES_TABLE_ID" | /usr/bin/awk -F'\t' 'NR == 2 { print $1 }')"
@@ -177,7 +177,7 @@ check "1 MB to free: no banner, and it takes no space" "0|{\"maxWidth\":\"infini
 "$OMC_OMC_SUPPORT_PATH/pasteboard" agentvm_sessions_nudge_dismissed set ""
 /usr/bin/jq '.sessions.freedIfAllDiscardedBytes = 31700000000' "$FAKE_AGENTVM_DIR/status.json" > "$FAKE_AGENTVM_DIR/status.new" && /bin/mv "$FAKE_AGENTVM_DIR/status.new" "$FAKE_AGENTVM_DIR/status.json"
 omc_run AgentVM.main.activated
-check "31.7 GB to free: the banner says so" "1|{\"maxWidth\":\"infinity\"}|agent-vm sessions hold about 31.7 GB that only their undo needs; discarding them frees it." \
+check "31.7 GB to free: the banner says so" "1|{\"maxWidth\":\"infinity\"}|Sessions hold about 31.7 GB you can free." \
     "$(shown "$SES_NUDGE_ID")|$(ui_prop "$SES_NUDGE_ID" frame)|$(ui_value "$SES_NUDGE_TEXT_ID")"
 omc_run AgentVM.main.session.nudge.dismiss
 check "  Not Now hides it" "0" "$(shown "$SES_NUDGE_ID")"
@@ -265,7 +265,7 @@ omc_run AgentVM.main.session.project.add
 check "the folder chosen becomes a card, without its trailing slash, and is selected" "1|$ADDED" \
     "$(ui_rows "$SES_PROJECTS_ID" | /usr/bin/awk -F'\t' -v p="$ADDED" '$1 == p' | /usr/bin/grep -c .)|$(selected)"
 check "  its pane: no sessions, nothing to discard, nothing left out yet" \
-    "1|newapp|no sessions yet|nothing to discard: no session yet|none: the snapshots take the whole project|0|0" \
+    "1|newapp|no sessions yet|nothing to discard: no session yet|none|0|0" \
     "$(shown "$SES_DETAIL_ID")|$(ui_value "$SES_NAME_ID")|$(ui_value "$SES_COUNTS_ID")|$(ui_value "$SES_SPACE_ID")|$(ui_value "$SES_EXCLUSIONS_ID")|$(enabled "$SES_DISCARD_ID")|$(enabled "$SES_DISCARD_ALL_ID")"
 omc_dialog_answer choose_folder "$ADDED"
 omc_run AgentVM.main.session.project.add
@@ -321,10 +321,10 @@ remove_project "$PROJECT"
 check "  on for a selected project" "1" "$(enabled "$SES_REMOVE_ID")"
 check "a project with an active session is not removed: an alert says why, and nothing is asked" \
     "myapp cannot be removed while a session is active|1||" \
-    "$(ui_alert_title)|$(ui_alert_message | /usr/bin/grep -c 'Remove it from the list once its session has ended')|$(pending)|$(discards)"
+    "$(ui_alert_title)|$(ui_alert_message | /usr/bin/grep -c 'Remove it once no session is active')|$(pending)|$(discards)"
 remove_project "/Users/you/src/zeta"
 check "a project with an ended session: asks, saying the sessions are discarded and the folder stays" \
-    "Remove zeta from the list?|1 session of zeta: their snapshots, and what an undo kept, are deleted; what they hold only together is not known: they were not measured. Undo is no longer possible for them; their records and reports stay in agent-vm session list. The project folder itself is not touched. The project comes back to the list with its next session." \
+    "Remove zeta from the list?|1 session of zeta is discarded and can no longer be undone. How much this frees is not known (not measured yet). The project folder is not touched." \
     "$(ui_alert_title)|$(ui_alert_message)"
 check "  Remove goes on; nothing is discarded yet" "AgentVM.main.session.remove.confirmed|/Users/you/src/zeta|" \
     "$(ui_alert_action Remove)|$(pending)|$(discards)"
@@ -344,7 +344,7 @@ omc_run AgentVM.main.session.remove.confirmed
 check "  a second Remove without a question does nothing" "session discard 20261125-040000-aaaa --json" "$(discards)"
 remove_project "/Users/you/src/alpha"
 check "a project with only a saved list: the question says the list is cleared" \
-    "Remove alpha from the list?|Its list of folders left out of snapshots is cleared. The project folder itself is not touched. The project comes back to the list with its next session." \
+    "Remove alpha from the list?|Its exclusions are cleared. The project folder is not touched." \
     "$(ui_alert_title)|$(ui_alert_message)"
 omc_run AgentVM.main.session.remove.confirmed
 check "  Remove clears the list, and its card goes, with the selection" \
@@ -355,7 +355,7 @@ omc_dialog_answer choose_folder "$ADDED"
 omc_run AgentVM.main.session.project.add
 remove_project "$ADDED"
 check "a project added with the plus button: the question says only that the folder stays" \
-    "Remove newapp from the list?|The project folder itself is not touched. The project comes back to the list with its next session." "$(ui_alert_title)|$(ui_alert_message)"
+    "Remove newapp from the list?|The project folder is not touched." "$(ui_alert_title)|$(ui_alert_message)"
 : > "$FAKE_AGENTVM_DIR/log"
 omc_run AgentVM.main.session.remove.confirmed
 check "  Remove takes its card off, and runs no agent-vm but to read the list again" \
@@ -383,7 +383,7 @@ check "its folder is there: it keeps its card, with when its last session ended;
     "$(ui_rows "$SES_PROJECTS_ID" | /usr/bin/awk -F'\t' -v p="$KEPT" '$1 == p' | /usr/bin/grep -c .)|$(ui_rows "$SES_PROJECTS_ID" | /usr/bin/awk -F'\t' -v p="$KEPT" '$1 == p { print $5 "|" $3 }')|$(cards | /usr/bin/grep -c 'gone=')"
 remove_project "$KEPT"
 check "  its pane: nothing to discard" "nothing to discard: its sessions are discarded" "$(ui_value "$SES_SPACE_ID")"
-check "  Remove asks, with nothing to discard" "Remove keptapp from the list?|The project folder itself is not touched. The project comes back to the list with its next session." \
+check "  Remove asks, with nothing to discard" "Remove keptapp from the list?|The project folder is not touched." \
     "$(ui_alert_title)|$(ui_alert_message)"
 : > "$FAKE_AGENTVM_DIR/log"
 omc_run AgentVM.main.session.remove.confirmed

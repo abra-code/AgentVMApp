@@ -119,7 +119,7 @@ check "  and the handler, which reads status itself, asks nothing" "|" "$(ui_ale
 select_image dev-acp
 check "an image whose base was built again: shown and on" "1 1" "$(button)"
 check "  the pane says why"          \
-    "Needs maintenance|Its base image dev-node was built again since it was made from it. Build Again... makes it again from it." \
+    "Needs maintenance|Base image dev-node was built again." \
     "$(ui_value "$MAIN_IMAGE_MAINTENANCE_ID" | /usr/bin/paste -sd '|' -)"
 select_image dev-agents
 check "one whose base has other tools, beside Full Disk Access it lacks: shown and on" "1 1" "$(button)"
@@ -144,21 +144,21 @@ omc_run AgentVM.main.image.rebuild
 check_status "exits cleanly" 0
 check "it asks, about the image selected" "Build image dev-acp again?|dev-acp" "$(ui_alert_title)|$(pending)"
 check "  what a rebuild does"        "yes" \
-    "$(ui_alert_message | /usr/bin/grep -q '^A fresh copy of image dev-node is made, and the recipes dev-acp added run on it again, as when it was built. dev-acp stays as it is, and can be used, until the new one is ready; a failure or Stop leaves it as it was.' && echo yes)"
+    "$(ui_alert_message | /usr/bin/grep -q '^A fresh copy of dev-node gets the recipes of dev-acp again. dev-acp stays usable until the new one is ready, and stays as it is if the build fails or is stopped.' && echo yes)"
 check "  Build Again confirms, Cancel does nothing" "AgentVM.main.image.rebuild.confirmed|" \
     "$(ui_alert_action 'Build Again')|$(ui_alert_action Cancel)"
 check "  nothing is started yet"     "" "$(started)"
 store "$NEEDS"' | .boxes |= map(.box.image = "dev-acp" | .image = "dev-acp")'
 clear_alerts
 omc_run AgentVM.main.image.rebuild
-check "the boxes made from it keep what they have; a disposable one is not named" "yes|no" \
-    "$(ui_alert_message | /usr/bin/grep -q 'Boxes made from it (s3 and try1) keep what they have until they are recreated\.' && echo yes || echo no)|$(ui_alert_message | /usr/bin/grep -q 'cadabra-spike' && echo yes || echo no)"
+check "the boxes made from it change only when recreated; no box is named" "yes|no" \
+    "$(ui_alert_message | /usr/bin/grep -q 'Its boxes change only when recreated\.' && echo yes || echo no)|$(ui_alert_message | /usr/bin/grep -q 'cadabra-spike' && echo yes || echo no)"
 check "  one machine of two runs: no word of a slot" "no" "$(ui_alert_message | /usr/bin/grep -q 'slot' && echo yes || echo no)"
 store "$NEEDS"' | .runningVMs.count = 2'
 clear_alerts
 omc_run AgentVM.main.image.rebuild
 check "both places taken: the question says so, and still asks" "Build image dev-acp again?|yes" \
-    "$(ui_alert_title)|$(ui_alert_message | /usr/bin/grep -q 'No virtual machine slot is free now (2 of 2 macOS virtual machines running), and the rebuild needs one: it fails at once until a macOS box or build stops\.$' && echo yes)"
+    "$(ui_alert_title)|$(ui_alert_message | /usr/bin/grep -q 'No macOS virtual machine is free (2 of 2 running): the build fails until one stops\.$' && echo yes)"
 store "$NEEDS"
 omc_run AgentVM.main.activated
 select_image dev-node
@@ -167,7 +167,7 @@ omc_run AgentVM.main.activated
 clear_alerts
 omc_run AgentVM.main.image.rebuild
 check "an image with images built from it: they are not built again with it" "yes" \
-    "$(ui_alert_message | /usr/bin/grep -q 'Images built from it (dev-acp and dev-agents) are not built again with it\.' && echo yes)"
+    "$(ui_alert_message | /usr/bin/grep -q 'Images built from it are not rebuilt\.' && echo yes)"
 store "$NEEDS"
 omc_run AgentVM.main.activated
 select_image dev-acp
@@ -214,7 +214,7 @@ job_end failed "recipe xcode: its input xcode was read from /Users/you/Downloads
 clear_alerts
 poll 1
 check "is said when the job ends, in agent-vm's words" \
-    "Image dev-acp was not built again, and is as it was|recipe xcode: its input xcode was read from /Users/you/Downloads/Xcode_27.xip, which is gone; give it with --input xcode=PATH" \
+    "Image dev-acp was not built again|recipe xcode: its input xcode was read from /Users/you/Downloads/Xcode_27.xip, which is gone; give it with --input xcode=PATH" \
     "$(ui_alert_title)|$(ui_alert_message)"
 check "  the image still needs it, with Build Again... on" "1 1" "$(button)"
 /bin/rm -f "$JOBS" "$FAKE_AGENTVM_DIR/job-count"
