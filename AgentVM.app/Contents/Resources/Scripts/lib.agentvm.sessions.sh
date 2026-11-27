@@ -490,20 +490,20 @@ ses_picked_text() {
     local _uuid="$1"
     local _ids="$(/usr/bin/awk -F'\t' '$1 == "true" { print $8 }' "$(ses_cache "$_uuid" session-table.tsv)" 2>/dev/null | /usr/bin/paste -sd ' ' -)"
     if [ -z "$_ids" ]; then
-        printf 'Tick the sessions to discard; what they free together is shown here.\n'
+        printf 'Check the sessions to discard; what they free together is shown here.\n'
         return 0
     fi
     local _count="$(printf '%s\n' "$_ids" | /usr/bin/awk '{ print NF }')"
     local _held="$(ses_held_rows "$_uuid")"
     if [ -z "$_held" ] && [ ! -f "$(ses_cache "$_uuid" session-usage.json)" ]; then
-        printf '%s ticked: not measured yet.\n' "$(main_count_text "$_count" session)"
+        printf '%s checked: not measured yet.\n' "$(main_count_text "$_count" session)"
         return 0
     fi
     local _freed="$(printf '%s\n' "$_held" | agentvm_held_freed "$_ids")"
     if [ "$_freed" = "0" ]; then
-        printf '%s ticked: discarding them frees nothing now; what they hold is held by other sessions or by the project too.\n' "$(main_count_text "$_count" session)"
+        printf '%s checked: discarding them frees nothing now; what they hold is held by other sessions or by the project too.\n' "$(main_count_text "$_count" session)"
     else
-        printf '%s ticked: about %s to free.\n' "$(main_count_text "$_count" session)" "$(ui_size_text "$_freed")"
+        printf '%s checked: about %s to free.\n' "$(main_count_text "$_count" session)" "$(ui_size_text "$_freed")"
     fi
 }
 

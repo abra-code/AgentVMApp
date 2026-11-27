@@ -1,5 +1,5 @@
 #!/bin/sh
-# Tests/67-session-discard.test.sh - discarding sessions from the Sessions tab: Discard Ticked...
+# Tests/67-session-discard.test.sh - discarding sessions from the Sessions tab: Discard Checked...
 # and Discard All Ended... (on only when there is something to discard), the question (how many,
 # what it frees, that undo ends), the discard itself (one call with the ids, the free space before
 # and after, the ticks and the window's measurement without them), the Time Machine sentence when
@@ -71,12 +71,12 @@ discards() {
 
 section "the buttons"
 open_project
-check "nothing ticked: Discard Ticked... off; the project has ended sessions: Discard All Ended... and Discard Sessions... on" "0|1|1" \
+check "nothing ticked: Discard Checked... off; the project has ended sessions: Discard All Ended... and Discard Sessions... on" "0|1|1" \
     "$(on "$SES_DISCARD_ID")|$(on "$SES_DISCARD_ALL_ID")|$(on "$SES_DISCARD_WINDOW_ID")"
 tick 0
-check "one ticked: Discard Ticked... on" "1" "$(on "$SES_DISCARD_ID")"
+check "one ticked: Discard Checked... on" "1" "$(on "$SES_DISCARD_ID")"
 
-section "Discard Ticked...: one ended session alone"
+section "Discard Checked...: one ended session alone"
 omc_run AgentVM.main.session.discard
 check "asks, naming how many" "Discard 1 session?" "$(ui_alert_title)"
 check "  and says it frees nothing now, and that undo ends" \
@@ -141,7 +141,7 @@ alerts_reset
 "$OMC_OMC_SUPPORT_PATH/pasteboard" "agentvm_session-discard_$OMC_ACTIONUI_WINDOW_UUID" set "$ENDED1 $ENDED2 20990101-000000-abcd"
 omc_run AgentVM.main.session.discard.confirmed
 check "  refused with sessions it has: they keep their ticks and their part of the measurement" "Not every session was discarded|1" \
-    "$(ui_alert_title)|$(ui_value "$SES_PICKED_ID" | /usr/bin/grep -c '2 sessions ticked: about 1 MB to free')"
+    "$(ui_alert_title)|$(ui_value "$SES_PICKED_ID" | /usr/bin/grep -c '2 sessions checked: about 1 MB to free')"
 alerts_reset
 "$OMC_OMC_SUPPORT_PATH/pasteboard" "agentvm_session-discard_$OMC_ACTIONUI_WINDOW_UUID" set "--older-than 0"
 : > "$FAKE_AGENTVM_DIR/log"

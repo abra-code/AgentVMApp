@@ -454,7 +454,7 @@ update_tools_text() {
     # The inputs the second step has a button for: the first of each recipe in a slot.
     local _inputs="$(update_input_rows "$1" "$2" | /usr/bin/awk -F'\t' -v slots="$UPDATE_SLOTS" '$5 + 0 <= slots + 0 && !seen[$5]++ { print $1 }')"
     local _given="$(update_inputs_given "$1" "$2" | /usr/bin/sed 's/=.*//')"
-    local _lists="Ticking it adds a step that lists them"
+    local _lists="Checking it adds a step that lists them"
     [ "$(update_choices "$1" "$2" | /usr/bin/cut -d' ' -f2)" = "1" ] && _lists="Continue lists them"
     local _next="$_lists."
     [ -n "$_inputs" ] && _next="$_lists, and takes a newer file for $(ui_lines_text "$_inputs")."
@@ -539,7 +539,7 @@ update_guest_text() {
     # macOS ties a Full Disk Access grant to the daemon it was made for; a Linux image has none.
     local _access=" Its Full Disk Access may have to be granted again afterwards; the image's pane says so then."
     update_linux "$1" "$2" && _access=""
-    printf "%s is replaced by this agent-vm's, %s%s.%s With another part ticked too, the daemon is replaced first, and stays even if that part fails.\n" \
+    printf "%s is replaced by this agent-vm's, %s%s.%s With another part checked too, the daemon is replaced first, and stays even if that part fails.\n" \
         "$_theirs" "$_mine" "$_adds" "$_access"
 }
 
@@ -566,7 +566,7 @@ update_after_text() {
 update_command_text() {
     local _flags="$(update_flags "$1" "$2")"
     if [ -z "$_flags" ]; then
-        printf 'Tick what to update.\n'
+        printf 'Check what to update.\n'
         return 0
     fi
     printf 'agent-vm image update %s\n' "$(update_run "$1" "$2" agentvm_image_update_args | agentvm_args_text)"

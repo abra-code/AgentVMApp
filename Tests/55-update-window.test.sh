@@ -184,7 +184,7 @@ check "the tools: the recipes it keeps" \
     "Runs the update steps of the recipes this image keeps (dev-acp), then every recipe's checks. Not run since the image was built. Continue lists them." \
     "$(ui_value "$UPDATE_TOOLS_TEXT_ID")"
 check "the guest daemon: another version, replaced by this agent-vm's" \
-    "The image's agent-vm-guest 0.2.18 is replaced by this agent-vm's, $VERSION. Its Full Disk Access may have to be granted again afterwards; the image's pane says so then. With another part ticked too, the daemon is replaced first, and stays even if that part fails." \
+    "The image's agent-vm-guest 0.2.18 is replaced by this agent-vm's, $VERSION. Its Full Disk Access may have to be granted again afterwards; the image's pane says so then. With another part checked too, the daemon is replaced first, and stays even if that part fails." \
     "$(ui_value "$UPDATE_GUEST_TEXT_ID")"
 check "afterwards: its box, and what a failure leaves: the guest daemon, which goes first when another part is ticked" \
     "Boxes made from it (s3) keep what they have until they are recreated.|The image can be used meanwhile: a box made during the update gets the image as it was.|An update that fails or is stopped leaves the image as it is now, except for its guest daemon once that is replaced." \
@@ -238,10 +238,10 @@ tick true false true
 check "macOS and the guest daemon: the daemon goes first" \
     "An update that fails or is stopped leaves the image as it is now, except for its guest daemon once that is replaced." "$(after_failure)"
 tick false false false
-check "nothing ticked: no command, and Update is off" "0 0 0|Tick what to update.|0" \
+check "nothing ticked: no command, and Update is off" "0 0 0|Check what to update.|0" \
     "$("$PB" "agentvm_choices_$UUID" get)|$(ui_value "$UPDATE_COMMAND_ID")|$(enabled "$UPDATE_START_ID")"
 tick yes 1 "true --set x=y"
-check "a value that is not a checkbox's is not a tick" "0 0 0|Tick what to update." \
+check "a value that is not a checkbox's is not a tick" "0 0 0|Check what to update." \
     "$("$PB" "agentvm_choices_$UUID" get)|$(ui_value "$UPDATE_COMMAND_ID")"
 check "a click asks agent-vm nothing" "" "$(fake_log)"
 # A repaint must not undo a click made while it ran: only the opening sets the checkboxes.
@@ -256,7 +256,7 @@ check "macOS: not behind what Apple last said" \
     "No newer macOS is known for this image: the newest is 27.0.1 (26A434), as of Sep 29, 2026. The update asks Apple again, and installs what is offered." \
     "$(ui_value "$UPDATE_SYSTEM_TEXT_ID")"
 check "the guest daemon: what the new one adds" \
-    "The image's agent-vm-guest 0.2.18 is replaced by this agent-vm's, $VERSION, which adds terminal-pixels. Its Full Disk Access may have to be granted again afterwards; the image's pane says so then. With another part ticked too, the daemon is replaced first, and stays even if that part fails." \
+    "The image's agent-vm-guest 0.2.18 is replaced by this agent-vm's, $VERSION, which adds terminal-pixels. Its Full Disk Access may have to be granted again afterwards; the image's pane says so then. With another part checked too, the daemon is replaced first, and stays even if that part fails." \
     "$(ui_value "$UPDATE_GUEST_TEXT_ID")"
 check "afterwards: the images built from it" \
     "Images built from it (dev-acp and dev-agents) are not updated with it: each is updated by itself." \
@@ -271,7 +271,7 @@ section "an image that needs nothing known"
 # dev-agents with this agent-vm's guest daemon: not behind, no recipes, the same daemon.
 store "$BEHIND"' | (.images[] | select(.name == "dev-agents")).guestVersion = "'"$VERSION"'"'
 open_update dev-agents
-check "nothing is ticked, and Update is off until something is" "false false false|0 0 0|Tick what to update.|0" \
+check "nothing is ticked, and Update is off until something is" "false false false|0 0 0|Check what to update.|0" \
     "$(ticks)|$(ui_value "$UPDATE_COMMAND_ID")|$(enabled "$UPDATE_START_ID")"
 check "the guest daemon is this agent-vm's" \
     "The image has agent-vm-guest $VERSION, as this agent-vm does. It is replaced only if the two still differ." "$(ui_value "$UPDATE_GUEST_TEXT_ID")"
@@ -499,7 +499,7 @@ check "macOS: the newest is not called a new major version" \
     "No newer macOS is known for this image: the newest is 27.0.1 (26A434), as of Sep 29, 2026. The update asks Apple again, and installs what is offered." \
     "$(ui_value "$UPDATE_SYSTEM_TEXT_ID")"
 check "the guest daemon: replaced, without a version to name" \
-    "The image's agent-vm-guest, whose version is not on record, is replaced by this agent-vm's, $VERSION. Its Full Disk Access may have to be granted again afterwards; the image's pane says so then. With another part ticked too, the daemon is replaced first, and stays even if that part fails." \
+    "The image's agent-vm-guest, whose version is not on record, is replaced by this agent-vm's, $VERSION. Its Full Disk Access may have to be granted again afterwards; the image's pane says so then. With another part checked too, the daemon is replaced first, and stays even if that part fails." \
     "$(ui_value "$UPDATE_GUEST_TEXT_ID")"
 omc_run AgentVM.update.close
 store '(.images[] | select(.name == "dev-agents")) |= del(.macOSVersion, .macOSBuild)'
@@ -596,7 +596,7 @@ check "the system is ticked, though nobody can say beforehand that it needs doin
     "true true true|1 1 1" "$(ticks)"
 check "Check Now is not shown: Apple has nothing to say of a Linux image" "0" "$(ui_visible "$UPDATE_CHECK_ID")"
 check "the guest daemon's part says nothing of Full Disk Access" \
-    "The image's agent-vm-guest 0.7.9 is replaced by this agent-vm's, $VERSION. With another part ticked too, the daemon is replaced first, and stays even if that part fails." "$(ui_value "$UPDATE_GUEST_TEXT_ID")"
+    "The image's agent-vm-guest 0.7.9 is replaced by this agent-vm's, $VERSION. With another part checked too, the daemon is replaced first, and stays even if that part fails." "$(ui_value "$UPDATE_GUEST_TEXT_ID")"
 check "the command it would run: the system's part is --system" \
     "agent-vm image update deb-agents --system --tools --guest|1" "$(ui_value "$UPDATE_COMMAND_ID")|$(enabled "$UPDATE_START_ID")"
 mixed '.runningVMs = {count: 2, limit: 2, linuxBoxes: 0, linuxImages: 0}'
@@ -671,7 +671,7 @@ open_update dev-acp
 tick true false false
 check "without the tools: one step, with Update" "1|0|0|1|0" "$(step)"
 check "  the tools part names what ticking it adds" \
-    "Runs the update steps of the recipes this image keeps (dev-acp, xcode), then every recipe's checks. Not run since the image was built. Ticking it adds a step that lists them, and takes a newer file for xcode." \
+    "Runs the update steps of the recipes this image keeps (dev-acp, xcode), then every recipe's checks. Not run since the image was built. Checking it adds a step that lists them, and takes a newer file for xcode." \
     "$(ui_value "$UPDATE_TOOLS_TEXT_ID")"
 omc_run AgentVM.update.next
 check "  Continue, however it came to run, has no second step to show" "1|0|0|1|0" "$(step)"

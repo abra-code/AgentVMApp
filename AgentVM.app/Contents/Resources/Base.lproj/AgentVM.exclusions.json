@@ -46,7 +46,7 @@
         { "type": "Text", "properties": { "text": "The next session of the project follows the list; sessions already taken are not changed.", "font": "caption", "foregroundStyle": "secondary" } },
         { "type": "Spacer" },
         { "type": "Button", "id": 5308, "properties": { "title": "Cancel", "role": "cancel", "actionID": "AgentVM.exclusions.cancel" } },
-        { "type": "Button", "id": 5309, "properties": { "title": "Save", "buttonStyle": "borderedProminent", "disabled": true, "actionID": "AgentVM.exclusions.save", "help": "Save the ticked folders as what this project's sessions leave out" } }
+        { "type": "Button", "id": 5309, "properties": { "title": "Save", "buttonStyle": "borderedProminent", "disabled": true, "actionID": "AgentVM.exclusions.save", "help": "Save the checked folders as what this project's sessions leave out" } }
       ]
     }
   ]

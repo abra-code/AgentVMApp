@@ -686,7 +686,7 @@ newimage_add_own() {
         *)  _warned=" agent-vm warns about it: $(printf '%s\n' "$_checked" | /usr/bin/cut -f8), and $((_warnings - 1)) more (agent-vm recipe check lists them)." ;;
     esac
     if newimage_offered "$_guest" "$_now"; then
-        printf '%s is in the list now. Tick it to install it.%s\n' "$_name" "$_warned"
+        printf '%s is in the list now. Check it to install it.%s\n' "$_name" "$_warned"
     else
         printf '%s is a recipe for %s, and the new image starts from %s. It is kept, and listed when the start is %s.%s\n' \
             "$_name" "$(newimage_images_words "$_guest")" "$(newimage_start_text "$1")" "$(newimage_start_words "$_guest")" "$_warned"
@@ -704,7 +704,7 @@ newimage_recipes_blocker() {
     for _name in $(newimage_ticks "$_uuid"); do
         _path="$(newimage_recipe_field "$_uuid" "$_name" 5)"
         if [ ! -f "$_path" ]; then
-            printf 'The recipe file %s is not there any more. Untick %s.\n' "$(agentvm_display_path "$_path")" "$_name"
+            printf 'The recipe file %s is not there any more. Uncheck %s.\n' "$(agentvm_display_path "$_path")" "$_name"
             return 0
         fi
         set -- "$@" "$_path"
@@ -725,7 +725,7 @@ newimage_recipes_blocker() {
         _path="${_refused%%"$ui_tab"*}"
         _name="$(newimage_recipe_list "$_uuid" | NEW_RECIPE_PATH="$_path" /usr/bin/awk -F'\t' '$5 == ENVIRON["NEW_RECIPE_PATH"] { print $1; exit }')"
         _refused="${_refused#*"$ui_tab"}"
-        printf 'agent-vm does not accept the recipe file %s now: %s. Untick %s.\n' "$(agentvm_display_path "$_path")" "${_refused%.}" "${_name:-it}"
+        printf 'agent-vm does not accept the recipe file %s now: %s. Uncheck %s.\n' "$(agentvm_display_path "$_path")" "${_refused%.}" "${_name:-it}"
         return 0
     fi
     local _together="$(printf '%s\n' "$_answer" | agentvm_recipe_check_error)"
@@ -863,7 +863,7 @@ newimage_tools_blocker() {
     newimage_holds_nothing "$1" || return 0
     local _first="$(newimage_missing "$1" | /usr/bin/sed -n '1p')"
     [ -n "$_first" ] || return 0
-    printf '%s needs %s: tick %s too.\n' "${_first%%"$ui_tab"*}" "${_first#*"$ui_tab"}" "${_first#*"$ui_tab"}"
+    printf '%s needs %s: check %s too.\n' "${_first%%"$ui_tab"*}" "${_first#*"$ui_tab"}" "${_first#*"$ui_tab"}"
 }
 
 # newimage_tools_warning <uuid>  ->  what may be missing, when it is not known what the start
@@ -872,7 +872,7 @@ newimage_tools_warning() {
     newimage_holds_nothing "$1" && return 0
     local _first="$(newimage_missing "$1" | /usr/bin/sed -n '1p')"
     [ -n "$_first" ] || return 0
-    printf '%s needs %s. Tick %s too, unless image %s already has it: the build stops at its first step when it does not.\n' \
+    printf '%s needs %s. Check %s too, unless image %s already has it: the build stops at its first step when it does not.\n' \
         "${_first%%"$ui_tab"*}" "${_first#*"$ui_tab"}" "${_first#*"$ui_tab"}" "$(newimage_start_name "$1")"
 }
 
@@ -882,7 +882,7 @@ newimage_tools_text() {
         printf 'No recipes were found beside this agent-vm, so the new image is %s as it is.\n' "$(newimage_start_text "$1")"
         return 0
     fi
-    printf 'Tick the tools to install on top of %s. They are installed in the order listed. With nothing ticked, the new image is the start as it is.\n' \
+    printf 'Check the tools to install on top of %s. They are installed in the order listed. With nothing checked, the new image is the start as it is.\n' \
         "$(newimage_start_text "$1")"
 }
 
@@ -1014,9 +1014,9 @@ EOF
 newimage_options_text() {
     local _count="$(newimage_option_rows "$1" | /usr/bin/awk 'END { print NR }')"
     if [ "$_count" -gt "$NEW_OPTION_SLOTS" ]; then
-        printf 'What the tools you ticked ask for. The first %s are here; the other %s keep their defaults.\n' "$NEW_OPTION_SLOTS" "$((_count - NEW_OPTION_SLOTS))"
+        printf 'What the tools you checked ask for. The first %s are here; the other %s keep their defaults.\n' "$NEW_OPTION_SLOTS" "$((_count - NEW_OPTION_SLOTS))"
     else
-        printf 'What the tools you ticked ask for. A parameter left as it is keeps its default.\n'
+        printf 'What the tools you checked ask for. A parameter left as it is keeps its default.\n'
     fi
 }
 

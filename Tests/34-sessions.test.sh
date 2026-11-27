@@ -108,22 +108,22 @@ check "  each holds nothing of its own, and the ended ones 1 MB with one other" 
     "$(printf '%s\n' "$rows" | col 5-6 | /usr/bin/paste -sd '|' -)"
 check "  the active session's checkbox is disabled; the hidden column has the id" "false|false|true|$ACTIVE" \
     "$(printf '%s\n' "$rows" | col 9 | /usr/bin/paste -sd '|' -)|$(printf '%s\n' "$rows" | /usr/bin/awk -F'\t' 'NR == 3 { print $8 }')"
-check "  nothing ticked yet" "Tick the sessions to discard; what they free together is shown here." "$(ui_value "$SES_PICKED_ID")"
+check "  nothing ticked yet" "Check the sessions to discard; what they free together is shown here." "$(ui_value "$SES_PICKED_ID")"
 
 section "ticking sessions"
 tick 0
 check "one ended session alone frees nothing: the other holds the same data" \
-    "1 session ticked: discarding them frees nothing now; what they hold is held by other sessions or by the project too." \
+    "1 session checked: discarding them frees nothing now; what they hold is held by other sessions or by the project too." \
     "$(ui_value "$SES_PICKED_ID")"
 check "  its row is ticked" "true" "$(ui_rows "$SES_TABLE_ID" | /usr/bin/awk -F'\t' 'NR == 1 { print $1 }')"
 tick 1
-check "both together free 1 MB" "2 sessions ticked: about 1 MB to free." "$(ui_value "$SES_PICKED_ID")"
+check "both together free 1 MB" "2 sessions checked: about 1 MB to free." "$(ui_value "$SES_PICKED_ID")"
 check "  and no agent-vm ran for it" "1" "$(measured_count)"
 tick 2
-check "the active one cannot be ticked" "false|2 sessions ticked: about 1 MB to free." \
+check "the active one cannot be ticked" "false|2 sessions checked: about 1 MB to free." \
     "$(ui_rows "$SES_TABLE_ID" | /usr/bin/awk -F'\t' 'NR == 3 { print $1 }')|$(ui_value "$SES_PICKED_ID")"
 tick 0
-check "unticking one leaves the other" "true|1 session ticked: discarding them frees nothing now; what they hold is held by other sessions or by the project too." \
+check "unticking one leaves the other" "true|1 session checked: discarding them frees nothing now; what they hold is held by other sessions or by the project too." \
     "$(ui_rows "$SES_TABLE_ID" | /usr/bin/awk -F'\t' 'NR == 2 { print $1 }')|$(ui_value "$SES_PICKED_ID")"
 tick 99
 check "a row the table does not have changes nothing" "true" "$(ui_rows "$SES_TABLE_ID" | /usr/bin/awk -F'\t' 'NR == 2 { print $1 }')"

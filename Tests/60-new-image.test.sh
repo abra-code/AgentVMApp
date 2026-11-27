@@ -514,7 +514,7 @@ check "status and the restore files are read again" "status --json|image fetch-i
 check "step 2: its panel, step 1 done" "Step 2 of 5 - Tools|2|dnttt" "$(step_shown)"
 check "Back is on"                   "1" "$(enabled "$NEW_BACK_ID")"
 check "the line above them names the start" \
-    "Tick the tools to install on top of image dev (macOS 27.0). They are installed in the order listed. With nothing ticked, the new image is the start as it is." \
+    "Check the tools to install on top of image dev (macOS 27.0). They are installed in the order listed. With nothing checked, the new image is the start as it is." \
     "$(ui_value "$NEW_TOOLS_TEXT_ID")"
 names=""
 slot=0
@@ -530,9 +530,9 @@ check "no checkbox is set by the window" "0" "$(ui_calls "${UUID}${TAB}$((R_TICK
 ticked node
 omc_run AgentVM.newimage.tick
 check "node alone: it is kept, and its note says what it needs" "node|needs homebrew" "$(kept ticks)|$(ui_value $((R_NOTE + 2)))"
-check "  and the step says to tick it" "node needs homebrew: tick homebrew too." "$(note)"
+check "  and the step says to tick it" "node needs homebrew: check homebrew too." "$(note)"
 next
-check "Continue: the step stays"     "Step 2 of 5 - Tools|node needs homebrew: tick homebrew too." "$(step_shown | /usr/bin/cut -d'|' -f1)|$(note)"
+check "Continue: the step stays"     "Step 2 of 5 - Tools|node needs homebrew: check homebrew too." "$(step_shown | /usr/bin/cut -d'|' -f1)|$(note)"
 ticked agent-clis node homebrew
 omc_run AgentVM.newimage.tick
 check "three ticked: kept in the order they are applied, and nothing is missing" "homebrew node agent-clis|||" \
@@ -639,7 +639,7 @@ check "  and unticked, the image has it again" "dev-node has it" "$(ui_value $((
 ticked agent-clis python xcode-platforms
 omc_run AgentVM.newimage.tick
 check "a need the image lists no recipe for: a warning, since its list may be short" \
-    "needs xcode|xcode-platforms needs xcode. Tick xcode too, unless image dev-node already has it: the build stops at its first step when it does not." \
+    "needs xcode|xcode-platforms needs xcode. Check xcode too, unless image dev-node already has it: the build stops at its first step when it does not." \
     "$(ui_value $((R_NOTE + 7)))|$(note)"
 next
 check "  and Continue goes on"       "Step 3 of 5 - Options" "$(ui_value "$NEW_HEADER_ID")"
@@ -660,14 +660,14 @@ store '.'
 open_new dev-node
 ticked agent-clis
 omc_run AgentVM.newimage.tick
-check "a warning, not a refusal"     "needs node|agent-clis needs node. Tick node too, unless image dev-node already has it: the build stops at its first step when it does not." \
+check "a warning, not a refusal"     "needs node|agent-clis needs node. Check node too, unless image dev-node already has it: the build stops at its first step when it does not." \
     "$(ui_value $((R_NOTE + 4)))|$(note)"
 next
 check "Continue goes on, past Options" "Step 4 of 5 - Name and size|dev-node-agent-clis" "$(ui_value "$NEW_HEADER_ID")|$(ui_value "$NEW_NAME_ID")"
 seen "$NEW_NAME_ID" "$NEW_CPUS_ID" "$NEW_MEMORY_ID" "$NEW_DISK_ID"
 next
 check "the advice repeats it, and says what Full Disk Access will be" \
-    "agent-clis needs node. Tick node too, unless image dev-node already has it: the build stops at its first step when it does not.|Image dev-node has no Full Disk Access, so the new image will have none either. Set Up... in the pane of either grants it." \
+    "agent-clis needs node. Check node too, unless image dev-node already has it: the build stops at its first step when it does not.|Image dev-node has no Full Disk Access, so the new image will have none either. Set Up... in the pane of either grants it." \
     "$(ui_value "$NEW_ADVICE_ID" | /usr/bin/sed -n '1,2p' | /usr/bin/paste -sd '|' -)"
 check "the command"                  "agent-vm image create dev-node-agent-clis --from dev-node --recipe $RECIPES/agent-clis/recipe.json" "$(ui_value "$NEW_COMMAND_ID")"
 omc_run AgentVM.newimage.close
@@ -683,7 +683,7 @@ ticked homebrew node acp-agents xcode xcode-platforms
 omc_run AgentVM.newimage.tick
 next
 check "step 3"                       "Step 3 of 5 - Options|3|ddntt" "$(step_shown)"
-check "the line above them"          "What the tools you ticked ask for. A parameter left as it is keeps its default." "$(ui_value "$NEW_OPTIONS_TEXT_ID")"
+check "the line above them"          "What the tools you checked ask for. A parameter left as it is keeps its default." "$(ui_value "$NEW_OPTIONS_TEXT_ID")"
 labels=""
 slot=0
 while [ "$slot" -lt 8 ]; do
@@ -850,11 +850,11 @@ pick "ipsw $IPSW" "$IPSW"
 next
 check "the restore file is the start" "ipsw $IPSW|Step 2 of 5 - Tools" "$(kept start)|$(ui_value "$NEW_HEADER_ID")"
 check "the line above the tools names it" \
-    "Tick the tools to install on top of the restore file $IPSW (macOS 27.0). They are installed in the order listed. With nothing ticked, the new image is the start as it is." \
+    "Check the tools to install on top of the restore file $IPSW (macOS 27.0). They are installed in the order listed. With nothing checked, the new image is the start as it is." \
     "$(ui_value "$NEW_TOOLS_TEXT_ID")"
 ticked python
 omc_run AgentVM.newimage.tick
-check "nothing is in a restore file: a need not ticked is refused" "python needs homebrew: tick homebrew too." "$(note)"
+check "nothing is in a restore file: a need not ticked is refused" "python needs homebrew: check homebrew too." "$(note)"
 ticked homebrew python
 next
 check "the name: dev is taken, so dev2; agent-vm's default sizes" "Step 4 of 5 - Name and size|dev2|4|8|64" \
@@ -995,7 +995,7 @@ ticked homebrew
 add_own "$OWN/team-tools/recipe.json"
 check "a recipe added: the next slot, and the checkboxes kept as the click saw them" "$SHIPPED team-tools|1|homebrew" "$(listed)|$(kept ticks)"
 check "  its description, without the advice, and where its file is" "The linters of the team, from $OWN/team-tools/recipe.json" "$(ui_value $((R_TEXT + 8)))"
-check "  it is not ticked for the user: the note says to tick it" "team-tools is in the list now. Tick it to install it.|0" \
+check "  it is not ticked for the user: the note says to tick it" "team-tools is in the list now. Check it to install it.|0" \
     "$(note)|$(ui_calls "${UUID}${TAB}$((R_TICK + 8))${TAB}")"
 add_own ""
 check "a file dialog that was canceled changes nothing" "$SHIPPED team-tools|1" "$(listed)"
@@ -1071,7 +1071,7 @@ check "the command"                  "agent-vm image create $(printf '%s\n' "$OW
 check "nothing stands in the way"    "|1" "$(note)|$(enabled "$NEW_BUILD_ID")"
 /bin/mv "$OWN/Extra Things.json" "$OWN/moved.json"
 omc_run AgentVM.newimage.activated
-check "a recipe file that is gone: Build is off, and says why" "The recipe file $OWN/Extra Things.json is not there any more. Untick Extra-Things.|0" "$(note)|$(enabled "$NEW_BUILD_ID")"
+check "a recipe file that is gone: Build is off, and says why" "The recipe file $OWN/Extra Things.json is not there any more. Uncheck Extra-Things.|0" "$(note)|$(enabled "$NEW_BUILD_ID")"
 : > "$FAKE_AGENTVM_DIR/log"
 omc_run AgentVM.newimage.build
 check "  Build, clicked anyway, starts nothing" "0" "$(started)"
@@ -1095,7 +1095,7 @@ omc_control "$((R_TICK + 8))" "true"
 /bin/mv "$OWN/Extra Things.json" "$OWN/moved.json"
 next
 check "Continue with a ticked recipe whose file is gone: the step stays, and says why" \
-    "Step 2 of 5 - Tools|The recipe file $OWN/Extra Things.json is not there any more. Untick Extra-Things." "$(ui_value "$NEW_HEADER_ID")|$(note)"
+    "Step 2 of 5 - Tools|The recipe file $OWN/Extra Things.json is not there any more. Uncheck Extra-Things." "$(ui_value "$NEW_HEADER_ID")|$(note)"
 /bin/mv "$OWN/moved.json" "$OWN/Extra Things.json"
 next
 check "it asks for nothing: step 4, named by the recipe, its case kept" "Step 4 of 5 - Name and size|dev-Extra-Things" "$(ui_value "$NEW_HEADER_ID")|$(ui_value "$NEW_NAME_ID")"
@@ -1142,7 +1142,7 @@ agentvm_says '.recipes[0].warnings = [{code: "sudo", place: "step 1", message: "
 : > "$FAKE_AGENTVM_DIR/log"
 add_own "$OWN/team-tools/recipe.json"
 check "a recipe with a warning is added, and the note has the warning" \
-    "team-tools is in the list now. Tick it to install it. agent-vm warns about it: step 1: it runs sudo, which asks for a password.|$SHIPPED team-tools|1" "$(note)|$(listed)"
+    "team-tools is in the list now. Check it to install it. agent-vm warns about it: step 1: it runs sudo, which asks for a password.|$SHIPPED team-tools|1" "$(note)|$(listed)"
 check "  agent-vm was asked once, about that file" "recipe check $OWN/team-tools/recipe.json --json" "$(fake_log | /usr/bin/grep '^recipe ')"
 omc_run AgentVM.newimage.close
 # The answer about team-tools goes before the window opens again: opening asks about every recipe.
@@ -1152,7 +1152,7 @@ ticked
 agentvm_says '.recipes[0].warnings = [{code: "sudo", place: "step 1", message: "it runs sudo"}, {code: "no-checks", place: "the recipe", message: "it has no checks"}, {code: "unused-input", place: "input license", message: "no step uses it"}]'
 add_own "$OWN/team-tools/recipe.json"
 check "several warnings: the first, and how many more" \
-    "team-tools is in the list now. Tick it to install it. agent-vm warns about it: step 1: it runs sudo, and 2 more (agent-vm recipe check lists them)." "$(note)"
+    "team-tools is in the list now. Check it to install it. agent-vm warns about it: step 1: it runs sudo, and 2 more (agent-vm recipe check lists them)." "$(note)"
 omc_control "$((R_TICK + 8))" "true"
 next
 check "  warnings do not stop Continue" "Step 3 of 5 - Options" "$(ui_value "$NEW_HEADER_ID")"
@@ -1161,11 +1161,11 @@ agentvm_says '.recipes[0] |= ({path, error: "step 1 has unknown key \"timeout\""
 printf '1\n' > "$FAKE_AGENTVM_DIR/recipe-check-status"
 next
 check "a ticked recipe agent-vm no longer accepts: the step stays, with its reason" \
-    "Step 2 of 5 - Tools|agent-vm does not accept the recipe file $OWN/team-tools/recipe.json now: step 1 has unknown key \"timeout\". Untick team-tools." "$(ui_value "$NEW_HEADER_ID")|$(note)"
+    "Step 2 of 5 - Tools|agent-vm does not accept the recipe file $OWN/team-tools/recipe.json now: step 1 has unknown key \"timeout\". Uncheck team-tools." "$(ui_value "$NEW_HEADER_ID")|$(note)"
 agentvm_says '.recipes[0] |= ({path, error: "cannot read it: The file could not be opened.", notes: [], warnings: []})'
 next
 check "  a reason that ends in a full stop: one full stop" \
-    "agent-vm does not accept the recipe file $OWN/team-tools/recipe.json now: cannot read it: The file could not be opened. Untick team-tools." "$(note)"
+    "agent-vm does not accept the recipe file $OWN/team-tools/recipe.json now: cannot read it: The file could not be opened. Uncheck team-tools." "$(note)"
 printf 'the store is locked\n' > "$FAKE_AGENTVM_DIR/fail-recipe"
 next
 check "  agent-vm fails with status 1 and no answer: its words" "agent-vm could not check the recipes: the store is locked" "$(note)"
@@ -1273,7 +1273,7 @@ check "  one built with recipes holds them" "linux-node, agent-clis" "$(ui_rows 
 pick "image deb" deb
 next
 check "step 2, and the line above the tools names the start with its system" \
-    "Step 2 of 5 - Tools|Tick the tools to install on top of image deb (Debian 13). They are installed in the order listed. With nothing ticked, the new image is the start as it is." \
+    "Step 2 of 5 - Tools|Check the tools to install on top of image deb (Debian 13). They are installed in the order listed. With nothing checked, the new image is the start as it is." \
     "$(ui_value "$NEW_HEADER_ID")|$(ui_value "$NEW_TOOLS_TEXT_ID")"
 check "the recipes for Linux images and for both, in the order they are applied; no recipe for macOS images" \
     "linux-node/1 linux-python/1 agent-clis/1 acp-agents/1 linux-sudo/1 $(unused 5)" "$(slots)"
@@ -1283,7 +1283,7 @@ check "no checkbox is set by the window: none is ticked for the user, the one fo
 check "Add a Recipe File... is on: five slots are free" "1" "$(enabled "$NEW_ADD_RECIPE_ID")"
 ticked_linux agent-clis
 omc_run AgentVM.newimage.tick
-check "the agents alone: what they need in a Linux image" "agent-clis|needs linux-node|agent-clis needs linux-node: tick linux-node too." \
+check "the agents alone: what they need in a Linux image" "agent-clis|needs linux-node|agent-clis needs linux-node: check linux-node too." \
     "$(kept ticks)|$(ui_value $((R_NOTE + 3)))|$(note)"
 next
 check "Continue: the step stays"     "Step 2 of 5 - Tools" "$(ui_value "$NEW_HEADER_ID")"
@@ -1352,12 +1352,12 @@ check "a row: agent-vm's name for the system, that it is a Linux built from its 
 pick "linux debian-13" "Debian 13"
 next
 check "it is the start, and the line above the tools names it" \
-    "linux debian-13|Step 2 of 5 - Tools|Tick the tools to install on top of a new Debian 13 system. They are installed in the order listed. With nothing ticked, the new image is the start as it is." \
+    "linux debian-13|Step 2 of 5 - Tools|Check the tools to install on top of a new Debian 13 system. They are installed in the order listed. With nothing checked, the new image is the start as it is." \
     "$(kept start)|$(ui_value "$NEW_HEADER_ID")|$(ui_value "$NEW_TOOLS_TEXT_ID")"
 check "the recipes for Linux images and for both; no recipe for macOS images" "linux-node/1 linux-python/1 agent-clis/1 acp-agents/1 linux-sudo/1 $(unused 5)" "$(slots)"
 ticked_linux agent-clis
 omc_run AgentVM.newimage.tick
-check "a new system holds nothing: a need that is not ticked is refused" "agent-clis needs linux-node: tick linux-node too." "$(note)"
+check "a new system holds nothing: a need that is not ticked is refused" "agent-clis needs linux-node: check linux-node too." "$(note)"
 next
 check "  and Continue stays"         "Step 2 of 5 - Tools" "$(ui_value "$NEW_HEADER_ID")"
 ticked_linux linux-node agent-clis
@@ -1438,7 +1438,7 @@ check "back on step 1"               "Step 1 of 5 - Start from|1|ntttt" "$(step_
 pick "linux alpine-3.22" "Alpine 3.22"
 next
 check "another system: the line above the tools names it" \
-    "Tick the tools to install on top of a new Alpine 3.22 system. They are installed in the order listed. With nothing ticked, the new image is the start as it is." "$(ui_value "$NEW_TOOLS_TEXT_ID")"
+    "Check the tools to install on top of a new Alpine 3.22 system. They are installed in the order listed. With nothing checked, the new image is the start as it is." "$(ui_value "$NEW_TOOLS_TEXT_ID")"
 next
 check "  and the name follows it"    "alpine" "$(ui_value "$NEW_NAME_ID")"
 seen "$NEW_NAME_ID" "$NEW_CPUS_ID" "$NEW_MEMORY_ID" "$NEW_DISK_ID"
@@ -1523,7 +1523,7 @@ check "a Linux start: its five recipes, and the two slots left over are hidden" 
 check "every checkbox whose recipe changed is set: the agents keep their tick in their new slot, and no other recipe inherits one" \
     "false false true false false false false|7" "$(boxes 7)|$(tick_calls)"
 check "the slots kept are the ones shown" "$LINUX" "$(kept slots)"
-check "the note says what the tick that stayed needs now" "agent-clis needs linux-node: tick linux-node too." "$(note)"
+check "the note says what the tick that stayed needs now" "agent-clis needs linux-node: check linux-node too." "$(note)"
 seen $((R_TICK + 1)) $((R_TICK + 2)) $((R_TICK + 3)) $((R_TICK + 4)) $((R_TICK + 5)) $((R_TICK + 6)) $((R_TICK + 7))
 omc_run AgentVM.newimage.tick
 check "what is ticked now: the ticks of the macOS recipes are gone" "agent-clis" "$(kept ticks)"
@@ -1581,7 +1581,7 @@ add_own "$OWN/linux-sudo/recipe.json"
 check "another recipe of a name that is not listed now" \
     "A recipe named linux-sudo is there already, for Linux images. A recipe is named by its folder, or by its file when that is not recipe.json: rename one to add this recipe.|$SHIPPED|1" "$(note)|$(listed)"
 add_own "$OWN/for-both/recipe.json"
-check "a recipe for both systems is listed now" "for-both is in the list now. Tick it to install it.|$SHIPPED for-both|1" "$(note)|$(listed)"
+check "a recipe for both systems is listed now" "for-both is in the list now. Check it to install it.|$SHIPPED for-both|1" "$(note)|$(listed)"
 omc_control "$((R_TICK + 8))" "true"
 omc_run AgentVM.newimage.tick
 check "  and ticked"                 "for-both" "$(kept ticks)"
@@ -1627,7 +1627,7 @@ add_own "$OWN/for-both/recipe.json"
 check "  so is a recipe for both systems, which would be listed there too" \
     "This window lists $SLOTS recipes for Linux images already. With more, build the image with agent-vm image create in Terminal.|$SHIPPED|1" "$(note)|$(listed)"
 add_own "$OWN/third.json"
-check "  a recipe for macOS images still has its slot" "third is in the list now. Tick it to install it.|$SHIPPED third|1" "$(note)|$(listed)"
+check "  a recipe for macOS images still has its slot" "third is in the list now. Check it to install it.|$SHIPPED third|1" "$(note)|$(listed)"
 back
 pick "image deb" deb
 next
