@@ -625,6 +625,35 @@
                   },
                   {
                     "type": "GroupBox",
+                    "properties": { "title": "Time Machine" },
+                    "children": [
+                      {
+                        "type": "VStack",
+                        "properties": { "alignment": "leading", "padding": 6.0, "frame": { "maxWidth": "infinity", "alignment": "leading" } },
+                        "children": [
+                          { "type": "Divider", "properties": { "opacity": 0, "frame": { "height": 0 } } },
+                          { "type": "Text", "properties": { "text": "Skip backup for:", "padding": { "top": 4 } } },
+                          { "type": "VStack", "properties": { "alignment": "leading", "spacing": 4.0, "padding": { "leading": 20, "bottom": 4 } }, "children": [
+                        { "type": "HStack", "properties": { "spacing": 6.0 }, "children": [
+                          { "type": "Toggle", "id": 541, "properties": { "title": "Boxes", "disabled": true, "actionID": "AgentVM.main.timemachine", "help": "Leave the boxes out of backups" } },
+                          { "type": "Button", "id": 542, "properties": { "systemImage": "folder", "buttonStyle": "borderless", "disabled": true, "actionID": "AgentVM.main.timemachine.show", "help": "Show the boxes in Finder" } }
+                        ] },
+                        { "type": "HStack", "properties": { "spacing": 6.0 }, "children": [
+                          { "type": "Toggle", "id": 543, "properties": { "title": "Images", "disabled": true, "actionID": "AgentVM.main.timemachine", "help": "Leave the images out of backups" } },
+                          { "type": "Button", "id": 544, "properties": { "systemImage": "folder", "buttonStyle": "borderless", "disabled": true, "actionID": "AgentVM.main.timemachine.show", "help": "Show the images in Finder" } }
+                        ] },
+                        { "type": "HStack", "properties": { "spacing": 6.0 }, "children": [
+                          { "type": "Toggle", "id": 545, "properties": { "title": "Cache (OS images)", "disabled": true, "actionID": "AgentVM.main.timemachine", "help": "Leave the downloaded systems out of backups" } },
+                          { "type": "Button", "id": 546, "properties": { "systemImage": "folder", "buttonStyle": "borderless", "disabled": true, "actionID": "AgentVM.main.timemachine.show", "help": "Show the downloaded systems in Finder" } }
+                        ] },
+                        { "type": "Text", "id": 547, "properties": { "text": "", "foregroundStyle": "secondary", "textSelection": "enabled" } }
+                          ] }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "type": "GroupBox",
                     "properties": { "title": "Sessions" },
                     "children": [
                       {

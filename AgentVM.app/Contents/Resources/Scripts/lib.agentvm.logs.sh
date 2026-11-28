@@ -58,21 +58,9 @@ logs_read() {
     main_read_status "$1"
 }
 
-# logs_store <uuid>  ->  the store's folder: the one that holds the folder of the kept logs, as
-# `status` names it; before agent-vm said, the store the app has agent-vm use (the setting
-# agentVMHome), else agent-vm's own default.
+# logs_store <uuid>  ->  the store's folder (main_store).
 logs_store() {
-    local _kept="$(main_kept_logs "$1" 4)"
-    case "$_kept" in
-        /*/*)
-            printf '%s\n' "${_kept%/*}"
-            return 0 ;;
-    esac
-    local _home="$(agentvm_setting agentVMHome)"
-    case "$_home" in
-        /*) printf '%s\n' "$_home" ;;
-        *)  printf '%s/Library/Application Support/agent-vm\n' "$HOME" ;;
-    esac
+    main_store "$1"
 }
 
 # logs_place_rows <uuid>  ->  the places: number, folder.

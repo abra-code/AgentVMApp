@@ -55,6 +55,7 @@ __AGENTVM_APP_MAIN_LIB=1
 
 . "$OMC_APP_BUNDLE_PATH/Contents/Resources/Scripts/lib.agentvm.ui.sh"
 . "$OMC_APP_BUNDLE_PATH/Contents/Resources/Scripts/lib.agentvm.sessions.sh"
+. "$OMC_APP_BUNDLE_PATH/Contents/Resources/Scripts/lib.agentvm.timemachine.sh"
 
 MAIN_GETSTARTED_ID=200
 # Step n of Get started: its symbol 210 + n, its fact 220 + n, its button 230 + n (step 1 has none).
@@ -819,6 +820,27 @@ main_kept_logs() {
     main_rows "$1" kept | /usr/bin/sed -n '1p' | /usr/bin/cut -f"$2"
 }
 
+# main_store <uuid>  ->  the store's folder: the one that holds the folder of the kept logs, as
+# `status` names it; before agent-vm said, the store the app has agent-vm use (the setting
+# agentVMHome), else agent-vm's own default. A setting written with a trailing "/" names the same
+# store, and is given without it.
+main_store() {
+    local _kept="$(main_kept_logs "$1" 4)"
+    case "$_kept" in
+        /*/*)
+            printf '%s\n' "${_kept%/*}"
+            return 0 ;;
+    esac
+    local _home="$(agentvm_setting agentVMHome)"
+    while [ "$_home" != "/" ] && [ "$_home" != "${_home%/}" ]; do
+        _home="${_home%/}"
+    done
+    case "$_home" in
+        /*) printf '%s\n' "$_home" ;;
+        *)  printf '%s/Library/Application Support/agent-vm\n' "$HOME" ;;
+    esac
+}
+
 # main_kept_days_text <uuid>  ->  for how long agent-vm keeps the logs of a box that is deleted
 # or recreated ("30 days", "1 day"), or nothing when it keeps none or does not say. The number is
 # a setting of the store, which the app shows and keeps no copy of.
@@ -1111,7 +1133,7 @@ main_status_error() {
 }
 
 # main_paint_settings <uuid>  ->  the Settings tab: which agent-vm, the virtual machines, the disk,
-# and the logs of deleted boxes.
+# Time Machine, and the logs of deleted boxes.
 main_paint_settings() {
     local _uuid="$1"
     local _version="-"
@@ -1125,6 +1147,7 @@ main_paint_settings() {
     "$dialog" "$_uuid" "$MAIN_DISK_ID" "${_disk:--}"
     main_paint_kept "$_uuid"
     ses_paint_settings "$_uuid"
+    tm_paint "$_uuid"
 }
 
 # What Get started says about Local Network access, while no image is ready: a first macOS image
@@ -2511,10 +2534,12 @@ main_refresh() {
             [ "$main_status_unchanged" -eq 1 ] || main_note_access "$_uuid"
         fi
         # The selected box's and image's measurements: on opening and activation, not in the poll
-        # loop.
+        # loop. Time Machine's folders too (lib.agentvm.timemachine.sh): a folder made again since
+        # is left out again.
         if [ "$_mode" = "full" ] && [ "$_status" -eq 0 ]; then
             main_read_selected "$_uuid" box
             main_read_selected "$_uuid" image
+            tm_read "$_uuid"
         fi
         # 126 and 127 are the shell's: the binary itself cannot be run any more (removed, or no
         # longer executable), so this pass asks again what can be used rather than showing the

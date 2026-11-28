@@ -65,6 +65,10 @@ agent-vm records what it started in a box, what the box contacted and what was r
 - **A deleted box** leaves its logs behind, for 30 days unless you change it. Settings says how many are kept and what they take, shows them in Finder, removes them, and sets for how long they are kept.
 - **Where the Logs Are...,** in How to Use a Box, says which file answers which question, and gives the Terminal commands that read them.
 
+## Time Machine
+
+The Time Machine group in Settings has a checkbox for each of the store's Boxes, Images and Cache: a checked folder is left out of backups. A running box's disk changes all the time, and Time Machine would copy it whole at every backup; images and downloaded systems are large and can be made again. Sessions and logs are always backed up. Time Machine's own settings do not list these folders: the setting is on each folder, and AgentVM sets it again on a checked folder that agent-vm made again.
+
 ## How it works
 
 AgentVM.app is an [OMC](https://github.com/abra-code/OMC) applet: its windows are [ActionUI](https://github.com/abra-code/ActionUI) JSON, and its actions are shell scripts that run `agent-vm` and read its `--json` output. It keeps no copy of what agent-vm knows, so whatever you do in Terminal or in Cadabra shows up here.

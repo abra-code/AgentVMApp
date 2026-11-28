@@ -77,6 +77,14 @@ TAB=$(printf '\t')
 # account, not from $HOME, so every real run needs AGENT_VM_HOME set to a scratch store.
 unset AGENTVM_APP_AGENT_VM AGENT_VM_HOME
 
+# Time Machine: every opening of the main window reads the store folders' backup state, and a
+# store chosen in Settings has them changed. The real tmutil would read, and could change, the
+# folders of a real store named by a fixture, so every test gets the fake (fake_tmutil.sh).
+AGENTVM_APP_TMUTIL="$TEST_HELPERS/fake_tmutil.sh"
+FAKE_TMUTIL_EXCLUDED="$OMCTEST_WORK/tmutil-excluded"
+FAKE_TMUTIL_LOG="$OMCTEST_WORK/tmutil-log"
+export AGENTVM_APP_TMUTIL FAKE_TMUTIL_EXCLUDED FAKE_TMUTIL_LOG
+
 # The app's settings file, computed as the library computes it, from $HOME.
 APP_SETTINGS="$HOME/Library/Application Support/AgentVM/settings.json"
 
